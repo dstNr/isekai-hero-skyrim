@@ -18,10 +18,18 @@ Message Property IsekaiMsg_PowerChoice Auto
 Message Property IsekaiMsg_SkillFocus Auto  
 Message Property IsekaiMsg_EquipmentChoice Auto
 Message Property IsekaiMsg_SystemComplete Auto
+Message Property IsekaiMsg_WorldSelect Auto
 
-; System sounds (optional)
-Sound Property QSTMagicCastArea Auto ; Magical activation sound
-Sound Property UIUnlock Auto ; Unlock/powerup sound
+; System sounds
+Sound Property QSTMagicCastArea Auto ; Magical activation
+Sound Property UIUnlock Auto ; Unlock/powerup
+Sound Property NPCDragonDeathSeqWind Auto ; Epic wind for God Mode
+Sound Property MAGPowerAttackOrc Auto ; Power surge
+Sound Property MAGIllusionNightEyeAuto Auto ; Aura activate
+
+; Visual effects
+Explosion Property FXDragonDeath seq Auto ; God Mode arrival
+ActiveMagicEffect Property AbFXShock Auto ; Electric aura
 
 ; ============================================
 ; SYSTEM STATE
@@ -29,12 +37,21 @@ Sound Property UIUnlock Auto ; Unlock/powerup sound
 
 Bool Property UIExtensionsInstalled Auto Hidden
 Bool Property SystemActivated Auto Hidden
-
-; Player's previous world (flavor text)
-String Property PreviousWorld = "Earth" Auto Hidden
+Bool Property GodModeAuraActive Auto Hidden
 
 ; ============================================
-; SYSTEM STRINGS (Isekai flavor)
+; ORIGIN WORLD SELECTION
+; ============================================
+
+String Property PreviousWorld = "Earth" Auto Hidden
+Int Property WorldIndex = 0 Auto Hidden ; 0=Earth, 1=Japan, 2=Korea, 3=Fantasy, 4=SciFi, 5=Apocalyptic
+
+String[] Property AvailableWorlds Auto
+String[] Property WorldDescriptions Auto
+String[] Property WorldFlavors Auto
+
+; ============================================
+; SYSTEM STRINGS
 ; ============================================
 
 String Property SYS_HEADER = "╔══════════════════════════════════════╗" AutoReadOnly
@@ -46,76 +63,201 @@ String Property SYS_DIVIDER = "════════════════�
 ; ============================================
 
 Event OnInit()
+    InitializeWorldData()
     CheckUIExtensions()
 EndEvent
+
+Function InitializeWorldData()
+    ; Available origin worlds for the reincarnated
+    AvailableWorlds = new String[6]
+    AvailableWorlds[0] = "Earth"
+    AvailableWorlds[1] = "Japan"
+    AvailableWorlds[2] = "Korea"
+    AvailableWorlds[3] = "Fantasy World"
+    AvailableWorlds[4] = "Sci-Fi Future"
+    AvailableWorlds[5] = "Apocalyptic Wasteland"
+    
+    ; Descriptions for each world
+    WorldDescriptions = new String[6]
+    WorldDescriptions[0] = "A world of technology without magic"
+    WorldDescriptions[1] = "Land of anime, ramen, and truck-kun"
+    WorldDescriptions[2] = "Kingdom of webtoons and dungeon breaks"
+    WorldDescriptions[3] = "A realm already filled with swords and sorcery"
+    WorldDescriptions[4] = "Advanced technology, space travel, AI"
+    WorldDescriptions[5] = "Survival, mutations, scarce resources"
+    
+    ; Special flavor text for each world
+    WorldFlavors = new String[6]
+    WorldFlavors[0] = "You were an ordinary person until the accident..."
+    WorldFlavors[1] = "Truck-kun sent you on your next adventure..."
+    WorldFlavors[2] = "The dungeon break claimed you, but the System intervened..."
+    WorldFlavors[3] = "You were a hero there too. Now you begin again..."
+    WorldFlavors[4] = "Cryosleep failed. Your consciousness was saved..."
+    WorldFlavors[5] = "Radiation took your body, not your soul..."
+EndFunction
 
 Function CheckUIExtensions()
     UIExtensionsInstalled = Game.IsPluginInstalled("UIExtensions.esp")
 EndFunction
 
 ; ============================================
+; WORLD SELECTION (New Step!)
+; ============================================
+
+Function ShowWorldSelection()
+    Int result
+    
+    Debug.Notification("[SYSTEM] Scanning dimensional origins...")
+    Utility.Wait(0.5)
+    
+    If UIExtensionsInstalled
+        result = ShowWorldSelection_UIExt()
+    Else
+        result = ShowWorldSelection_Vanilla()
+    EndIf
+    
+    If result >= 0 && result < AvailableWorlds.Length
+        WorldIndex = result
+        PreviousWorld = AvailableWorlds[result]
+        Debug.Notification("[SYSTEM] Origin confirmed: " + PreviousWorld)
+        Debug.Notification("[SYSTEM] " + WorldFlavors[result])
+        
+        ; Play special sound based on world
+        PlayWorldArrivalSound(result)
+    Else
+        WorldIndex = 0
+        PreviousWorld = "Earth"
+    EndIf
+    
+    ; Continue to system welcome
+    Utility.Wait(1.0)
+    ShowSystemWelcome()
+EndFunction
+
+Int Function ShowWorldSelection_Vanilla()
+    If IsekaiMsg_WorldSelect
+        Return IsekaiMsg_WorldSelect.Show()
+    Else
+        ; Build custom world selection
+        String text = BuildSystemHeader("DIMENSIONAL ORIGIN") + "\n\n"
+        text += "From which world do you hail, Reincarnated One?\n\n"
+        text += "[1] EARTH - Modern world, no magic\n"
+        text += "[2] JAPAN - Land of truck-kun incidents\n"
+        text += "[3] KOREA - Dungeons and hunters\n"
+        text += "[4] FANTASY WORLD - Swords and sorcery\n"
+        text += "[5] SCI-FI FUTURE - Advanced technology\n"
+        text += "[6] APOCALYPTIC - Survival and mutations\n\n"
+        text += BuildSystemFooter()
+        
+        Debug.MessageBox(text)
+        Return 0
+    EndIf
+EndFunction
+
+Int Function ShowWorldSelection_UIExt()
+    String title = "═══ SYSTEM: DIMENSIONAL ORIGIN ═══"
+    String desc = "Select your previous incarnation's world:"
+    
+    Return ShowSystemMenu(title, desc, AvailableWorlds, WorldDescriptions, 0)
+EndFunction
+
+Function PlayWorldArrivalSound(Int worldIdx)
+    ; Different sounds for different origins
+    If worldIdx == 1 || worldIdx == 2 ; Japan/Korea
+        ; Anime-style magical sound
+        If MAGIllusionNightEyeAuto
+            MAGIllusionNightEyeAuto.Play(Game.GetPlayer())
+        EndIf
+    ElseIf worldIdx == 3 ; Fantasy
+        ; Mystical sound
+        If QSTMagicCastArea
+            QSTMagicCastArea.Play(Game.GetPlayer())
+        EndIf
+    ElseIf worldIdx == 4 ; Sci-Fi
+        ; Tech sound (use unlock as substitute)
+        If UIUnlock
+            UIUnlock.Play(Game.GetPlayer())
+        EndIf
+    ElseIf worldIdx == 5 ; Apocalyptic
+        ; Darker sound
+        If NPCDragonDeathSeqWind
+            NPCDragonDeathSeqWind.Play(Game.GetPlayer())
+        EndIf
+    EndIf
+EndFunction
+
+; ============================================
 ; SYSTEM ACTIVATION SEQUENCE
 ; ============================================
 
-; Called when the awakening begins - dramatic system startup
 Function ActivateSystem()
     SystemActivated = True
     
-    ; Play activation sound if available
+    ; Play activation sound
     If QSTMagicCastArea
         QSTMagicCastArea.Play(Game.GetPlayer())
     EndIf
     
-    ; Show dramatic system boot sequence
     ShowSystemBootSequence()
     
-    ; Then show the main welcome
-    ShowSystemWelcome()
+    ; NEW: Show world selection first!
+    ShowWorldSelection()
 EndFunction
 
 Function ShowSystemBootSequence()
-    ; Simulate a system booting up - dramatic pauses
+    Debug.Notification("[SYSTEM] ╔══════════════════════════════════════╗")
+    Utility.Wait(0.5)
+    Debug.Notification("[SYSTEM] ║     WORLD SYSTEM v2.0.1 ONLINE       ║")
+    Utility.Wait(0.5)
+    Debug.Notification("[SYSTEM] ╚══════════════════════════════════════╝")
+    Utility.Wait(0.8)
+    
     Debug.Notification("[SYSTEM] Detecting soul signature...")
     Utility.Wait(0.8)
-    
-    Debug.Notification("[SYSTEM] Analyzing dimensional origin...")
+    Debug.Notification("[SYSTEM] Analyzing dimensional residue...")
     Utility.Wait(0.8)
-    
-    Debug.Notification("[SYSTEM] Origin confirmed: " + PreviousWorld)
-    Utility.Wait(0.6)
-    
-    Debug.Notification("[SYSTEM] Reincarnation protocol initiated!")
+    Debug.Notification("[SYSTEM] Multiple world signatures detected!")
     Utility.Wait(1.0)
     
-    ; Dramatic pause before the big reveal
-    Debug.Notification("[SYSTEM] Welcome to NIRN, Reincarnated One.")
+    Debug.Notification("[SYSTEM] Initiating reincarnation protocol...")
     Utility.Wait(1.5)
 EndFunction
 
 ; ============================================
-; SYSTEM WELCOME DIALOG
+; SYSTEM WELCOME
 ; ============================================
 
 Function ShowSystemWelcome()
-    ; Build immersive system welcome message
     String welcomeText = BuildSystemHeader("WORLD SYSTEM") + "\n\n"
-    welcomeText += "Greetings, Soul from Another World.\n\n"
-    welcomeText += "You have been reincarnated into the realm of Nirn.\n"
-    welcomeText += "Your previous existence in " + PreviousWorld + " has ended.\n\n"
-    welcomeText += "The SYSTEM grants you a choice:\n"
-    welcomeText += "How much power shall you retain from your past life?\n\n"
-    welcomeText += BuildSystemFooter()
     
-    ; Show welcome with dramatic flair
+    welcomeText += "Greetings, Soul from " + PreviousWorld + ".\n\n"
+    welcomeText += WorldFlavors[WorldIndex] + "\n\n"
+    welcomeText += "You have been reincarnated into the realm of NIRN.\n"
+    welcomeText += "Your previous life has ended. Your new story begins.\n\n"
+    welcomeText += "The SYSTEM grants you a choice:\n"
+    welcomeText += "How much power shall you retain?\n\n"
+    
+    ; Add world-specific bonuses
+    If WorldIndex == 1 || WorldIndex == 2
+        welcomeText += "⚠ Bonus: Isekai Knowledge detected!\n"
+    ElseIf WorldIndex == 3
+        welcomeText += "⚠ Bonus: Prior magic affinity detected!\n"
+    ElseIf WorldIndex == 4
+        welcomeText += "⚠ Bonus: Advanced intelligence detected!\n"
+    ElseIf WorldIndex == 5
+        welcomeText += "⚠ Bonus: Survival instincts detected!\n"
+    EndIf
+    
+    welcomeText += "\n" + BuildSystemFooter()
+    
     Debug.MessageBox(welcomeText)
     Utility.Wait(0.5)
     
-    ; Then proceed to power selection
     ShowPowerChoice()
 EndFunction
 
 ; ============================================
-; POWER LEVEL SELECTION (The Isekai Choice)
+; POWER LEVEL SELECTION
 ; ============================================
 
 Function ShowPowerChoice()
@@ -127,47 +269,75 @@ Function ShowPowerChoice()
         result = ShowPowerChoice_Vanilla()
     EndIf
     
-    ; Play sound on selection
     If UIUnlock && result >= 0 && result < 3
         UIUnlock.Play(Game.GetPlayer())
     EndIf
     
-    ; Handle result with system flavor
     If result == 3 || result == -1
-        Debug.Notification("[SYSTEM] User declined power. Standard mode activated.")
+        Debug.Notification("[SYSTEM] User declined power. Standard mode.")
         MainQuest.OnPowerChosen(0)
     Else
         String powerName = GetPowerLevelName(result)
         Debug.Notification("[SYSTEM] " + powerName + " mode selected.")
+        
+        ; Special effects for God Mode
+        If result == 2
+            TriggerGodModeEffects()
+        EndIf
+        
         MainQuest.OnPowerChosen(result)
     EndIf
+EndFunction
+
+Function TriggerGodModeEffects()
+    ; Dramatic God Mode activation
+    Debug.Notification("[SYSTEM] ⚠⚠⚠ GOD MODE ACTIVATION ⚠⚠⚠")
+    Utility.Wait(0.3)
+    
+    ; Play epic sound
+    If NPCDragonDeathSeqWind
+        NPCDragonDeathSeqWind.Play(Game.GetPlayer())
+    EndIf
+    
+    ; Screen shake effect via magic
+    If MAGPowerAttackOrc
+        MAGPowerAttackOrc.Play(Game.GetPlayer())
+    EndIf
+    
+    ; Visual effect
+    Actor player = Game.GetPlayer()
+    If player
+        ; Apply temporary god-like visual
+        Debug.Notification("[SYSTEM] Reality bending...")
+        Utility.Wait(0.5)
+        Debug.Notification("[SYSTEM] Power level: MAXIMUM")
+    EndIf
+    
+    GodModeAuraActive = True
+    Utility.Wait(1.0)
 EndFunction
 
 Int Function ShowPowerChoice_Vanilla()
     If IsekaiMsg_PowerChoice
         Return IsekaiMsg_PowerChoice.Show()
     Else
-        ; Fallback if message form not configured
         String text = BuildSystemHeader("STATUS ALLOCATION") + "\n\n"
         text += "Choose your reincarnation blessing:\n\n"
-        text += "[1] NORMAL - No memories retained\n"
-        text += "    Start as a native of this world\n\n"
-        text += "[2] HERO - Partial awakening\n"
-        text += "    Level 1 | Skills 100 | 50 Perk Points\n\n"
-        text += "[3] GOD MODE - Full awakening\n"
-        text += "    Level 255 | Max Skills | 500 Perk Points\n\n"
+        text += "[1] NORMAL - No memories, native start\n"
+        text += "[2] HERO - Level 1 | Skills 100 | 50 Perks\n"
+        text += "[3] GOD MODE - Level 255 | Max Skills | 500 Perks\n"
+        text += "    ⚠ WARNING: World may destabilize!\n"
         text += "[4] DECLINE - Refuse the blessing\n\n"
         text += BuildSystemFooter()
         
         Debug.MessageBox(text)
-        Return 0 ; Default to Normal if no form
+        Return 0
     EndIf
 EndFunction
 
 Int Function ShowPowerChoice_SystemStyle()
-    ; Enhanced UI version with system aesthetic
     String title = "═══ SYSTEM: STATUS ALLOCATION ═══"
-    String desc = "Reincarnated One, choose your blessing level:"
+    String desc = "Reincarnated One, choose your blessing:"
     
     String[] options = new String[4]
     options[0] = "NORMAL"
@@ -176,10 +346,10 @@ Int Function ShowPowerChoice_SystemStyle()
     options[3] = "DECLINE"
     
     String[] details = new String[4]
-    details[0] = "No memories | Native start"
-    details[1] = "Level 1 | Skills 100 | 50 Perks"
-    details[2] = "Level 255 | Max Skills | 500 Perks"
-    details[3] = "Refuse the System's gift"
+    details[0] = "No boost | Pure challenge"
+    details[1] = "Lv1 | Skill 100 | 50 Perks"
+    details[2] = "⚠ Lv255 | MAX | 500 Perks"
+    details[3] = "Refuse the System"
     
     Return ShowSystemMenu(title, desc, options, details, 1)
 EndFunction
@@ -191,8 +361,7 @@ EndFunction
 Function ShowSkillFocus()
     Int result
     
-    ; System flavor notification
-    Debug.Notification("[SYSTEM] Allocating skill memories...")
+    Debug.Notification("[SYSTEM] Restoring skill memories...")
     Utility.Wait(0.5)
     
     If UIExtensionsInstalled
@@ -202,11 +371,11 @@ Function ShowSkillFocus()
     EndIf
     
     If result == 5 || result == -1
-        Debug.Notification("[SYSTEM] Default allocation: BALANCED")
+        Debug.Notification("[SYSTEM] Default: BALANCED allocation")
         MainQuest.OnSkillFocusChosen(0)
     Else
         String focusName = GetSkillFocusName(result)
-        Debug.Notification("[SYSTEM] " + focusName + " memories restored.")
+        Debug.Notification("[SYSTEM] " + focusName + " expertise restored")
         MainQuest.OnSkillFocusChosen(result)
     EndIf
 EndFunction
@@ -217,12 +386,12 @@ Int Function ShowSkillFocus_Vanilla()
     Else
         String text = BuildSystemHeader("SKILL ALLOCATION") + "\n\n"
         text += "Select your past life's expertise:\n\n"
-        text += "[1] BALANCED - Equal mastery in all arts\n"
-        text += "[2] WARRIOR - Combat mastery (Weapons/Armor)\n"
-        text += "[3] MAGE - Arcane mastery (Magic schools)\n"
-        text += "[4] THIEF - Shadow mastery (Stealth/Agility)\n"
-        text += "[5] CUSTOM - Configure later via System Menu\n"
-        text += "[6] BACK - Return to previous menu\n\n"
+        text += "[1] BALANCED - Equal mastery\n"
+        text += "[2] WARRIOR - Combat mastery\n"
+        text += "[3] MAGE - Arcane mastery\n"
+        text += "[4] THIEF - Shadow mastery\n"
+        text += "[5] CUSTOM - Configure later\n"
+        text += "[6] BACK\n\n"
         text += BuildSystemFooter()
         
         Debug.MessageBox(text)
@@ -232,7 +401,7 @@ EndFunction
 
 Int Function ShowSkillFocus_SystemStyle()
     String title = "═══ SYSTEM: SKILL ALLOCATION ═══"
-    String desc = "Select expertise from your previous life:"
+    String desc = "Select expertise from " + PreviousWorld + ":"
     
     String[] options = new String[6]
     options[0] = "BALANCED"
@@ -243,12 +412,12 @@ Int Function ShowSkillFocus_SystemStyle()
     options[5] = "BACK"
     
     String[] details = new String[6]
-    details[0] = "All skills equal mastery"
+    details[0] = "All skills equal"
     details[1] = "Weapons | Armor | Smithing"
-    details[2] = "Destruction | Restoration | Conjuration"
-    details[3] = "Sneak | Lockpicking | Pickpocket"
-    details[4] = "Manual configuration"
-    details[5] = "Return to power selection"
+    details[2] = "All magic schools"
+    details[3] = "Stealth | Agility"
+    details[4] = "Manual config"
+    details[5] = "Return"
     
     Return ShowSystemMenu(title, desc, options, details, 0)
 EndFunction
@@ -260,7 +429,7 @@ EndFunction
 Function ShowEquipment()
     Int result
     
-    Debug.Notification("[SYSTEM] Summoning equipment from the void...")
+    Debug.Notification("[SYSTEM] Accessing dimensional storage...")
     Utility.Wait(0.5)
     
     If UIExtensionsInstalled
@@ -269,12 +438,20 @@ Function ShowEquipment()
         result = ShowEquipment_Vanilla()
     EndIf
     
+    ; Special equipment for certain worlds
+    String bonus = ""
+    If WorldIndex == 3 ; Fantasy World
+        bonus = " [+Magic Items]"
+    ElseIf WorldIndex == 4 ; Sci-Fi
+        bonus = " [+Tech Adaptation]"
+    EndIf
+    
     If result == 4 || result == -1
-        Debug.Notification("[SYSTEM] Minimal equipment selected.")
+        Debug.Notification("[SYSTEM] Minimal gear selected")
         MainQuest.OnEquipmentChosen(0)
     Else
         String equipName = GetEquipmentName(result)
-        Debug.Notification("[SYSTEM] " + equipName + " equipment manifested.")
+        Debug.Notification("[SYSTEM] " + equipName + " gear summoned" + bonus)
         MainQuest.OnEquipmentChosen(result)
     EndIf
 EndFunction
@@ -285,11 +462,11 @@ Int Function ShowEquipment_Vanilla()
     Else
         String text = BuildSystemHeader("EQUIPMENT SUMMONING") + "\n\n"
         text += "Choose your starting gear:\n\n"
-        text += "[1] HUMBLE - Iron set, basic supplies, 100g\n"
-        text += "[2] ADVENTURER - Steel set, potions, 500g\n"
-        text += "[3] HERO - Daedric set, ultimate potions, 2000g\n"
-        text += "[4] NONE - No equipment (hard mode)\n"
-        text += "[5] BACK - Return to skill selection\n\n"
+        text += "[1] HUMBLE - Iron, basics, 100g\n"
+        text += "[2] ADVENTURER - Steel, potions, 500g\n"
+        text += "[3] HERO - Daedric, ultimate, 2000g\n"
+        text += "[4] NONE - Hard mode\n"
+        text += "[5] BACK\n\n"
         text += BuildSystemFooter()
         
         Debug.MessageBox(text)
@@ -298,8 +475,8 @@ Int Function ShowEquipment_Vanilla()
 EndFunction
 
 Int Function ShowEquipment_SystemStyle()
-    String title = "═══ SYSTEM: EQUIPMENT SUMMONING ═══"
-    String desc = "Select gear from the dimensional storage:"
+    String title = "═══ SYSTEM: EQUIPMENT ═══"
+    String desc = "Select gear from dimensional storage:"
     
     String[] options = new String[5]
     options[0] = "HUMBLE"
@@ -309,11 +486,11 @@ Int Function ShowEquipment_SystemStyle()
     options[4] = "BACK"
     
     String[] details = new String[5]
-    details[0] = "Iron | Basic supplies | 100 gold"
-    details[1] = "Steel | Health potions | 500 gold"
-    details[2] = "Daedric | Ultimate potions | 2000 gold"
-    details[3] = "No equipment | Pure skill"
-    details[4] = "Return to skills"
+    details[0] = "Iron | 100 gold"
+    details[1] = "Steel | Potions | 500g"
+    details[2] = "Daedric | Ultimate | 2000g"
+    details[3] = "No gear | Hard"
+    details[4] = "Return"
     
     Return ShowSystemMenu(title, desc, options, details, 0)
 EndFunction
@@ -325,31 +502,153 @@ EndFunction
 Function ShowSystemComplete(Int powerLevel, Int skillFocus, Int equipment)
     String completionText = BuildSystemHeader("REINCARNATION COMPLETE") + "\n\n"
     
-    completionText += "Status applied successfully.\n\n"
-    completionText += "Power Level: " + GetPowerLevelName(powerLevel) + "\n"
-    completionText += "Skill Focus: " + GetSkillFocusName(skillFocus) + "\n"
+    completionText += "Origin: " + PreviousWorld + "\n"
+    completionText += "Power: " + GetPowerLevelName(powerLevel) + "\n"
+    completionText += "Expertise: " + GetSkillFocusName(skillFocus) + "\n"
     completionText += "Equipment: " + GetEquipmentName(equipment) + "\n\n"
     
     If powerLevel == 2
-        completionText += "⚠ WARNING: God Mode detected.\n"
-        completionText += "   The world may not be ready...\n\n"
+        completionText += "⚠⚠⚠ GOD MODE ACTIVE ⚠⚠⚠\n"
+        completionText += "Reality anchor: STABLE\n"
+        completionText += "Power limiter: DISABLED\n"
+        completionText += "May the gods have mercy...\n\n"
     ElseIf powerLevel == 1
-        completionText += "✓ Hero Mode active.\n"
-        completionText += "   Your legend begins now.\n\n"
+        completionText += "✓ HERO STATUS CONFIRMED\n"
+        completionText += "Your legend awaits...\n\n"
     Else
-        completionText += "✓ Standard Mode active.\n"
-        completionText += "   Forge your own destiny.\n\n"
+        completionText += "✓ STANDARD REINCARNATION\n"
+        completionText += "Forge your own destiny...\n\n"
     EndIf
     
     completionText += "[SYSTEM] Good luck, Reincarnated One.\n"
+    completionText += "[SYSTEM] May your new life be glorious.\n\n"
     completionText += BuildSystemFooter()
     
     Debug.MessageBox(completionText)
     
-    ; Final system notification
+    ; Final system messages
     Utility.Wait(0.5)
-    Debug.Notification("[SYSTEM] Reincarnation protocol complete.")
-    Debug.Notification("[SYSTEM] May your new life be glorious.")
+    Debug.Notification("[SYSTEM] ╔══════════════════════════════════════╗")
+    Debug.Notification("[SYSTEM] ║   REINCARNATION PROTOCOL COMPLETE   ║")
+    Debug.Notification("[SYSTEM] ╚══════════════════════════════════════╝")
+    
+    ; God Mode persistent notification
+    If powerLevel == 2
+        Utility.Wait(1.0)
+        Debug.Notification("[SYSTEM] ⚠ God Mode active. Have fun!")
+    EndIf
+EndFunction
+
+; ============================================
+; STATUS WINDOW (NEW!)
+; ============================================
+
+Function ShowStatusWindow()
+    Actor player = Game.GetPlayer()
+    If !player
+        Return
+    EndIf
+    
+    String status = BuildSystemHeader("STATUS WINDOW") + "\n\n"
+    
+    ; Basic Info
+    status += "╔═══ IDENTITY ═══╗\n"
+    status += "Name: " + player.GetActorBase().GetName() + "\n"
+    status += "Race: " + player.GetRace().GetName() + "\n"
+    status += "Level: " + player.GetLevel() + "\n\n"
+    
+    ; Origin Info
+    status += "╔═══ ORIGIN ═══╗\n"
+    status += "Previous World: " + PreviousWorld + "\n"
+    If WorldFlavors && WorldIndex < WorldFlavors.Length
+        status += "Memory: " + WorldFlavors[WorldIndex] + "\n"
+    EndIf
+    status += "Status: Reincarnated\n\n"
+    
+    ; System Status
+    status += "╔═══ SYSTEM ═══╗\n"
+    status += "Power Level: " + GetCurrentPowerName() + "\n"
+    
+    If GodModeAuraActive
+        status += "Aura: ACTIVE ⚡\n"
+    Else
+        status += "Aura: Inactive\n"
+    EndIf
+    
+    ; Show some skill values
+    status += "\n╔═══ SKILLS ═══╗\n"
+    status += "One-Handed: " + player.GetActorValue("OneHanded") as Int + "\n"
+    status += "Destruction: " + player.GetActorValue("Destruction") as Int + "\n"
+    status += "Sneak: " + player.GetActorValue("Sneak") as Int + "\n"
+    status += "Smithing: " + player.GetActorValue("Smithing") as Int + "\n\n"
+    
+    ; Special bonuses based on origin world
+    status += "╔═══ BONUSES ═══╗\n"
+    If WorldIndex == 1 || WorldIndex == 2
+        status += "✓ Isekai Knowledge: +Wisdom\n"
+    ElseIf WorldIndex == 3
+        status += "✓ Magic Affinity: +Magicka\n"
+    ElseIf WorldIndex == 4
+        status += "✓ Tech Mind: +Intelligence\n"
+    ElseIf WorldIndex == 5
+        status += "✓ Survival Instinct: +Stamina\n"
+    Else
+        status += "✓ Adaptability: +Luck\n"
+    EndIf
+    
+    If GodModeAuraActive
+        status += "✓ God Mode: Unlimited Power\n"
+    EndIf
+    
+    status += "\n" + BuildSystemFooter()
+    
+    Debug.MessageBox(status)
+EndFunction
+
+; Show detailed stats
+Function ShowDetailedStats()
+    Actor player = Game.GetPlayer()
+    If !player
+        Return
+    EndIf
+    
+    String stats = "╔══════ DETAILED STATUS ══════╗\n\n"
+    
+    ; Combat Skills
+    stats += "═══ COMBAT ═══\n"
+    stats += "One-Handed: " + player.GetActorValue("OneHanded") as Int + "\n"
+    stats += "Two-Handed: " + player.GetActorValue("TwoHanded") as Int + "\n"
+    stats += "Archery: " + player.GetActorValue("Archery") as Int + "\n"
+    stats += "Block: " + player.GetActorValue("Block") as Int + "\n"
+    stats += "Smithing: " + player.GetActorValue("Smithing") as Int + "\n\n"
+    
+    ; Magic Skills
+    stats += "═══ MAGIC ═══\n"
+    stats += "Destruction: " + player.GetActorValue("Destruction") as Int + "\n"
+    stats += "Restoration: " + player.GetActorValue("Restoration") as Int + "\n"
+    stats += "Conjuration: " + player.GetActorValue("Conjuration") as Int + "\n"
+    stats += "Alteration: " + player.GetActorValue("Alteration") as Int + "\n"
+    stats += "Illusion: " + player.GetActorValue("Illusion") as Int + "\n"
+    stats += "Enchanting: " + player.GetActorValue("Enchanting") as Int + "\n\n"
+    
+    ; Stealth Skills
+    stats += "═══ STEALTH ═══\n"
+    stats += "Sneak: " + player.GetActorValue("Sneak") as Int + "\n"
+    stats += "Lockpicking: " + player.GetActorValue("Lockpicking") as Int + "\n"
+    stats += "Pickpocket: " + player.GetActorValue("Pickpocket") as Int + "\n"
+    stats += "Speech: " + player.GetActorValue("Speech") as Int + "\n"
+    stats += "Alchemy: " + player.GetActorValue("Alchemy") as Int + "\n\n"
+    
+    ; Attributes
+    stats += "═══ ATTRIBUTES ═══\n"
+    stats += "Health: " + player.GetActorValue("Health") as Int + "\n"
+    stats += "Magicka: " + player.GetActorValue("Magicka") as Int + "\n"
+    stats += "Stamina: " + player.GetActorValue("Stamina") as Int + "\n"
+    stats += "Carry Weight: " + player.GetActorValue("CarryWeight") as Int + "\n\n"
+    
+    stats += "╚════════════════════════════════╝"
+    
+    Debug.MessageBox(stats)
 EndFunction
 
 ; ============================================
@@ -357,12 +656,7 @@ EndFunction
 ; ============================================
 
 Int Function ShowSystemMenu(String title, String description, String[] options, String[] details, Int defaultIndex)
-    ; Enhanced menu with system aesthetic
-    ; Falls back to vanilla if UIExtensions not available
-    
     If UIExtensionsInstalled
-        ; Try to use UIExtensions for fancy menu
-        ; For now, use formatted message box
         Return ShowFormattedSystemMenu(title, description, options, details)
     Else
         Return ShowFormattedSystemMenu(title, description, options, details)
@@ -388,13 +682,11 @@ Int Function ShowFormattedSystemMenu(String title, String description, String[] 
     text += BuildSystemFooter()
     
     Debug.MessageBox(text)
-    
-    ; Return -1 to indicate we need the Message Form for actual input
     Return -1
 EndFunction
 
 ; ============================================
-; SYSTEM TEXT BUILDERS
+; UTILITY FUNCTIONS
 ; ============================================
 
 String Function BuildSystemHeader(String title)
@@ -402,12 +694,8 @@ String Function BuildSystemHeader(String title)
 EndFunction
 
 String Function BuildSystemFooter()
-    Return "╚═══ [SYSTEM] ═══╝"
+    Return "╚═══ [WORLD SYSTEM] ═══╝"
 EndFunction
-
-; ============================================
-; UTILITY FUNCTIONS
-; ============================================
 
 String Function GetPowerLevelName(Int level)
     If level == 0
@@ -448,23 +736,47 @@ String Function GetEquipmentName(Int equip)
     Return "UNKNOWN"
 EndFunction
 
-; Show a system status window (for MCM or debug)
-Function ShowStatusWindow()
-    Actor player = Game.GetPlayer()
-    
-    String status = BuildSystemHeader("STATUS WINDOW") + "\n\n"
-    status += "Name: " + player.GetActorBase().GetName() + "\n"
-    status += "Level: " + player.GetLevel() + "\n"
-    status += "Race: " + player.GetRace().GetName() + "\n\n"
-    status += "Origin: " + PreviousWorld + "\n"
-    status += "Status: Reincarnated\n"
-    status += BuildSystemFooter()
-    
-    Debug.MessageBox(status)
+String Function GetCurrentPowerName()
+    If MainQuest
+        Return GetPowerLevelName(MainQuest.ChosenPowerLevel)
+    EndIf
+    Return "UNKNOWN"
 EndFunction
 
-; Allow changing the previous world (for RP)
+; Change origin world (for MCM or debug)
 Function SetPreviousWorld(String worldName)
     PreviousWorld = worldName
     Debug.Notification("[SYSTEM] Origin updated: " + worldName)
+EndFunction
+
+; Toggle God Mode effects
+Function ToggleGodModeAura(Bool active)
+    GodModeAuraActive = active
+    If active
+        Debug.Notification("[SYSTEM] ⚡ God Mode Aura activated")
+        If MAGIllusionNightEyeAuto
+            MAGIllusionNightEyeAuto.Play(Game.GetPlayer())
+        EndIf
+    Else
+        Debug.Notification("[SYSTEM] God Mode Aura deactivated")
+    EndIf
+EndFunction
+
+; Show System help
+Function ShowSystemHelp()
+    String help = BuildSystemHeader("SYSTEM HELP") + "\n\n"
+    help += "Welcome to the Isekai Hero System!\n\n"
+    help += "POWER LEVELS:\n"
+    help += "• NORMAL: Vanilla Skyrim experience\n"
+    help += "• HERO: Max skills, 50 perks\n"
+    help += "• GOD MODE: Max everything, 500 perks\n\n"
+    help += "ORIGIN WORLDS:\n"
+    help += "Each world gives unique flavor text\n"
+    help += "and minor bonuses to your journey.\n\n"
+    help += "STATUS WINDOW:\n"
+    help += "Check your System stats anytime\n"
+    help += "via the MCM menu.\n\n"
+    help += BuildSystemFooter()
+    
+    Debug.MessageBox(help)
 EndFunction

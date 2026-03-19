@@ -102,7 +102,19 @@
 1. **Miscellaneous → Message**
 2. Rechtsklick → **New**
 
-### 5.2 Message 1: System Welcome (Optional - wird im Script gebaut)
+### 5.2 Message 1: World Selection (WICHTIG - NEU!)
+
+1. ID: `IsekaiMsg_WorldSelect`
+2. Name: "Dimensional Origin"
+3. Message Text: `[SYSTEM] Select origin world`
+4. **Buttons (Rückgabewerte):**
+   - Button 1: `EARTH` → **0**
+   - Button 2: `JAPAN` → **1**
+   - Button 3: `KOREA` → **2**
+   - Button 4: `FANTASY WORLD` → **3**
+   - Button 5: `SCI-FI FUTURE` → **4**
+   - Button 6: `APOCALYPTIC` → **5**
+5. **OK**
 
 1. ID: `IsekaiMsg_SystemWelcome`
 2. Name: "System Welcome"

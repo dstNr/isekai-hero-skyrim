@@ -12,11 +12,12 @@ IsekaiDialogScript Property DialogScript Auto
 IsekaiPowerScript Property PowerScript Auto
 
 ; ============================================
-; QUEST STAGES
+; QUEST STAGES (Updated with World Selection)
 ; ============================================
 
 Int Property STAGE_WAIT_FOR_SPAWN = 10 AutoReadOnly
 Int Property STAGE_SYSTEM_BOOT = 20 AutoReadOnly
+Int Property STAGE_WORLD_SELECT = 25 AutoReadOnly ; NEW!
 Int Property STAGE_POWER_CHOICE = 30 AutoReadOnly
 Int Property STAGE_SKILL_FOCUS = 40 AutoReadOnly
 Int Property STAGE_EQUIPMENT = 50 AutoReadOnly
@@ -60,17 +61,21 @@ EndFunction
 
 ; Stage 20: The System awakens
 Function TriggerAwakening()
-    ; Dramatic pause for immersion
     Game.SetInChargen(True, True, True)
     
-    ; Activate the System interface
+    ; Activate the System - now includes world selection!
     If DialogScript
         DialogScript.ActivateSystem()
     Else
-        ; Fallback if something went wrong
         Debug.Notification("[SYSTEM ERROR] Dialog component not found!")
         ShowPowerChoice()
     EndIf
+EndFunction
+
+; Called from DialogScript after world selection
+Function OnWorldSelected(Int worldIdx)
+    SetStage(STAGE_WORLD_SELECT)
+    ; World selection handled in DialogScript, continues to welcome
 EndFunction
 
 ; ============================================
