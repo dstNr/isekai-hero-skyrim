@@ -97,7 +97,7 @@ Function OnPowerChosen(Int powerLevel)
         Debug.Notification("[SYSTEM] Standard reincarnation selected.")
         SkipToCompletion()
     Else
-        ; Hero/God mode - continue with customization
+        ; Hero/Ascended mode - continue with customization
         SetStage(STAGE_SKILL_FOCUS)
         DialogScript.ShowSkillFocus()
     EndIf

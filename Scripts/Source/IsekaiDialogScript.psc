@@ -37,7 +37,7 @@ ActiveMagicEffect Property AbFXShock Auto ; Electric aura
 
 Bool Property UIExtensionsInstalled Auto Hidden
 Bool Property SystemActivated Auto Hidden
-Bool Property GodModeAuraActive Auto Hidden
+Bool Property AscendedAuraActive Auto Hidden
 
 ; ============================================
 ; ORIGIN WORLD SELECTION
@@ -280,18 +280,18 @@ Function ShowPowerChoice()
         String powerName = GetPowerLevelName(result)
         Debug.Notification("[SYSTEM] " + powerName + " mode selected.")
         
-        ; Special effects for God Mode
+        ; Special effects for Ascended mode
         If result == 2
-            TriggerGodModeEffects()
+            TriggerAscendedEffects()
         EndIf
         
         MainQuest.OnPowerChosen(result)
     EndIf
 EndFunction
 
-Function TriggerGodModeEffects()
+Function TriggerAscendedEffects()
     ; Dramatic God Mode activation
-    Debug.Notification("[SYSTEM] ⚠⚠⚠ GOD MODE ACTIVATION ⚠⚠⚠")
+    Debug.Notification("[SYSTEM] ⚠⚠⚠ ASCENSION ACTIVATED ⚠⚠⚠")
     Utility.Wait(0.3)
     
     ; Play epic sound
@@ -325,8 +325,8 @@ Int Function ShowPowerChoice_Vanilla()
         text += "Choose your reincarnation blessing:\n\n"
         text += "[1] NORMAL - No memories, native start\n"
         text += "[2] HERO - Level 1 | Skills 100 | 50 Perks\n"
-        text += "[3] GOD MODE - Level 255 | Max Skills | 500 Perks\n"
-        text += "    ⚠ WARNING: World may destabilize!\n"
+        text += "[3] ASCENDED - Level 255 | Max Skills | 500 Perks\n"
+        text += "    ⚠ Ultimate power achieved!\n"
         text += "[4] DECLINE - Refuse the blessing\n\n"
         text += BuildSystemFooter()
         
@@ -342,7 +342,7 @@ Int Function ShowPowerChoice_SystemStyle()
     String[] options = new String[4]
     options[0] = "NORMAL"
     options[1] = "HERO"
-    options[2] = "GOD MODE"
+    options[2] = "ASCENDED"
     options[3] = "DECLINE"
     
     String[] details = new String[4]
@@ -508,7 +508,7 @@ Function ShowSystemComplete(Int powerLevel, Int skillFocus, Int equipment)
     completionText += "Equipment: " + GetEquipmentName(equipment) + "\n\n"
     
     If powerLevel == 2
-        completionText += "⚠⚠⚠ GOD MODE ACTIVE ⚠⚠⚠\n"
+        completionText += "⚠⚠⚠ ASCENDED STATUS ACTIVE ⚠⚠⚠\n"
         completionText += "Reality anchor: STABLE\n"
         completionText += "Power limiter: DISABLED\n"
         completionText += "May the gods have mercy...\n\n"
@@ -532,10 +532,10 @@ Function ShowSystemComplete(Int powerLevel, Int skillFocus, Int equipment)
     Debug.Notification("[SYSTEM] ║   REINCARNATION PROTOCOL COMPLETE   ║")
     Debug.Notification("[SYSTEM] ╚══════════════════════════════════════╝")
     
-    ; God Mode persistent notification
+    ; Ascended persistent notification
     If powerLevel == 2
         Utility.Wait(1.0)
-        Debug.Notification("[SYSTEM] ⚠ God Mode active. Have fun!")
+        Debug.Notification("[SYSTEM] ⚠ Ascended mode active. Have fun!")
     EndIf
 EndFunction
 
@@ -569,8 +569,8 @@ Function ShowStatusWindow()
     status += "╔═══ SYSTEM ═══╗\n"
     status += "Power Level: " + GetCurrentPowerName() + "\n"
     
-    If GodModeAuraActive
-        status += "Aura: ACTIVE ⚡\n"
+    If AscendedAuraActive
+        status += "Aura: ASCENDED ⚡\n"
     Else
         status += "Aura: Inactive\n"
     EndIf
@@ -596,8 +596,8 @@ Function ShowStatusWindow()
         status += "✓ Adaptability: +Luck\n"
     EndIf
     
-    If GodModeAuraActive
-        status += "✓ God Mode: Unlimited Power\n"
+    If AscendedAuraActive
+        status += "✓ Ascension: ACTIVE\n"
     EndIf
     
     status += "\n" + BuildSystemFooter()
@@ -703,7 +703,7 @@ String Function GetPowerLevelName(Int level)
     ElseIf level == 1
         Return "HERO"
     ElseIf level == 2
-        Return "GOD MODE"
+        Return "ASCENDED"
     EndIf
     Return "UNKNOWN"
 EndFunction
