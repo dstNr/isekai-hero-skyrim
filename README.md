@@ -5,6 +5,8 @@
 
 Start your Skyrim adventure as an overpowered hero! Inspired by Isekai anime, this mod lets you choose your power level after character creation.
 
+> **📝 Development:** See [WORKFLOW.md](WORKFLOW.md) for contribution guidelines.
+
 ## Features
 
 - **Three Power Levels**: Normal, Hero, or God Mode
