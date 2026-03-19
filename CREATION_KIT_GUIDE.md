@@ -102,64 +102,59 @@
 1. **Miscellaneous → Message**
 2. Rechtsklick → **New**
 
-### 5.2 Message 1: Power Choice
+### 5.2 Message 1: System Welcome (Optional - wird im Script gebaut)
+
+1. ID: `IsekaiMsg_SystemWelcome`
+2. Name: "System Welcome"
+3. Message Text: `[SYSTEM] Initializing...`
+4. Button 1: `Continue`
+5. **OK**
+
+### 5.3 Message 2: Power Choice (WICHTIG)
 
 1. ID: `IsekaiMsg_PowerChoice`
-2. Name: "Isekai Awakening"
-3. Message Text (wird im Script überschrieben, kann leer bleiben):
-   ```
-   Choose your power level
-   ```
-4. **Buttons (wichtig für Rückgabewerte):**
-   - Button 1: `Normal` → gibt **0** zurück
-   - Button 2: `Hero` → gibt **1** zurück
-   - Button 3: `God Mode` → gibt **2** zurück
-   - Button 4: `Cancel` → gibt **3** zurück
+2. Name: "Status Allocation"
+3. Message Text: `[SYSTEM] Select blessing level`
+4. **Buttons (Rückgabewerte):**
+   - Button 1: `NORMAL` → **0**
+   - Button 2: `HERO` → **1**
+   - Button 3: `GOD MODE` → **2**
+   - Button 4: `DECLINE` → **3**
 5. **OK**
 
-### 5.3 Message 2: Skill Focus
+### 5.4 Message 3: Skill Focus (WICHTIG)
 
 1. ID: `IsekaiMsg_SkillFocus`
-2. Name: "Distribute Your Potential"
-3. Message Text:
-   ```
-   Choose your skill focus
-   ```
+2. Name: "Skill Allocation"
+3. Message Text: `[SYSTEM] Select expertise`
 4. **Buttons:**
-   - Button 1: `All Equal` → gibt **0** zurück
-   - Button 2: `Warrior` → gibt **1** zurück
-   - Button 3: `Mage` → gibt **2** zurück
-   - Button 4: `Thief` → gibt **3** zurück
-   - Button 5: `Custom` → gibt **4** zurück
-   - Button 6: `Cancel` → gibt **5** zurück
+   - Button 1: `BALANCED` → **0**
+   - Button 2: `WARRIOR` → **1**
+   - Button 3: `MAGE` → **2**
+   - Button 4: `THIEF` → **3**
+   - Button 5: `CUSTOM` → **4**
+   - Button 6: `BACK` → **5**
 5. **OK**
 
-### 5.4 Message 3: Equipment
+### 5.5 Message 4: Equipment (WICHTIG)
 
 1. ID: `IsekaiMsg_EquipmentChoice`
-2. Name: "Choose Your Equipment"
-3. Message Text:
-   ```
-   Choose your starting equipment
-   ```
+2. Name: "Equipment Summoning"
+3. Message Text: `[SYSTEM] Select equipment`
 4. **Buttons:**
-   - Button 1: `Humble` → gibt **0** zurück
-   - Button 2: `Adventurer` → gibt **1** zurück
-   - Button 3: `Hero` → gibt **2** zurück
-   - Button 4: `None` → gibt **3** zurück
-   - Button 5: `Cancel` → gibt **4** zurück
+   - Button 1: `HUMBLE` → **0**
+   - Button 2: `ADVENTURER` → **1**
+   - Button 3: `HERO` → **2**
+   - Button 4: `NONE` → **3**
+   - Button 5: `BACK` → **4**
 5. **OK**
 
-### 5.5 Message 4: Confirmation (Optional)
+### 5.6 Message 5: System Complete (Optional)
 
-1. ID: `IsekaiMsg_Confirmation`
-2. Name: "Isekai Confirmation"
-3. Message Text:
-   ```
-   Your choices have been applied.
-   ```
-4. Buttons:
-   - Button 1: `OK`
+1. ID: `IsekaiMsg_SystemComplete`
+2. Name: "Reincarnation Complete"
+3. Message Text: `[SYSTEM] Status applied`
+4. Button 1: `Acknowledge`
 5. **OK**
 
 ---

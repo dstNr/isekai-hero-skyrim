@@ -1,116 +1,206 @@
 ; IsekaiIntroQuest.psc
 ; Main quest script for Isekai Hero mod
-; Handles the awakening sequence after character creation
+; "The System has chosen you. Your new life begins."
 
 Scriptname IsekaiIntroQuest extends Quest
 
-; Properties
+; ============================================
+; SYSTEM COMPONENTS
+; ============================================
+
 IsekaiDialogScript Property DialogScript Auto
 IsekaiPowerScript Property PowerScript Auto
 
-; Quest stages
+; ============================================
+; QUEST STAGES
+; ============================================
+
 Int Property STAGE_WAIT_FOR_SPAWN = 10 AutoReadOnly
-Int Property STAGE_TRIGGER_AWAKENING = 20 AutoReadOnly
+Int Property STAGE_SYSTEM_BOOT = 20 AutoReadOnly
 Int Property STAGE_POWER_CHOICE = 30 AutoReadOnly
 Int Property STAGE_SKILL_FOCUS = 40 AutoReadOnly
 Int Property STAGE_EQUIPMENT = 50 AutoReadOnly
 Int Property STAGE_APPLY = 60 AutoReadOnly
 Int Property STAGE_COMPLETE = 100 AutoReadOnly
 
-; Player choices stored for application
+; ============================================
+; PLAYER CHOICES (Stored by the System)
+; ============================================
+
 Int Property ChosenPowerLevel = 0 Auto Hidden ; 0=Normal, 1=Hero, 2=God
 Int Property ChosenSkillFocus = 0 Auto Hidden ; 0=Equal, 1=Warrior, 2=Mage, 3=Thief
 Int Property ChosenEquipment = 0 Auto Hidden ; 0=Humble, 1=Adventurer, 2=Hero, 3=None
 
-; Called when quest starts
+; ============================================
+; SYSTEM INITIALIZATION
+; ============================================
+
 Event OnInit()
-    Debug.Notification("Isekai Hero: Waiting for player spawn...")
-    RegisterForSingleUpdate(5.0) ; Check every 5 seconds
+    Debug.Notification("[SYSTEM] Scanning for soul signature...")
+    RegisterForSingleUpdate(3.0)
 EndEvent
 
-; Wait for player to leave character creation
 Event OnUpdate()
-    Actor player = Game.GetPlayer()
-    
-    ; Check if player has left Helgen/alternate start area
     If IsPlayerSpawned()
-        SetStage(STAGE_TRIGGER_AWAKENING)
+        Debug.Notification("[SYSTEM] Soul detected in Nirn.")
+        SetStage(STAGE_SYSTEM_BOOT)
     Else
-        RegisterForSingleUpdate(5.0) ; Keep waiting
+        RegisterForSingleUpdate(3.0)
     EndIf
 EndEvent
 
-; Check if player has spawned in the world
 Bool Function IsPlayerSpawned()
     Worldspace currentWorld = Game.GetPlayer().GetWorldspace()
-    
-    ; Check if player is in any valid play area
-    If currentWorld
-        ; Player is in a worldspace (not in character creation)
-        Return True
-    EndIf
-    
-    Return False
+    Return currentWorld != None
 EndFunction
 
-; Stage 20: Trigger the awakening
+; ============================================
+; SYSTEM BOOT SEQUENCE
+; ============================================
+
+; Stage 20: The System awakens
 Function TriggerAwakening()
-    ; Pause game slightly for dramatic effect
+    ; Dramatic pause for immersion
     Game.SetInChargen(True, True, True)
-    Utility.Wait(1.0)
     
-    ; Show first dialog
+    ; Activate the System interface
+    If DialogScript
+        DialogScript.ActivateSystem()
+    Else
+        ; Fallback if something went wrong
+        Debug.Notification("[SYSTEM ERROR] Dialog component not found!")
+        ShowPowerChoice()
+    EndIf
+EndFunction
+
+; ============================================
+; SYSTEM SEQUENCES
+; ============================================
+
+; Called from DialogScript after system welcome
+Function ShowPowerChoice()
+    SetStage(STAGE_POWER_CHOICE)
     DialogScript.ShowPowerChoice()
 EndFunction
 
-; Called from dialog script when power is chosen
+; Called when power level is selected
 Function OnPowerChosen(Int powerLevel)
     ChosenPowerLevel = powerLevel
-    SetStage(STAGE_SKILL_FOCUS)
-    DialogScript.ShowSkillFocus()
+    
+    If powerLevel == 0
+        ; Normal mode - skip to completion
+        Debug.Notification("[SYSTEM] Standard reincarnation selected.")
+        SkipToCompletion()
+    Else
+        ; Hero/God mode - continue with customization
+        SetStage(STAGE_SKILL_FOCUS)
+        DialogScript.ShowSkillFocus()
+    EndIf
 EndFunction
 
-; Called when skill focus is chosen
+; Called when skill focus is selected
 Function OnSkillFocusChosen(Int focus)
     ChosenSkillFocus = focus
     SetStage(STAGE_EQUIPMENT)
     DialogScript.ShowEquipment()
 EndFunction
 
-; Called when equipment is chosen
+; Called when equipment is selected
 Function OnEquipmentChosen(Int equipment)
     ChosenEquipment = equipment
     SetStage(STAGE_APPLY)
     ApplyChoices()
 EndFunction
 
-; Apply all chosen settings
+; ============================================
+; SYSTEM APPLICATION
+; ============================================
+
 Function ApplyChoices()
     Game.SetInChargen(False, False, False)
     
     If ChosenPowerLevel == 0
-        ; Normal - do nothing
-        Debug.Notification("Isekai Hero: You chose the path of a normal adventurer.")
+        ; Normal mode
+        Debug.Notification("[SYSTEM] Standard mode confirmed.")
+        Debug.Notification("[SYSTEM] May your journey be challenging.")
     Else
-        ; Apply power level
+        ; Apply the System's blessings
         PowerScript.ApplyPowerLevel(ChosenPowerLevel, ChosenSkillFocus)
-        
-        ; Apply equipment
         PowerScript.GiveEquipment(ChosenEquipment)
         
-        String powerText = "Hero"
+        ; System confirmation
         If ChosenPowerLevel == 2
-            powerText = "God"
+            Debug.Notification("[SYSTEM] ⚠ GOD MODE ACTIVATED")
+            Debug.Notification("[SYSTEM] The world trembles before you...")
+        Else
+            Debug.Notification("[SYSTEM] ✓ HERO MODE ACTIVATED")
+            Debug.Notification("[SYSTEM] Your legend begins.")
         EndIf
-        
-        Debug.Notification("Isekai Hero: " + powerText + " mode activated!")
     EndIf
     
+    ; Show completion summary
     SetStage(STAGE_COMPLETE)
+    ShowSystemCompletion()
 EndFunction
 
-; Allow respec via MCM
+Function ShowSystemCompletion()
+    If DialogScript
+        DialogScript.ShowSystemComplete(ChosenPowerLevel, ChosenSkillFocus, ChosenEquipment)
+    EndIf
+EndFunction
+
+; Skip customization for Normal mode
+Function SkipToCompletion()
+    SetStage(STAGE_COMPLETE)
+    
+    Game.SetInChargen(False, False, False)
+    
+    String normalText = "═══════════════════════════════════════\n\n"
+    normalText += "You have chosen the path of a native.\n\n"
+    normalText += "No memories from your past life remain.\n"
+    normalText += "You are truly reborn in this world.\n\n"
+    normalText += "Good luck, adventurer.\n\n"
+    normalText += "═══════════════════════════════════════"
+    
+    Debug.MessageBox(normalText)
+    
+    Debug.Notification("[SYSTEM] Reincarnation complete.")
+EndFunction
+
+; ============================================
+; SYSTEM RESPEC (For MCM)
+; ============================================
+
 Function RespecCharacter()
-    SetStage(STAGE_TRIGGER_AWAKENING)
+    Debug.Notification("[SYSTEM] Reinitializing...")
+    
+    ; Reset choices
+    ChosenPowerLevel = 0
+    ChosenSkillFocus = 0
+    ChosenEquipment = 0
+    
+    ; Restart the sequence
+    SetStage(STAGE_SYSTEM_BOOT)
     TriggerAwakening()
+EndFunction
+
+; ============================================
+; UTILITY FUNCTIONS
+; ============================================
+
+; Get current power level name
+String Function GetCurrentPowerName()
+    If ChosenPowerLevel == 0
+        Return "NORMAL"
+    ElseIf ChosenPowerLevel == 1
+        Return "HERO"
+    ElseIf ChosenPowerLevel == 2
+        Return "GOD MODE"
+    EndIf
+    Return "UNKNOWN"
+EndFunction
+
+; Check if System is active
+Bool Function IsSystemActive()
+    Return GetStage() >= STAGE_COMPLETE
 EndFunction
