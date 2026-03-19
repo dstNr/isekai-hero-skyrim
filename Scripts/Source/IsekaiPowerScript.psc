@@ -56,13 +56,15 @@ Function ApplyPowerLevel(Int powerLevel, Int skillFocus)
     
     ; Set level based on power choice
     If powerLevel == 2
-        ; God Mode - Level 81
-        player.SetLevel(81)
-        ; Give perk points
-        player.AddPerkPoints(80)
-    Else
+        ; God Mode - Level 255 (max)
+        player.SetLevel(255)
+        ; Give plenty of perk points for vanilla + custom skill trees
+        player.AddPerkPoints(500)
+    ElseIf powerLevel == 1
         ; Hero - Level 1 but skills maxed
         player.SetLevel(1)
+        ; Some perk points to distribute
+        player.AddPerkPoints(50)
     EndIf
 EndFunction
 

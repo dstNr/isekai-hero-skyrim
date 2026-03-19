@@ -48,8 +48,8 @@ Function ShowPowerChoice()
     String text = "You feel strange energy flowing through your veins...\n\n" + \
                   "Choose your destiny:\n\n" + \
                   "[Normal] - Start as a regular adventurer (Vanilla)\n" + \
-                  "[Hero] - Start with max skills (Level 1, Skills 100)\n" + \
-                  "[God Mode] - True Isekai power (Level 81, all perks)"
+                  "[Hero] - Start with max skills (Level 1, Skills 100, 50 perks)\n" + \
+                  "[God Mode] - True Isekai power (Level 255, 500 perks)"
     
     Int result = ShowMessageDialog(title, text, PowerButtons)
     

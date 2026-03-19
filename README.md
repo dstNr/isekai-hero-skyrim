@@ -44,8 +44,8 @@ Start your Skyrim adventure as an overpowered hero! Inspired by Isekai anime, th
 | Level | Description |
 |-------|-------------|
 | **Normal** | Vanilla Skyrim experience |
-| **Hero** | Max skills (100), Level 1 |
-| **God Mode** | Max skills, Level 81, 80 perk points |
+| **Hero** | Max skills (100), Level 1, 50 perks |
+| **God Mode** | Max skills, Level 255, 500 perks |
 
 ### Skill Focus
 
