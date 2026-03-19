@@ -6,7 +6,7 @@ Scriptname IsekaiPowerScript extends Quest
 ; All 18 skill AVs
 ActorValue Property OneHanded Auto
 ActorValue Property TwoHanded Auto
-ActorValue Property Marksman Auto
+ActorValue Property Archery Auto
 ActorValue Property Block Auto
 ActorValue Property Smithing Auto
 ActorValue Property HeavyArmor Auto
@@ -15,7 +15,7 @@ ActorValue Property Pickpocket Auto
 ActorValue Property Lockpicking Auto
 ActorValue Property Sneak Auto
 ActorValue Property Alchemy Auto
-ActorValue Property Speechcraft Auto
+ActorValue Property Speech Auto
 ActorValue Property Alteration Auto
 ActorValue Property Conjuration Auto
 ActorValue Property Destruction Auto
@@ -72,7 +72,7 @@ EndFunction
 Function SetAllSkills(Actor player, Int value)
     player.SetActorValue("OneHanded", value)
     player.SetActorValue("TwoHanded", value)
-    player.SetActorValue("Marksman", value)
+    player.SetActorValue("Archery", value)
     player.SetActorValue("Block", value)
     player.SetActorValue("Smithing", value)
     player.SetActorValue("HeavyArmor", value)
@@ -81,7 +81,7 @@ Function SetAllSkills(Actor player, Int value)
     player.SetActorValue("Lockpicking", value)
     player.SetActorValue("Sneak", value)
     player.SetActorValue("Alchemy", value)
-    player.SetActorValue("Speechcraft", value)
+    player.SetActorValue("Speech", value)
     player.SetActorValue("Alteration", value)
     player.SetActorValue("Conjuration", value)
     player.SetActorValue("Destruction", value)
@@ -94,7 +94,7 @@ EndFunction
 Function SetWarriorSkills(Actor player, Int value)
     player.SetActorValue("OneHanded", value)
     player.SetActorValue("TwoHanded", value)
-    player.SetActorValue("Marksman", value)
+    player.SetActorValue("Archery", value)
     player.SetActorValue("Block", value)
     player.SetActorValue("Smithing", value)
     player.SetActorValue("HeavyArmor", value)
@@ -117,13 +117,13 @@ EndFunction
 
 ; Set thief skills to value, others lower
 Function SetThiefSkills(Actor player, Int value)
-    player.SetActorValue("Marksman", value)
+    player.SetActorValue("Archery", value)
     player.SetActorValue("LightArmor", value)
     player.SetActorValue("Pickpocket", value)
     player.SetActorValue("Lockpicking", value)
     player.SetActorValue("Sneak", value)
     player.SetActorValue("Alchemy", value)
-    player.SetActorValue("Speechcraft", value)
+    player.SetActorValue("Speech", value)
     ; Others at 50
     SetOtherSkills(player, 50)
 EndFunction
@@ -190,3 +190,4 @@ Function GiveHeroGear(Actor player)
     player.AddItem(Game.GetForm(0x00039BE7), 10) ; Potion of Ultimate Magicka
     player.AddItem(Game.GetForm(0x00039BE6), 10) ; Potion of Ultimate Stamina
 EndFunction
+ion

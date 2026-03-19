@@ -95,6 +95,8 @@
 
 ## 5. Message Forms Erstellen (Dialoge)
 
+**WICHTIG:** Diese Message Forms sind **zwingend erforderlich** — sie liefern die Button-Rückgabewerte für die Dialoge.
+
 ### 5.1 Message Kategorie öffnen
 
 1. **Miscellaneous → Message**
@@ -104,21 +106,15 @@
 
 1. ID: `IsekaiMsg_PowerChoice`
 2. Name: "Isekai Awakening"
-3. Message Text:
+3. Message Text (wird im Script überschrieben, kann leer bleiben):
    ```
-   You feel strange energy flowing through your veins...
-
-   Choose your destiny:
-
-   [Normal] - Start as a regular adventurer
-   [Hero] - Max skills, Level 1, 50 perks  
-   [God Mode] - Level 255, 500 perks
+   Choose your power level
    ```
-4. Buttons:
-   - Button 1: `Normal`
-   - Button 2: `Hero`
-   - Button 3: `God Mode`
-   - Button 4: `Cancel`
+4. **Buttons (wichtig für Rückgabewerte):**
+   - Button 1: `Normal` → gibt **0** zurück
+   - Button 2: `Hero` → gibt **1** zurück
+   - Button 3: `God Mode` → gibt **2** zurück
+   - Button 4: `Cancel` → gibt **3** zurück
 5. **OK**
 
 ### 5.3 Message 2: Skill Focus
@@ -127,21 +123,15 @@
 2. Name: "Distribute Your Potential"
 3. Message Text:
    ```
-   How do you wish to focus your abilities?
-
-   [All Equal] - 100 in every skill
-   [Warrior] - Combat skills focused
-   [Mage] - Magic skills focused
-   [Thief] - Stealth skills focused
-   [Custom] - Configure later
+   Choose your skill focus
    ```
-4. Buttons:
-   - Button 1: `All Equal`
-   - Button 2: `Warrior`
-   - Button 3: `Mage`
-   - Button 4: `Thief`
-   - Button 5: `Custom`
-   - Button 6: `Cancel`
+4. **Buttons:**
+   - Button 1: `All Equal` → gibt **0** zurück
+   - Button 2: `Warrior` → gibt **1** zurück
+   - Button 3: `Mage` → gibt **2** zurück
+   - Button 4: `Thief` → gibt **3** zurück
+   - Button 5: `Custom` → gibt **4** zurück
+   - Button 6: `Cancel` → gibt **5** zurück
 5. **OK**
 
 ### 5.4 Message 3: Equipment
@@ -150,19 +140,26 @@
 2. Name: "Choose Your Equipment"
 3. Message Text:
    ```
-   What gear do you bring to this world?
+   Choose your starting equipment
+   ```
+4. **Buttons:**
+   - Button 1: `Humble` → gibt **0** zurück
+   - Button 2: `Adventurer` → gibt **1** zurück
+   - Button 3: `Hero` → gibt **2** zurück
+   - Button 4: `None` → gibt **3** zurück
+   - Button 5: `Cancel` → gibt **4** zurück
+5. **OK**
 
-   [Humble] - Iron armor, basic supplies
-   [Adventurer] - Steel gear, potions, gold
-   [Hero] - Legendary items
-   [None] - Pure skill only
+### 5.5 Message 4: Confirmation (Optional)
+
+1. ID: `IsekaiMsg_Confirmation`
+2. Name: "Isekai Confirmation"
+3. Message Text:
+   ```
+   Your choices have been applied.
    ```
 4. Buttons:
-   - Button 1: `Humble`
-   - Button 2: `Adventurer`
-   - Button 3: `Hero`
-   - Button 4: `None`
-   - Button 5: `Cancel`
+   - Button 1: `OK`
 5. **OK**
 
 ---
@@ -200,6 +197,25 @@
    - Oder dein Mod-Organizer-Profil
 4. Starte Skyrim SE mit aktiviertem Mod
 5. Neues Spiel starten → Testen!
+
+---
+
+## 9. UIExtensions Integration (Optional)
+
+Für ein verbessertes Erlebnis kannst du **UIExtensions** installieren:
+
+### Was verbessert sich?
+- Schönere Listen-Menüs statt MessageBoxen
+- Bessere Tastatur-Navigation
+- Beschreibungen zu jedem Eintrag
+
+### Installation
+1. Lade [UIExtensions](https://www.nexusmods.com/skyrimspecialedition/mods/17561) herunter
+2. Installiere mit deinem Mod Manager
+3. Das Skript erkennt UIExtensions automatisch
+
+### Ohne UIExtensions
+Der Mod funktioniert komplett ohne UIExtensions — dann werden die Standard-Message Forms verwendet.
 
 ---
 
