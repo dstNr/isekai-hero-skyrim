@@ -1,6 +1,7 @@
 ; IsekaiIntroQuest.psc
 ; Main quest script for Isekai Hero mod
 ; "The System has chosen you. Your new life begins."
+; Compatible with: Vanilla Start, Alternate Start, LAL, and other start mods
 
 Scriptname IsekaiIntroQuest extends Quest
 
@@ -12,12 +13,12 @@ IsekaiDialogScript Property DialogScript Auto
 IsekaiPowerScript Property PowerScript Auto
 
 ; ============================================
-; QUEST STAGES (Updated with World Selection)
+; QUEST STAGES
 ; ============================================
 
 Int Property STAGE_WAIT_FOR_SPAWN = 10 AutoReadOnly
 Int Property STAGE_SYSTEM_BOOT = 20 AutoReadOnly
-Int Property STAGE_WORLD_SELECT = 25 AutoReadOnly ; NEW!
+Int Property STAGE_WORLD_SELECT = 25 AutoReadOnly
 Int Property STAGE_POWER_CHOICE = 30 AutoReadOnly
 Int Property STAGE_SKILL_FOCUS = 40 AutoReadOnly
 Int Property STAGE_EQUIPMENT = 50 AutoReadOnly
@@ -25,45 +26,144 @@ Int Property STAGE_APPLY = 60 AutoReadOnly
 Int Property STAGE_COMPLETE = 100 AutoReadOnly
 
 ; ============================================
-; PLAYER CHOICES (Stored by the System)
+; PLAYER CHOICES
 ; ============================================
 
-Int Property ChosenPowerLevel = 0 Auto Hidden ; 0=Normal, 1=Hero, 2=God
+Int Property ChosenPowerLevel = 0 Auto Hidden ; 0=Normal, 1=Hero, 2=Ascended
 Int Property ChosenSkillFocus = 0 Auto Hidden ; 0=Equal, 1=Warrior, 2=Mage, 3=Thief
 Int Property ChosenEquipment = 0 Auto Hidden ; 0=Humble, 1=Adventurer, 2=Hero, 3=None
+
+; ============================================
+; START MOD DETECTION
+; ============================================
+
+Bool Property AlternateStartInstalled Auto Hidden
+Bool Property LALInstalled Auto Hidden
 
 ; ============================================
 ; SYSTEM INITIALIZATION
 ; ============================================
 
 Event OnInit()
-    Debug.Notification("[SYSTEM] Scanning for soul signature...")
-    RegisterForSingleUpdate(3.0)
+    Debug.Notification("[SYSTEM] Initializing...")
+    CheckStartMods()
+    RegisterForSingleUpdate(5.0)
 EndEvent
 
+Function CheckStartMods()
+    ; Detect popular start mods
+    AlternateStartInstalled = Game.IsPluginInstalled("AlternateStart.esp")
+    LALInstalled = Game.IsPluginInstalled("Alternate Start - Live Another Life.esp")
+    
+    If LALInstalled
+        Debug.Notification("[SYSTEM] Detected: Live Another Life")
+    ElseIf AlternateStartInstalled
+        Debug.Notification("[SYSTEM] Detected: Alternate Start")
+    Else
+        Debug.Notification("[SYSTEM] Standard start detected")
+    EndIf
+EndFunction
+
+; ============================================
+; SMART TRIGGER SYSTEM
+; ============================================
+
 Event OnUpdate()
-    If IsPlayerSpawned()
-        Debug.Notification("[SYSTEM] Soul detected in Nirn.")
+    If IsReadyForAwakening()
+        Debug.Notification("[SYSTEM] Soul stabilized. Initiating contact...")
+        Utility.Wait(2.0)
         SetStage(STAGE_SYSTEM_BOOT)
     Else
+        ; Check again in a few seconds
         RegisterForSingleUpdate(3.0)
     EndIf
 EndEvent
 
-Bool Function IsPlayerSpawned()
-    Worldspace currentWorld = Game.GetPlayer().GetWorldspace()
-    Return currentWorld != None
+; Check if player is truly ready (not in character creation, not imprisoned)
+Bool Function IsReadyForAwakening()
+    Actor player = Game.GetPlayer()
+    
+    ; Basic checks
+    If !player
+        Return False
+    EndIf
+    
+    ; Check if we're in a valid worldspace
+    Worldspace currentWorld = player.GetWorldspace()
+    If !currentWorld
+        Return False
+    EndIf
+    
+    ; Check if player is in character creation/prison
+    ; These worlds/locations indicate "not ready yet"
+    String worldName = currentWorld.GetName()
+    
+    ; Blocked worlds (character creation, prison, etc.)
+    If worldName == ""
+        Return False
+    EndIf
+    
+    ; Check if player can move (not in cutscene)
+    If player.IsInScene()
+        Return False
+    EndIf
+    
+    ; Check if player has control (not in menu/dialog)
+    If UI.IsMenuOpen("Dialogue Menu") || UI.IsMenuOpen("RaceSex Menu")
+        Return False
+    EndIf
+    
+    ; Special check: Is player in "chargen" mode?
+    ; This is true during character creation
+    If IsInChargenArea(player)
+        Return False
+    EndIf
+    
+    ; All checks passed - player is ready
+    Return True
+EndFunction
+
+; Check if player is still in character generation
+Bool Function IsInChargenArea(Actor player)
+    ; Check common chargen cells/worldspaces
+    Location currentLoc = player.GetCurrentLocation()
+    
+    If currentLoc
+        String locName = currentLoc.GetName()
+        
+        ; Common chargen location names
+        If StringUtil.Find(locName, "Prison") >= 0 || \
+           StringUtil.Find(locName, "Chargen") >= 0 || \
+           StringUtil.Find(locName, "CharGen") >= 0 || \
+           StringUtil.Find(locName, "Prisoner") >= 0 || \
+           StringUtil.Find(locName, "Cell") >= 0
+            Return True
+        EndIf
+    EndIf
+    
+    ; Check worldspace
+    Worldspace currentWorld = player.GetWorldspace()
+    If currentWorld
+        String worldName = currentWorld.GetName()
+        
+        ; Helgen Keep is the vanilla prison
+        If worldName == "HelgenKeep" || worldName == ""
+            Return True
+        EndIf
+    EndIf
+    
+    Return False
 EndFunction
 
 ; ============================================
 ; SYSTEM BOOT SEQUENCE
 ; ============================================
 
-; Stage 20: The System awakens
 Function TriggerAwakening()
+    ; Pause game for dramatic effect (but allow UI)
     Game.SetInChargen(True, True, True)
     
-    ; Activate the System - now includes world selection!
+    ; Activate the System
     If DialogScript
         DialogScript.ActivateSystem()
     Else
@@ -75,42 +175,35 @@ EndFunction
 ; Called from DialogScript after world selection
 Function OnWorldSelected(Int worldIdx)
     SetStage(STAGE_WORLD_SELECT)
-    ; World selection handled in DialogScript, continues to welcome
 EndFunction
 
 ; ============================================
 ; SYSTEM SEQUENCES
 ; ============================================
 
-; Called from DialogScript after system welcome
 Function ShowPowerChoice()
     SetStage(STAGE_POWER_CHOICE)
     DialogScript.ShowPowerChoice()
 EndFunction
 
-; Called when power level is selected
 Function OnPowerChosen(Int powerLevel)
     ChosenPowerLevel = powerLevel
     
     If powerLevel == 0
-        ; Normal mode - skip to completion
         Debug.Notification("[SYSTEM] Standard reincarnation selected.")
         SkipToCompletion()
     Else
-        ; Hero/Ascended mode - continue with customization
         SetStage(STAGE_SKILL_FOCUS)
         DialogScript.ShowSkillFocus()
     EndIf
 EndFunction
 
-; Called when skill focus is selected
 Function OnSkillFocusChosen(Int focus)
     ChosenSkillFocus = focus
     SetStage(STAGE_EQUIPMENT)
     DialogScript.ShowEquipment()
 EndFunction
 
-; Called when equipment is selected
 Function OnEquipmentChosen(Int equipment)
     ChosenEquipment = equipment
     SetStage(STAGE_APPLY)
@@ -122,28 +215,25 @@ EndFunction
 ; ============================================
 
 Function ApplyChoices()
+    ; Release chargen lock
     Game.SetInChargen(False, False, False)
     
     If ChosenPowerLevel == 0
-        ; Normal mode
         Debug.Notification("[SYSTEM] Standard mode confirmed.")
         Debug.Notification("[SYSTEM] May your journey be challenging.")
     Else
-        ; Apply the System's blessings
         PowerScript.ApplyPowerLevel(ChosenPowerLevel, ChosenSkillFocus)
         PowerScript.GiveEquipment(ChosenEquipment)
         
-        ; System confirmation
         If ChosenPowerLevel == 2
-            Debug.Notification("[SYSTEM] ⚠ GOD MODE ACTIVATED")
-            Debug.Notification("[SYSTEM] The world trembles before you...")
+            Debug.Notification("[SYSTEM] ⚠ ASCENDED STATUS ACHIEVED")
+            Debug.Notification("[SYSTEM] You have transcended mortal limits...")
         Else
             Debug.Notification("[SYSTEM] ✓ HERO MODE ACTIVATED")
             Debug.Notification("[SYSTEM] Your legend begins.")
         EndIf
     EndIf
     
-    ; Show completion summary
     SetStage(STAGE_COMPLETE)
     ShowSystemCompletion()
 EndFunction
@@ -154,10 +244,12 @@ Function ShowSystemCompletion()
     EndIf
 EndFunction
 
-; Skip customization for Normal mode
+; ============================================
+; NORMAL MODE SKIP
+; ============================================
+
 Function SkipToCompletion()
     SetStage(STAGE_COMPLETE)
-    
     Game.SetInChargen(False, False, False)
     
     String normalText = "═══════════════════════════════════════\n\n"
@@ -168,44 +260,46 @@ Function SkipToCompletion()
     normalText += "═══════════════════════════════════════"
     
     Debug.MessageBox(normalText)
-    
     Debug.Notification("[SYSTEM] Reincarnation complete.")
 EndFunction
 
 ; ============================================
-; SYSTEM RESPEC (For MCM)
+; SYSTEM RESPEC
 ; ============================================
 
 Function RespecCharacter()
     Debug.Notification("[SYSTEM] Reinitializing...")
     
-    ; Reset choices
     ChosenPowerLevel = 0
     ChosenSkillFocus = 0
     ChosenEquipment = 0
     
-    ; Restart the sequence
     SetStage(STAGE_SYSTEM_BOOT)
     TriggerAwakening()
 EndFunction
 
 ; ============================================
-; UTILITY FUNCTIONS
+; UTILITY
 ; ============================================
 
-; Get current power level name
 String Function GetCurrentPowerName()
     If ChosenPowerLevel == 0
         Return "NORMAL"
     ElseIf ChosenPowerLevel == 1
         Return "HERO"
     ElseIf ChosenPowerLevel == 2
-        Return "GOD MODE"
+        Return "ASCENDED"
     EndIf
     Return "UNKNOWN"
 EndFunction
 
-; Check if System is active
 Bool Function IsSystemActive()
     Return GetStage() >= STAGE_COMPLETE
+EndFunction
+
+; Manual trigger (for debug or MCM)
+Function ForceTrigger()
+    Debug.Notification("[SYSTEM] Manual activation initiated...")
+    Utility.Wait(1.0)
+    TriggerAwakening()
 EndFunction
