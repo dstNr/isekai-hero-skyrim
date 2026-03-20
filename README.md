@@ -45,6 +45,12 @@ Each origin grants unique flavor text and minor bonuses!
 - **Hero** - Daedric items, ultimate potions, 2000 gold
 - **None** - Pure skill only (hard mode)
 
+### 💰 Wealth Levels (NEW!)
+- **Modest** - 1,000 gold — A humble merchant's savings
+- **Wealthy** - 10,000 gold — A successful adventurer's hoard
+- **Noble** - 50,000 gold — A minor lord's fortune
+- **Merchant Prince** - 100,000 gold + rare gems — Wealth beyond measure!
+
 ### 🎮 System Interface
 - Dramatic boot sequence with soul detection
 - ASCII-style System headers (`╔═══ 「 SYSTEM 」 ═══╗`)
@@ -128,6 +134,7 @@ See **[CREATION_KIT_GUIDE.md](CREATION_KIT_GUIDE.md)** for step-by-step instruct
 - `IsekaiMsg_PowerChoice` - Power level selection
 - `IsekaiMsg_SkillFocus` - Skill distribution
 - `IsekaiMsg_EquipmentChoice` - Starting gear
+- `IsekaiMsg_WealthChoice` - Starting wealth (NEW!)
 - `IsekaiMsg_SystemComplete` - Completion summary
 
 ---

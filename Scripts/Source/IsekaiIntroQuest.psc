@@ -22,6 +22,7 @@ Int Property STAGE_WORLD_SELECT = 25 AutoReadOnly
 Int Property STAGE_POWER_CHOICE = 30 AutoReadOnly
 Int Property STAGE_SKILL_FOCUS = 40 AutoReadOnly
 Int Property STAGE_EQUIPMENT = 50 AutoReadOnly
+Int Property STAGE_WEALTH = 55 AutoReadOnly
 Int Property STAGE_APPLY = 60 AutoReadOnly
 Int Property STAGE_COMPLETE = 100 AutoReadOnly
 
@@ -32,6 +33,7 @@ Int Property STAGE_COMPLETE = 100 AutoReadOnly
 Int Property ChosenPowerLevel = 0 Auto Hidden ; 0=Normal, 1=Hero, 2=Ascended
 Int Property ChosenSkillFocus = 0 Auto Hidden ; 0=Equal, 1=Warrior, 2=Mage, 3=Thief
 Int Property ChosenEquipment = 0 Auto Hidden ; 0=Humble, 1=Adventurer, 2=Hero, 3=None
+Int Property ChosenWealth = 0 Auto Hidden ; 0=Modest, 1=Wealthy, 2=Noble, 3=MerchantPrince
 
 ; ============================================
 ; START MOD DETECTION
@@ -206,6 +208,12 @@ EndFunction
 
 Function OnEquipmentChosen(Int equipment)
     ChosenEquipment = equipment
+    SetStage(STAGE_WEALTH)
+    DialogScript.ShowWealthChoice()
+EndFunction
+
+Function OnWealthChosen(Int wealth)
+    ChosenWealth = wealth
     SetStage(STAGE_APPLY)
     ApplyChoices()
 EndFunction
@@ -224,6 +232,7 @@ Function ApplyChoices()
     Else
         PowerScript.ApplyPowerLevel(ChosenPowerLevel, ChosenSkillFocus)
         PowerScript.GiveEquipment(ChosenEquipment)
+        PowerScript.GiveWealth(ChosenWealth)
         
         If ChosenPowerLevel == 2
             Debug.Notification("[SYSTEM] ⚠ ASCENDED STATUS ACHIEVED")

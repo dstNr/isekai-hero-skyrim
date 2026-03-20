@@ -152,6 +152,29 @@ Function GiveEquipment(Int choice)
     EndIf
 EndFunction
 
+; Give wealth based on choice
+Function GiveWealth(Int choice)
+    Actor player = Game.GetPlayer()
+    
+    If choice == 0
+        ; Modest - 1,000 gold
+        player.AddItem(Game.GetForm(0x0000000F), 1000)
+    ElseIf choice == 1
+        ; Wealthy - 10,000 gold
+        player.AddItem(Game.GetForm(0x0000000F), 10000)
+    ElseIf choice == 2
+        ; Noble - 50,000 gold
+        player.AddItem(Game.GetForm(0x0000000F), 50000)
+    ElseIf choice == 3
+        ; Merchant Prince - 100,000 gold
+        player.AddItem(Game.GetForm(0x0000000F), 100000)
+        ; Bonus: Rare gems for the truly wealthy
+        player.AddItem(Game.GetForm(0x0006851E), 10) ; Flawless Diamond
+        player.AddItem(Game.GetForm(0x0006851F), 10) ; Flawless Ruby
+        player.AddItem(Game.GetForm(0x00068520), 10) ; Flawless Sapphire
+    EndIf
+EndFunction
+
 ; Give humble equipment
 Function GiveHumbleGear(Actor player)
     ; Iron armor set

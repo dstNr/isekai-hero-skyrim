@@ -17,6 +17,7 @@ Message Property IsekaiMsg_StatusWindow Auto
 Message Property IsekaiMsg_PowerChoice Auto
 Message Property IsekaiMsg_SkillFocus Auto  
 Message Property IsekaiMsg_EquipmentChoice Auto
+Message Property IsekaiMsg_WealthChoice Auto
 Message Property IsekaiMsg_SystemComplete Auto
 Message Property IsekaiMsg_WorldSelect Auto
 
@@ -456,6 +457,88 @@ Function ShowEquipment()
     EndIf
 EndFunction
 
+; ============================================
+; WEALTH SELECTION (NEW!)
+; ============================================
+
+Function ShowWealthChoice()
+    Int result
+    
+    Debug.Notification("[SYSTEM] Accessing dimensional treasury...")
+    Utility.Wait(0.5)
+    
+    If UIExtensionsInstalled
+        result = ShowWealth_SystemStyle()
+    Else
+        result = ShowWealth_Vanilla()
+    EndIf
+    
+    If result == 4 || result == -1
+        Debug.Notification("[SYSTEM] Modest wealth selected")
+        MainQuest.OnWealthChosen(0)
+    Else
+        String wealthName = GetWealthName(result)
+        Debug.Notification("[SYSTEM] " + wealthName + " wealth granted")
+        MainQuest.OnWealthChosen(result)
+    EndIf
+EndFunction
+
+Int Function ShowWealth_Vanilla()
+    If IsekaiMsg_WealthChoice
+        Return IsekaiMsg_WealthChoice.Show()
+    Else
+        String text = BuildSystemHeader("WEALTH ALLOCATION") + "\n\n"
+        text += "Choose your starting fortune:\n\n"
+        text += "[1] MODEST - 1,000 gold\n"
+        text += "    A humble merchant's savings\n\n"
+        text += "[2] WEALTHY - 10,000 gold\n"
+        text += "    A successful adventurer's hoard\n\n"
+        text += "[3] NOBLE - 50,000 gold\n"
+        text += "    A minor lord's fortune\n\n"
+        text += "[4] MERCHANT PRINCE - 100,000 gold\n"
+        text += "    ⚠ Wealth beyond measure!\n\n"
+        text += "[5] BACK\n\n"
+        text += BuildSystemFooter()
+        
+        Debug.MessageBox(text)
+        Return 0
+    EndIf
+EndFunction
+
+Int Function ShowWealth_SystemStyle()
+    String title = "═══ SYSTEM: WEALTH ═══"
+    String desc = "Select your dimensional treasury:"
+    
+    String[] options = new String[5]
+    options[0] = "MODEST"
+    options[1] = "WEALTHY"
+    options[2] = "NOBLE"
+    options[3] = "MERCHANT PRINCE"
+    options[4] = "BACK"
+    
+    String[] details = new String[5]
+    details[0] = "1,000 gold"
+    details[1] = "10,000 gold"
+    details[2] = "50,000 gold"
+    details[3] = "⚠ 100,000 gold"
+    details[4] = "Return"
+    
+    Return ShowSystemMenu(title, desc, options, details, 0)
+EndFunction
+
+String Function GetWealthName(Int wealth)
+    If wealth == 0
+        Return "MODEST"
+    ElseIf wealth == 1
+        Return "WEALTHY"
+    ElseIf wealth == 2
+        Return "NOBLE"
+    ElseIf wealth == 3
+        Return "MERCHANT PRINCE"
+    EndIf
+    Return "UNKNOWN"
+EndFunction
+
 Int Function ShowEquipment_Vanilla()
     If IsekaiMsg_EquipmentChoice
         Return IsekaiMsg_EquipmentChoice.Show()
@@ -505,7 +588,8 @@ Function ShowSystemComplete(Int powerLevel, Int skillFocus, Int equipment)
     completionText += "Origin: " + PreviousWorld + "\n"
     completionText += "Power: " + GetPowerLevelName(powerLevel) + "\n"
     completionText += "Expertise: " + GetSkillFocusName(skillFocus) + "\n"
-    completionText += "Equipment: " + GetEquipmentName(equipment) + "\n\n"
+    completionText += "Equipment: " + GetEquipmentName(equipment) + "\n"
+    completionText += "Wealth: " + GetWealthName(MainQuest.ChosenWealth) + "\n\n"
     
     If powerLevel == 2
         completionText += "⚠⚠⚠ ASCENDED STATUS ACTIVE ⚠⚠⚠\n"

@@ -73,6 +73,10 @@
    - Index: `50`
    - Log Entry: "Choose equipment"
    
+   Stage 55:
+   - Index: `55`
+   - Log Entry: "Choose wealth level"
+   
    Stage 60:
    - Index: `60`
    - Log Entry: "Your destiny is sealed"
@@ -161,7 +165,20 @@
    - Button 5: `BACK` → **4**
 5. **OK**
 
-### 5.6 Message 5: System Complete (Optional)
+### 5.6 Message 5: Wealth Choice (WICHTIG - NEU!)
+
+1. ID: `IsekaiMsg_WealthChoice`
+2. Name: "Wealth Allocation"
+3. Message Text: `[SYSTEM] Select starting wealth`
+4. **Buttons:**
+   - Button 1: `MODEST` → **0** (1,000 gold)
+   - Button 2: `WEALTHY` → **1** (10,000 gold)
+   - Button 3: `NOBLE` → **2** (50,000 gold)
+   - Button 4: `MERCHANT PRINCE` → **3** (100,000 gold + gems)
+   - Button 5: `BACK` → **4**
+5. **OK**
+
+### 5.7 Message 6: System Complete (Optional)
 
 1. ID: `IsekaiMsg_SystemComplete`
 2. Name: "Reincarnation Complete"
