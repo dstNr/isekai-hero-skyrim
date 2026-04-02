@@ -29,7 +29,7 @@ Sound Property MAGPowerAttackOrc Auto ; Power surge
 Sound Property MAGIllusionNightEyeAuto Auto ; Aura activate
 
 ; Visual effects
-Explosion Property FXDragonDeath seq Auto ; God Mode arrival
+Explosion Property FXDragonDeath Auto ; God Mode arrival
 ActiveMagicEffect Property AbFXShock Auto ; Electric aura
 
 ; ============================================

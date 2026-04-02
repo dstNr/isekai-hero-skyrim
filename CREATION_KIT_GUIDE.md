@@ -224,7 +224,25 @@
 
 ---
 
-## 9. UIExtensions Integration (Optional)
+## ⚠️ WICHTIG: Skyrim Unbound / N.Y.A Modlist
+
+Falls du den Mod mit **N.Y.A Modlist** nutzen willst:
+
+1. **"Start Game Enabled"** → ⚠️ kann mit Skyrim Unbound kollidieren!
+2. Stattdessen: Quest startet automatisch nach ~5 Sekunden wenn Spieler Kontrolle hat
+3. Skyrim Unbound wird automatisch erkannt via `Game.IsPluginInstalled("SkyrimUnbound.esp")`
+
+**Empfehlung für N.Y.A:**
+- "Start Game Enabled" auf der Quest aktiviert lassen (funktioniert meist)
+- Wenn Konflikte auftreten → "Start Game Enabled" deaktivieren
+- Der Mod triggert dann trotzdem via `OnUpdate()` Check
+
+### Properties in Quest `IsekaiIntroQuest`:
+- `SkyrimUnboundInstalled` → `SkyrimUnbound.esp` (boolean check)
+- `AlternateStartInstalled` → `AlternateStart.esp`
+- `LALInstalled` → `Alternate Start - Live Another Life.esp`
+
+Der Mod zeigt automatisch die richtige Notification je nach erkannter Start-Mod.
 
 Für ein verbessertes Erlebnis kannst du **UIExtensions** installieren:
 

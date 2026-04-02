@@ -1,7 +1,7 @@
 ; IsekaiIntroQuest.psc
 ; Main quest script for Isekai Hero mod
 ; "The System has chosen you. Your new life begins."
-; Compatible with: Vanilla Start, Alternate Start, LAL, and other start mods
+; Compatible with: Vanilla, Skyrim Unbound, Alternate Start, LAL, N.Y.A Modlist
 
 Scriptname IsekaiIntroQuest extends Quest
 
@@ -41,6 +41,7 @@ Int Property ChosenWealth = 0 Auto Hidden ; 0=Modest, 1=Wealthy, 2=Noble, 3=Merc
 
 Bool Property AlternateStartInstalled Auto Hidden
 Bool Property LALInstalled Auto Hidden
+Bool Property SkyrimUnboundInstalled Auto Hidden
 
 ; ============================================
 ; SYSTEM INITIALIZATION
@@ -56,8 +57,11 @@ Function CheckStartMods()
     ; Detect popular start mods
     AlternateStartInstalled = Game.IsPluginInstalled("AlternateStart.esp")
     LALInstalled = Game.IsPluginInstalled("Alternate Start - Live Another Life.esp")
+    SkyrimUnboundInstalled = Game.IsPluginInstalled("SkyrimUnbound.esp")
     
-    If LALInstalled
+    If SkyrimUnboundInstalled
+        Debug.Notification("[SYSTEM] Detected: Skyrim Unbound")
+    ElseIf LALInstalled
         Debug.Notification("[SYSTEM] Detected: Live Another Life")
     ElseIf AlternateStartInstalled
         Debug.Notification("[SYSTEM] Detected: Alternate Start")

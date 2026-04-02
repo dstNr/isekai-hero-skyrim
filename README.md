@@ -113,8 +113,9 @@ Your choices are applied and you begin as a true Isekai hero!
 | Mod | Status | Notes |
 |-----|--------|-------|
 | Vanilla Start | ✅ Compatible | Works out of the box |
-| Alternate Start | ✅ Compatible | Auto-detected, triggers after start scenario |
-| Live Another Life | ✅ Compatible | Auto-detected, triggers after start scenario |
+| Alternate Start | ✅ Compatible | Auto-detected |
+| Live Another Life | ✅ Compatible | Auto-detected |
+| **Skyrim Unbound** | ✅ Compatible | **N.Y.A Modlist support! Auto-detected** |
 | SkyUI | ✅ Compatible | Required for MCM |
 | UIExtensions | ✅ Compatible | Optional, enhances menus |
 
