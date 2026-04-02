@@ -22,13 +22,17 @@
 
 ---
 
-## 3. Als ESL Flaggen (wichtig!)
+## 3. Als ESL Flaggen (optional aber empfohlen)
 
-1. **File → Data...** erneut öffnen
-2. **IsekaiHero.esp** auswählen → **Set as Active**
-3. Rechtsklick auf **IsekaiHero.esp**
-4. **Light (ESL)** ankreuzen
-5. **OK**
+> ESL ermöglicht dem Mod in große Modlisten (wie N.Y.A) zu funktionieren ohne den 255 Plugin-Limit zu erreichen.
+
+1. **File → Compact Active File Form IDs** klicken (Form IDs für ESL umnummerieren)
+2. **File → Convert Active File to Light Master** klicken
+3. **File → Save**
+
+⚠️ **Wichtig:** Max. 4096 neue Records pro ESL. Für unseren Mod reicht das locker.
+
+⚠️ **Falls ESL-Probleme auftreten:** Überspringe diesen Schritt — der Mod funktioniert auch ohne ESL!
 
 ---
 

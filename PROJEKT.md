@@ -40,7 +40,10 @@ isekai-hero-skyrim/
 
 - [ ] **CK öffnen** → Skyrim.esm als Master laden
 - [ ] **Neues Plugin erstellen** → `IsekaiHero.esp`
-- [ ] **ESL flaggen** → Als Light ESL markieren
+- [ ] **ESL flaggen** (optional):
+  1. **File → Compact Active File Form IDs**
+  2. **File → Convert Active File to Light Master**
+  3. **File → Save**
 - [ ] **Quest erstellen** → `IsekaiIntroQuest` (ID: `IsekaiIntroQuest`)
   - [ ] Start Game Enabled ✓
   - [ ] Alle Stages (10, 20, 25, 30, 40, 50, 55, 60, 100)
