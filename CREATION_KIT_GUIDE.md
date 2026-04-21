@@ -1,291 +1,357 @@
-# Creation Kit Setup Guide — Isekai Hero
+# Isekai Hero - Creation Kit Guide
 
-**Voraussetzung:** Du führst die Schritte in Creation Kit aus, ich beschreibe sie.
+This guide walks you through setting up the Isekai Hero mod in the Creation Kit.
 
----
+## Prerequisites
 
-## 1. Creation Kit Starten
-
-1. Steam → Bibliothek → Tools
-2. "Skyrim Special Edition Creation Kit" installieren/starten
-3. Warte bis geladen (kann ein paar Minuten dauern)
+- Skyrim Special Edition Creation Kit (Steam: Tools > Creation Kit)
+- Basic familiarity with the Creation Kit interface
 
 ---
 
-## 2. Neues Plugin Erstellen
+## Step 1: Create the Plugin
 
-1. **File → Data...**
-2. Warte bis "Master Files" geladen sind
-3. **Skyrim.esm** auswählen → **Set as Active**
-4. Klicke **OK** (lädt jetzt, dauert lange)
-5. **File → Save** → Speichere als: `IsekaiHero.esp`
-
----
-
-## 3. Als ESL Flaggen (optional aber empfohlen)
-
-> ESL ermöglicht dem Mod in große Modlisten (wie N.Y.A) zu funktionieren ohne den 255 Plugin-Limit zu erreichen.
-
-1. **File → Compact Active File Form IDs** klicken (Form IDs für ESL umnummerieren)
-2. **File → Convert Active File to Light Master** klicken
-3. **File → Save**
-
-⚠️ **Wichtig:** Max. 4096 neue Records pro ESL. Für unseren Mod reicht das locker.
-
-⚠️ **Falls ESL-Probleme auftreten:** Überspringe diesen Schritt — der Mod funktioniert auch ohne ESL!
+1. Open Creation Kit
+2. **File > Data...**
+3. Check **Skyrim.esm** (and Update.esm if you have it)
+4. Click **OK** and wait for loading
+5. **File > Save**
+6. Name: `IsekaiHero.esp`
+7. Click **Save**
 
 ---
 
-## 4. Quest Erstellen
+## Step 2: ESL Flag (Optional but Recommended)
 
-### 4.1 Quest-Record anlegen
+To make the mod ESL-flagged (doesn't count towards 255 plugin limit):
 
-1. **Character → Quest...**
-2. Rechtsklick → **New**
-3. ID: `IsekaiIntroQuest`
-4. Name: "Isekai Awakening"
-5. Priority: `50`
-6. **OK**
-
-### 4.2 Quest-Eigenschaften
-
-1. Doppelklick auf `IsekaiIntroQuest`
-2. Tab **Quest Data**:
-   - Type: `Miscellaneous`
-   - Start Game Enabled: ☑ **HÄKCHEN SETZEN** (wichtig!)
-   - Allow Repeated Stages: ☐
-3. Tab **Quest Stages**:
-   - Klicke **New** (mehrfach für Stages)
-   
-   Stage 10:
-   - Index: `10`
-   - Log Entry: "Waiting for player to spawn..."
-   
-   Stage 20:
-   - Index: `20`
-   - Log Entry: "The awakening begins..."
-   
-   Stage 30:
-   - Index: `30`
-   - Log Entry: "Choose your power level"
-   
-   Stage 40:
-   - Index: `40`
-   - Log Entry: "Choose skill focus"
-   
-   Stage 50:
-   - Index: `50`
-   - Log Entry: "Choose equipment"
-   
-   Stage 55:
-   - Index: `55`
-   - Log Entry: "Choose wealth level"
-   
-   Stage 60:
-   - Index: `60`
-   - Log Entry: "Your destiny is sealed"
-   
-   Stage 100:
-   - Index: `100`
-   - Log Entry: "Isekai awakening complete"
-   
-4. Tab **Scripts**:
-   - Klicke **Add**
-   - Name: `IsekaiIntroQuest`
-   - **OK**
-   - Klicke **Properties**
-   - **Add Property** für:
-     - `DialogScript` → Type: `IsekaiDialogScript`
-     - `PowerScript` → Type: `IsekaiPowerScript`
-   - **OK** → **OK**
+1. **File > Compact Active File Form IDs**
+2. **File > Convert Active File to Light Master**
+3. **File > Save**
 
 ---
 
-## 5. Message Forms Erstellen (Dialoge)
+## Step 3: Create the Main Quest
 
-**WICHTIG:** Diese Message Forms sind **zwingend erforderlich** — sie liefern die Button-Rückgabewerte für die Dialoge.
+1. In the Object Window, filter for `Quest`
+2. Right-click in the list > **New**
+3. Set the following:
+   - **ID**: `IsekaiIntroQuest`
+   - **Name**: Isekai Hero - System Awakening
+   - **Type**: None
+   - **Priority**: 50
+   - ☑ **Start Game Enabled**
+   - ☑ **Run Once**
 
-### 5.1 Message Kategorie öffnen
+4. Go to the **Scripts** tab
+5. Click **Add**
+6. Select `IsekaiIntroQuest` (you may need to compile scripts first)
+7. Click **Properties**
+8. Add the following properties:
+   - `DialogScript` → ObjectReference → `IsekaiDialogScript`
+   - `PowerScript` → ObjectReference → `IsekaiPowerScript`
+   - `ProgressionScript` → ObjectReference → `IsekaiProgressionScript`
+   - `PerkDefs` → ObjectReference → `IsekaiPerkDefinitions`
 
-1. **Miscellaneous → Message**
-2. Rechtsklick → **New**
-
-### 5.2 Message 1: World Selection (WICHTIG - NEU!)
-
-1. ID: `IsekaiMsg_WorldSelect`
-2. Name: "Dimensional Origin"
-3. Message Text: `[SYSTEM] Select origin world`
-4. **Buttons (Rückgabewerte):**
-   - Button 1: `EARTH` → **0**
-   - Button 2: `JAPAN` → **1**
-   - Button 3: `KOREA` → **2**
-   - Button 4: `FANTASY WORLD` → **3**
-   - Button 5: `SCI-FI FUTURE` → **4**
-   - Button 6: `APOCALYPTIC` → **5**
-5. **OK**
-
-1. ID: `IsekaiMsg_SystemWelcome`
-2. Name: "System Welcome"
-3. Message Text: `[SYSTEM] Initializing...`
-4. Button 1: `Continue`
-5. **OK**
-
-### 5.3 Message 2: Power Choice (WICHTIG)
-
-1. ID: `IsekaiMsg_PowerChoice`
-2. Name: "Status Allocation"
-3. Message Text: `[SYSTEM] Select blessing level`
-4. **Buttons (Rückgabewerte):**
-   - Button 1: `NORMAL` → **0**
-   - Button 2: `HERO` → **1**
-   - Button 3: `GOD MODE` → **2**
-   - Button 4: `DECLINE` → **3**
-5. **OK**
-
-### 5.4 Message 3: Skill Focus (WICHTIG)
-
-1. ID: `IsekaiMsg_SkillFocus`
-2. Name: "Skill Allocation"
-3. Message Text: `[SYSTEM] Select expertise`
-4. **Buttons:**
-   - Button 1: `BALANCED` → **0**
-   - Button 2: `WARRIOR` → **1**
-   - Button 3: `MAGE` → **2**
-   - Button 4: `THIEF` → **3**
-   - Button 5: `CUSTOM` → **4**
-   - Button 6: `BACK` → **5**
-5. **OK**
-
-### 5.5 Message 4: Equipment (WICHTIG)
-
-1. ID: `IsekaiMsg_EquipmentChoice`
-2. Name: "Equipment Summoning"
-3. Message Text: `[SYSTEM] Select equipment`
-4. **Buttons:**
-   - Button 1: `HUMBLE` → **0**
-   - Button 2: `ADVENTURER` → **1**
-   - Button 3: `HERO` → **2**
-   - Button 4: `NONE` → **3**
-   - Button 5: `BACK` → **4**
-5. **OK**
-
-### 5.6 Message 5: Wealth Choice (WICHTIG - NEU!)
-
-1. ID: `IsekaiMsg_WealthChoice`
-2. Name: "Wealth Allocation"
-3. Message Text: `[SYSTEM] Select starting wealth`
-4. **Buttons:**
-   - Button 1: `MODEST` → **0** (1,000 gold)
-   - Button 2: `WEALTHY` → **1** (10,000 gold)
-   - Button 3: `NOBLE` → **2** (50,000 gold)
-   - Button 4: `MERCHANT PRINCE` → **3** (100,000 gold + gems)
-   - Button 5: `BACK` → **4**
-5. **OK**
-
-### 5.7 Message 6: System Complete (Optional)
-
-1. ID: `IsekaiMsg_SystemComplete`
-2. Name: "Reincarnation Complete"
-3. Message Text: `[SYSTEM] Status applied`
-4. Button 1: `Acknowledge`
-5. **OK**
+9. Click **OK**
 
 ---
 
-## 6. FormLists für Equipment (optional)
+## Step 4: Create Quest Stages
 
-1. **Items → FormList**
-2. Rechtsklick → **New**
-3. Erstelle 3 Listen:
-   - `Isekai_Equipment_Humble`
-   - `Isekai_Equipment_Adventurer`
-   - `Isekai_Equipment_Hero`
-4. Füge Items hinzu (oder lass leer für jetzt)
+In the Quest window, go to **Quest Stages** tab:
 
----
-
-## 7. Scripts Kompilieren
-
-1. **Gameplay → Scripts → Compile**
-2. Finde `IsekaiIntroQuest.psc`
-3. **Compile**
-4. Wiederhole für:
-   - `IsekaiDialogScript.psc`
-   - `IsekaiPowerScript.psc`
-5. Prüfe auf Fehler (grün = OK, rot = Fehler)
+| Stage | Log Entry |
+|-------|-----------|
+| 10 | (No log entry - waiting for spawn) |
+| 20 | [SYSTEM] Boot sequence initiated |
+| 25 | [SYSTEM] Dimensional origin confirmed |
+| 30 | [SYSTEM] Power level selected |
+| 40 | [SYSTEM] Skill focus assigned |
+| 50 | [SYSTEM] Equipment summoned |
+| 55 | [SYSTEM] Wealth allocated |
+| 60 | [SYSTEM] Applying changes... |
+| 100 | [SYSTEM] Reincarnation complete |
 
 ---
 
-## 8. Speichern & Testen
+## Step 5: Create Message Forms
 
-1. **File → Save**
-2. Schließe Creation Kit
-3. Kopiere `IsekaiHero.esp` nach:
-   - `C:\Users\[NAME]\Documents\My Games\Skyrim Special Edition\Data\`
-   - Oder dein Mod-Organizer-Profil
-4. Starte Skyrim SE mit aktiviertem Mod
-5. Neues Spiel starten → Testen!
+These are the dialog boxes that appear during the Isekai sequence.
+
+### 1. IsekaiMsg_WorldSelect
+1. Object Window > filter `Message`
+2. Right-click > **New**
+3. **ID**: `IsekaiMsg_WorldSelect`
+4. **Name**: SYSTEM: Dimensional Origin
+5. **Message**: 
+   ```
+   From which world do you hail, Reincarnated One?
+   
+   [1] EARTH - Modern world, no magic
+   [2] JAPAN - Land of truck-kun incidents
+   [3] KOREA - Dungeons and hunters
+   [4] FANTASY WORLD - Swords and sorcery
+   [5] SCI-FI FUTURE - Advanced technology
+   [6] APOCALYPTIC - Survival and mutations
+   ```
+6. **Buttons** (one per line):
+   ```
+   Earth
+   Japan
+   Korea
+   Fantasy World
+   Sci-Fi Future
+   Apocalyptic
+   ```
+
+### 2. IsekaiMsg_PowerChoice
+- **ID**: `IsekaiMsg_PowerChoice`
+- **Name**: SYSTEM: Status Allocation
+- **Message**:
+  ```
+  Choose your reincarnation blessing:
+  
+  [1] NORMAL - No memories, native start
+  [2] HERO - Level 1 | Skills 100 | 50 Perks
+  [3] ASCENDED - Level 255 | Max Skills | 500 Perks
+  [4] DECLINE - Refuse the blessing
+  ```
+- **Buttons**:
+  ```
+  NORMAL
+  HERO
+  ASCENDED
+  DECLINE
+  ```
+
+### 3. IsekaiMsg_SkillFocus
+- **ID**: `IsekaiMsg_SkillFocus`
+- **Name**: SYSTEM: Skill Allocation
+- **Message**:
+  ```
+  Select your past life's expertise:
+  
+  [1] BALANCED - Equal mastery
+  [2] WARRIOR - Combat mastery
+  [3] MAGE - Arcane mastery
+  [4] THIEF - Shadow mastery
+  [5] CUSTOM - Configure later
+  [6] BACK
+  ```
+- **Buttons**:
+  ```
+  BALANCED
+  WARRIOR
+  MAGE
+  THIEF
+  CUSTOM
+  BACK
+  ```
+
+### 4. IsekaiMsg_EquipmentChoice
+- **ID**: `IsekaiMsg_EquipmentChoice`
+- **Name**: SYSTEM: Equipment Summoning
+- **Message**:
+  ```
+  Choose your starting gear:
+  
+  [1] HUMBLE - Iron gear, basic supplies
+  [2] ADVENTURER - Steel gear, potions
+  [3] HERO - Daedric items, ultimate potions
+  [4] NONE - Pure skill only
+  [5] BACK
+  ```
+- **Buttons**:
+  ```
+  HUMBLE
+  ADVENTURER
+  HERO
+  NONE
+  BACK
+  ```
+
+### 5. IsekaiMsg_WealthChoice
+- **ID**: `IsekaiMsg_WealthChoice`
+- **Name**: SYSTEM: Wealth Allocation
+- **Message**:
+  ```
+  Choose your starting fortune:
+  
+  [1] MODEST - 1,000 gold
+  [2] WEALTHY - 10,000 gold
+  [3] NOBLE - 50,000 gold
+  [4] MERCHANT PRINCE - 100,000 gold + gems
+  [5] BACK
+  ```
+- **Buttons**:
+  ```
+  MODEST
+  WEALTHY
+  NOBLE
+  MERCHANT PRINCE
+  BACK
+  ```
+
+### 6. IsekaiMsg_SystemComplete
+- **ID**: `IsekaiMsg_SystemComplete`
+- **Name**: SYSTEM: Reincarnation Complete
+- **Message**:
+  ```
+  ╔══════════════════════════════════════╗
+  ║     REINCARNATION COMPLETE!          ║
+  ╠══════════════════════════════════════╣
+  
+  Welcome to Nirn, Reincarnated One.
+  Your journey begins now.
+  
+  May your legend be written in the stars.
+  
+  ╚══════════════════════════════════════╝
+  ```
+- **Buttons**: `Continue`
 
 ---
 
-## ⚠️ WICHTIG: Skyrim Unbound / N.Y.A Modlist
+## Step 6: Create FormLists (v2.0)
 
-Falls du den Mod mit **N.Y.A Modlist** nutzen willst:
+These allow modders to customize equipment without editing scripts.
 
-1. **"Start Game Enabled"** → ⚠️ kann mit Skyrim Unbound kollidieren!
-2. Stattdessen: Quest startet automatisch nach ~5 Sekunden wenn Spieler Kontrolle hat
-3. Skyrim Unbound wird automatisch erkannt via `Game.IsPluginInstalled("SkyrimUnbound.esp")`
+1. Object Window > filter `FormList`
+2. Right-click > **New**
+3. Create the following FormLists:
 
-**Empfehlung für N.Y.A:**
-- "Start Game Enabled" auf der Quest aktiviert lassen (funktioniert meist)
-- Wenn Konflikte auftreten → "Start Game Enabled" deaktivieren
-- Der Mod triggert dann trotzdem via `OnUpdate()` Check
+### Weapon FormLists
+- **Isekai_Weapons_Humble** - Add: IronSword (00012E4E)
+- **Isekai_Weapons_Adventurer** - Add: SteelSword (0001398C)
+- **Isekai_Weapons_Hero** - Add: DaedricSword (000139B8)
 
-### Properties in Quest `IsekaiIntroQuest`:
-- `SkyrimUnboundInstalled` → `SkyrimUnbound.esp` (boolean check)
-- `AlternateStartInstalled` → `AlternateStart.esp`
-- `LALInstalled` → `Alternate Start - Live Another Life.esp`
+### Armor FormLists
+- **Isekai_Armor_Humble** - Add: IronArmor (00012E4D)
+- **Isekai_Armor_Adventurer** - Add: SteelArmor (00013958)
+- **Isekai_Armor_Hero** - Add: DaedricArmor (0001396A)
 
-Der Mod zeigt automatisch die richtige Notification je nach erkannter Start-Mod.
+### Potion FormLists
+- **Isekai_Potions_Health** - Add: PotionOfHealth (0003EADE), PotionOfUltimateHealth (00039BE5)
+- **Isekai_Potions_Magicka** - Add: PotionOfMagicka (0003EADA), PotionOfUltimateMagicka (00039BE7)
+- **Isekai_Potions_Stamina** - Add: PotionOfUltimateStamina (00039BE6)
 
-Für ein verbessertes Erlebnis kannst du **UIExtensions** installieren:
+### Misc FormLists
+- **Isekai_Gems_Rare** - Add: FlawlessDiamond (0006851E), FlawlessRuby (0006851F), FlawlessSapphire (00068520)
 
-### Was verbessert sich?
-- Schönere Listen-Menüs statt MessageBoxen
-- Bessere Tastatur-Navigation
-- Beschreibungen zu jedem Eintrag
+---
 
-### Installation
-1. Lade [UIExtensions](https://www.nexusmods.com/skyrimspecialedition/mods/17561) herunter
-2. Installiere mit deinem Mod Manager
-3. Das Skript erkennt UIExtensions automatisch
+## Step 7: Create Perks (v2.0)
 
-### Ohne UIExtensions
-Der Mod funktioniert komplett ohne UIExtensions — dann werden die Standard-Message Forms verwendet.
+1. Object Window > filter `Perk`
+2. Right-click > **New**
+3. Create the following perks:
+
+### Reincarnated Soul Branch
+| Perk ID | Name | Description |
+|---------|------|-------------|
+| Isekai_PastLifeMemories | Past Life Memories | +10% XP gain |
+| Isekai_QuickLearner | Quick Learner | +20% skill speed |
+| Isekai_Prodigy | Prodigy | +50% XP, skills faster |
+| Isekai_Transcendent | Transcendent Being | +100% XP, legendary |
+
+### Dimensional Knowledge Branch
+| Perk ID | Name | Description |
+|---------|------|-------------|
+| Isekai_OtherworldlyInsight | Otherworldly Insight | +20 Magicka |
+| Isekai_ArcaneUnderstanding | Arcane Understanding | +50 Magicka, +20% duration |
+| Isekai_DimensionalStorage | Dimensional Storage | +100 carry weight |
+| Isekai_RealityManipulation | Reality Manipulation | +150 Magicka, -25% cost |
+
+### System Protection Branch
+| Perk ID | Name | Description |
+|---------|------|-------------|
+| Isekai_SystemShield | System Shield | +20 Health, 5% resistance |
+| Isekai_PainSuppression | Pain Suppression | +50 Health, 10% resistance |
+| Isekai_Regeneration | Regeneration | +100% health regen |
+| Isekai_ImmortalVessel | Immortal Vessel | +200 Health, 25% resistance |
+
+### Ascended Exclusive
+| Perk ID | Name | Description |
+|---------|------|-------------|
+| Isekai_SystemAdmin | System Administrator | Ultimate power (requires Level 100) |
+
+For each perk:
+1. Set the **ID** and **Name**
+2. Add the description in the **Description** field
+3. Set **Level** requirements as needed
+4. Click **OK**
+
+---
+
+## Step 8: Create Additional Quests (v2.0)
+
+### IsekaiProgression Quest
+1. Create new Quest: `IsekaiProgression`
+2. ☑ **Start Game Enabled**
+3. Add Script: `IsekaiProgressionScript`
+4. Set priority: 45
+
+### IsekaiPerks Quest
+1. Create new Quest: `IsekaiPerks`
+2. ☑ **Start Game Enabled**
+3. Add Script: `IsekaiPerkDefinitions`
+4. Set priority: 45
+
+### IsekaiMCM Quest (for SkyUI)
+1. Create new Quest: `IsekaiMCM`
+2. ☑ **Start Game Enabled**
+3. Add Script: `IsekaiMCMScript`
+4. Set priority: 40
+
+---
+
+## Step 9: Compile Scripts
+
+1. **Gameplay > Compile Scripts** (or press F6)
+2. Select all Isekai scripts:
+   - IsekaiIntroQuest.psc
+   - IsekaiDialogScript.psc
+   - IsekaiPowerScript.psc
+   - IsekaiProgressionScript.psc
+   - IsekaiPerkDefinitions.psc
+   - IsekaiMCMScript.psc
+3. Click **Compile**
+4. Check for errors in the message window
+
+---
+
+## Step 10: Save and Test
+
+1. **File > Save**
+2. Copy `IsekaiHero.esp` to your Skyrim Data folder
+3. Copy compiled `.pex` files from `Data/Scripts/` to your mod folder
+4. Launch Skyrim and test!
 
 ---
 
 ## Troubleshooting
 
-### Quest startet nicht
-- Prüfe: "Start Game Enabled" ist angehakt?
-- Warte länger (mod kann nach Char-Erstellung einige Sekunden brauchen)
+### "Script not found" error
+- Make sure scripts are compiled
+- Check that script names match exactly
 
-### Scripts nicht gefunden
-- Scripts müssen im `Scripts` Ordner liegen
-- Kompilieren funktioniert? (Keine roten Fehler?)
+### Message boxes don't appear
+- Verify Message Form IDs match script properties
+- Check button indices (0, 1, 2...)
 
-### Dialoge nicht sichtbar
-- Message Forms korrekt erstellt?
-- ID-Namen stimmen mit Script überein?
-
----
-
-**Nächster Schritt nach dem Testen:**
-- Balancing (zu stark/schwach?)
-- MCM-Integration (optional)
-- Nexus-Release
+### Quest doesn't start
+- Ensure "Start Game Enabled" is checked
+- Check for script compilation errors
 
 ---
 
-*Bei Problemen: Screenshots vom Creation Kit schicken!*
+## Distribution
+
+When releasing the mod, include:
+- `IsekaiHero.esp`
+- `Scripts/Isekai*.pex` (compiled scripts)
+- `Scripts/Source/Isekai*.psc` (source scripts)
+- `Interface/IsekaiMCMConfig.json` (MCM config)
+- `README.md`
+- This guide

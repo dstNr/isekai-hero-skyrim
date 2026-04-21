@@ -1,5 +1,6 @@
 ; IsekaiIntroQuest.psc
 ; Main quest script for Isekai Hero mod
+; VERSION 2.0 - With Progression & Perks
 ; "The System has chosen you. Your new life begins."
 ; Compatible with: Vanilla, Skyrim Unbound, Alternate Start, LAL, N.Y.A Modlist
 
@@ -11,6 +12,9 @@ Scriptname IsekaiIntroQuest extends Quest
 
 IsekaiDialogScript Property DialogScript Auto
 IsekaiPowerScript Property PowerScript Auto
+IsekaiProgressionScript Property ProgressionScript Auto
+IsekaiPerkDefinitions Property PerkDefs Auto
+IsekaiMCMScript Property MCM Auto
 
 ; ============================================
 ; QUEST STAGES
@@ -238,6 +242,16 @@ Function ApplyChoices()
         PowerScript.GiveEquipment(ChosenEquipment)
         PowerScript.GiveWealth(ChosenWealth)
         
+        ; Grant Isekai perks based on choices
+        If PerkDefs
+            PerkDefs.GrantStartingPerks(Game.GetPlayer(), ChosenPowerLevel, ChosenSkillFocus)
+        EndIf
+        
+        ; Initialize progression system
+        If ProgressionScript
+            ProgressionScript.GrantStartingBonus(ChosenPowerLevel)
+        EndIf
+        
         If ChosenPowerLevel == 2
             Debug.Notification("[SYSTEM] ⚠ ASCENDED STATUS ACHIEVED")
             Debug.Notification("[SYSTEM] You have transcended mortal limits...")
@@ -283,9 +297,24 @@ EndFunction
 Function RespecCharacter()
     Debug.Notification("[SYSTEM] Reinitializing...")
     
+    Actor player = Game.GetPlayer()
+    
+    ; Reset choices
     ChosenPowerLevel = 0
     ChosenSkillFocus = 0
     ChosenEquipment = 0
+    ChosenWealth = 0
+    
+    ; Reset skills if PowerScript available
+    If PowerScript
+        PowerScript.ResetAllSkills(player)
+    EndIf
+    
+    ; Remove Isekai perks
+    If PerkDefs
+        ; This would need individual perk removal - simplified for now
+        Debug.Notification("[SYSTEM] Note: Remove perks manually or use console")
+    EndIf
     
     SetStage(STAGE_SYSTEM_BOOT)
     TriggerAwakening()
