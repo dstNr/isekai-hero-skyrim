@@ -32,15 +32,16 @@ Int Property TotalPerksEarned = 0 Auto Hidden
 ; ============================================
 ; SYSTEM MILESTONES
 ; ============================================
+;
+; Skyrim's Papyrus compiler does NOT support Structs (a Fallout 4 feature),
+; so milestones are stored as parallel arrays indexed 0..MILESTONE_COUNT-1.
 
-Struct Milestone
-    String Name
-    String Description
-    Int RewardPerks
-    Bool Completed
-EndStruct
+Int Property MILESTONE_COUNT = 10 AutoReadOnly
 
-Milestone[] Property Milestones Auto
+String[] Property MilestoneNames Auto Hidden
+String[] Property MilestoneDescriptions Auto Hidden
+Int[] Property MilestoneRewardPerks Auto Hidden
+Bool[] Property MilestoneCompleted Auto Hidden
 
 ; ============================================
 ; INITIALIZATION
@@ -52,91 +53,84 @@ Event OnInit()
 EndEvent
 
 Function InitializeMilestones()
-    Milestones = new Milestone[10]
-    
+    MilestoneNames = new String[10]
+    MilestoneDescriptions = new String[10]
+    MilestoneRewardPerks = new Int[10]
+    MilestoneCompleted = new Bool[10] ; defaults to False
+
     ; Milestone 0: First Steps
-    Milestones[0].Name = "First Steps"
-    Milestones[0].Description = "Begin your journey in Nirn"
-    Milestones[0].RewardPerks = 5
-    Milestones[0].Completed = False
-    
+    MilestoneNames[0] = "First Steps"
+    MilestoneDescriptions[0] = "Begin your journey in Nirn"
+    MilestoneRewardPerks[0] = 5
+
     ; Milestone 1: Word of Power
-    Milestones[1].Name = "Voice of the Dragonborn"
-    Milestones[1].Description = "Learn your first Word of Power"
-    Milestones[1].RewardPerks = 10
-    Milestones[1].Completed = False
-    
+    MilestoneNames[1] = "Voice of the Dragonborn"
+    MilestoneDescriptions[1] = "Learn your first Word of Power"
+    MilestoneRewardPerks[1] = 10
+
     ; Milestone 2: Dragon Slayer
-    Milestones[2].Name = "Dragon Slayer"
-    Milestones[2].Description = "Defeat your first Dragon"
-    Milestones[2].RewardPerks = 15
-    Milestones[2].Completed = False
-    
+    MilestoneNames[2] = "Dragon Slayer"
+    MilestoneDescriptions[2] = "Defeat your first Dragon"
+    MilestoneRewardPerks[2] = 15
+
     ; Milestone 3: Rising Power (Level 25)
-    Milestones[3].Name = "Rising Power"
-    Milestones[3].Description = "Reach Level 25"
-    Milestones[3].RewardPerks = 10
-    Milestones[3].Completed = False
-    
+    MilestoneNames[3] = "Rising Power"
+    MilestoneDescriptions[3] = "Reach Level 25"
+    MilestoneRewardPerks[3] = 10
+
     ; Milestone 4: Dungeon Delver
-    Milestones[4].Name = "Dungeon Delver"
-    Milestones[4].Description = "Clear 5 dungeons"
-    Milestones[4].RewardPerks = 10
-    Milestones[4].Completed = False
-    
+    MilestoneNames[4] = "Dungeon Delver"
+    MilestoneDescriptions[4] = "Clear 5 dungeons"
+    MilestoneRewardPerks[4] = 10
+
     ; Milestone 5: Faction Member
-    Milestones[5].Name = "Faction Initiate"
-    Milestones[5].Description = "Join a major faction"
-    Milestones[5].RewardPerks = 10
-    Milestones[5].Completed = False
-    
+    MilestoneNames[5] = "Faction Initiate"
+    MilestoneDescriptions[5] = "Join a major faction"
+    MilestoneRewardPerks[5] = 10
+
     ; Milestone 6: Adept (Level 50)
-    Milestones[6].Name = "Adept"
-    Milestones[6].Description = "Reach Level 50"
-    Milestones[6].RewardPerks = 20
-    Milestones[6].Completed = False
-    
+    MilestoneNames[6] = "Adept"
+    MilestoneDescriptions[6] = "Reach Level 50"
+    MilestoneRewardPerks[6] = 20
+
     ; Milestone 7: Dragonborn
-    Milestones[7].Name = "Dragonborn"
-    Milestones[7].Description = "Learn 10 Words of Power"
-    Milestones[7].RewardPerks = 25
-    Milestones[7].Completed = False
-    
+    MilestoneNames[7] = "Dragonborn"
+    MilestoneDescriptions[7] = "Learn 10 Words of Power"
+    MilestoneRewardPerks[7] = 25
+
     ; Milestone 8: Master (Level 100)
-    Milestones[8].Name = "Master"
-    Milestones[8].Description = "Reach Level 100"
-    Milestones[8].RewardPerks = 50
-    Milestones[8].Completed = False
-    
+    MilestoneNames[8] = "Master"
+    MilestoneDescriptions[8] = "Reach Level 100"
+    MilestoneRewardPerks[8] = 50
+
     ; Milestone 9: Legend
-    Milestones[9].Name = "Legend"
-    Milestones[9].Description = "Defeat 10 Dragons"
-    Milestones[9].RewardPerks = 100
-    Milestones[9].Completed = False
+    MilestoneNames[9] = "Legend"
+    MilestoneDescriptions[9] = "Defeat 10 Dragons"
+    MilestoneRewardPerks[9] = 100
 EndFunction
 
 Function RegisterForEvents()
-    ; Register for death events
-    RegisterForTrackedStatsEvent("Dragons Killed")
-    RegisterForTrackedStatsEvent("Dungeons Cleared")
-    RegisterForTrackedStatsEvent("Words of Power Learned")
-    
+    ; RegisterForTrackedStatsEvent() takes NO arguments - it registers for ALL
+    ; stat changes. OnTrackedStatsEvent then filters by stat name
+    ; ("Dragon Souls Collected", "Dungeons Cleared", "Words Of Power Learned").
+    RegisterForTrackedStatsEvent()
+
     ; Register for level up
     RegisterForSingleUpdateGameTime(1.0)
-EndEvent
+EndFunction
 
 ; ============================================
 ; EVENT HANDLERS
 ; ============================================
 
 Event OnTrackedStatsEvent(string statFilter, int statValue)
-    If statFilter == "Dragons Killed"
+    If statFilter == "Dragon Souls Collected"
         DragonsKilled = statValue
         CheckDragonMilestones()
     ElseIf statFilter == "Dungeons Cleared"
         DungeonsCleared = statValue
         CheckDungeonMilestones()
-    ElseIf statFilter == "Words of Power Learned"
+    ElseIf statFilter == "Words Of Power Learned"
         WordsLearned = statValue
         CheckWordMilestones()
     EndIf
@@ -153,31 +147,31 @@ EndEvent
 
 Function CheckDragonMilestones()
     ; First Dragon
-    If !Milestones[2].Completed && DragonsKilled >= 1
+    If !MilestoneCompleted[2] && DragonsKilled >= 1
         CompleteMilestone(2)
     EndIf
-    
+
     ; Legend (10 Dragons)
-    If !Milestones[9].Completed && DragonsKilled >= 10
+    If !MilestoneCompleted[9] && DragonsKilled >= 10
         CompleteMilestone(9)
     EndIf
 EndFunction
 
 Function CheckDungeonMilestones()
     ; Dungeon Delver (5 dungeons)
-    If !Milestones[4].Completed && DungeonsCleared >= 5
+    If !MilestoneCompleted[4] && DungeonsCleared >= 5
         CompleteMilestone(4)
     EndIf
 EndFunction
 
 Function CheckWordMilestones()
     ; First Word
-    If !Milestones[1].Completed && WordsLearned >= 1
+    If !MilestoneCompleted[1] && WordsLearned >= 1
         CompleteMilestone(1)
     EndIf
-    
+
     ; Dragonborn (10 words)
-    If !Milestones[7].Completed && WordsLearned >= 10
+    If !MilestoneCompleted[7] && WordsLearned >= 10
         CompleteMilestone(7)
     EndIf
 EndFunction
@@ -185,19 +179,19 @@ EndFunction
 Function CheckLevelMilestones()
     Actor player = Game.GetPlayer()
     Int currentLevel = player.GetLevel()
-    
+
     ; Rising Power (Level 25)
-    If !Milestones[3].Completed && currentLevel >= 25
+    If !MilestoneCompleted[3] && currentLevel >= 25
         CompleteMilestone(3)
     EndIf
-    
+
     ; Adept (Level 50)
-    If !Milestones[6].Completed && currentLevel >= 50
+    If !MilestoneCompleted[6] && currentLevel >= 50
         CompleteMilestone(6)
     EndIf
-    
+
     ; Master (Level 100)
-    If !Milestones[8].Completed && currentLevel >= 100
+    If !MilestoneCompleted[8] && currentLevel >= 100
         CompleteMilestone(8)
     EndIf
 EndFunction
@@ -207,42 +201,41 @@ EndFunction
 ; ============================================
 
 Function CompleteMilestone(Int milestoneIndex)
-    If milestoneIndex < 0 || milestoneIndex >= Milestones.Length
+    If milestoneIndex < 0 || milestoneIndex >= MilestoneNames.Length
         Return
     EndIf
-    
-    Milestone ms = Milestones[milestoneIndex]
-    If ms.Completed
+
+    If MilestoneCompleted[milestoneIndex]
         Return
     EndIf
-    
+
     ; Mark as completed
-    Milestones[milestoneIndex].Completed = True
-    
+    MilestoneCompleted[milestoneIndex] = True
+
     ; Grant rewards
-    Actor player = Game.GetPlayer()
-    If ms.RewardPerks > 0
-        player.AddPerkPoints(ms.RewardPerks)
-        TotalPerksEarned += ms.RewardPerks
+    Int reward = MilestoneRewardPerks[milestoneIndex]
+    If reward > 0
+        Game.AddPerkPoints(reward)
+        TotalPerksEarned += reward
     EndIf
-    
+
     ; Show completion message
-    ShowMilestoneComplete(ms)
+    ShowMilestoneComplete(milestoneIndex)
 EndFunction
 
-Function ShowMilestoneComplete(Milestone ms)
-    String message = "╔══════════════════════════════════════╗\n"
-    message += "║     SYSTEM MILESTONE ACHIEVED!       ║\n"
-    message += "╠══════════════════════════════════════╣\n"
-    message += "  " + ms.Name + "\n"
-    message += "  " + ms.Description + "\n"
-    message += "╠══════════════════════════════════════╣\n"
-    message += "  REWARD: " + ms.RewardPerks + " Perk Points\n"
-    message += "╚══════════════════════════════════════╝"
-    
-    Debug.MessageBox(message)
-    Debug.Notification("[SYSTEM] Milestone: " + ms.Name)
-    
+Function ShowMilestoneComplete(Int index)
+    String msgText = "╔══════════════════════════════════════╗\n"
+    msgText += "║     SYSTEM MILESTONE ACHIEVED!       ║\n"
+    msgText += "╠══════════════════════════════════════╣\n"
+    msgText += "  " + MilestoneNames[index] + "\n"
+    msgText += "  " + MilestoneDescriptions[index] + "\n"
+    msgText += "╠══════════════════════════════════════╣\n"
+    msgText += "  REWARD: " + MilestoneRewardPerks[index] + " Perk Points\n"
+    msgText += "╚══════════════════════════════════════╝"
+
+    Debug.MessageBox(msgText)
+    Debug.Notification("[SYSTEM] Milestone: " + MilestoneNames[index])
+
     ; Play sound
     Sound rewardSound = Game.GetFormFromFile(0x0003C5A0, "Skyrim.esm") as Sound ; UIQuestComplete
     If rewardSound
@@ -255,7 +248,7 @@ EndFunction
 ; ============================================
 
 Function OnFactionJoined(String factionName)
-    If !Milestones[5].Completed
+    If !MilestoneCompleted[5]
         CompleteMilestone(5)
     EndIf
 EndFunction
@@ -267,8 +260,8 @@ EndFunction
 Int Function GetCompletedMilestoneCount()
     Int count = 0
     Int i = 0
-    While i < Milestones.Length
-        If Milestones[i].Completed
+    While i < MilestoneCompleted.Length
+        If MilestoneCompleted[i]
             count += 1
         EndIf
         i += 1
@@ -279,22 +272,22 @@ EndFunction
 Int Function GetTotalPossiblePerks()
     Int total = 0
     Int i = 0
-    While i < Milestones.Length
-        total += Milestones[i].RewardPerks
+    While i < MilestoneRewardPerks.Length
+        total += MilestoneRewardPerks[i]
         i += 1
     EndWhile
     Return total
 EndFunction
 
 String Function GetMilestoneStatus(Int index)
-    If index < 0 || index >= Milestones.Length
+    If index < 0 || index >= MilestoneNames.Length
         Return "Invalid"
     EndIf
-    
-    If Milestones[index].Completed
-        Return "✓ " + Milestones[index].Name
+
+    If MilestoneCompleted[index]
+        Return "✓ " + MilestoneNames[index]
     Else
-        Return "○ " + Milestones[index].Name
+        Return "○ " + MilestoneNames[index]
     EndIf
 EndFunction
 
@@ -305,9 +298,8 @@ EndFunction
 Function GrantStartingBonus(Int powerLevel)
     ; Grant first steps milestone immediately
     CompleteMilestone(0)
-    
+
     ; Power level affects starting perks
-    Actor player = Game.GetPlayer()
     If powerLevel == 1 ; Hero
         ; Already gets 50 from PowerScript, give some bonus
         Debug.Notification("[SYSTEM] Hero bonus: Additional perks unlocked through milestones")

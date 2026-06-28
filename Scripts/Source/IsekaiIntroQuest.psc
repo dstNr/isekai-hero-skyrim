@@ -113,11 +113,6 @@ Bool Function IsReadyForAwakening()
         Return False
     EndIf
     
-    ; Check if player can move (not in cutscene)
-    If player.IsInScene()
-        Return False
-    EndIf
-    
     ; Check if player has control (not in menu/dialog)
     If UI.IsMenuOpen("Dialogue Menu") || UI.IsMenuOpen("RaceSex Menu")
         Return False
@@ -180,11 +175,6 @@ Function TriggerAwakening()
         Debug.Notification("[SYSTEM ERROR] Dialog component not found!")
         ShowPowerChoice()
     EndIf
-EndFunction
-
-; Called from DialogScript after world selection
-Function OnWorldSelected(Int worldIdx)
-    SetStage(STAGE_WORLD_SELECT)
 EndFunction
 
 ; ============================================

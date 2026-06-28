@@ -314,7 +314,7 @@ Function TriggerAscendedEffects()
         Debug.Notification("[SYSTEM] Power level: MAXIMUM")
     EndIf
     
-    GodModeAuraActive = True
+    AscendedAuraActive = True
     Utility.Wait(1.0)
 EndFunction
 
@@ -740,11 +740,45 @@ EndFunction
 ; ============================================
 
 Int Function ShowSystemMenu(String title, String description, String[] options, String[] details, Int defaultIndex)
+    ; Real UIExtensions scroll-menu when available. The per-menu _Vanilla()
+    ; functions (Message forms) are the primary path WITHOUT UIExtensions;
+    ; ShowFormattedSystemMenu is only a non-interactive last resort.
     If UIExtensionsInstalled
-        Return ShowFormattedSystemMenu(title, description, options, details)
-    Else
+        Return ShowUIExtMenu(title, description, options, details, defaultIndex)
+    EndIf
+    Return ShowFormattedSystemMenu(title, description, options, details)
+EndFunction
+
+; Real UIExtensions UIListMenu. Returns the selected option index (0-based),
+; or -1 if the player cancelled (ESC).
+; NOTE: requires the UIExtensions modder-resource sources on the import path at
+; compile time. The runtime UIExtensionsInstalled guard keeps it safe when the
+; plugin isn't loaded.
+Int Function ShowUIExtMenu(String title, String description, String[] options, String[] details, Int defaultIndex)
+    UIListMenu menu = UIExtensions.GetMenu("UIListMenu") as UIListMenu
+    If !menu
         Return ShowFormattedSystemMenu(title, description, options, details)
     EndIf
+
+    ; UIListMenu has no title bar - surface title/description as notifications
+    ; so option indices stay aligned (no extra header entry is added).
+    Debug.Notification(title)
+    If description != ""
+        Debug.Notification(description)
+    EndIf
+
+    Int i = 0
+    While i < options.Length
+        String label = options[i]
+        If details && i < details.Length
+            label += "   —   " + details[i]
+        EndIf
+        menu.AddEntryItem(label)
+        i += 1
+    EndWhile
+
+    menu.OpenMenu()
+    Return menu.GetResultInt()
 EndFunction
 
 Int Function ShowFormattedSystemMenu(String title, String description, String[] options, String[] details)
@@ -833,11 +867,11 @@ Function SetPreviousWorld(String worldName)
     Debug.Notification("[SYSTEM] Origin updated: " + worldName)
 EndFunction
 
-; Toggle God Mode effects
+; Toggle Ascended aura effects
 Function ToggleGodModeAura(Bool active)
-    GodModeAuraActive = active
+    AscendedAuraActive = active
     If active
-        Debug.Notification("[SYSTEM] ⚡ God Mode Aura activated")
+        Debug.Notification("[SYSTEM] ⚡ Ascended Aura activated")
         If MAGIllusionNightEyeAuto
             MAGIllusionNightEyeAuto.Play(Game.GetPlayer())
         EndIf
@@ -853,7 +887,7 @@ Function ShowSystemHelp()
     help += "POWER LEVELS:\n"
     help += "• NORMAL: Vanilla Skyrim experience\n"
     help += "• HERO: Max skills, 50 perks\n"
-    help += "• GOD MODE: Max everything, 500 perks\n\n"
+    help += "• ASCENDED: Max everything, 500 perks\n\n"
     help += "ORIGIN WORLDS:\n"
     help += "Each world gives unique flavor text\n"
     help += "and minor bonuses to your journey.\n\n"

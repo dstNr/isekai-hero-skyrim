@@ -1,0 +1,15 @@
+# Compiled Papyrus output
+Scripts/*.pex
+*.pex
+
+# Third-party modder-resource sources used only for compiling.
+# These have their own licenses and must not be redistributed in this repo.
+# Drop them locally (see Scripts/SourceDeps/README.md) - they are git-ignored.
+Scripts/SourceDeps/*.psc
+
+# Editor / OS noise
+*.bak
+*.tmp
+Thumbs.db
+.DS_Store
+Scripts/SourceDeps/*.bsa

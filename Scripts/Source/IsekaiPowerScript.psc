@@ -18,25 +18,8 @@ FormList Property Isekai_Potions_Magicka Auto
 FormList Property Isekai_Potions_Stamina Auto
 FormList Property Isekai_Gems_Rare Auto
 
-; All 18 skill AVs
-ActorValue Property OneHanded Auto
-ActorValue Property TwoHanded Auto
-ActorValue Property Archery Auto
-ActorValue Property Block Auto
-ActorValue Property Smithing Auto
-ActorValue Property HeavyArmor Auto
-ActorValue Property LightArmor Auto
-ActorValue Property Pickpocket Auto
-ActorValue Property Lockpicking Auto
-ActorValue Property Sneak Auto
-ActorValue Property Alchemy Auto
-ActorValue Property Speech Auto
-ActorValue Property Alteration Auto
-ActorValue Property Conjuration Auto
-ActorValue Property Destruction Auto
-ActorValue Property Illusion Auto
-ActorValue Property Restoration Auto
-ActorValue Property Enchanting Auto
+; Skills are set via string-based SetActorValue("OneHanded", ...) below,
+; so no ActorValue property objects are needed here.
 
 ; Fallback forms if FormLists are empty
 Weapon Fallback_IronSword
@@ -88,9 +71,9 @@ EndFunction
 ; SAFE FORM GETTERS (MODLIST COMPATIBLE)
 ; ============================================
 
-Form Function GetSafeForm(FormList formList, Form fallback, Int index = 0)
-    If formList && formList.GetSize() > index
-        Form result = formList.GetAt(index)
+Form Function GetSafeForm(FormList akList, Form fallback, Int index = 0)
+    If akList && akList.GetSize() > index
+        Form result = akList.GetAt(index)
         If result
             Return result
         EndIf
@@ -127,17 +110,16 @@ Function ApplyPowerLevel(Int powerLevel, Int skillFocus)
         SetAllSkills(player, 100)
     EndIf
     
-    ; Set level based on power choice
+    ; Give perk points based on power choice.
+    ; NOTE: Skyrim has no Papyrus function to set the player's character level
+    ; directly, so we grant power through maxed skills + perk points instead.
+    ; The level then rises naturally as those skills are used/legendary'd.
     If powerLevel == 2
-        ; God Mode - Level 255 (max)
-        player.SetLevel(255)
-        ; Give plenty of perk points for vanilla + custom skill trees
-        player.AddPerkPoints(500)
+        ; Ascended - plenty of perk points for vanilla + custom skill trees
+        Game.AddPerkPoints(500)
     ElseIf powerLevel == 1
-        ; Hero - Level 1 but skills maxed
-        player.SetLevel(1)
-        ; Some perk points to distribute
-        player.AddPerkPoints(50)
+        ; Hero - some perk points to distribute
+        Game.AddPerkPoints(50)
     EndIf
 EndFunction
 
@@ -273,15 +255,15 @@ EndFunction
 
 Function GiveHumbleGear(Actor player)
     ; Get forms safely from FormList or fallback
-    Weapon weapon = GetSafeForm(Isekai_Weapons_Humble, Fallback_IronSword, 0) as Weapon
-    Armor armor = GetSafeForm(Isekai_Armor_Humble, Fallback_IronArmor, 0) as Armor
+    Weapon akWeapon = GetSafeForm(Isekai_Weapons_Humble, Fallback_IronSword, 0) as Weapon
+    Armor akArmor = GetSafeForm(Isekai_Armor_Humble, Fallback_IronArmor, 0) as Armor
     MiscObject gold = GetSafeForm(None, Fallback_Gold, 0) as MiscObject
-    
-    If weapon
-        player.AddItem(weapon, 1)
+
+    If akWeapon
+        player.AddItem(akWeapon, 1)
     EndIf
-    If armor
-        player.AddItem(armor, 1)
+    If akArmor
+        player.AddItem(akArmor, 1)
     EndIf
     If gold
         player.AddItem(gold, 100)
@@ -289,17 +271,17 @@ Function GiveHumbleGear(Actor player)
 EndFunction
 
 Function GiveAdventurerGear(Actor player)
-    Weapon weapon = GetSafeForm(Isekai_Weapons_Adventurer, Fallback_SteelSword, 0) as Weapon
-    Armor armor = GetSafeForm(Isekai_Armor_Adventurer, Fallback_SteelArmor, 0) as Armor
+    Weapon akWeapon = GetSafeForm(Isekai_Weapons_Adventurer, Fallback_SteelSword, 0) as Weapon
+    Armor akArmor = GetSafeForm(Isekai_Armor_Adventurer, Fallback_SteelArmor, 0) as Armor
     MiscObject gold = GetSafeForm(None, Fallback_Gold, 0) as MiscObject
     Potion healthPotion = GetSafeForm(Isekai_Potions_Health, Fallback_HealthPotion, 0) as Potion
     Potion magickaPotion = GetSafeForm(Isekai_Potions_Magicka, Fallback_MagickaPotion, 0) as Potion
-    
-    If weapon
-        player.AddItem(weapon, 1)
+
+    If akWeapon
+        player.AddItem(akWeapon, 1)
     EndIf
-    If armor
-        player.AddItem(armor, 1)
+    If akArmor
+        player.AddItem(akArmor, 1)
     EndIf
     If gold
         player.AddItem(gold, 500)
@@ -313,18 +295,18 @@ Function GiveAdventurerGear(Actor player)
 EndFunction
 
 Function GiveHeroGear(Actor player)
-    Weapon weapon = GetSafeForm(Isekai_Weapons_Hero, Fallback_DaedricSword, 0) as Weapon
-    Armor armor = GetSafeForm(Isekai_Armor_Hero, Fallback_DaedricArmor, 0) as Armor
+    Weapon akWeapon = GetSafeForm(Isekai_Weapons_Hero, Fallback_DaedricSword, 0) as Weapon
+    Armor akArmor = GetSafeForm(Isekai_Armor_Hero, Fallback_DaedricArmor, 0) as Armor
     MiscObject gold = GetSafeForm(None, Fallback_Gold, 0) as MiscObject
     Potion healthPotion = GetSafeForm(Isekai_Potions_Health, Fallback_HealthPotion, 0) as Potion
     Potion magickaPotion = GetSafeForm(Isekai_Potions_Magicka, Fallback_MagickaPotion, 0) as Potion
     Potion staminaPotion = GetSafeForm(Isekai_Potions_Stamina, Fallback_StaminaPotion, 0) as Potion
-    
-    If weapon
-        player.AddItem(weapon, 1)
+
+    If akWeapon
+        player.AddItem(akWeapon, 1)
     EndIf
-    If armor
-        player.AddItem(armor, 1)
+    If akArmor
+        player.AddItem(akArmor, 1)
     EndIf
     If gold
         player.AddItem(gold, 2000)

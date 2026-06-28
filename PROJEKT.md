@@ -14,23 +14,41 @@ Einen vollständigen Isekai-Mod für Skyrim Special Edition bauen, der:
 ```
 isekai-hero-skyrim/
 ├── PROJEKT.md              # Dieser Fahrplan
-├── README.md              # Projektübersicht
-├── WORKFLOW.md            # Git-Workflow
-├── CREATION_KIT_GUIDE.md  # CK-Anleitung
+├── README.md               # Projektübersicht
+├── WORKFLOW.md             # Git-Workflow
+├── CREATION_KIT_GUIDE.md   # CK-Anleitung
+├── FEATURES.md             # Geplante Features
+├── compile.ps1             # Papyrus Compile-Check (Build-Skript)
 │
 ├── Scripts/
 │   └── Source/
-│       ├── IsekaiIntroQuest.psc    ✅ Vollständig
-│       ├── IsekaiDialogScript.psc  ✅ Vollständig (mit Fixes)
-│       └── IsekaiPowerScript.psc   ✅ Vollständig
+│       ├── IsekaiIntroQuest.psc        # Haupt-Quest-Logik
+│       ├── IsekaiDialogScript.psc      # System-Interface / Menüs (Vanilla + UIExtensions)
+│       ├── IsekaiPowerScript.psc       # Skills / Equipment / Wealth
+│       ├── IsekaiProgressionScript.psc # Milestones / Perk-Belohnungen
+│       ├── IsekaiPerkDefinitions.psc   # Isekai-Perks
+│       └── IsekaiMCMScript.psc         # MCM (SKI_ConfigBase / SkyUI)
 │
-├── Data/
-│   ├── Interface/          # 🔴 LEER —需 erstellen
-│   ├── MCMScripts/         # 🔴 LEER —需 erstellen
-│   └── (IsekaiHero.esp)    # 🔴 Muss im CK erstellt werden
-│
-└── .git/
+└── Interface/              # (IsekaiMCMConfig.json entfernt — MCM läuft über SKI_ConfigBase-Script)
 ```
+
+> **Status der Skripte:** Logik-Review + bekannte Compile-Fehler behoben
+> (`GodModeAuraActive`, `EndEvent`/`EndFunction`, `Game.AddPerkPoints`,
+> Tracked-Stat-Namen). **Echter Compiler-Gegencheck steht noch aus** — dafür
+> wird die Skyrim-SE-Creation-Kit benötigt (siehe „Build-Toolchain" unten).
+
+### 🔧 Build-Toolchain (für Compile-Check)
+
+`compile.ps1` kompiliert alle `.psc` in `Scripts/Source` und meldet Fehler,
+bevor das CK geöffnet wird. Voraussetzungen (einmalig zu installieren):
+
+| Komponente | Liefert | Quelle |
+|---|---|---|
+| Skyrim SE **Creation Kit** | `PapyrusCompiler.exe`, Vanilla-Quellen, `TESV_Papyrus_Flags.flg` | Steam (kostenlos) |
+| **SkyUI SDK** | `SKI_ConfigBase.psc` (für MCM) | SkyUI Modder-Resource |
+| **UIExtensions** Quellen | `UIListMenu.psc` (für UIExt-Menüs) | UIExtensions Modder-Resource |
+
+Aufruf: `./compile.ps1` (auto-detect) oder `./compile.ps1 -Only IsekaiPowerScript`.
 
 ---
 
@@ -172,21 +190,24 @@ Explosion Property FXDragonDeath Auto
 | Mod | Status | Bemerkung |
 |-----|--------|-----------|
 | Skyrim SE 1.5.x/1.6.x | ✅ Erforderlich | Base Game |
-| SKSE | ⬜ Optional | Für erweiterte Features |
-| SkyUI | ⬜ Optional | MCM-Menü |
-| UIExtensions | ⬜ Optional | Bessere Menüs |
+| **SKSE64** | ✅ **Erforderlich** | `GetName()`, `UI`, `StringUtil` werden im Code genutzt |
+| **SkyUI** | ✅ **Erforderlich** | MCM-Menü (`SKI_ConfigBase`) |
+| **UIExtensions** | ✅ **Erforderlich** | Scroll-Menüs (`UIListMenu`) |
 | Alternate Start | ✅ Kompatibel | Auto-detected |
 | Live Another Life | ✅ Kompatibel | Auto-detected |
+
+> ⚠️ SKSE/SkyUI/UIExtensions sind **keine** optionalen Extras — der Code
+> referenziert ihre Funktionen direkt und kompiliert ohne sie nicht.
 
 ---
 
 ## 🛠️ Installation (Endnutzer)
 
-1. IsekaiHero.esp aktivieren
-2. Scripts.7z nach Data/ entpacken
-3. (Optional) SkyUI für MCM
-4. (Optional) UIExtensions für bessere Menüs
+1. SKSE64, SkyUI und UIExtensions installieren
+2. IsekaiHero.esp aktivieren
+3. Scripts.7z nach Data/ entpacken
+4. Über den SKSE-Loader starten
 
 ---
 
-_Letzte Aktualisierung: 2026-04-02_
+_Letzte Aktualisierung: 2026-06-28_

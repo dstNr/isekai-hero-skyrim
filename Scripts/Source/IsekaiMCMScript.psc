@@ -11,12 +11,12 @@ Scriptname IsekaiMCMScript extends SKI_ConfigBase
 IsekaiIntroQuest Property MainQuest Auto
 IsekaiDialogScript Property DialogScript Auto
 IsekaiPowerScript Property PowerScript Auto
+IsekaiProgressionScript Property Progression Auto
 
 ; ============================================
 ; MCM STATE
 ; ============================================
-
-Int Property CurrentPage = 0 Auto Hidden
+; NOTE: CurrentPage is already provided by the SKI_ConfigBase parent.
 
 ; Option IDs
 Int OID_SystemStatus
@@ -84,6 +84,14 @@ Function ShowStatusPage()
             AddTextOption("Skills", GetSkillStatus())
             AddTextOption("Equipment Tier", GetEquipmentName(MainQuest.ChosenEquipment))
             AddTextOption("Wealth Level", GetWealthName(MainQuest.ChosenWealth))
+            AddEmptyOption()
+            AddHeaderOption("PROGRESSION")
+            If Progression
+                AddTextOption("Milestones", Progression.GetCompletedMilestoneCount() + " / 10 completed")
+                AddTextOption("Perks from Milestones", Progression.TotalPerksEarned + "")
+            Else
+                AddTextOption("Milestones", "Progression script not linked")
+            EndIf
         EndIf
     Else
         AddTextOption("ERROR", "Main Quest not found!")
@@ -146,8 +154,7 @@ EndFunction
 
 Event OnOptionSelect(Int option)
     If option == OID_ReSpec
-        ShowMessage("Re-Spec will reset your character and restart the System sequence.\n\nContinue?", 
-            "Yes", "No", 0)
+        ShowMessage("Re-Spec will reset your character and restart the System sequence.\n\nContinue?", "Yes", "No", 0)
     ElseIf option == OID_ForceTrigger
         If MainQuest
             MainQuest.ForceTrigger()
@@ -247,8 +254,8 @@ EndFunction
 ; EXTERNAL NOTIFICATION CONTROL
 ; ============================================
 
-Function SystemNotification(String message)
+Function SystemNotification(String msg)
     If EnableNotifications
-        Debug.Notification(message)
+        Debug.Notification(msg)
     EndIf
 EndFunction

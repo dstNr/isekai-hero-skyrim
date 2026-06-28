@@ -105,9 +105,9 @@ Full Mod Configuration Menu support:
 ## 📋 Requirements
 
 - **Skyrim Special Edition** (1.5.x or 1.6.x)
-- **SKSE** (optional, for enhanced features)
-- **[Optional]** SkyUI for MCM menu
-- **[Optional]** UIExtensions for enhanced menus
+- **SKSE64** — **required** (`GetName()`, `UI`, `StringUtil` are used in code)
+- **SkyUI** — **required** for the MCM menu (`SKI_ConfigBase`)
+- **UIExtensions** — **required** for the scroll menus (`UIListMenu`)
 
 ---
 
@@ -162,8 +162,9 @@ Your choices are applied and you begin as a true Isekai hero!
 | Alternate Start | ✅ Compatible | Auto-detected |
 | Live Another Life | ✅ Compatible | Auto-detected |
 | **Skyrim Unbound** | ✅ Compatible | **N.Y.A Modlist support! Auto-detected** |
-| SkyUI | ✅ Compatible | Required for MCM |
-| UIExtensions | ✅ Compatible | Optional, enhances menus |
+| SKSE64 | ✅ Required | GetName/UI/StringUtil used in code |
+| SkyUI | ✅ Required | Required for MCM |
+| UIExtensions | ✅ Required | Scroll menus (UIListMenu) |
 
 - ✅ **ESL flagged** - Doesn't count towards 255 plugin limit
 - ✅ **Minimal script load** - No constant OnUpdate loops
