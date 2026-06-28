@@ -727,6 +727,50 @@ Aus: Skyrim Special Edition\Data\
 
 ---
 
+## 🏆 Main Quest Tracker einrichten (Solo-Leveling-Belohnungen)
+
+Das Skript [`IsekaiQuestTracker.psc`](Scripts/Source/IsekaiQuestTracker.psc) belohnt
+Hauptquest-Abschlüsse mit Perk-Punkten + Titeln. So verdrahtest du es:
+
+### 1. Quest anlegen
+1. **Object Window → Character → Quest → Rechtsklick → New**
+2. **ID:** `IsekaiQuestTracker`
+3. Reiter **Quest Data:** Haken bei **Start Game Enabled** und **Run Once**
+4. Reiter **Scripts → Add → `IsekaiQuestTracker`**
+
+### 2. MainQuests-Array füllen (WICHTIG: exakte Reihenfolge!)
+Im Script-Properties-Fenster `MainQuests` markieren → **Edit Value** → Größe **12**,
+dann jeden Index mit der passenden Vanilla-Quest belegen:
+
+| Index | Quest Editor ID | Quest-Name | Belohnung |
+|------:|-----------------|------------|-----------|
+| 0 | `MQ101` | Unbound | +10 Perks, „Survivor" |
+| 1 | `MQ102` | Before the Storm | +5 Perks |
+| 2 | `MQ103` | Bleak Falls Barrow | +15 Perks, „Tomb Raider" |
+| 3 | `MQ104` | Dragon Rising | +50 Perks, „Dragon Slayer" |
+| 4 | `MQ105` | The Way of the Voice | +25 Perks, „Voice Wielder" |
+| 5 | `MQ106` | The Horn of Jurgen Windcaller | +30 Perks |
+| 6 | `MQ201` | A Blade in the Dark | +20 Perks |
+| 7 | `MQ202` | Diplomatic Immunity | +40 Perks, „Spy" |
+| 8 | `MQ203` | A Cornered Rat | +25 Perks |
+| 9 | `MQ204` | Alduin's Wall | +30 Perks, „Time Reader" |
+| 10 | `MQ205` | The Fallen | +50 Perks, „Dragon Tamer" |
+| 11 | `MQ206` | Dragonslayer | +500 Perks, „World Savior" |
+
+> ⚠️ Reihenfolge muss stimmen — die Belohnungen sind im Skript fest an den Index
+> gekoppelt. Suche die Quests im Object Window per ID (Filter `MQ1`/`MQ2`).
+
+### 3. Optionen (Properties)
+- `EnableQuestRewards` = `True` (Standard)
+- `RetroactiveRewards` = `False` → bereits abgeschlossene Quests bei Installation
+  werden **nicht** nachträglich belohnt (für Bestands-Saves empfohlen)
+
+### 4. Im MCM-Quest verknüpfen
+In der Quest mit `IsekaiMCMScript` die neue Property `QuestTracker` auf
+`IsekaiQuestTracker` setzen (für Status-Anzeige + Toggle im MCM).
+
+---
+
 ## 📤 Distribution
 
 Für die Veröffentlichung benötigst du:
@@ -734,7 +778,7 @@ Für die Veröffentlichung benötigst du:
 ### Erforderlich:
 - `IsekaiHero.esp` (ESL-flagged)
 - `Scripts\*.pex` (kompilierte Scripts)
-- `Interface\IsekaiMCMConfig.json`
+- SKSE64, SkyUI, UIExtensions (als Mod-Abhängigkeiten im Mod-Beschreibungstext)
 
 ### Optional (empfohlen):
 - `Scripts\Source\*.psc` (Quellcode)

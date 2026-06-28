@@ -6,9 +6,15 @@ Diese Datei dokumentiert geplante Features und Ideen für zukünftige Versionen 
 
 ## 🎯 Feature: Main Quest Integration mit System-Benachrichtigungen
 
-**Status:** 💡 Idee / In Planung  
-**Priorität:** Hoch  
-**Zielversion:** v2.1 oder v3.0
+**Status:** ✅ Kern implementiert (`IsekaiQuestTracker.psc`, kompiliert) — CK-Verdrahtung nötig
+**Priorität:** Hoch
+**Zielversion:** v2.1
+
+> **Umgesetzt:** [IsekaiQuestTracker.psc](Scripts/Source/IsekaiQuestTracker.psc) überwacht die
+> 12 Hauptquests (MQ101–MQ206), zeigt bei Abschluss eine System-Box und vergibt
+> Perk-Punkte + Flavor-Titel. MCM zeigt Fortschritt + Toggle. **CK-Setup siehe
+> [CREATION_KIT_GUIDE.md](CREATION_KIT_GUIDE.md).**
+> Noch offen aus dem Konzept unten: Fraktions-/DLC-Quests, schaltbares Titel-System mit Boni, Daily Quests.
 
 ### Konzept
 

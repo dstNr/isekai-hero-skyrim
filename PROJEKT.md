@@ -27,6 +27,7 @@ isekai-hero-skyrim/
 │       ├── IsekaiPowerScript.psc       # Skills / Equipment / Wealth
 │       ├── IsekaiProgressionScript.psc # Milestones / Perk-Belohnungen
 │       ├── IsekaiPerkDefinitions.psc   # Isekai-Perks
+│       ├── IsekaiQuestTracker.psc      # Hauptquest-Belohnungen (Solo-Leveling-Style)
 │       └── IsekaiMCMScript.psc         # MCM (SKI_ConfigBase / SkyUI)
 │
 └── Interface/              # (IsekaiMCMConfig.json entfernt — MCM läuft über SKI_ConfigBase-Script)

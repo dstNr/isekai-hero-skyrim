@@ -12,6 +12,7 @@ IsekaiIntroQuest Property MainQuest Auto
 IsekaiDialogScript Property DialogScript Auto
 IsekaiPowerScript Property PowerScript Auto
 IsekaiProgressionScript Property Progression Auto
+IsekaiQuestTracker Property QuestTracker Auto
 
 ; ============================================
 ; MCM STATE
@@ -28,6 +29,7 @@ Int OID_ReSpec
 Int OID_ForceTrigger
 Int OID_EnableNotifications
 Int OID_DebugMode
+Int OID_QuestRewards
 
 ; Toggle states
 Bool Property EnableNotifications = True Auto Hidden
@@ -92,6 +94,10 @@ Function ShowStatusPage()
             Else
                 AddTextOption("Milestones", "Progression script not linked")
             EndIf
+            If QuestTracker
+                AddTextOption("Main Quests Rewarded", QuestTracker.GetQuestsRewarded() + " / 12")
+                AddTextOption("Perks from Quests", QuestTracker.GetTotalQuestPerks() + "")
+            EndIf
         EndIf
     Else
         AddTextOption("ERROR", "Main Quest not found!")
@@ -115,7 +121,15 @@ Function ShowSettingsPage()
     
     AddHeaderOption("NOTIFICATIONS")
     OID_EnableNotifications = AddToggleOption("Enable System Notifications", EnableNotifications)
-    
+
+    AddEmptyOption()
+    AddHeaderOption("QUEST REWARDS")
+    If QuestTracker
+        OID_QuestRewards = AddToggleOption("Main Quest Rewards", QuestTracker.EnableQuestRewards)
+    Else
+        AddTextOption("Main Quest Rewards", "Tracker not linked")
+    EndIf
+
     AddEmptyOption()
     AddHeaderOption("VISUAL")
     AddTextOption("Ascended Aura", "Coming Soon")
@@ -166,6 +180,11 @@ Event OnOptionSelect(Int option)
     ElseIf option == OID_DebugMode
         DebugMode = !DebugMode
         SetToggleOptionValue(OID_DebugMode, DebugMode)
+    ElseIf option == OID_QuestRewards
+        If QuestTracker
+            QuestTracker.EnableQuestRewards = !QuestTracker.EnableQuestRewards
+            SetToggleOptionValue(OID_QuestRewards, QuestTracker.EnableQuestRewards)
+        EndIf
     EndIf
 EndEvent
 
@@ -178,6 +197,8 @@ Event OnOptionHighlight(Int option)
         SetInfoText("Toggle System notification messages")
     ElseIf option == OID_DebugMode
         SetInfoText("Enable debug logging and extra information")
+    ElseIf option == OID_QuestRewards
+        SetInfoText("Grant Perk Points and titles when you complete main story quests")
     EndIf
 EndEvent
 
