@@ -110,15 +110,15 @@ Function ApplyPowerLevel(Int powerLevel, Int skillFocus)
         SetAllSkills(player, 100)
     EndIf
     
-    ; Give perk points based on power choice.
-    ; NOTE: Skyrim has no Papyrus function to set the player's character level
-    ; directly, so we grant power through maxed skills + perk points instead.
-    ; The level then rises naturally as those skills are used/legendary'd.
+    ; Set character level + perk points based on power choice.
+    ; Game.SetPlayerLevel() is an SKSE function (SKSE is a required dependency).
     If powerLevel == 2
-        ; Ascended - plenty of perk points for vanilla + custom skill trees
+        ; Ascended - Level 255, plenty of perk points
+        Game.SetPlayerLevel(255)
         Game.AddPerkPoints(500)
     ElseIf powerLevel == 1
-        ; Hero - some perk points to distribute
+        ; Hero - Level 1 but skills maxed
+        Game.SetPlayerLevel(1)
         Game.AddPerkPoints(50)
     EndIf
 EndFunction

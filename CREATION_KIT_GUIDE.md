@@ -123,50 +123,26 @@ Dieser Schritt ist oft fehlerhaft in Anleitungen - hier detailliert:
 3. Klicke auf den Button **Properties** (rechts neben der Liste)
 4. Es öffnet sich das "Properties" Fenster
 
-Du musst jetzt 4 Properties hinzufügen:
+Die Properties sind bereits im Skript als **Auto-Properties** deklariert – du musst
+sie **nicht** manuell mit „Add Property" anlegen. Sie erscheinen automatisch, sobald
+das Skript angehängt ist. Du setzt nur ihre **Werte** (Edit Value → Select Form):
 
-#### Property 1: DialogScript
-1. Klicke **Add Property** (unten links)
-2. Es öffnet sich "Add Property"
-3. Fülle aus:
-   - **Property Name:** `DialogScript`
-   - **Type:** `Quest`
-4. Klicke **OK**
-5. Die Property erscheint in der Liste
-6. **Doppelklicke** auf die Zeile (oder klicke **Edit Value**)
-7. Es öffnet sich "Select Form"
-8. Wähle: `IsekaiDialogScript` (oder lass es vorerst auf None, wenn es noch nicht existiert)
-9. Klicke **OK**
+| Property | Typ (automatisch) | Wert setzen auf |
+|----------|-------------------|-----------------|
+| `DialogScript` | `IsekaiDialogScript` | Quest mit `IsekaiDialogScript` |
+| `PowerScript` | `IsekaiPowerScript` | Quest mit `IsekaiPowerScript` |
+| `ProgressionScript` | `IsekaiProgressionScript` | Quest mit `IsekaiProgressionScript` |
+| `PerkDefs` | `IsekaiPerkDefinitions` | Quest mit `IsekaiPerkDefinitions` |
+| `MCM` | `IsekaiMCMScript` | Quest mit `IsekaiMCMScript` |
 
-#### Property 2: PowerScript
-1. Wiederhole: **Add Property**
-2. **Property Name:** `PowerScript`
-3. **Type:** `Quest`
-4. **OK**
-5. **Doppelklicke** die Zeile
-6. Wähle: `IsekaiPowerScript` (oder None)
-7. **OK**
+> ⚠️ Der Property-**Typ** ist der jeweilige Skript-Name (NICHT `Quest`). Er wird
+> automatisch aus der Skript-Deklaration übernommen.
 
-#### Property 3: ProgressionScript
-1. **Add Property**
-2. **Property Name:** `ProgressionScript`
-3. **Type:** `Quest`
-4. **OK**
-5. Wähle: `IsekaiProgressionScript` (oder None)
+**WICHTIG:** Die Ziel-Quests werden erst in Schritt 8 erstellt. Lass die Werte
+also zunächst auf **None** und verknüpfe sie später (am einfachsten per **Auto-Fill**,
+sobald alle Quests existieren).
 
-#### Property 4: PerkDefs
-1. **Add Property**
-2. **Property Name:** `PerkDefs`
-3. **Type:** `Quest`
-4. **OK**
-5. Wähle: `IsekaiPerkDefinitions` (oder None)
-
-**WICHTIG:** Wenn die Quests noch nicht existieren (sie werden erst in Schritt 8 erstellt):
-- Lass die Properties auf **None**
-- Du verknüpfst sie später, nachdem alle Quests existieren
-
-6. Klicke **OK** im Properties-Fenster
-7. Klicke **OK** im Quest-Fenster
+Danach: **OK** im Properties-Fenster, **OK** im Quest-Fenster.
 
 ✅ **Kontrolle:** Die Quest erscheint jetzt in der Object Window Liste
 
@@ -575,7 +551,17 @@ Für Progression, Perks und MCM brauchen wir separate Quests.
    - ☑ **Start Game Enabled**
    - **Priority:** `40`
 3. Tab **Scripts** → **Add** → `IsekaiMCMScript`
-4. **OK**
+4. Properties setzen (Auto-Fill oder manuell):
+   `MainQuest`, `DialogScript`, `PowerScript`, `Progression`, `QuestTracker`
+   → jeweils auf die Quest mit dem entsprechenden Skript
+5. **OK**
+
+### 8.4 IsekaiQuestTracker Quest
+
+Der Hauptquest-Belohnungs-Tracker → siehe eigener Abschnitt
+**„🏆 Main Quest Tracker einrichten"** weiter unten (Quest anlegen,
+`MainQuests`-Array füllen). Danach im MCM-Quest die `QuestTracker`-Property
+darauf verweisen lassen.
 
 ---
 
@@ -587,16 +573,21 @@ Dieser Schritt ist oft problematisch - hier detailliert:
 
 1. Stelle sicher, dass alle `.psc` Dateien im Ordner sind:
    ```
-   Skyrim Special Edition\Data\Scripts\Source\
+   Skyrim Special Edition\Data\Source\Scripts\
    ├── IsekaiIntroQuest.psc
    ├── IsekaiDialogScript.psc
    ├── IsekaiPowerScript.psc
    ├── IsekaiProgressionScript.psc
    ├── IsekaiPerkDefinitions.psc
+   ├── IsekaiQuestTracker.psc
    └── IsekaiMCMScript.psc
    ```
+   > Hinweis: Skyrim SE nutzt `Data\Source\Scripts` (ältere Anleitungen sagen
+   > `Data\Scripts\Source`). Nutze das Verzeichnis, in dem deine `Game.psc` liegt.
 
-2. **WICHTIG:** SKSE muss installiert sein für MCM und StorageUtil!
+2. **WICHTIG:** SKSE, **SkyUI** (für MCM) und **UIExtensions** (für die Menüs)
+   müssen installiert sein – ihre Skript-Quellen müssen zum Kompilieren auffindbar
+   sein. Alternativ nutzt du das Repo-Skript `compile.ps1` (siehe `Scripts/SourceDeps/`).
 
 ### 9.2 Kompilierung
 
@@ -646,16 +637,17 @@ Kopiere diese Dateien in deinen Mod-Ordner:
 ```
 Aus: Skyrim Special Edition\Data\
 ├── IsekaiHero.esp
-├── Scripts\
-│   ├── IsekaiIntroQuest.pex
-│   ├── IsekaiDialogScript.pex
-│   ├── IsekaiPowerScript.pex
-│   ├── IsekaiProgressionScript.pex
-│   ├── IsekaiPerkDefinitions.pex
-│   └── IsekaiMCMScript.pex
-└── Interface\
-    └── IsekaiMCMConfig.json
+└── Scripts\
+    ├── IsekaiIntroQuest.pex
+    ├── IsekaiDialogScript.pex
+    ├── IsekaiPowerScript.pex
+    ├── IsekaiProgressionScript.pex
+    ├── IsekaiPerkDefinitions.pex
+    ├── IsekaiQuestTracker.pex
+    └── IsekaiMCMScript.pex
 ```
+> Hinweis: Das MCM läuft über das `IsekaiMCMScript` (SKI_ConfigBase) – es wird
+> **keine** `IsekaiMCMConfig.json` mehr benötigt (wurde entfernt).
 
 ### 10.3 In-Game Test
 
