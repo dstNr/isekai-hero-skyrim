@@ -682,8 +682,13 @@ auffindbar sein – entweder in `Data\Scripts` (lose) oder in einem geladenen BS
 Da wir SkyUI/UIExtensions **nicht** als Master laden, müssen die `.pex` lose vorliegen.
 
 **Lösung (einmalig):** Extrahiere die `.pex` der Abhängigkeiten nach `Data\Scripts`:
-- **UIExtensions:** aus `Data\UIExtensions.bsa` → alle `ui*.pex`
+- **UIExtensions:** aus `Data\UIExtensions.bsa` → `uiextensions.pex`, `uilistmenu.pex`,
+  `uimenubase.pex` (das reicht für unsere Menüs)
 - **SkyUI:** aus `SkyUI_SE.bsa` → alle `SKI_*.pex`
+
+> ⚠️ **NICHT** `cosmeticmenu.pex` / `uicosmeticmenu.pex` / `uidyemenu.pex`
+> mitkopieren – die erben von **RaceMenu** (separater Mod) und lösen sonst die
+> Warnung `Cannot open store for class "RaceMenu"` aus. Wir nutzen sie nicht.
 
 Zum Entpacken eignet sich **BSArch** oder **BSA Browser**. Danach **CK neu starten**
 (der Script-Store wird nur beim Start eingelesen). Diese `.pex` ändern sich nie –
