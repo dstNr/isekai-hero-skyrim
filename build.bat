@@ -20,4 +20,10 @@ if errorlevel 1 exit /b 1
 cmake --build "%~dp0build"
 if errorlevel 1 exit /b 1
 
+REM Auto-deploy the single plugin DLL into the game so testing is one step.
+set "SKSE_PLUGINS=E:\SteamLibrary\steamapps\common\Skyrim Special Edition\Data\SKSE\Plugins"
+if not exist "%SKSE_PLUGINS%" mkdir "%SKSE_PLUGINS%"
+copy /Y "%~dp0build\IsekaiHeroSKSE.dll" "%SKSE_PLUGINS%\" >nul
+echo Deployed IsekaiHeroSKSE.dll -^> %SKSE_PLUGINS%
+
 echo BUILD_OK

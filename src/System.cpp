@@ -1,5 +1,10 @@
 #include "System.h"
 
+#include <algorithm>
+#include <functional>
+#include <string>
+#include <vector>
+
 namespace Isekai {
 
     namespace {
@@ -14,15 +19,88 @@ namespace Isekai {
         // Reincarnation flow (skeleton — selection menu ported next)
         // ------------------------------------------------------------------
 
+        // ---- Reusable vanilla message box (buttons + callback w/ selected index) ----
+
+        class ButtonCallback : public RE::IMessageBoxCallback {
+        public:
+            explicit ButtonCallback(std::function<void(int)> a_fn) : _fn(std::move(a_fn)) {}
+
+            void Run(Message a_msg) override {
+                if (_fn) {
+                    _fn(static_cast<int>(a_msg));  // enum value == 0-based button index
+                }
+            }
+
+        private:
+            std::function<void(int)> _fn;
+        };
+
+        void ShowMessageBox(const std::string& a_body, std::vector<std::string> a_buttons,
+                            std::function<void(int)> a_onSelect) {
+            auto* factoryManager = RE::MessageDataFactoryManager::GetSingleton();
+            auto* strings = RE::InterfaceStrings::GetSingleton();
+            if (!factoryManager || !strings) {
+                return;
+            }
+            auto* creator = factoryManager->GetCreator<RE::MessageBoxData>(strings->messageBoxData);
+            if (!creator) {
+                return;
+            }
+            auto* mbox = creator->Create();
+            if (!mbox) {
+                return;
+            }
+
+            mbox->callback = RE::make_smart<ButtonCallback>(std::move(a_onSelect));
+            mbox->bodyText = RE::BSString(a_body);
+            for (const auto& b : a_buttons) {
+                mbox->buttonText.push_back(RE::BSString(b));
+            }
+            mbox->QueueMessage();
+        }
+
+        // ---- Reincarnation flow (choices captured into g_state) ----
+
+        void ApplyReincarnation() {
+            // Placeholder: full skill/perk/level/equipment application ported next.
+            logger::info("Reincarnation applied: origin={}, power={}",
+                         static_cast<int>(g_state.origin), static_cast<int>(g_state.power));
+            RE::DebugNotification("[SYSTEM] Reincarnation complete. Your new life begins.");
+        }
+
+        void ShowPowerSelection() {
+            ShowMessageBox(
+                "SYSTEM: STATUS ALLOCATION\nHow much power shall you retain?",
+                { "NORMAL - pure challenge", "HERO - maxed skills", "ASCENDED - godlike" },
+                [](int a_idx) {
+                    g_state.power = static_cast<PowerLevel>(std::clamp(a_idx, 0, 2));
+                    logger::info("Power selected: {}", a_idx);
+                    ApplyReincarnation();
+                });
+        }
+
+        void ShowOriginSelection() {
+            ShowMessageBox(
+                "SYSTEM: DIMENSIONAL ORIGIN\nFrom which world do you hail, Reincarnated One?",
+                { "Earth", "Japan", "Korea", "Fantasy World", "Sci-Fi Future", "Apocalyptic" },
+                [](int a_idx) {
+                    g_state.origin = static_cast<OriginWorld>(std::clamp(a_idx, 0, 5));
+                    logger::info("Origin selected: {}", a_idx);
+                    ShowPowerSelection();
+                });
+        }
+
         void BeginReincarnation() {
             if (g_state.reincarnated) {
                 return;
             }
-            g_state.reincarnated = true;  // mark now so the trigger fires once
+            g_state.reincarnated = true;  // fire the trigger exactly once per character
 
-            logger::info("Reincarnation triggered — player ready (start-method independent)");
-            RE::DebugNotification("[SYSTEM] Soul signature detected...");
-            RE::DebugNotification("[SYSTEM] World System online. Reincarnation pending.");
+            logger::info("Reincarnation triggered — starting selection flow");
+            SKSE::GetTaskInterface()->AddTask([]() {
+                RE::DebugNotification("[SYSTEM] Soul signature detected...");
+                ShowOriginSelection();
+            });
         }
 
         // True once the player is really playing: 3D loaded, not paused, past
