@@ -1,0 +1,20 @@
+@echo off
+REM Build the Isekai SKSE plugin. Sets up MSVC env, then CMake configure + build.
+call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+if errorlevel 1 exit /b 1
+
+REM VS-bundled CMake + Ninja onto PATH, plus the VS Installer (for vswhere).
+set "VS_CMAKE=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake"
+set "PATH=%VS_CMAKE%\CMake\bin;%VS_CMAKE%\Ninja;%PATH%;C:\Program Files (x86)\Microsoft Visual Studio\Installer"
+
+set "VCPKG_ROOT=C:\Users\dstNr\vcpkg"
+
+cmake -S "%~dp0." -B "%~dp0build" -G Ninja ^
+  -DCMAKE_BUILD_TYPE=Release ^
+  -DCMAKE_TOOLCHAIN_FILE="%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake"
+if errorlevel 1 exit /b 1
+
+cmake --build "%~dp0build"
+if errorlevel 1 exit /b 1
+
+echo BUILD_OK

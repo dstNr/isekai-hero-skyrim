@@ -1,15 +1,17 @@
-# Compiled Papyrus output
-Scripts/*.pex
-*.pex
+# --- C++ SKSE plugin build ---
+build/
+vcpkg_installed/
+*.user
+*.pdb
 
-# Third-party modder-resource sources used only for compiling.
-# These have their own licenses and must not be redistributed in this repo.
-# Drop them locally (see Scripts/SourceDeps/README.md) - they are git-ignored.
-Scripts/SourceDeps/*.psc
+# --- Papyrus archive (kept local only) ---
+# Third-party modder-resource sources + compiled output are not redistributed.
+papyrus/Scripts/SourceDeps/*.psc
+papyrus/Scripts/SourceDeps/*.bsa
+papyrus/Scripts/*.pex
 
-# Editor / OS noise
+# --- Editor / OS ---
 *.bak
 *.tmp
 Thumbs.db
 .DS_Store
-Scripts/SourceDeps/*.bsa
