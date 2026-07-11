@@ -1,8 +1,10 @@
 #include "System.h"
 
 #include <algorithm>
+#include <chrono>
 #include <functional>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace Isekai {
@@ -13,7 +15,7 @@ namespace Isekai {
         // --- Co-save serialization IDs ---
         constexpr std::uint32_t kSerID = 'ISKA';    // unique plugin id
         constexpr std::uint32_t kRecState = 'STAT';  // record tag
-        constexpr std::uint32_t kVersion = 1;
+        constexpr std::uint32_t kVersion = 2;        // bumped: origin removed from State
 
         // ------------------------------------------------------------------
         // Reincarnation flow (skeleton — selection menu ported next)
@@ -59,34 +61,67 @@ namespace Isekai {
             mbox->QueueMessage();
         }
 
-        // ---- Reincarnation flow (choices captured into g_state) ----
+        // ---- Timing helpers ----
+
+        // Run fn on the main thread after a_ms. Game/UI calls must be on the main
+        // thread, so a detached timer thread marshals back via the task interface.
+        void DelayedMainThread(std::uint32_t a_ms, std::function<void()> a_fn) {
+            std::thread([a_ms, fn = std::move(a_fn)]() mutable {
+                std::this_thread::sleep_for(std::chrono::milliseconds(a_ms));
+                if (auto* task = SKSE::GetTaskInterface()) {
+                    task->AddTask([fn = std::move(fn)]() { fn(); });
+                }
+            }).detach();
+        }
+
+        void SystemMsg(const char* a_text) {
+            RE::DebugNotification(a_text);
+        }
+
+        std::string RankName(PowerLevel a_power) {
+            switch (a_power) {
+            case PowerLevel::Hero:
+                return "S-RANK";
+            case PowerLevel::Ascended:
+                return "MONARCH";
+            default:
+                return "E-RANK";
+            }
+        }
+
+        // ---- Reincarnation flow (choice captured into g_state) ----
 
         void ApplyReincarnation() {
-            // Placeholder: full skill/perk/level/equipment application ported next.
-            logger::info("Reincarnation applied: origin={}, power={}",
-                         static_cast<int>(g_state.origin), static_cast<int>(g_state.power));
-            RE::DebugNotification("[SYSTEM] Reincarnation complete. Your new life begins.");
+            // Placeholder: skill/perk/level/equipment application ported next.
+            logger::info("Reincarnation applied: rank={}", RankName(g_state.power));
+
+            const std::string body =
+                "═══════════════════════════\n"
+                "    REINCARNATION COMPLETE\n"
+                "═══════════════════════════\n\n"
+                "Awakening rank acquired: " + RankName(g_state.power) + "\n"
+                "The System is now bound to your soul.\n"
+                "Your new life begins.";
+
+            ShowMessageBox(body, { "Continue" }, [](int) {});
         }
 
         void ShowPowerSelection() {
             ShowMessageBox(
-                "SYSTEM: STATUS ALLOCATION\nHow much power shall you retain?",
-                { "NORMAL - pure challenge", "HERO - maxed skills", "ASCENDED - godlike" },
+                "═══════════════════════════\n"
+                "         [ SYSTEM ]\n"
+                "═══════════════════════════\n\n"
+                "You have been chosen.\n"
+                "Select your Awakening rank:",
+                {
+                    "E-RANK   -  No blessing (challenge)",
+                    "S-RANK   -  Hero awakening",
+                    "MONARCH  -  Ascension (godlike)",
+                },
                 [](int a_idx) {
                     g_state.power = static_cast<PowerLevel>(std::clamp(a_idx, 0, 2));
-                    logger::info("Power selected: {}", a_idx);
+                    logger::info("Awakening rank selected: {} ({})", a_idx, RankName(g_state.power));
                     ApplyReincarnation();
-                });
-        }
-
-        void ShowOriginSelection() {
-            ShowMessageBox(
-                "SYSTEM: DIMENSIONAL ORIGIN\nFrom which world do you hail, Reincarnated One?",
-                { "Earth", "Japan", "Korea", "Fantasy World", "Sci-Fi Future", "Apocalyptic" },
-                [](int a_idx) {
-                    g_state.origin = static_cast<OriginWorld>(std::clamp(a_idx, 0, 5));
-                    logger::info("Origin selected: {}", a_idx);
-                    ShowPowerSelection();
                 });
         }
 
@@ -94,13 +129,15 @@ namespace Isekai {
             if (g_state.reincarnated) {
                 return;
             }
-            g_state.reincarnated = true;  // fire the trigger exactly once per character
+            g_state.reincarnated = true;  // fire exactly once per character
 
-            logger::info("Reincarnation triggered — starting selection flow");
-            SKSE::GetTaskInterface()->AddTask([]() {
-                RE::DebugNotification("[SYSTEM] Soul signature detected...");
-                ShowOriginSelection();
-            });
+            logger::info("Reincarnation triggered — System boot sequence");
+
+            // Solo-Leveling style boot: paced [SYSTEM] messages, then the rank menu.
+            SystemMsg("[ SYSTEM ] Soul signature detected...");
+            DelayedMainThread(1500, []() { SystemMsg("[ SYSTEM ] Analyzing dimensional residue..."); });
+            DelayedMainThread(3000, []() { SystemMsg("[ SYSTEM ] Awakening protocol ready."); });
+            DelayedMainThread(4500, []() { ShowPowerSelection(); });
         }
 
         // True once the player is really playing: 3D loaded, not paused, past
