@@ -5,11 +5,11 @@
 
 namespace Isekai {
 
-    // The System's Awakening rank granted on reincarnation.
+    // How much power the System grants on reincarnation.
     enum class PowerLevel {
-        Normal,    // E-Rank: no boost, pure challenge
-        Hero,      // S-Rank: maxed skills, some perks
-        Ascended,  // Monarch: maxed everything, level 255, many perks
+        Normal,    // no boost, pure challenge
+        Hero,      // maxed skills, some perks
+        Ascended,  // maxed everything, level 255, many perks
     };
 
     // Which skills the past life mastered.

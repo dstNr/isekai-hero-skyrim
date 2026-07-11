@@ -78,14 +78,14 @@ namespace Isekai {
             RE::DebugNotification(a_text);
         }
 
-        std::string RankName(PowerLevel a_power) {
+        std::string PowerName(PowerLevel a_power) {
             switch (a_power) {
             case PowerLevel::Hero:
-                return "S-RANK";
+                return "HERO";
             case PowerLevel::Ascended:
-                return "MONARCH";
+                return "ASCENDED";
             default:
-                return "E-RANK";
+                return "NORMAL";
             }
         }
 
@@ -93,13 +93,13 @@ namespace Isekai {
 
         void ApplyReincarnation() {
             // Placeholder: skill/perk/level/equipment application ported next.
-            logger::info("Reincarnation applied: rank={}", RankName(g_state.power));
+            logger::info("Reincarnation applied: power={}", PowerName(g_state.power));
 
             const std::string body =
                 "═══════════════════════════\n"
                 "    REINCARNATION COMPLETE\n"
                 "═══════════════════════════\n\n"
-                "Awakening rank acquired: " + RankName(g_state.power) + "\n"
+                "Power level: " + PowerName(g_state.power) + "\n"
                 "The System is now bound to your soul.\n"
                 "Your new life begins.";
 
@@ -111,16 +111,16 @@ namespace Isekai {
                 "═══════════════════════════\n"
                 "         [ SYSTEM ]\n"
                 "═══════════════════════════\n\n"
-                "You have been chosen.\n"
-                "Select your Awakening rank:",
+                "You have been reincarnated.\n"
+                "Choose your blessing:",
                 {
-                    "E-RANK   -  No blessing (challenge)",
-                    "S-RANK   -  Hero awakening",
-                    "MONARCH  -  Ascension (godlike)",
+                    "NORMAL    -  No blessing (challenge)",
+                    "HERO      -  Awakened power",
+                    "ASCENDED  -  Transcend mortal limits",
                 },
                 [](int a_idx) {
                     g_state.power = static_cast<PowerLevel>(std::clamp(a_idx, 0, 2));
-                    logger::info("Awakening rank selected: {} ({})", a_idx, RankName(g_state.power));
+                    logger::info("Power level selected: {} ({})", a_idx, PowerName(g_state.power));
                     ApplyReincarnation();
                 });
         }
