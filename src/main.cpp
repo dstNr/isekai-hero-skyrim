@@ -10,7 +10,7 @@ SKSEPluginLoad(const SKSE::LoadInterface* a_skse) {
     logger::info("=== Isekai Hero SKSE loaded ===");
     logger::info("Runtime version: {}", a_skse->RuntimeVersion().string());
 
-    Isekai::RegisterMessageListener();
+    Isekai::Install();
 
     return true;
 }

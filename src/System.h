@@ -41,6 +41,9 @@ namespace Isekai {
 
     [[nodiscard]] State& GetState();
 
-    // Hook into SKSE's lifecycle (new game / load / data loaded).
-    void RegisterMessageListener();
+    // Install everything: co-save serialization (persist choices + the
+    // "already reincarnated" flag) and a start-method-independent trigger that
+    // fires the first time the player is actually in control in the world
+    // (works with vanilla, coc, Alternate Start, Skyrim Unbound, ...).
+    void Install();
 }
