@@ -9,8 +9,11 @@ set "PATH=%VS_CMAKE%\CMake\bin;%VS_CMAKE%\Ninja;%PATH%;C:\Program Files (x86)\Mi
 
 set "VCPKG_ROOT=C:\Users\dstNr\vcpkg"
 
+REM Static triplet: bake spdlog/fmt/CommonLibSSE into a single self-contained
+REM plugin DLL (dynamic CRT via -md), so no extra .dll files need shipping.
 cmake -S "%~dp0." -B "%~dp0build" -G Ninja ^
   -DCMAKE_BUILD_TYPE=Release ^
+  -DVCPKG_TARGET_TRIPLET=x64-windows-static-md ^
   -DCMAKE_TOOLCHAIN_FILE="%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake"
 if errorlevel 1 exit /b 1
 
