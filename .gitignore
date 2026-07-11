@@ -3,6 +3,9 @@ build/
 vcpkg_installed/
 *.user
 *.pdb
+build.log
+build.err.log
+build.pid
 
 # --- Papyrus archive (kept local only) ---
 # Third-party modder-resource sources + compiled output are not redistributed.
