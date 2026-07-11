@@ -13,6 +13,10 @@ add_commonlibsse_plugin(
     AUTHOR "dstNr"
     SOURCES
         src/main.cpp
+        src/System.cpp
+        src/System.h
+        src/Logger.h
+        src/PCH.h
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)

@@ -12,3 +12,6 @@
 // The auto-generated plugin file (and CommonLibSSE-NG) use "..."sv literals;
 // make the literal operators available project-wide via the PCH.
 using namespace std::literals;
+
+// Convenience alias used throughout the project: logger::info(...) etc.
+namespace logger = SKSE::log;
