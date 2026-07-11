@@ -668,8 +668,26 @@ Aus: Skyrim Special Edition\Data\
 
 **Lösung:**
 1. Prüfe: Existiert `Scripts\IsekaiIntroQuest.pex`?
-2. Wenn nein: Kompiliere im CK erneut (Schritt 9)
+2. Wenn nein: Kompiliere erneut (`compile.ps1`)
 3. Wenn ja: Stelle sicher, dass die .pex Dateien im Data-Ordner sind
+
+### "Cannot open store for class ..." beim Skript-Anhängen
+
+**Beispiel:** `SCRIPTS: Cannot open store for class "uilistmenu", missing file?`
+
+**Ursache:** Beim Anhängen lädt das CK den kompletten Referenz-Graphen des Skripts.
+`IsekaiDialogScript` referenziert `UIListMenu` (UIExtensions), `IsekaiMCMScript`
+erbt von `SKI_ConfigBase` (SkyUI). Deren **kompilierte `.pex`** müssen für das CK
+auffindbar sein – entweder in `Data\Scripts` (lose) oder in einem geladenen BSA.
+Da wir SkyUI/UIExtensions **nicht** als Master laden, müssen die `.pex` lose vorliegen.
+
+**Lösung (einmalig):** Extrahiere die `.pex` der Abhängigkeiten nach `Data\Scripts`:
+- **UIExtensions:** aus `Data\UIExtensions.bsa` → alle `ui*.pex`
+- **SkyUI:** aus `SkyUI_SE.bsa` → alle `SKI_*.pex`
+
+Zum Entpacken eignet sich **BSArch** oder **BSA Browser**. Danach **CK neu starten**
+(der Script-Store wird nur beim Start eingelesen). Diese `.pex` ändern sich nie –
+also nur ein einziges Mal nötig.
 
 ### Quest startet nicht
 

@@ -17,7 +17,10 @@
 param(
     [string]$SkyrimPath,
     [string]$Only,
-    [string[]]$ExtraImports = @()
+    [string[]]$ExtraImports = @(),
+    # After a successful build, copy the .pex into the game's Data\Scripts so the
+    # Creation Kit's "Add Script" list finds them. Use -NoDeploy to skip.
+    [switch]$NoDeploy
 )
 
 $ErrorActionPreference = "Stop"
@@ -121,10 +124,22 @@ foreach ($s in $scripts) {
 
 Write-Host ""
 Write-Host ("=" * 60)
-if ($failed.Count -eq 0) {
-    Write-Host "ALL SCRIPTS COMPILED SUCCESSFULLY" -ForegroundColor Green
-    exit 0
-} else {
+if ($failed.Count -ne 0) {
     Write-Host "FAILED: $($failed -join ', ')" -ForegroundColor Red
     exit 1
 }
+
+Write-Host "ALL SCRIPTS COMPILED SUCCESSFULLY" -ForegroundColor Green
+
+# Deploy compiled .pex into the game so the Creation Kit sees them.
+if (-not $NoDeploy) {
+    $gameScripts = Join-Path $skyrim "Data\Scripts"
+    if (-not (Test-Path $gameScripts)) { New-Item -ItemType Directory -Path $gameScripts -Force | Out-Null }
+    $copied = 0
+    foreach ($s in $scripts) {
+        $pex = Join-Path $outputDir ($s.BaseName + ".pex")
+        if (Test-Path $pex) { Copy-Item $pex -Destination $gameScripts -Force; $copied++ }
+    }
+    Write-Host "Deployed $copied .pex -> $gameScripts" -ForegroundColor Cyan
+}
+exit 0
