@@ -1,5 +1,8 @@
 #include "System.h"
 
+#include "UI/Overlay.h"
+#include "UI/SystemWindow.h"
+
 #include <algorithm>
 #include <chrono>
 #include <functional>
@@ -16,50 +19,6 @@ namespace Isekai {
         constexpr std::uint32_t kSerID = 'ISKA';    // unique plugin id
         constexpr std::uint32_t kRecState = 'STAT';  // record tag
         constexpr std::uint32_t kVersion = 2;        // bumped: origin removed from State
-
-        // ------------------------------------------------------------------
-        // Reincarnation flow (skeleton — selection menu ported next)
-        // ------------------------------------------------------------------
-
-        // ---- Reusable vanilla message box (buttons + callback w/ selected index) ----
-
-        class ButtonCallback : public RE::IMessageBoxCallback {
-        public:
-            explicit ButtonCallback(std::function<void(int)> a_fn) : _fn(std::move(a_fn)) {}
-
-            void Run(Message a_msg) override {
-                if (_fn) {
-                    _fn(static_cast<int>(a_msg));  // enum value == 0-based button index
-                }
-            }
-
-        private:
-            std::function<void(int)> _fn;
-        };
-
-        void ShowMessageBox(const std::string& a_body, std::vector<std::string> a_buttons,
-                            std::function<void(int)> a_onSelect) {
-            auto* factoryManager = RE::MessageDataFactoryManager::GetSingleton();
-            auto* strings = RE::InterfaceStrings::GetSingleton();
-            if (!factoryManager || !strings) {
-                return;
-            }
-            auto* creator = factoryManager->GetCreator<RE::MessageBoxData>(strings->messageBoxData);
-            if (!creator) {
-                return;
-            }
-            auto* mbox = creator->Create();
-            if (!mbox) {
-                return;
-            }
-
-            mbox->callback = RE::make_smart<ButtonCallback>(std::move(a_onSelect));
-            mbox->bodyText = RE::BSString(a_body);
-            for (const auto& b : a_buttons) {
-                mbox->buttonText.push_back(RE::BSString(b));
-            }
-            mbox->QueueMessage();
-        }
 
         // ---- Timing helpers ----
 
@@ -165,31 +124,24 @@ namespace Isekai {
                          b.attrBonus, b.gold);
 
             const std::string body =
-                "[ SYSTEM ]\n"
-                "- - - - - - - - - - - - - - - -\n\n"
                 "REINCARNATION COMPLETE\n\n"
                 "Power level:  " + PowerName(g_state.power) + "\n\n"
                 "The System is now bound to your soul.\n"
                 "Your new life begins.";
 
-            ShowMessageBox(body, { "Continue" }, [](int) {});
+            UI::ShowSystemWindow("[ SYSTEM ]", body, { "CONTINUE" }, [](int) {});
         }
 
         void ShowPowerSelection() {
-            ShowMessageBox(
-                "[ SYSTEM ]\n"
-                "- - - - - - - - - - - - - - - -\n\n"
+            UI::ShowSystemWindow(
+                "[ SYSTEM ]",
                 "You have been reincarnated.\n"
-                "The System offers you a blessing:\n\n"
-                "NORMAL   -  No blessing. Pure challenge.\n"
-                "HERO     -  Awakened power.\n"
-                "ASCENDED -  Transcend mortal limits.\n\n"
+                "The System offers you a blessing.\n\n"
+                "NORMAL    -  No blessing. Pure challenge.\n"
+                "HERO      -  Awakened power.\n"
+                "ASCENDED  -  Transcend mortal limits.\n\n"
                 "Choose your path:",
-                {
-                    "NORMAL",
-                    "HERO",
-                    "ASCENDED",
-                },
+                { "NORMAL", "HERO", "ASCENDED" },
                 [](int a_idx) {
                     g_state.power = static_cast<PowerLevel>(std::clamp(a_idx, 0, 2));
                     logger::info("Power level selected: {} ({})", a_idx, PowerName(g_state.power));
@@ -304,6 +256,8 @@ namespace Isekai {
 
         void OnSKSEMessage(SKSE::MessagingInterface::Message* a_msg) {
             if (a_msg->type == SKSE::MessagingInterface::kDataLoaded) {
+                UI::Install();
+
                 if (auto* ui = RE::UI::GetSingleton()) {
                     ui->AddEventSink<RE::MenuOpenCloseEvent>(MenuWatcher::GetSingleton());
                     logger::info("Menu watcher installed — reincarnation trigger armed");
