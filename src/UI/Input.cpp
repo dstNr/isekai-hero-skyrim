@@ -33,6 +33,10 @@ namespace Isekai::UI {
             std::vector<std::pair<int, bool>>        buttons;  // (ImGui button, down)
         };
 
+        // Flip to true to log every key press with its device and scan code — the fast
+        // way to find out what the game actually sends when a hotkey does not land.
+        constexpr bool kLogKeyPresses = false;
+
         std::mutex g_mutex;
         Pending    g_pending;
 
@@ -73,11 +77,24 @@ namespace Isekai::UI {
                 // Hotkeys work whether or not a panel is open, so they are handled
                 // before the capture check below.
                 for (auto* event = *a_event; event; event = event->next) {
-                    if (event->GetDevice() != RE::INPUT_DEVICE::kKeyboard ||
-                        event->GetEventType() != RE::INPUT_EVENT_TYPE::kButton) {
+                    if (event->GetEventType() != RE::INPUT_EVENT_TYPE::kButton) {
                         continue;
                     }
-                    if (auto* button = event->AsButtonEvent(); button && button->IsDown()) {
+                    auto* button = event->AsButtonEvent();
+                    if (!button || !button->IsDown()) {
+                        continue;
+                    }
+
+                    // DIAGNOSTIC: F11 never reached the handler and the log could not
+                    // say why — whether no key events arrive at all, or they arrive
+                    // under a device or scan code we did not expect. So print what
+                    // actually shows up.
+                    if constexpr (kLogKeyPresses) {
+                        logger::info("key down: device={} scanCode={:#x}",
+                                     static_cast<int>(event->GetDevice()), button->GetIDCode());
+                    }
+
+                    if (event->GetDevice() == RE::INPUT_DEVICE::kKeyboard) {
                         FireHotkey(button->GetIDCode());
                     }
                 }
