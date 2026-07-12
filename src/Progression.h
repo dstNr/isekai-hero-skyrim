@@ -15,10 +15,18 @@ namespace Isekai::Progression {
     // "Active Effects" list.
     struct Passive {
         const char*    name;
-        const char*    effect;  // human-readable, e.g. "+20 Health"
+        const char*    stat;        // "Health", "Magic Resist", ...
         RE::ActorValue actorValue;
-        float          amount;
+        float          baseAmount;  // before the blessing's reward scale is applied
+        bool           percent;     // render as "+10% Magic Resist" rather than "+10 Health"
     };
+
+    // What the passive is actually worth to this character, i.e. after scaling.
+    [[nodiscard]] float PassiveAmount(const Passive& a_passive);
+
+    // "+50 Health" — built from the scaled amount, never hard-coded, so the panel
+    // cannot promise one number and hand out another.
+    [[nodiscard]] std::string PassiveEffectText(const Passive& a_passive);
 
     // Register the quest watcher. Call once, at kDataLoaded.
     void Install();

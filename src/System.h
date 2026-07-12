@@ -43,6 +43,11 @@ namespace Isekai {
 
     [[nodiscard]] State& GetState();
 
+    // Multiplier on every milestone reward — passives, dragon souls, the lot.
+    // The blessing taken at the start is not a one-off head start: it decides how
+    // fast the System keeps feeding you for the rest of the run.
+    [[nodiscard]] float RewardScale();
+
     // Perk points a milestone endpoint pays out. Scaled to the blessing taken at the
     // start, so that choice keeps mattering for the whole playthrough.
     [[nodiscard]] std::int32_t MilestonePerkPoints();

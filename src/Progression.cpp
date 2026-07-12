@@ -42,119 +42,125 @@ namespace Isekai::Progression {
 
         using AV = RE::ActorValue;
 
-        // Deliberately limited to actor values that add onto a known base (0, or a
-        // flat stat). Multiplier values like kShoutRecoveryMult have a base of 1.0 and
-        // would need different handling — worth adding later, not worth guessing now.
+        // Amounts here are the NORMAL baseline. RewardScale() multiplies them by the
+        // blessing (HERO x2, ASCENDED x4), so the table stays readable and the choice
+        // made at the start keeps compounding for the whole run.
+        //
+        // Actor values are deliberately limited to ones that add onto a known base
+        // (0, or a flat stat). Multiplier values like kShoutRecoveryMult have a base of
+        // 1.0 and would need different handling — worth adding later, not worth guessing.
+        //
         // Keys start at 1101, not 1001: an earlier build shipped a table whose editor
         // IDs were mismapped, and a save from it may already hold keys 1001-1016
         // against the wrong quests. Starting fresh means those stale keys match
         // nothing and simply lapse, rather than silently suppressing a real reward.
+        //
+        //  key    editor ID          quest name                       { passive: name, stat, actor value, base amount, is % }  souls  endpoint
         constexpr Milestone kMilestones[] = {
             // --- Main quest (names verified against the game's own quest table) ---
-            //                                                                                                                  souls  endpoint
-            { 1101, "MQ101",          "Unbound",                       { "Survivor",          "+25 Health",        AV::kHealth,      25.0f },  0, false },
-            { 1102, "MQ102",          "Before the Storm",              { "Wayfarer",          "+25 Carry Weight",  AV::kCarryWeight, 25.0f },  0, false },
-            { 1103, "MQ103",          "Bleak Falls Barrow",            { "Tomb Raider",       "+25 Stamina",       AV::kStamina,     25.0f },  0, false },
-            { 1104, "MQ104",          "Dragon Rising",                 { "Dragon Slayer",     "+5% Magic Resist",  AV::kResistMagic,  5.0f },  1, false },
-            { 1105, "MQ105",          "The Way of the Voice",          { "Voice Wielder",     "+25 Magicka",       AV::kMagicka,     25.0f },  1, false },
-            { 1106, "MQ105Ustengrav", "The Horn of Jurgen Windcaller", { "Horn Bearer",       "+25 Stamina",       AV::kStamina,     25.0f },  0, false },
-            { 1107, "MQ106",          "A Blade in the Dark",           { "Blade in the Dark", "+25 Health",        AV::kHealth,      25.0f },  1, false },
-            { 1108, "MQ201",          "Diplomatic Immunity",           { "Infiltrator",       "+25 Stamina",       AV::kStamina,     25.0f },  0, false },
-            { 1109, "MQ202",          "A Cornered Rat",                { "Shadow Walker",     "+25 Carry Weight",  AV::kCarryWeight, 25.0f },  0, false },
-            { 1110, "MQ203",          "Alduin's Wall",                 { "Loremaster",        "+25 Magicka",       AV::kMagicka,     25.0f },  1, false },
-            { 1111, "MQ204",          "The Throat of the World",       { "Skyborn",           "+5% Magic Resist",  AV::kResistMagic,  5.0f },  1, false },
-            { 1112, "MQ205",          "Elder Knowledge",               { "Time Reader",       "+25 Magicka",       AV::kMagicka,     25.0f },  1, false },
-            { 1113, "MQ206",          "Alduin's Bane",                 { "Time Walker",       "+5% Magic Resist",  AV::kResistMagic,  5.0f },  2, false },
-            { 1114, "MQ301",          "The Fallen",                    { "Dragon Trapper",    "+25 Health",        AV::kHealth,      25.0f },  2, false },
-            { 1115, "MQ302",          "Season Unending",               { "Peacemaker",        "+25 Carry Weight",  AV::kCarryWeight, 25.0f },  0, false },
-            { 1116, "MQ303",          "The World-Eater's Eyrie",       { "Sky Breaker",       "+25 Health",        AV::kHealth,      25.0f },  3, false },
-            { 1117, "MQ304",          "Sovngarde",                     { "Soul Walker",       "+50 Health",        AV::kHealth,      50.0f },  3, false },
+            { 1101, "MQ101",          "Unbound",                       { "Survivor", "Health", AV::kHealth, 25.0f, false },  0, false },
+            { 1102, "MQ102",          "Before the Storm",              { "Wayfarer", "Carry Weight", AV::kCarryWeight, 25.0f, false },  0, false },
+            { 1103, "MQ103",          "Bleak Falls Barrow",            { "Tomb Raider", "Stamina", AV::kStamina, 25.0f, false },  0, false },
+            { 1104, "MQ104",          "Dragon Rising",                 { "Dragon Slayer", "Magic Resist", AV::kResistMagic, 5.0f, true },  1, false },
+            { 1105, "MQ105",          "The Way of the Voice",          { "Voice Wielder", "Magicka", AV::kMagicka, 25.0f, false },  1, false },
+            { 1106, "MQ105Ustengrav", "The Horn of Jurgen Windcaller", { "Horn Bearer", "Stamina", AV::kStamina, 25.0f, false },  0, false },
+            { 1107, "MQ106",          "A Blade in the Dark",           { "Blade in the Dark", "Health", AV::kHealth, 25.0f, false },  1, false },
+            { 1108, "MQ201",          "Diplomatic Immunity",           { "Infiltrator", "Stamina", AV::kStamina, 25.0f, false },  0, false },
+            { 1109, "MQ202",          "A Cornered Rat",                { "Shadow Walker", "Carry Weight", AV::kCarryWeight, 25.0f, false },  0, false },
+            { 1110, "MQ203",          "Alduin's Wall",                 { "Loremaster", "Magicka", AV::kMagicka, 25.0f, false },  1, false },
+            { 1111, "MQ204",          "The Throat of the World",       { "Skyborn", "Magic Resist", AV::kResistMagic, 5.0f, true },  1, false },
+            { 1112, "MQ205",          "Elder Knowledge",               { "Time Reader", "Magicka", AV::kMagicka, 25.0f, false },  1, false },
+            { 1113, "MQ206",          "Alduin's Bane",                 { "Time Walker", "Magic Resist", AV::kResistMagic, 5.0f, true },  2, false },
+            { 1114, "MQ301",          "The Fallen",                    { "Dragon Trapper", "Health", AV::kHealth, 25.0f, false },  2, false },
+            { 1115, "MQ302",          "Season Unending",               { "Peacemaker", "Carry Weight", AV::kCarryWeight, 25.0f, false },  0, false },
+            { 1116, "MQ303",          "The World-Eater's Eyrie",       { "Sky Breaker", "Health", AV::kHealth, 25.0f, false },  3, false },
+            { 1117, "MQ304",          "Sovngarde",                     { "Soul Walker", "Health", AV::kHealth, 50.0f, false },  3, false },
 
             // --- Endpoint: the main quest ---
-            { 1118, "MQ305",          "Dragonslayer",                  { "World Savior",      "+100 Health",       AV::kHealth,     100.0f }, 10, true },
+            { 1118, "MQ305",          "Dragonslayer",                  { "World Savior", "Health", AV::kHealth, 100.0f, false }, 10, true },
 
             // --- Dawnguard ---
-            { 2201, "DLC1VQ01",        "Awakening",                    { "Dawnguard Recruit", "+15 Health",        AV::kHealth,      15.0f },  0, false },
-            { 2202, "DLC1VQ02",        "Bloodline",                    { "Bloodline",         "+15 Health",        AV::kHealth,      15.0f },  0, false },
+            { 2201, "DLC1VQ01",        "Awakening",                    { "Dawnguard Recruit", "Health", AV::kHealth, 15.0f, false },  0, false },
+            { 2202, "DLC1VQ02",        "Bloodline",                    { "Bloodline", "Health", AV::kHealth, 15.0f, false },  0, false },
             // The Prophet branches by allegiance; whichever the player walks, only one fires.
-            { 2203, "DLC1VQ03Hunter",  "Prophet",                      { "Prophet's Ally",    "+15 Magicka",       AV::kMagicka,     15.0f },  0, false },
-            { 2204, "DLC1VQ03Vampire", "Prophet",                      { "Prophet's Ally",    "+15 Magicka",       AV::kMagicka,     15.0f },  0, false },
-            { 2205, "DLC1VQ04",        "Chasing Echoes",               { "Echo Chaser",       "+15 Stamina",       AV::kStamina,     15.0f },  0, false },
-            { 2206, "DLC1VQ05",        "Beyond Death",                 { "Soul Cairn Walker", "+25 Magicka",       AV::kMagicka,     25.0f },  1, false },
-            { 2207, "DLC1VQ06",        "Unseen Visions",               { "Seer",              "+15 Magicka",       AV::kMagicka,     15.0f },  0, false },
-            { 2208, "DLC1VQ07",        "Touching the Sky",             { "Sky Toucher",       "+25 Health",        AV::kHealth,      25.0f },  1, false },
-            { 2209, "DLC1VQDragon",    "Durnehviir",                   { "Soul Binder",       "+15 Magicka",       AV::kMagicka,     15.0f },  2, false },
+            { 2203, "DLC1VQ03Hunter",  "Prophet",                      { "Prophet's Ally", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
+            { 2204, "DLC1VQ03Vampire", "Prophet",                      { "Prophet's Ally", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
+            { 2205, "DLC1VQ04",        "Chasing Echoes",               { "Echo Chaser", "Stamina", AV::kStamina, 15.0f, false },  0, false },
+            { 2206, "DLC1VQ05",        "Beyond Death",                 { "Soul Cairn Walker", "Magicka", AV::kMagicka, 25.0f, false },  1, false },
+            { 2207, "DLC1VQ06",        "Unseen Visions",               { "Seer", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
+            { 2208, "DLC1VQ07",        "Touching the Sky",             { "Sky Toucher", "Health", AV::kHealth, 25.0f, false },  1, false },
+            { 2209, "DLC1VQDragon",    "Durnehviir",                   { "Soul Binder", "Magicka", AV::kMagicka, 15.0f, false },  2, false },
 
             // --- Endpoint: Dawnguard ---
-            { 2101, "DLC1VQ08",        "Kindred Judgment",             { "Vampire's Bane",    "+15% Magic Resist", AV::kResistMagic, 15.0f },  5, true },
+            { 2101, "DLC1VQ08",        "Kindred Judgment",             { "Vampire's Bane", "Magic Resist", AV::kResistMagic, 15.0f, true },  5, true },
 
             // --- Dragonborn ---
-            { 2301, "DLC2MQ01",        "Dragonborn",                   { "Marked",            "+15 Health",        AV::kHealth,      15.0f },  0, false },
-            { 2302, "DLC2MQ02",        "The Temple of Miraak",         { "Temple Delver",     "+15 Magicka",       AV::kMagicka,     15.0f },  0, false },
-            { 2303, "DLC2MQ03",        "The Fate of the Skaal",        { "Skaal-Friend",      "+15 Health",        AV::kHealth,      15.0f },  0, false },
-            { 2304, "DLC2MQ03B",       "Cleansing the Stones",         { "Stone Cleanser",    "+15 Stamina",       AV::kStamina,     15.0f },  0, false },
-            { 2305, "DLC2MQ04",        "The Path of Knowledge",        { "Knowledge Seeker",  "+25 Magicka",       AV::kMagicka,     25.0f },  1, false },
-            { 2306, "DLC2MQ05",        "The Gardener of Men",          { "Apocrypha Walker",  "+25 Magicka",       AV::kMagicka,     25.0f },  2, false },
+            { 2301, "DLC2MQ01",        "Dragonborn",                   { "Marked", "Health", AV::kHealth, 15.0f, false },  0, false },
+            { 2302, "DLC2MQ02",        "The Temple of Miraak",         { "Temple Delver", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
+            { 2303, "DLC2MQ03",        "The Fate of the Skaal",        { "Skaal-Friend", "Health", AV::kHealth, 15.0f, false },  0, false },
+            { 2304, "DLC2MQ03B",       "Cleansing the Stones",         { "Stone Cleanser", "Stamina", AV::kStamina, 15.0f, false },  0, false },
+            { 2305, "DLC2MQ04",        "The Path of Knowledge",        { "Knowledge Seeker", "Magicka", AV::kMagicka, 25.0f, false },  1, false },
+            { 2306, "DLC2MQ05",        "The Gardener of Men",          { "Apocrypha Walker", "Magicka", AV::kMagicka, 25.0f, false },  2, false },
 
             // --- Endpoint: Dragonborn ---
-            { 2102, "DLC2MQ06",        "At the Summit of Apocrypha",   { "Miraak's Bane",     "+100 Magicka",      AV::kMagicka,    100.0f }, 10, true },
+            { 2102, "DLC2MQ06",        "At the Summit of Apocrypha",   { "Miraak's Bane", "Magicka", AV::kMagicka, 100.0f, false }, 10, true },
 
             // --- The Companions ---
-            { 3101, "C00",             "Take Up Arms",                 { "Whelp",             "+15 Health",        AV::kHealth,      15.0f },  0, false },
-            { 3102, "C01",             "Proving Honor",                { "Shield-Brother",    "+15 Stamina",       AV::kStamina,     15.0f },  0, false },
-            { 3103, "C02",             "Brotherhood",                  { "Blood-Kin",         "+5% Frost Resist",  AV::kResistFrost,  5.0f },  0, false },
-            { 3104, "C03",             "The Silver Hand",              { "Silver Bane",       "+15 Health",        AV::kHealth,      15.0f },  0, false },
-            { 3105, "C04",             "Blood's Honor",                { "Oathkeeper",        "+15 Stamina",       AV::kStamina,     15.0f },  0, false },
-            { 3106, "C05",             "Purity of Revenge",            { "Vengeance",         "+5% Fire Resist",   AV::kResistFire,   5.0f },  0, false },
-            { 3107, "C06",             "Glory of the Dead",            { "Harbinger",         "+50 Health",        AV::kHealth,      50.0f },  2, false },
+            { 3101, "C00",             "Take Up Arms",                 { "Whelp", "Health", AV::kHealth, 15.0f, false },  0, false },
+            { 3102, "C01",             "Proving Honor",                { "Shield-Brother", "Stamina", AV::kStamina, 15.0f, false },  0, false },
+            { 3103, "C02",             "Brotherhood",                  { "Blood-Kin", "Frost Resist", AV::kResistFrost, 5.0f, true },  0, false },
+            { 3104, "C03",             "The Silver Hand",              { "Silver Bane", "Health", AV::kHealth, 15.0f, false },  0, false },
+            { 3105, "C04",             "Blood's Honor",                { "Oathkeeper", "Stamina", AV::kStamina, 15.0f, false },  0, false },
+            { 3106, "C05",             "Purity of Revenge",            { "Vengeance", "Fire Resist", AV::kResistFire, 5.0f, true },  0, false },
+            { 3107, "C06",             "Glory of the Dead",            { "Harbinger", "Health", AV::kHealth, 50.0f, false },  2, false },
 
             // --- College of Winterhold (MG06 does not exist in the game data) ---
-            { 3201, "MG01",            "First Lessons",                { "Apprentice",        "+15 Magicka",       AV::kMagicka,     15.0f },  0, false },
-            { 3202, "MG02",            "Under Saarthal",               { "Delver",            "+15 Magicka",       AV::kMagicka,     15.0f },  0, false },
-            { 3203, "MG03",            "Hitting the Books",            { "Scholar",           "+5% Shock Resist",  AV::kResistShock,  5.0f },  0, false },
-            { 3204, "MG04",            "Good Intentions",              { "Confidant",         "+15 Magicka",       AV::kMagicka,     15.0f },  0, false },
-            { 3205, "MG05",            "Containment",                  { "Warden",            "+5% Magic Resist",  AV::kResistMagic,  5.0f },  0, false },
-            { 3206, "MG07",            "The Staff of Magnus",          { "Staffbearer",       "+25 Magicka",       AV::kMagicka,     25.0f },  0, false },
-            { 3207, "MG08",            "The Eye of Magnus",            { "Arch-Mage",         "+75 Magicka",       AV::kMagicka,     75.0f },  2, false },
+            { 3201, "MG01",            "First Lessons",                { "Apprentice", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
+            { 3202, "MG02",            "Under Saarthal",               { "Delver", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
+            { 3203, "MG03",            "Hitting the Books",            { "Scholar", "Shock Resist", AV::kResistShock, 5.0f, true },  0, false },
+            { 3204, "MG04",            "Good Intentions",              { "Confidant", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
+            { 3205, "MG05",            "Containment",                  { "Warden", "Magic Resist", AV::kResistMagic, 5.0f, true },  0, false },
+            { 3206, "MG07",            "The Staff of Magnus",          { "Staffbearer", "Magicka", AV::kMagicka, 25.0f, false },  0, false },
+            { 3207, "MG08",            "The Eye of Magnus",            { "Arch-Mage", "Magicka", AV::kMagicka, 75.0f, false },  2, false },
 
             // --- Thieves Guild ---
-            { 3301, "TG00",            "A Chance Arrangement",         { "Cutpurse",          "+15 Carry Weight",  AV::kCarryWeight, 15.0f },  0, false },
-            { 3302, "TG01",            "Taking Care of Business",      { "Collector",         "+15 Carry Weight",  AV::kCarryWeight, 15.0f },  0, false },
-            { 3303, "TG02",            "Loud and Clear",               { "Saboteur",          "+15 Stamina",       AV::kStamina,     15.0f },  0, false },
-            { 3304, "TG03",            "Dampened Spirits",             { "Meadwrecker",       "+15 Stamina",       AV::kStamina,     15.0f },  0, false },
-            { 3305, "TG04",            "Scoundrel's Folly",            { "Scoundrel",         "+15 Carry Weight",  AV::kCarryWeight, 15.0f },  0, false },
-            { 3306, "TG05",            "Speaking With Silence",        { "Silent Step",       "+15 Stamina",       AV::kStamina,     15.0f },  0, false },
-            { 3307, "TG06",            "Hard Answers",                 { "Answer-Seeker",     "+15 Carry Weight",  AV::kCarryWeight, 15.0f },  0, false },
-            { 3308, "TG07",            "The Pursuit",                  { "Pursuer",           "+15 Stamina",       AV::kStamina,     15.0f },  0, false },
-            { 3309, "TG08A",           "Trinity Restored",             { "Nightingale",       "+5% Shock Resist",  AV::kResistShock,  5.0f },  0, false },
-            { 3310, "TG08B",           "Blindsighted",                 { "Blindsighted",      "+25 Stamina",       AV::kStamina,     25.0f },  0, false },
-            { 3311, "TG09",            "Darkness Returns",             { "Keeper of the Key", "+25 Carry Weight",  AV::kCarryWeight, 25.0f },  0, false },
-            { 3312, "TGLeadership",    "Under New Management",         { "Guild Master",      "+50 Carry Weight",  AV::kCarryWeight, 50.0f },  2, false },
+            { 3301, "TG00",            "A Chance Arrangement",         { "Cutpurse", "Carry Weight", AV::kCarryWeight, 15.0f, false },  0, false },
+            { 3302, "TG01",            "Taking Care of Business",      { "Collector", "Carry Weight", AV::kCarryWeight, 15.0f, false },  0, false },
+            { 3303, "TG02",            "Loud and Clear",               { "Saboteur", "Stamina", AV::kStamina, 15.0f, false },  0, false },
+            { 3304, "TG03",            "Dampened Spirits",             { "Meadwrecker", "Stamina", AV::kStamina, 15.0f, false },  0, false },
+            { 3305, "TG04",            "Scoundrel's Folly",            { "Scoundrel", "Carry Weight", AV::kCarryWeight, 15.0f, false },  0, false },
+            { 3306, "TG05",            "Speaking With Silence",        { "Silent Step", "Stamina", AV::kStamina, 15.0f, false },  0, false },
+            { 3307, "TG06",            "Hard Answers",                 { "Answer-Seeker", "Carry Weight", AV::kCarryWeight, 15.0f, false },  0, false },
+            { 3308, "TG07",            "The Pursuit",                  { "Pursuer", "Stamina", AV::kStamina, 15.0f, false },  0, false },
+            { 3309, "TG08A",           "Trinity Restored",             { "Nightingale", "Shock Resist", AV::kResistShock, 5.0f, true },  0, false },
+            { 3310, "TG08B",           "Blindsighted",                 { "Blindsighted", "Stamina", AV::kStamina, 25.0f, false },  0, false },
+            { 3311, "TG09",            "Darkness Returns",             { "Keeper of the Key", "Carry Weight", AV::kCarryWeight, 25.0f, false },  0, false },
+            { 3312, "TGLeadership",    "Under New Management",         { "Guild Master", "Carry Weight", AV::kCarryWeight, 50.0f, false },  2, false },
 
             // --- Dark Brotherhood ---
-            { 3401, "DB01",            "Innocence Lost",               { "Initiate",          "+15 Stamina",       AV::kStamina,     15.0f },  0, false },
-            { 3402, "DB02",            "With Friends Like These...",   { "Sworn",             "+15 Health",        AV::kHealth,      15.0f },  0, false },
-            { 3403, "DB03",            "Mourning Never Comes",         { "Silencer",          "+15 Stamina",       AV::kStamina,     15.0f },  0, false },
-            { 3404, "DB04",            "Whispers in the Dark",         { "Whisperer",         "+15 Magicka",       AV::kMagicka,     15.0f },  0, false },
-            { 3405, "DB05",            "Bound Until Death",            { "Bound",             "+15 Health",        AV::kHealth,      15.0f },  0, false },
-            { 3406, "DB06",            "Breaching Security",           { "Breacher",          "+15 Stamina",       AV::kStamina,     15.0f },  0, false },
-            { 3407, "DB07",            "The Cure for Madness",         { "Cure-Bringer",      "+15 Health",        AV::kHealth,      15.0f },  0, false },
-            { 3408, "DB08",            "Recipe for Disaster",          { "Poisoner",          "+5% Disease Resist",AV::kResistDisease, 5.0f },  0, false },
-            { 3409, "DB09",            "To Kill an Empire",            { "Emperor's End",     "+15 Health",        AV::kHealth,      15.0f },  0, false },
-            { 3410, "DB10",            "Death Incarnate",              { "Death Incarnate",   "+25 Stamina",       AV::kStamina,     25.0f },  0, false },
-            { 3411, "DB11",            "Hail Sithis!",                 { "Listener",          "+50 Stamina",       AV::kStamina,     50.0f },  2, false },
+            { 3401, "DB01",            "Innocence Lost",               { "Initiate", "Stamina", AV::kStamina, 15.0f, false },  0, false },
+            { 3402, "DB02",            "With Friends Like These...",   { "Sworn", "Health", AV::kHealth, 15.0f, false },  0, false },
+            { 3403, "DB03",            "Mourning Never Comes",         { "Silencer", "Stamina", AV::kStamina, 15.0f, false },  0, false },
+            { 3404, "DB04",            "Whispers in the Dark",         { "Whisperer", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
+            { 3405, "DB05",            "Bound Until Death",            { "Bound", "Health", AV::kHealth, 15.0f, false },  0, false },
+            { 3406, "DB06",            "Breaching Security",           { "Breacher", "Stamina", AV::kStamina, 15.0f, false },  0, false },
+            { 3407, "DB07",            "The Cure for Madness",         { "Cure-Bringer", "Health", AV::kHealth, 15.0f, false },  0, false },
+            { 3408, "DB08",            "Recipe for Disaster",          { "Poisoner", "Disease Resist", AV::kResistDisease, 5.0f, true },  0, false },
+            { 3409, "DB09",            "To Kill an Empire",            { "Emperor's End", "Health", AV::kHealth, 15.0f, false },  0, false },
+            { 3410, "DB10",            "Death Incarnate",              { "Death Incarnate", "Stamina", AV::kStamina, 25.0f, false },  0, false },
+            { 3411, "DB11",            "Hail Sithis!",                 { "Listener", "Stamina", AV::kStamina, 50.0f, false },  2, false },
 
             // --- Civil War ---
             // No milestone for the war's end: the finale runs through radiant siege
             // quests (CWSiegeObj fires per city), so there is no single quest that means
             // "the war is over". Only the scripted beats are tracked.
-            { 3501, "CW01A",           "Joining the Legion",           { "Legionnaire",       "+15 Health",        AV::kHealth,      15.0f },  0, false },
-            { 3502, "CW01B",           "Joining the Stormcloaks",      { "Stormcloak",        "+15 Health",        AV::kHealth,      15.0f },  0, false },
-            { 3503, "CW02A",           "The Jagged Crown",             { "Crown Bearer",      "+15 Stamina",       AV::kStamina,     15.0f },  0, false },
-            { 3504, "CW02B",           "The Jagged Crown",             { "Crown Bearer",      "+15 Stamina",       AV::kStamina,     15.0f },  0, false },
-            { 3505, "CW03",            "Message to Whiterun",          { "Herald",            "+15 Carry Weight",  AV::kCarryWeight, 15.0f },  0, false },
-            { 3506, "CWMission03",     "A False Front",                { "False Front",       "+15 Stamina",       AV::kStamina,     15.0f },  0, false },
-            { 3507, "CWMission07",     "Compelling Tribute",           { "Tribute Taker",     "+15 Carry Weight",  AV::kCarryWeight, 15.0f },  0, false },
+            { 3501, "CW01A",           "Joining the Legion",           { "Legionnaire", "Health", AV::kHealth, 15.0f, false },  0, false },
+            { 3502, "CW01B",           "Joining the Stormcloaks",      { "Stormcloak", "Health", AV::kHealth, 15.0f, false },  0, false },
+            { 3503, "CW02A",           "The Jagged Crown",             { "Crown Bearer", "Stamina", AV::kStamina, 15.0f, false },  0, false },
+            { 3504, "CW02B",           "The Jagged Crown",             { "Crown Bearer", "Stamina", AV::kStamina, 15.0f, false },  0, false },
+            { 3505, "CW03",            "Message to Whiterun",          { "Herald", "Carry Weight", AV::kCarryWeight, 15.0f, false },  0, false },
+            { 3506, "CWMission03",     "A False Front",                { "False Front", "Stamina", AV::kStamina, 15.0f, false },  0, false },
+            { 3507, "CWMission07",     "Compelling Tribute",           { "Tribute Taker", "Carry Weight", AV::kCarryWeight, 15.0f, false },  0, false },
         };
 
         // editorID -> quest, built once. Empty until Install() runs.
@@ -185,7 +191,11 @@ namespace Isekai::Progression {
                 return;
             }
             const float base = avOwner->GetBaseActorValue(a_passive.actorValue);
-            avOwner->SetBaseActorValue(a_passive.actorValue, base + a_passive.amount);
+            avOwner->SetBaseActorValue(a_passive.actorValue, base + PassiveAmount(a_passive));
+        }
+
+        [[nodiscard]] std::int32_t ScaledSouls(std::int32_t a_base) {
+            return static_cast<std::int32_t>(std::lround(static_cast<float>(a_base) * RewardScale()));
         }
 
         // Hand out a milestone's rewards. Main thread only.
@@ -197,7 +207,9 @@ namespace Isekai::Progression {
             GetState().grantedMilestones.push_back(a_milestone.key);
 
             ApplyPassive(a_milestone.passive);
-            GrantDragonSouls(a_milestone.dragonSouls);
+
+            const std::int32_t souls = ScaledSouls(a_milestone.dragonSouls);
+            GrantDragonSouls(souls);
 
             std::int32_t perks = 0;
             if (a_milestone.endpoint) {
@@ -205,9 +217,9 @@ namespace Isekai::Progression {
                 GrantPerkPoints(perks);
             }
 
-            logger::info("Milestone granted: {} — passive '{}' ({}), perks +{}, souls +{}",
+            logger::info("Milestone granted: {} — passive '{}' ({}), perks +{}, souls +{} (scale x{})",
                          a_milestone.questName, a_milestone.passive.name,
-                         a_milestone.passive.effect, perks, a_milestone.dragonSouls);
+                         PassiveEffectText(a_milestone.passive), perks, souls, RewardScale());
             return true;
         }
 
@@ -237,9 +249,10 @@ namespace Isekai::Progression {
             text += "\n\nREWARDS\n\n  Passive   ";
             text += a_milestone.passive.name;
             text += "\n            ";
-            text += a_milestone.passive.effect;
-            if (a_milestone.dragonSouls > 0) {
-                text += "\n\n  Dragon Souls  +" + std::to_string(a_milestone.dragonSouls);
+            text += PassiveEffectText(a_milestone.passive);
+
+            if (const auto souls = ScaledSouls(a_milestone.dragonSouls); souls > 0) {
+                text += "\n\n  Dragon Souls  +" + std::to_string(souls);
             }
             if (a_perks > 0) {
                 text += "\n  Perk Points   +" + std::to_string(a_perks);
@@ -334,6 +347,18 @@ namespace Isekai::Progression {
         };
     }
 
+    float PassiveAmount(const Passive& a_passive) {
+        return std::round(a_passive.baseAmount * RewardScale());
+    }
+
+    std::string PassiveEffectText(const Passive& a_passive) {
+        std::string text = "+";
+        text += std::to_string(static_cast<int>(PassiveAmount(a_passive)));
+        text += a_passive.percent ? "% " : " ";
+        text += a_passive.stat;
+        return text;
+    }
+
     void Install() {
         auto* data = RE::TESDataHandler::GetSingleton();
         if (!data) {
@@ -385,6 +410,7 @@ namespace Isekai::Progression {
     void CatchUpOnLoad() {
         std::vector<const Milestone*> caughtUp;
         std::int32_t                  perks = 0;
+        std::int32_t                  souls = 0;
 
         for (const auto& m : kMilestones) {
             if (AlreadyGranted(m.key)) {
@@ -397,6 +423,7 @@ namespace Isekai::Progression {
             if (m.endpoint) {
                 perks += MilestonePerkPoints();
             }
+            souls += ScaledSouls(m.dragonSouls);
             if (Grant(m)) {
                 caughtUp.push_back(&m);
             }
@@ -410,7 +437,10 @@ namespace Isekai::Progression {
         // otherwise be a dozen popups in a row.
         std::string body = "SYNCHRONISING...\n\nThe System has recognised deeds already done.\n\n";
         for (const auto* m : caughtUp) {
-            body += "  " + std::string(m->passive.name) + "   " + m->passive.effect + "\n";
+            body += "  " + std::string(m->passive.name) + "   " + PassiveEffectText(m->passive) + "\n";
+        }
+        if (souls > 0) {
+            body += "\n  Dragon Souls  +" + std::to_string(souls);
         }
         if (perks > 0) {
             body += "\n  Perk Points   +" + std::to_string(perks);

@@ -330,6 +330,17 @@ namespace Isekai {
         return g_state;
     }
 
+    float RewardScale() {
+        switch (g_state.power) {
+        case PowerLevel::Hero:
+            return 2.0f;
+        case PowerLevel::Ascended:
+            return 4.0f;
+        default:  // Normal is the baseline the table is written against
+            return 1.0f;
+        }
+    }
+
     std::int32_t MilestonePerkPoints() {
         // The same amount the blessing itself paid: the choice made at the start keeps
         // paying out at every endpoint. NORMAL took no blessing, so it earns no perk
