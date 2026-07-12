@@ -31,30 +31,40 @@ namespace Isekai::UI {
         constexpr float kFadeInSeconds = 0.30f;
         constexpr float kPanelWidth = 640.0f;
 
-        using UEFlag = RE::ControlMap::UEFlag;
-
-        // CommonLibSSE only defines bitwise ops for stl::enumeration, not for the
-        // bare enum class, so combine the flags by hand.
-        template <class... Args>
-        [[nodiscard]] constexpr UEFlag CombineFlags(Args... a_flags) {
-            using U = std::underlying_type_t<UEFlag>;
-            return static_cast<UEFlag>((static_cast<U>(a_flags) | ...));
-        }
-
-        // While the panel is up the player must not walk, swing, or open menus.
-        // Skyrim reads input through DirectInput, not the window message queue, so
-        // suppressing WndProc alone would not be enough — the control map is.
-        constexpr auto kBlockedControls =
-            CombineFlags(UEFlag::kMovement, UEFlag::kLooking, UEFlag::kActivate,
-                         UEFlag::kMenu, UEFlag::kFighting, UEFlag::kSneaking,
-                         UEFlag::kJumping, UEFlag::kMainFour, UEFlag::kWheelZoom,
-                         UEFlag::kPOVSwitch);
+        // Hold the world still while a panel is up.
+        //
+        // Deliberately NOT ControlMap::ToggleControls: that corrupted the input
+        // system. The game kept running fine until the player regained control, then
+        // crashed indexing controlMap[]/devices[] with a garbage index — proven by
+        // bisection (the crash disappears with the ToggleControls call removed, and
+        // reproduced even for the blessing that writes no stats at all).
+        //
+        // These two do the same job without going near those arrays:
+        //   numPausesGame    — the very counter a vanilla menu bumps to pause the
+        //                      game. Freezes the world, so nothing swings or attacks.
+        //   blockPlayerInput — stops PlayerControls from feeding its handlers.
+        // Both are plain scalars. Bounded by g_paused so the pause count stays even.
+        bool g_paused = false;
 
         // Main thread only.
         void SetGameInputEnabled(bool a_enable) {
-            if (auto* controls = RE::ControlMap::GetSingleton()) {
-                controls->ToggleControls(kBlockedControls, a_enable);
+            if (a_enable == !g_paused) {
+                return;  // already in the requested state
             }
+            g_paused = !a_enable;
+
+            if (auto* controls = RE::PlayerControls::GetSingleton()) {
+                controls->blockPlayerInput = g_paused;
+            }
+            if (auto* ui = RE::UI::GetSingleton()) {
+                if (g_paused) {
+                    ++ui->numPausesGame;
+                } else if (ui->numPausesGame > 0) {
+                    --ui->numPausesGame;
+                }
+            }
+
+            logger::info("Game {} for System panel", g_paused ? "paused" : "resumed");
         }
 
         // Called from the render thread once a button was clicked. Hands the answer
