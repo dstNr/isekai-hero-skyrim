@@ -16,6 +16,8 @@ add_commonlibsse_plugin(
         src/main.cpp
         src/System.cpp
         src/System.h
+        src/Progression.cpp
+        src/Progression.h
         src/Logger.h
         src/PCH.h
         src/UI/Input.cpp

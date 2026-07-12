@@ -3,6 +3,9 @@
 // Core of the Isekai "System". Ported from the Papyrus version's data model
 // (see papyrus/Scripts/Source). Native C++ / CommonLibSSE-NG implementation.
 
+#include <cstdint>
+#include <vector>
+
 namespace Isekai {
 
     // How much power the System grants on reincarnation.
@@ -26,9 +29,21 @@ namespace Isekai {
         bool       reincarnated = false;
         PowerLevel power = PowerLevel::Normal;
         SkillFocus skills = SkillFocus::Balanced;
+
+        // Milestones already paid out, by their stable key. Guards against paying
+        // twice — quest stage events fire more than once, and the retroactive
+        // catch-up runs on every load.
+        std::vector<std::uint32_t> grantedMilestones;
     };
 
     [[nodiscard]] State& GetState();
+
+    // Perk points a milestone endpoint pays out. Scaled to the blessing taken at the
+    // start, so that choice keeps mattering for the whole playthrough.
+    [[nodiscard]] std::int32_t MilestonePerkPoints();
+
+    // Add perk points, clamped to what the engine can actually hold (127).
+    void GrantPerkPoints(std::int32_t a_points);
 
     // Install everything: co-save serialization (persist choices + the
     // "already reincarnated" flag) and a start-method-independent trigger that

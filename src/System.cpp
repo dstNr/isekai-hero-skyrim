@@ -1,5 +1,6 @@
 #include "System.h"
 
+#include "Progression.h"
 #include "UI/Overlay.h"
 #include "UI/SystemWindow.h"
 
@@ -18,7 +19,7 @@ namespace Isekai {
         // --- Co-save serialization IDs ---
         constexpr std::uint32_t kSerID = 'ISKA';    // unique plugin id
         constexpr std::uint32_t kRecState = 'STAT';  // record tag
-        constexpr std::uint32_t kVersion = 2;        // bumped: origin removed from State
+        constexpr std::uint32_t kVersion = 3;        // bumped: milestone list added
 
         // ---- Timing helpers ----
 
@@ -106,11 +107,7 @@ namespace Isekai {
                 }
             }
 
-            if (b.perkPoints > 0) {
-                auto& stats = player->GetGameStatsData();
-                const int total = static_cast<int>(stats.perkCount) + b.perkPoints;
-                stats.perkCount = static_cast<std::int8_t>(std::min(total, kMaxPerkPoints));
-            }
+            GrantPerkPoints(b.perkPoints);
 
             // Gold (Gold001 = 0x0000000F).
             if (b.gold > 0) {
@@ -230,23 +227,63 @@ namespace Isekai {
         // Serialization callbacks
         // ------------------------------------------------------------------
 
+        // Written field by field, not as one memcpy of the struct: State now holds a
+        // vector, whose bytes are a heap pointer, not the data. Blitting the struct
+        // would write a pointer into the save and read it back as garbage.
         void SaveCallback(SKSE::SerializationInterface* a_intf) {
-            if (a_intf->OpenRecord(kRecState, kVersion)) {
-                a_intf->WriteRecordData(&g_state, sizeof(g_state));
+            if (!a_intf->OpenRecord(kRecState, kVersion)) {
+                logger::error("Could not open the save record — state not written");
+                return;
             }
-            logger::info("State saved (reincarnated={})", g_state.reincarnated);
+
+            a_intf->WriteRecordData(g_state.reincarnated);
+            a_intf->WriteRecordData(g_state.power);
+            a_intf->WriteRecordData(g_state.skills);
+
+            const auto count = static_cast<std::uint32_t>(g_state.grantedMilestones.size());
+            a_intf->WriteRecordData(count);
+            for (const auto key : g_state.grantedMilestones) {
+                a_intf->WriteRecordData(key);
+            }
+
+            logger::info("State saved (reincarnated={}, milestones={})", g_state.reincarnated,
+                         count);
         }
 
         void LoadCallback(SKSE::SerializationInterface* a_intf) {
             std::uint32_t type = 0;
             std::uint32_t version = 0;
             std::uint32_t length = 0;
+
             while (a_intf->GetNextRecordInfo(type, version, length)) {
-                if (type == kRecState && version == kVersion && length == sizeof(g_state)) {
-                    a_intf->ReadRecordData(&g_state, sizeof(g_state));
+                if (type != kRecState) {
+                    continue;
+                }
+                // Saves from an older layout are skipped rather than misread. The player
+                // loses the System's memory of past milestones, not their character.
+                if (version != kVersion) {
+                    logger::warn("Save holds state version {} but we speak {} — ignoring it",
+                                 version, kVersion);
+                    continue;
+                }
+
+                a_intf->ReadRecordData(g_state.reincarnated);
+                a_intf->ReadRecordData(g_state.power);
+                a_intf->ReadRecordData(g_state.skills);
+
+                std::uint32_t count = 0;
+                a_intf->ReadRecordData(count);
+                g_state.grantedMilestones.clear();
+                g_state.grantedMilestones.reserve(count);
+                for (std::uint32_t i = 0; i < count; ++i) {
+                    std::uint32_t key = 0;
+                    a_intf->ReadRecordData(key);
+                    g_state.grantedMilestones.push_back(key);
                 }
             }
-            logger::info("State loaded (reincarnated={})", g_state.reincarnated);
+
+            logger::info("State loaded (reincarnated={}, milestones={})", g_state.reincarnated,
+                         g_state.grantedMilestones.size());
         }
 
         void RevertCallback(SKSE::SerializationInterface*) {
@@ -259,19 +296,52 @@ namespace Isekai {
         // ------------------------------------------------------------------
 
         void OnSKSEMessage(SKSE::MessagingInterface::Message* a_msg) {
-            if (a_msg->type == SKSE::MessagingInterface::kDataLoaded) {
+            switch (a_msg->type) {
+            case SKSE::MessagingInterface::kDataLoaded:
                 UI::Install();
+                Progression::Install();
 
                 if (auto* ui = RE::UI::GetSingleton()) {
                     ui->AddEventSink<RE::MenuOpenCloseEvent>(MenuWatcher::GetSingleton());
                     logger::info("Menu watcher installed — reincarnation trigger armed");
                 }
+                break;
+
+            // Both fire after the co-save has been read back, so grantedMilestones is
+            // populated and the catch-up knows what it already owes.
+            case SKSE::MessagingInterface::kPostLoadGame:
+            case SKSE::MessagingInterface::kNewGame:
+                Progression::CatchUpOnLoad();
+                break;
+
+            default:
+                break;
             }
         }
     }
 
     State& GetState() {
         return g_state;
+    }
+
+    std::int32_t MilestonePerkPoints() {
+        // The same amount the blessing itself paid: the choice made at the start keeps
+        // paying out at every endpoint. NORMAL took no blessing, so it earns no perk
+        // points here either — it grows through passives alone.
+        return BlessingFor(g_state.power).perkPoints;
+    }
+
+    void GrantPerkPoints(std::int32_t a_points) {
+        if (a_points <= 0) {
+            return;
+        }
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        if (!player) {
+            return;
+        }
+        auto&      stats = player->GetGameStatsData();
+        const auto total = static_cast<std::int32_t>(stats.perkCount) + a_points;
+        stats.perkCount = static_cast<std::int8_t>(std::min(total, kMaxPerkPoints));
     }
 
     void Install() {
