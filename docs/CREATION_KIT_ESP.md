@@ -55,15 +55,21 @@ Für **jeden** der acht Einträge unten identisch ausfüllen:
 | **Effect Archetype** | `Value Modifier` |
 | **Casting Type** | `Constant Effect` |
 | **Delivery** | `Self` |
-| **Actor Value** | siehe Tabelle |
+| **Assoc. Item 1** | der Actor Value — siehe Tabelle |
 | **Flags** | **nur** `No Hit Event` und `No Duration` ankreuzen |
 | | ❌ **NICHT** `Detrimental` |
 | | ❌ **NICHT** `Hide in UI` — genau das wollen wir ja sehen |
 | Magnitude/Duration/Area | leer lassen (0) |
 
+> **Es gibt kein Feld namens „Actor Value".** Der Actor Value steckt in
+> **`Assoc. Item 1`** (links, unter *Minimum Skill Level*). Das Feld ist generisch
+> benannt, weil sein Inhalt vom Archetype abhängt — bei `Value Modifier` listet es
+> Actor Values. Wenn dort Objekte statt Actor Values auftauchen, `Effect Archetype`
+> einmal weg- und wieder zurückstellen; das lädt die Liste neu.
+
 Die acht:
 
-| ID | Name | Actor Value |
+| ID | Name | Assoc. Item 1 |
 |---|---|---|
 | `IsekaiME_Health` | `System: Vitality` | `Health` |
 | `IsekaiME_Magicka` | `System: Arcane` | `Magicka` |
@@ -171,6 +177,7 @@ verifiziert haben. So gibt es keine geratene Zahl im Code.
 
 | Symptom | Ursache |
 |---|---|
+| Kein Feld „Actor Value" zu finden | Heißt **`Assoc. Item 1`** (Teil A) |
 | CK stürzt beim Laden ab | `Skyrim.esm` **und** `Update.esm` müssen beide angehakt sein |
 | Truhe leert sich von selbst | `Respawns`-Haken vergessen (Teil C) |
 | Passives greifen nicht | Ability-Typ ist `Spell` statt `Ability` (Teil B) |
