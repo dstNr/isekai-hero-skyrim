@@ -157,7 +157,36 @@ namespace Isekai::Progression {
             return text;
         }
 
-        class QuestWatcher : public RE::BSTEventSink<RE::TESQuestStageEvent> {
+        // Check one quest and pay out if it just finished. Safe to call repeatedly.
+        void CheckQuest(RE::FormID a_formID) {
+            auto*       quest = RE::TESForm::LookupByID<RE::TESQuest>(a_formID);
+            const auto* milestone = FindByQuest(quest);
+
+            // Deliberately asking the engine whether the quest is done, rather than
+            // matching a hard-coded completion stage number — one less thing to get
+            // wrong, and it survives quests that finish on different stages.
+            if (!milestone || !quest->IsCompleted() || AlreadyGranted(milestone->key)) {
+                return;
+            }
+
+            const std::int32_t perks = milestone->endpoint ? MilestonePerkPoints() : 0;
+            if (Grant(*milestone)) {
+                Celebrate(milestone->endpoint ? "MILESTONE" : "QUEST COMPLETE",
+                          milestone->questName, RewardText(*milestone, perks));
+            }
+        }
+
+        // Listening to two events, not one.
+        //
+        // A quest finished in normal play advances a stage, so the stage event alone
+        // would do. But the console's `completequest` marks a quest done *without*
+        // advancing a stage — no stage event, no reward. That made the whole feature
+        // untestable without playing the quest for real, which is no way to trust a
+        // trigger. Stopping the quest does fire the start/stop event, so we take both.
+        // Grant() is idempotent, so a quest that fires both is still paid once.
+        class QuestWatcher :
+            public RE::BSTEventSink<RE::TESQuestStageEvent>,
+            public RE::BSTEventSink<RE::TESQuestStartStopEvent> {
         public:
             static QuestWatcher* GetSingleton() {
                 static QuestWatcher singleton;
@@ -167,24 +196,17 @@ namespace Isekai::Progression {
             RE::BSEventNotifyControl ProcessEvent(
                 const RE::TESQuestStageEvent*                a_event,
                 RE::BSTEventSource<RE::TESQuestStageEvent>*) override {
-                if (!a_event) {
-                    return RE::BSEventNotifyControl::kContinue;
+                if (a_event) {
+                    CheckQuest(a_event->formID);
                 }
+                return RE::BSEventNotifyControl::kContinue;
+            }
 
-                auto* quest = RE::TESForm::LookupByID<RE::TESQuest>(a_event->formID);
-                const auto* milestone = FindByQuest(quest);
-
-                // Deliberately asking the engine whether the quest is done, rather than
-                // matching a hard-coded completion stage number — one less thing to get
-                // wrong, and it survives quests that finish on different stages.
-                if (!milestone || !quest->IsCompleted() || AlreadyGranted(milestone->key)) {
-                    return RE::BSEventNotifyControl::kContinue;
-                }
-
-                const std::int32_t perks = milestone->endpoint ? MilestonePerkPoints() : 0;
-                if (Grant(*milestone)) {
-                    Celebrate(milestone->endpoint ? "MILESTONE" : "QUEST COMPLETE",
-                              milestone->questName, RewardText(*milestone, perks));
+            RE::BSEventNotifyControl ProcessEvent(
+                const RE::TESQuestStartStopEvent*                a_event,
+                RE::BSTEventSource<RE::TESQuestStartStopEvent>*) override {
+                if (a_event && !a_event->started) {
+                    CheckQuest(a_event->formID);
                 }
                 return RE::BSEventNotifyControl::kContinue;
             }
@@ -230,7 +252,8 @@ namespace Isekai::Progression {
 
         if (auto* source = RE::ScriptEventSourceHolder::GetSingleton()) {
             source->AddEventSink<RE::TESQuestStageEvent>(QuestWatcher::GetSingleton());
-            logger::info("Progression: quest watcher armed");
+            source->AddEventSink<RE::TESQuestStartStopEvent>(QuestWatcher::GetSingleton());
+            logger::info("Progression: quest watcher armed (stage + start/stop)");
         }
     }
 
