@@ -29,7 +29,7 @@ namespace Isekai::UI {
 
         constexpr float kRevealCharsPerSec = 45.0f;
         constexpr float kFadeInSeconds = 0.30f;
-        constexpr float kPanelWidth = 640.0f;
+        constexpr float kPanelWidth = 720.0f;  // at 1080p; scaled with the display
 
         // Hold the world still while a panel is up.
         //
@@ -105,14 +105,15 @@ namespace Isekai::UI {
                 shownBody.push_back('_');  // cursor, while it types itself out
             }
 
+            const float  s = Style::g_scale;
             const ImVec2 screen = io.DisplaySize;
             ImGui::SetNextWindowPos(ImVec2{ screen.x * 0.5f, screen.y * 0.45f }, ImGuiCond_Always,
                                     ImVec2{ 0.5f, 0.5f });
-            ImGui::SetNextWindowSize(ImVec2{ kPanelWidth, 0.0f }, ImGuiCond_Always);
+            ImGui::SetNextWindowSize(ImVec2{ kPanelWidth * s, 0.0f }, ImGuiCond_Always);
 
             ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 28.0f, 24.0f });
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 32.0f * s, 28.0f * s });
             ImGui::PushStyleColor(ImGuiCol_WindowBg,
                                   ImVec4{ Style::kPanelBg.x, Style::kPanelBg.y, Style::kPanelBg.z,
                                           Style::kPanelBg.w * fade });
@@ -130,12 +131,14 @@ namespace Isekai::UI {
                 const ImVec2 size = ImGui::GetWindowSize();
                 const ImVec2 wMax{ wMin.x + size.x, wMin.y + size.y };
 
-                Style::DrawGlowBorder(dl, wMin, wMax, Style::kAccent, fade);
-                Style::DrawCornerBrackets(dl, wMin, wMax, Style::kAccent, fade);
+                Style::DrawGlowBorder(dl, wMin, wMax, Style::kAccent, fade, 7, 2.0f * s);
+                Style::DrawCornerBrackets(dl, wMin, wMax, Style::kAccent, fade, 24.0f * s,
+                                          2.5f * s);
 
                 const float inner = ImGui::GetContentRegionAvail().x;
 
                 // --- Title, centred ---
+                ImGui::PushFont(Style::g_title, Style::TitleSize());
                 ImGui::PushStyleColor(
                     ImGuiCol_Text,
                     ImVec4{ Style::kAccent.x, Style::kAccent.y, Style::kAccent.z, fade });
@@ -143,27 +146,31 @@ namespace Isekai::UI {
                 ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (inner - titleW) * 0.5f);
                 ImGui::TextUnformatted(g_win.title.c_str());
                 ImGui::PopStyleColor();
+                ImGui::PopFont();
 
                 ImGui::Spacing();
                 const float sepY = ImGui::GetCursorScreenPos().y;
-                dl->AddLine(ImVec2{ wMin.x + 20.0f, sepY }, ImVec2{ wMax.x - 20.0f, sepY },
+                dl->AddLine(ImVec2{ wMin.x + 24.0f * s, sepY }, ImVec2{ wMax.x - 24.0f * s, sepY },
                             Style::Col(Style::kAccent, 0.45f * fade), 1.0f);
                 ImGui::Spacing();
                 ImGui::Spacing();
 
                 // --- Body, typewriter reveal ---
+                ImGui::PushFont(Style::g_body, Style::BodySize());
                 ImGui::PushStyleColor(
                     ImGuiCol_Text, ImVec4{ Style::kText.x, Style::kText.y, Style::kText.z, fade });
                 ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + inner);
                 ImGui::TextUnformatted(shownBody.c_str());
                 ImGui::PopTextWrapPos();
                 ImGui::PopStyleColor();
+                ImGui::PopFont();
 
                 ImGui::Spacing();
                 ImGui::Spacing();
 
                 // --- Choices, only once the text has finished typing ---
                 if (bodyComplete && !g_win.choices.empty()) {
+                    ImGui::PushFont(Style::g_title, Style::BodySize());
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f });
                     ImGui::PushStyleColor(
                         ImGuiCol_ButtonHovered,
@@ -185,7 +192,7 @@ namespace Isekai::UI {
                             ImGui::SameLine();
                         }
                         ImGui::PushID(static_cast<int>(i));
-                        if (ImGui::Button(g_win.choices[i].c_str(), ImVec2{ btnW, 40.0f })) {
+                        if (ImGui::Button(g_win.choices[i].c_str(), ImVec2{ btnW, 46.0f * s })) {
                             chosen = static_cast<int>(i);
                         }
                         ImGui::PopID();
@@ -193,6 +200,7 @@ namespace Isekai::UI {
 
                     ImGui::PopStyleVar(2);
                     ImGui::PopStyleColor(5);
+                    ImGui::PopFont();
                 }
             }
             ImGui::End();

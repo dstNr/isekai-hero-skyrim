@@ -1,6 +1,7 @@
 #include "UI/Overlay.h"
 
 #include "UI/Input.h"
+#include "UI/Style.h"
 #include "UI/SystemWindow.h"
 
 #include <d3d11.h>
@@ -53,6 +54,19 @@ namespace Isekai::UI {
             a_io.DeltaTime = std::clamp(delta, 1.0f / 1000.0f, 1.0f / 15.0f);
         }
 
+        // Consolas ships with Windows, so we can use it without redistributing a font
+        // file. If it is somehow missing, ImGui's built-in font takes over — the panel
+        // still works, it just looks plainer. Sizes are irrelevant here: ImGui 1.92
+        // rasterises on demand at whatever size PushFont asks for.
+        void LoadFonts(ImGuiIO& a_io) {
+            Style::g_body = a_io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\consola.ttf", 20.0f);
+            Style::g_title = a_io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\consolab.ttf", 30.0f);
+
+            if (!Style::g_body || !Style::g_title) {
+                logger::warn("UI: Consolas not found — falling back to the built-in font");
+            }
+        }
+
         // Runs on the render thread, on the first Present after the hook is in place.
         bool InitImGui(IDXGISwapChain* a_swapChain) {
             auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
@@ -88,6 +102,9 @@ namespace Isekai::UI {
             ImGuiIO& io = ImGui::GetIO();
             io.IniFilename = nullptr;  // don't litter the game folder with imgui.ini
             io.LogFilename = nullptr;
+            io.MouseDrawCursor = false;  // we draw our own, see Style::DrawSystemCursor
+
+            LoadFonts(io);
 
             if (!ImGui_ImplDX11_Init(device, g_context)) {
                 logger::error("UI: ImGui DX11 backend init failed");
@@ -108,17 +125,21 @@ namespace Isekai::UI {
             if (g_ready.load(std::memory_order_acquire)) {
                 ImGuiIO& io = ImGui::GetIO();
                 UpdateDisplayAndTime(a_swapChain, io);
+                Style::UpdateScale(io.DisplaySize.y);
                 FeedImGui(io);
-
-                // Only ever draw a cursor while we own the input. Left on permanently,
-                // ours would sit on screen next to the game's own cursor whenever
-                // Skyrim opens a menu of its own (a Survival Mode prompt, say).
-                io.MouseDrawCursor = IsCapturingInput();
 
                 ImGui_ImplDX11_NewFrame();
                 ImGui::NewFrame();
 
                 DrawSystemWindow();
+
+                // Only while we own the input, and above everything else — otherwise
+                // it would sit on screen next to Skyrim's own cursor whenever the game
+                // opens a menu of its own (a Survival Mode prompt, say).
+                if (IsCapturingInput()) {
+                    Style::DrawSystemCursor(ImGui::GetForegroundDrawList(), io.MousePos,
+                                            Style::g_scale, Style::kAccent);
+                }
 
                 ImGui::Render();
                 g_context->OMSetRenderTargets(1, &g_backBufferView, nullptr);

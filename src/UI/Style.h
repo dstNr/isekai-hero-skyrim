@@ -2,6 +2,8 @@
 
 #include <imgui.h>
 
+#include <algorithm>
+
 // Visual language of the System: cold cyan light on a deep translucent navy
 // panel, hard angular edges, no rounded "app" look.
 namespace Isekai::UI::Style {
@@ -10,6 +12,23 @@ namespace Isekai::UI::Style {
     inline const ImVec4 kAccent{ 0.35f, 0.80f, 1.00f, 1.00f };
     inline const ImVec4 kText{ 0.85f, 0.94f, 1.00f, 1.00f };
     inline const ImVec4 kTextDim{ 0.50f, 0.65f, 0.78f, 1.00f };
+
+    // Monospace on purpose: it sells the "terminal" read, and it makes the option
+    // list line up in columns, which a proportional font cannot do.
+    // Set by Overlay::InitImGui. Null is fine — ImGui then keeps its built-in font.
+    inline ImFont* g_body = nullptr;
+    inline ImFont* g_title = nullptr;
+
+    // Everything is authored against 1080p and scaled from there, so the panel does
+    // not shrink into a postage stamp on a 4K screen.
+    inline float g_scale = 1.0f;
+
+    inline void UpdateScale(float a_displayHeight) {
+        g_scale = std::max(a_displayHeight / 1080.0f, 0.5f);
+    }
+
+    [[nodiscard]] inline float BodySize() { return 20.0f * g_scale; }
+    [[nodiscard]] inline float TitleSize() { return 30.0f * g_scale; }
 
     [[nodiscard]] inline ImU32 Col(const ImVec4& a_color, float a_alphaScale = 1.0f) {
         return ImGui::GetColorU32(
@@ -31,6 +50,40 @@ namespace Isekai::UI::Style {
                           Col(a_color, alpha), 0.0f, 0, 1.5f);
         }
         a_dl->AddRect(a_min, a_max, Col(a_color, a_alphaScale), 0.0f, 0, 1.5f);
+    }
+
+    // Our own pointer, drawn into the foreground. ImGui's stock arrow is a plain
+    // grey OS cursor and reads as a foreign object on top of the panel; this one is
+    // cut from the same cyan as the frame. Skyrim has no cursor of its own to borrow
+    // outside its Scaleform menus, so drawing one is the only option.
+    inline void DrawSystemCursor(ImDrawList* a_dl, ImVec2 a_pos, float a_scale,
+                                 const ImVec4& a_color) {
+        const auto P = [&](float x, float y) {
+            return ImVec2{ a_pos.x + x * a_scale, a_pos.y + y * a_scale };
+        };
+
+        // A hard, angular arrowhead — no rounded OS-cursor curves.
+        const ImVec2 tip = P(0.0f, 0.0f);
+        const ImVec2 tail = P(0.0f, 18.0f);
+        const ImVec2 barb = P(13.0f, 13.0f);
+
+        // Drop shadow first, so the cursor stays readable over a bright sky.
+        const ImVec2 off{ 2.0f * a_scale, 2.0f * a_scale };
+        a_dl->AddTriangleFilled(ImVec2{ tip.x + off.x, tip.y + off.y },
+                                ImVec2{ tail.x + off.x, tail.y + off.y },
+                                ImVec2{ barb.x + off.x, barb.y + off.y },
+                                IM_COL32(0, 0, 0, 120));
+
+        for (int i = 3; i >= 1; --i) {
+            const float spread = static_cast<float>(i) * 1.5f * a_scale;
+            a_dl->AddTriangle(ImVec2{ tip.x - spread, tip.y - spread },
+                              ImVec2{ tail.x - spread, tail.y + spread },
+                              ImVec2{ barb.x + spread, barb.y + spread },
+                              Col(a_color, 0.10f), 1.0f);
+        }
+
+        a_dl->AddTriangleFilled(tip, tail, barb, Col(a_color, 0.30f));
+        a_dl->AddTriangle(tip, tail, barb, Col(a_color), 1.5f * a_scale);
     }
 
     // Targeting-reticle brackets at the four corners.

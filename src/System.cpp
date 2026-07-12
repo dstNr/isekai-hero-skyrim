@@ -124,8 +124,10 @@ namespace Isekai {
                          b.attrBonus, b.gold);
 
             const std::string body =
-                "REINCARNATION COMPLETE\n\n"
-                "Power level:  " + PowerName(g_state.power) + "\n\n"
+                "REINCARNATION COMPLETE\n"
+                "\n"
+                "  Power level   " + PowerName(g_state.power) + "\n"
+                "\n"
                 "The System is now bound to your soul.\n"
                 "Your new life begins.";
 
@@ -136,10 +138,12 @@ namespace Isekai {
             UI::ShowSystemWindow(
                 "[ SYSTEM ]",
                 "You have been reincarnated.\n"
-                "The System offers you a blessing.\n\n"
-                "NORMAL    -  No blessing. Pure challenge.\n"
-                "HERO      -  Awakened power.\n"
-                "ASCENDED  -  Transcend mortal limits.\n\n"
+                "The System offers you a blessing.\n"
+                "\n"
+                "  NORMAL    No blessing. Pure challenge.\n"
+                "  HERO      Awakened power.\n"
+                "  ASCENDED  Transcend mortal limits.\n"
+                "\n"
                 "Choose your path:",
                 { "NORMAL", "HERO", "ASCENDED" },
                 [](int a_idx) {
