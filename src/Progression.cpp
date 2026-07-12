@@ -13,10 +13,12 @@ namespace Isekai::Progression {
 
     namespace {
 
-        // Set true to dump every quest editor ID the game knows to the log. The
-        // milestone table below is written against those IDs, so this is how we
-        // confirm them against the real game data instead of trusting memory.
-        constexpr bool kDumpQuestIDs = true;
+        // Set true to dump every quest editor ID the game knows to the log. That dump
+        // is how the table below was verified against real game data — and it was worth
+        // it: from MQ204 on, the chain is shifted by one from what it looks like
+        // (MQ206 is Alduin's Bane, not The Fallen), and the Horn of Jurgen Windcaller
+        // is not MQ106 at all but a sub-quest, MQ105Ustengrav.
+        constexpr bool kDumpQuestIDs = false;
 
         // A quest whose completion the System rewards.
         //
@@ -36,30 +38,36 @@ namespace Isekai::Progression {
         // Deliberately limited to actor values that add onto a known base (0, or a
         // flat stat). Multiplier values like kShoutRecoveryMult have a base of 1.0 and
         // would need different handling — worth adding later, not worth guessing now.
+        // Keys start at 1101, not 1001: an earlier build shipped a table whose editor
+        // IDs were mismapped, and a save from it may already hold keys 1001-1016
+        // against the wrong quests. Starting fresh means those stale keys match
+        // nothing and simply lapse, rather than silently suppressing a real reward.
         constexpr Milestone kMilestones[] = {
-            // --- Main quest ---
-            { 1001, "MQ101", "Unbound",                       { "Survivor",       "+25 Health",         AV::kHealth,      25.0f }, false },
-            { 1002, "MQ102", "Before the Storm",              { "Wayfarer",       "+25 Carry Weight",   AV::kCarryWeight, 25.0f }, false },
-            { 1003, "MQ103", "Bleak Falls Barrow",            { "Tomb Raider",    "+25 Stamina",        AV::kStamina,     25.0f }, false },
-            { 1004, "MQ104", "Dragon Rising",                 { "Dragon Slayer",  "+5% Magic Resist",   AV::kResistMagic,  5.0f }, false },
-            { 1005, "MQ105", "The Way of the Voice",          { "Voice Wielder",  "+25 Magicka",        AV::kMagicka,     25.0f }, false },
-            { 1006, "MQ106", "The Horn of Jurgen Windcaller", { "Tongue",         "+25 Magicka",        AV::kMagicka,     25.0f }, false },
-            { 1007, "MQ201", "Diplomatic Immunity",           { "Infiltrator",    "+25 Stamina",        AV::kStamina,     25.0f }, false },
-            { 1008, "MQ202", "A Cornered Rat",                { "Shadow Walker",  "+25 Stamina",        AV::kStamina,     25.0f }, false },
-            { 1009, "MQ203", "Alduin's Wall",                 { "Loremaster",     "+25 Magicka",        AV::kMagicka,     25.0f }, false },
-            { 1010, "MQ204", "Elder Knowledge",               { "Time Reader",    "+25 Magicka",        AV::kMagicka,     25.0f }, false },
-            { 1011, "MQ205", "Alduin's Bane",                 { "Time Walker",    "+5% Magic Resist",   AV::kResistMagic,  5.0f }, false },
-            { 1012, "MQ206", "The Fallen",                    { "Dragon Trapper", "+25 Health",         AV::kHealth,      25.0f }, false },
-            { 1013, "MQ302", "Season Unending",               { "Peacemaker",     "+25 Carry Weight",   AV::kCarryWeight, 25.0f }, false },
-            { 1014, "MQ303", "The World-Eater's Eyrie",       { "Skyborn",        "+25 Health",         AV::kHealth,      25.0f }, false },
-            { 1015, "MQ304", "Sovngarde",                     { "Soul Walker",    "+50 Health",         AV::kHealth,      50.0f }, false },
+            // --- Main quest (names verified against the game's own quest table) ---
+            { 1101, "MQ101",          "Unbound",                       { "Survivor",         "+25 Health",        AV::kHealth,      25.0f }, false },
+            { 1102, "MQ102",          "Before the Storm",              { "Wayfarer",         "+25 Carry Weight",  AV::kCarryWeight, 25.0f }, false },
+            { 1103, "MQ103",          "Bleak Falls Barrow",            { "Tomb Raider",      "+25 Stamina",       AV::kStamina,     25.0f }, false },
+            { 1104, "MQ104",          "Dragon Rising",                 { "Dragon Slayer",    "+5% Magic Resist",  AV::kResistMagic,  5.0f }, false },
+            { 1105, "MQ105",          "The Way of the Voice",          { "Voice Wielder",    "+25 Magicka",       AV::kMagicka,     25.0f }, false },
+            { 1106, "MQ105Ustengrav", "The Horn of Jurgen Windcaller", { "Horn Bearer",      "+25 Stamina",       AV::kStamina,     25.0f }, false },
+            { 1107, "MQ106",          "A Blade in the Dark",           { "Blade in the Dark",  "+25 Health",      AV::kHealth,      25.0f }, false },
+            { 1108, "MQ201",          "Diplomatic Immunity",           { "Infiltrator",      "+25 Stamina",       AV::kStamina,     25.0f }, false },
+            { 1109, "MQ202",          "A Cornered Rat",                { "Shadow Walker",    "+25 Carry Weight",  AV::kCarryWeight, 25.0f }, false },
+            { 1110, "MQ203",          "Alduin's Wall",                 { "Loremaster",       "+25 Magicka",       AV::kMagicka,     25.0f }, false },
+            { 1111, "MQ204",          "The Throat of the World",       { "Skyborn",          "+5% Magic Resist",  AV::kResistMagic,  5.0f }, false },
+            { 1112, "MQ205",          "Elder Knowledge",               { "Time Reader",      "+25 Magicka",       AV::kMagicka,     25.0f }, false },
+            { 1113, "MQ206",          "Alduin's Bane",                 { "Time Walker",      "+5% Magic Resist",  AV::kResistMagic,  5.0f }, false },
+            { 1114, "MQ301",          "The Fallen",                    { "Dragon Trapper",   "+25 Health",        AV::kHealth,      25.0f }, false },
+            { 1115, "MQ302",          "Season Unending",               { "Peacemaker",       "+25 Carry Weight",  AV::kCarryWeight, 25.0f }, false },
+            { 1116, "MQ303",          "The World-Eater's Eyrie",       { "Sky Breaker",      "+25 Health",        AV::kHealth,      25.0f }, false },
+            { 1117, "MQ304",          "Sovngarde",                     { "Soul Walker",      "+50 Health",        AV::kHealth,      50.0f }, false },
 
             // --- Endpoint: the main quest ---
-            { 1016, "MQ305", "Dragonslayer",                  { "World Savior",   "+100 Health",        AV::kHealth,     100.0f }, true },
+            { 1118, "MQ305",          "Dragonslayer",                  { "World Savior",     "+100 Health",       AV::kHealth,     100.0f }, true },
 
             // --- Endpoints: the add-ons ---
-            { 2001, "DLC1VQ08", "Kindred Judgment",           { "Vampire's Bane", "+15% Magic Resist",  AV::kResistMagic, 15.0f }, true },
-            { 2002, "DLC2MQ06", "At the Summit of Apocrypha", { "Miraak's Bane",  "+100 Magicka",       AV::kMagicka,    100.0f }, true },
+            { 2101, "DLC1VQ08",       "Kindred Judgment",              { "Vampire's Bane",   "+15% Magic Resist", AV::kResistMagic, 15.0f }, true },
+            { 2102, "DLC2MQ06",       "At the Summit of Apocrypha",    { "Miraak's Bane",    "+100 Magicka",      AV::kMagicka,    100.0f }, true },
         };
 
         // editorID -> quest, built once. Empty until Install() runs.
