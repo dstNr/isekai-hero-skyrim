@@ -1,5 +1,6 @@
 #include "System.h"
 
+#include "Plugin.h"
 #include "Progression.h"
 #include "UI/LevelUpEffect.h"
 #include "UI/Overlay.h"
@@ -295,6 +296,7 @@ namespace Isekai {
         void OnSKSEMessage(SKSE::MessagingInterface::Message* a_msg) {
             switch (a_msg->type) {
             case SKSE::MessagingInterface::kDataLoaded:
+                Plugin::DumpForms();
                 UI::Install();
                 Progression::Install();
 
