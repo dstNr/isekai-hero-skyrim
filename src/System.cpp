@@ -1,6 +1,7 @@
 #include "System.h"
 
 #include "Progression.h"
+#include "UI/LevelUpEffect.h"
 #include "UI/Overlay.h"
 #include "UI/SystemWindow.h"
 
@@ -20,19 +21,6 @@ namespace Isekai {
         constexpr std::uint32_t kSerID = 'ISKA';    // unique plugin id
         constexpr std::uint32_t kRecState = 'STAT';  // record tag
         constexpr std::uint32_t kVersion = 3;        // bumped: milestone list added
-
-        // ---- Timing helpers ----
-
-        // Run fn on the main thread after a_ms. Game/UI calls must be on the main
-        // thread, so a detached timer thread marshals back via the task interface.
-        void DelayedMainThread(std::uint32_t a_ms, std::function<void()> a_fn) {
-            std::thread([a_ms, fn = std::move(a_fn)]() mutable {
-                std::this_thread::sleep_for(std::chrono::milliseconds(a_ms));
-                if (auto* task = SKSE::GetTaskInterface()) {
-                    task->AddTask([fn = std::move(fn)]() { fn(); });
-                }
-            }).detach();
-        }
 
         void SystemMsg(const char* a_text) {
             RE::DebugNotification(a_text);
@@ -128,7 +116,13 @@ namespace Isekai {
                 "The System is now bound to your soul.\n"
                 "Your new life begins.";
 
-            UI::ShowSystemWindow("[ SYSTEM ]", body, { "CONTINUE" }, [](int) {});
+            // The biggest moment the mod has: let the flourish land before the panel.
+            RE::PlaySound("UILevelUp");
+            UI::PlayLevelUpEffect("AWAKENED", PowerName(g_state.power));
+
+            DelayedMainThread(1600, [body]() {
+                UI::ShowSystemWindow("[ SYSTEM ]", body, { "CONTINUE" }, [](int) {});
+            });
         }
 
         void ShowPowerSelection() {
@@ -318,6 +312,15 @@ namespace Isekai {
                 break;
             }
         }
+    }
+
+    void DelayedMainThread(std::uint32_t a_ms, std::function<void()> a_fn) {
+        std::thread([a_ms, fn = std::move(a_fn)]() mutable {
+            std::this_thread::sleep_for(std::chrono::milliseconds(a_ms));
+            if (auto* task = SKSE::GetTaskInterface()) {
+                task->AddTask([fn = std::move(fn)]() { fn(); });
+            }
+        }).detach();
     }
 
     State& GetState() {

@@ -4,9 +4,14 @@
 // (see papyrus/Scripts/Source). Native C++ / CommonLibSSE-NG implementation.
 
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 namespace Isekai {
+
+    // Run fn on the main thread after a_ms. Game and UI calls must happen on the main
+    // thread, so a detached timer marshals back through SKSE's task interface.
+    void DelayedMainThread(std::uint32_t a_ms, std::function<void()> a_fn);
 
     // How much power the System grants on reincarnation.
     enum class PowerLevel {

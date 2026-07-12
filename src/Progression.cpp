@@ -1,6 +1,7 @@
 #include "Progression.h"
 
 #include "System.h"
+#include "UI/LevelUpEffect.h"
 #include "UI/SystemWindow.h"
 
 #include <algorithm>
@@ -123,6 +124,26 @@ namespace Isekai::Progression {
             return true;
         }
 
+        // How long the flourish gets the screen to itself before the reward panel
+        // slides in over it. Long enough for the rings to land, short enough not to
+        // feel like waiting.
+        constexpr std::uint32_t kFlourishLeadMs = 1600;
+
+        // Skyrim keeps its sound editor IDs (that is how the console "playsound" works),
+        // so no FormID to guess. If the ID were wrong the effect just stays silent —
+        // it cannot crash, unlike a bad form lookup.
+        constexpr const char* kMilestoneSound = "UILevelUp";
+
+        // Fire the flourish, then bring up the panel once it has played out.
+        void Celebrate(std::string a_title, std::string a_subtitle, std::string a_body) {
+            RE::PlaySound(kMilestoneSound);
+            UI::PlayLevelUpEffect(std::move(a_title), std::move(a_subtitle));
+
+            DelayedMainThread(kFlourishLeadMs, [body = std::move(a_body)]() {
+                UI::ShowSystemWindow("[ SYSTEM ]", body, { "ACCEPT" }, [](int) {});
+            });
+        }
+
         std::string RewardText(const Milestone& a_milestone, std::int32_t a_perks) {
             std::string text = "QUEST COMPLETE\n\n  ";
             text += a_milestone.questName;
@@ -162,8 +183,8 @@ namespace Isekai::Progression {
 
                 const std::int32_t perks = milestone->endpoint ? MilestonePerkPoints() : 0;
                 if (Grant(*milestone)) {
-                    UI::ShowSystemWindow("[ SYSTEM ]", RewardText(*milestone, perks),
-                                         { "ACCEPT" }, [](int) {});
+                    Celebrate(milestone->endpoint ? "MILESTONE" : "QUEST COMPLETE",
+                              milestone->questName, RewardText(*milestone, perks));
                 }
                 return RE::BSEventNotifyControl::kContinue;
             }
@@ -249,7 +270,8 @@ namespace Isekai::Progression {
 
         logger::info("Progression: caught up on {} milestone(s) already completed",
                      caughtUp.size());
-        UI::ShowSystemWindow("[ SYSTEM ]", body, { "ACCEPT" }, [](int) {});
+        Celebrate("SYNCHRONISED", std::to_string(caughtUp.size()) + " deeds recognised",
+                  std::move(body));
     }
 
     std::vector<const Passive*> EarnedPassives() {

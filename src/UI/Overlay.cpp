@@ -1,6 +1,7 @@
 #include "UI/Overlay.h"
 
 #include "UI/Input.h"
+#include "UI/LevelUpEffect.h"
 #include "UI/Style.h"
 #include "UI/SystemWindow.h"
 
@@ -131,6 +132,9 @@ namespace Isekai::UI {
                 ImGui_ImplDX11_NewFrame();
                 ImGui::NewFrame();
 
+                // The flourish never blocks: it plays over normal gameplay, and it is
+                // drawn before the cursor so it can never sit on top of it.
+                DrawLevelUpEffect();
                 DrawSystemWindow();
 
                 // Only while we own the input, and above everything else — otherwise
