@@ -91,15 +91,82 @@ namespace Isekai {
 
         // ---- Reincarnation flow (choice captured into g_state) ----
 
+        // What each blessing grants. 0 = leave that stat untouched.
+        struct Blessing {
+            std::uint16_t skillLevel;   // set all 18 skills to this
+            std::uint16_t playerLevel;  // set character level
+            std::int32_t  perkPoints;   // add to available perk points
+            float         attrBonus;    // add to base Health/Magicka/Stamina
+            std::int32_t  gold;         // add to inventory
+        };
+
+        Blessing BlessingFor(PowerLevel a_power) {
+            switch (a_power) {
+            case PowerLevel::Hero:
+                return { 50, 25, 10, 100.0f, 2000 };
+            case PowerLevel::Ascended:
+                return { 100, 150, 80, 300.0f, 25000 };
+            default:  // Normal — pure challenge, no boosts
+                return { 0, 0, 0, 0.0f, 0 };
+            }
+        }
+
         void ApplyReincarnation() {
-            // Placeholder: skill/perk/level/equipment application ported next.
-            logger::info("Reincarnation applied: power={}", PowerName(g_state.power));
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            if (!player) {
+                return;
+            }
+
+            const Blessing b = BlessingFor(g_state.power);
+            auto* avOwner = player->AsActorValueOwner();
+
+            // Skills: the 18 skill actor values are contiguous (kOneHanded..kEnchanting).
+            if (b.skillLevel > 0 && avOwner) {
+                for (int av = static_cast<int>(RE::ActorValue::kOneHanded);
+                     av <= static_cast<int>(RE::ActorValue::kEnchanting); ++av) {
+                    avOwner->SetBaseActorValue(static_cast<RE::ActorValue>(av),
+                                               static_cast<float>(b.skillLevel));
+                }
+            }
+
+            // Attributes: add a flat bonus on top of the current base.
+            if (b.attrBonus > 0.0f && avOwner) {
+                for (auto av : { RE::ActorValue::kHealth, RE::ActorValue::kMagicka,
+                                 RE::ActorValue::kStamina }) {
+                    avOwner->SetBaseActorValue(av, avOwner->GetBaseActorValue(av) + b.attrBonus);
+                }
+            }
+
+            // Character level: for the player this lives on the ActorBase (TESNPC).
+            if (b.playerLevel > 0) {
+                if (auto* base = player->GetActorBase()) {
+                    base->actorData.level = b.playerLevel;
+                }
+            }
+
+            // Perk points (perkCount is a signed 8-bit field — clamp to its max).
+            if (b.perkPoints > 0) {
+                auto& stats = player->GetGameStatsData();
+                const int total = static_cast<int>(stats.perkCount) + b.perkPoints;
+                stats.perkCount = static_cast<std::int8_t>(std::min(total, 127));
+            }
+
+            // Gold (Gold001 = 0x0000000F).
+            if (b.gold > 0) {
+                if (auto* gold = RE::TESForm::LookupByID<RE::TESObjectMISC>(0x0000000F)) {
+                    player->AddObjectToContainer(gold, nullptr, b.gold, nullptr);
+                }
+            }
+
+            logger::info("Reincarnation applied: power={} skills={} level={} perks=+{} attr=+{} gold={}",
+                         PowerName(g_state.power), b.skillLevel, b.playerLevel, b.perkPoints,
+                         b.attrBonus, b.gold);
 
             const std::string body =
-                "═══════════════════════════\n"
-                "    REINCARNATION COMPLETE\n"
-                "═══════════════════════════\n\n"
-                "Power level: " + PowerName(g_state.power) + "\n"
+                "[ SYSTEM ]\n"
+                "- - - - - - - - - - - - - - - -\n\n"
+                "REINCARNATION COMPLETE\n\n"
+                "Power level:  " + PowerName(g_state.power) + "\n\n"
                 "The System is now bound to your soul.\n"
                 "Your new life begins.";
 
@@ -108,15 +175,18 @@ namespace Isekai {
 
         void ShowPowerSelection() {
             ShowMessageBox(
-                "═══════════════════════════\n"
-                "         [ SYSTEM ]\n"
-                "═══════════════════════════\n\n"
+                "[ SYSTEM ]\n"
+                "- - - - - - - - - - - - - - - -\n\n"
                 "You have been reincarnated.\n"
-                "Choose your blessing:",
+                "The System offers you a blessing:\n\n"
+                "NORMAL   -  No blessing. Pure challenge.\n"
+                "HERO     -  Awakened power.\n"
+                "ASCENDED -  Transcend mortal limits.\n\n"
+                "Choose your path:",
                 {
-                    "NORMAL    -  No blessing (challenge)",
-                    "HERO      -  Awakened power",
-                    "ASCENDED  -  Transcend mortal limits",
+                    "NORMAL",
+                    "HERO",
+                    "ASCENDED",
                 },
                 [](int a_idx) {
                     g_state.power = static_cast<PowerLevel>(std::clamp(a_idx, 0, 2));
