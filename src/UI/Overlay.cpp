@@ -1,5 +1,6 @@
 #include "UI/Overlay.h"
 
+#include "UI/Input.h"
 #include "UI/SystemWindow.h"
 
 #include <d3d11.h>
@@ -7,14 +8,11 @@
 
 #include <imgui.h>
 #include <imgui_impl_dx11.h>
-#include <imgui_impl_win32.h>
 
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
-
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND a_hWnd, UINT a_msg, WPARAM a_wParam,
-                                                             LPARAM a_lParam);
 
 namespace Isekai::UI {
 
@@ -25,24 +23,34 @@ namespace Isekai::UI {
         constexpr std::size_t kPresentVTableIndex = 8;
 
         using PresentFn = HRESULT(WINAPI*)(IDXGISwapChain*, UINT, UINT);
-        using WndProcFn = LRESULT(WINAPI*)(HWND, UINT, WPARAM, LPARAM);
 
-        PresentFn g_originalPresent = nullptr;
-        WndProcFn g_originalWndProc = nullptr;
-
+        PresentFn               g_originalPresent = nullptr;
         ID3D11RenderTargetView* g_backBufferView = nullptr;
         ID3D11DeviceContext*    g_context = nullptr;
-        HWND                    g_window = nullptr;
 
         std::atomic<bool> g_ready{ false };
 
-        LRESULT WINAPI HookedWndProc(HWND a_hWnd, UINT a_msg, WPARAM a_wParam, LPARAM a_lParam) {
-            if (g_ready.load(std::memory_order_acquire) && IsCapturingInput()) {
-                ImGui_ImplWin32_WndProcHandler(a_hWnd, a_msg, a_wParam, a_lParam);
+        // We deliberately do not use ImGui's Win32 backend. It reads the mouse from
+        // the window message queue, which Skyrim never fills (it takes the mouse via
+        // DirectInput), and it fights the game over the OS cursor. Input comes from
+        // the game's own event bus instead (see Input.cpp), and the two values the
+        // backend would otherwise provide — display size and frame time — we set here.
+        void UpdateDisplayAndTime(IDXGISwapChain* a_swapChain, ImGuiIO& a_io) {
+            DXGI_SWAP_CHAIN_DESC desc{};
+            if (SUCCEEDED(a_swapChain->GetDesc(&desc))) {
+                a_io.DisplaySize = ImVec2{ static_cast<float>(desc.BufferDesc.Width),
+                                           static_cast<float>(desc.BufferDesc.Height) };
             }
-            // The game still gets the message, but its controls are switched off while
-            // a window of ours is open (see SystemWindow), so nothing acts on it.
-            return g_originalWndProc(a_hWnd, a_msg, a_wParam, a_lParam);
+
+            using clock = std::chrono::steady_clock;
+            static auto last = clock::now();
+            const auto  now = clock::now();
+            const auto  delta = std::chrono::duration<float>(now - last).count();
+            last = now;
+
+            // A stalled frame (loading screen, alt-tab) must not hand ImGui a huge or
+            // zero dt — that would make animations jump or divide by zero.
+            a_io.DeltaTime = std::clamp(delta, 1.0f / 1000.0f, 1.0f / 15.0f);
         }
 
         // Runs on the render thread, on the first Present after the hook is in place.
@@ -54,9 +62,8 @@ namespace Isekai::UI {
 
             auto* device = reinterpret_cast<ID3D11Device*>(renderer->data.forwarder);
             g_context = reinterpret_cast<ID3D11DeviceContext*>(renderer->data.context);
-            g_window = reinterpret_cast<HWND>(renderer->data.renderWindows[0].hWnd);
-            if (!device || !g_context || !g_window) {
-                logger::error("UI: renderer is missing device/context/window");
+            if (!device || !g_context) {
+                logger::error("UI: renderer is missing device/context");
                 return false;
             }
 
@@ -70,7 +77,8 @@ namespace Isekai::UI {
             const HRESULT hr = device->CreateRenderTargetView(backBuffer, nullptr, &g_backBufferView);
             backBuffer->Release();
             if (FAILED(hr)) {
-                logger::error("UI: CreateRenderTargetView failed ({:#x})", static_cast<std::uint32_t>(hr));
+                logger::error("UI: CreateRenderTargetView failed ({:#x})",
+                              static_cast<std::uint32_t>(hr));
                 return false;
             }
 
@@ -80,15 +88,12 @@ namespace Isekai::UI {
             ImGuiIO& io = ImGui::GetIO();
             io.IniFilename = nullptr;  // don't litter the game folder with imgui.ini
             io.LogFilename = nullptr;
-            io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;  // we draw our own
+            io.MouseDrawCursor = true;  // the only cursor on screen while a panel is up
 
-            if (!ImGui_ImplWin32_Init(g_window) || !ImGui_ImplDX11_Init(device, g_context)) {
-                logger::error("UI: ImGui backend init failed");
+            if (!ImGui_ImplDX11_Init(device, g_context)) {
+                logger::error("UI: ImGui DX11 backend init failed");
                 return false;
             }
-
-            g_originalWndProc = reinterpret_cast<WndProcFn>(
-                SetWindowLongPtrA(g_window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(HookedWndProc)));
 
             logger::info("UI: ImGui overlay initialised");
             return true;
@@ -102,11 +107,13 @@ namespace Isekai::UI {
             }
 
             if (g_ready.load(std::memory_order_acquire)) {
+                ImGuiIO& io = ImGui::GetIO();
+                UpdateDisplayAndTime(a_swapChain, io);
+                FeedImGui(io);
+
                 ImGui_ImplDX11_NewFrame();
-                ImGui_ImplWin32_NewFrame();
                 ImGui::NewFrame();
 
-                ImGui::GetIO().MouseDrawCursor = IsCapturingInput();
                 DrawSystemWindow();
 
                 ImGui::Render();
@@ -140,6 +147,8 @@ namespace Isekai::UI {
 
         REL::safe_write(reinterpret_cast<std::uintptr_t>(&vtable[kPresentVTableIndex]),
                         reinterpret_cast<std::uintptr_t>(&HookedPresent));
+
+        InstallInput();
 
         logger::info("UI: swap chain Present hooked — overlay armed");
     }

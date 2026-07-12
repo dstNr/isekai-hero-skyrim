@@ -18,6 +18,8 @@ add_commonlibsse_plugin(
         src/System.h
         src/Logger.h
         src/PCH.h
+        src/UI/Input.cpp
+        src/UI/Input.h
         src/UI/Overlay.cpp
         src/UI/Overlay.h
         src/UI/Style.h
