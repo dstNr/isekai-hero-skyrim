@@ -52,14 +52,32 @@ Für **jeden** der acht Einträge unten identisch ausfüllen:
 |---|---|
 | **ID** | siehe Tabelle |
 | **Name** | siehe Tabelle *(das ist der Text, den du später im Effektmenü siehst)* |
-| **Effect Archetype** | `Value Modifier` |
+| **Effect Archetype** | **`Peak Value Modifier`** |
 | **Casting Type** | `Constant Effect` |
 | **Delivery** | `Self` |
 | **Assoc. Item 1** | der Actor Value — siehe Tabelle |
-| **Flags** | **nur** `No Hit Event` und `No Duration` ankreuzen |
+| **Flags** | **`Recover`** ✅ und `No Duration` ✅ |
 | | ❌ **NICHT** `Detrimental` |
 | | ❌ **NICHT** `Hide in UI` — genau das wollen wir ja sehen |
 | Magnitude/Duration/Area | leer lassen (0) |
+
+> ### ⚠️ `Recover` ist der Haken, an dem alles hängt
+>
+> Ohne `Recover` behandelt Skyrim einen Werte-Modifikator **nicht als Fortify**, sondern
+> als einmaligen Heil-/Schadenseffekt: Er ändert deinen *aktuellen* Wert einmal und dein
+> *Maximum* nie. Der Effekt steht dann sauber im Menü, hat eine Magnitude — und wirkt
+> trotzdem nicht.
+>
+> Ausgelesen aus den echten Spieldaten, alle mit `Recover` und Archetype `34`
+> (= `Peak Value Modifier`):
+>
+> ```
+> Fortify Magicka        archetype=34  Recover
+> Fortify Stamina        archetype=34  Recover | NoDuration
+> Fortify Carry Weight   archetype=34  Recover
+> The Steed Stone        archetype=34  Recover
+> Resist Magic           archetype=34  Recover | NoDuration
+> ```
 
 > **Es gibt kein Feld namens „Actor Value".** Der Actor Value steckt in
 > **`Assoc. Item 1`** (links, unter *Minimum Skill Level*). Das Feld ist generisch
@@ -71,14 +89,19 @@ Die acht:
 
 | ID | Name | Assoc. Item 1 |
 |---|---|---|
-| `IsekaiME_Health` | `System: Vitality` | `Health` |
-| `IsekaiME_Magicka` | `System: Arcane` | `Magicka` |
-| `IsekaiME_Stamina` | `System: Endurance` | `Stamina` |
-| `IsekaiME_CarryWeight` | `System: Burden` | `CarryWeight` |
-| `IsekaiME_ResistMagic` | `System: Warding` | `ResistMagic` |
-| `IsekaiME_ResistFire` | `System: Emberskin` | `ResistFire` |
-| `IsekaiME_ResistFrost` | `System: Frostskin` | `ResistFrost` |
-| `IsekaiME_ResistDisease` | `System: Purity` | `ResistDisease` |
+| `IsekaiME_Health` | `System: Health` | `Health` |
+| `IsekaiME_Magicka` | `System: Magicka` | `Magicka` |
+| `IsekaiME_Stamina` | `System: Stamina` | `Stamina` |
+| `IsekaiME_CarryWeight` | `System: Carry Weight` | `CarryWeight` |
+| `IsekaiME_ResistMagic` | `System: Magic Resist` | `ResistMagic` |
+| `IsekaiME_ResistFire` | `System: Fire Resist` | `ResistFire` |
+| `IsekaiME_ResistFrost` | `System: Frost Resist` | `ResistFrost` |
+| `IsekaiME_ResistDisease` | `System: Disease Resist` | `ResistDisease` |
+
+> **Warum die nüchternen Namen?** Skyrim zeigt unter *Aktive Effekte* den Namen des
+> Magic Effects plus die Magnitude. Mit Fantasienamen stand da `+100 System: Burden` —
+> hübsch, aber unlesbar. Jetzt steht dort `+100 System: Carry Weight`. Ein Statuseffekt,
+> den man nachschlagen muss, ist ein schlechter Statuseffekt.
 
 > **Tipp:** Den ersten anlegen, dann in der Liste **rechtsklicken → Duplicate** und nur
 > ID, Name und Actor Value ändern. Spart viel Klickerei.

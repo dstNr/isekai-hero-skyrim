@@ -35,10 +35,11 @@ namespace Isekai::Passives {
         // Actor value -> the ability that fortifies it.
         std::map<RE::ActorValue, Ability> g_abilities;
 
-        // DIAGNOSTIC: our effects show up in the menu but do not actually fortify
-        // anything. Rather than guess which flag is missing, print ours next to the
-        // vanilla effects that demonstrably do work on the same actor value.
-        constexpr bool kCompareWithVanilla = true;
+        // Flip to true to print our effects next to the vanilla ones that demonstrably
+        // work on the same actor value. That is how we found out our abilities showed up
+        // in the menu but fortified nothing: every working vanilla fortify carries the
+        // Recover flag and archetype 34 (Peak Value Modifier); ours had neither.
+        constexpr bool kCompareWithVanilla = false;
 
         using Flag = RE::EffectSetting::EffectSettingData::Flag;
 
