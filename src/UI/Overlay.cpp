@@ -88,7 +88,6 @@ namespace Isekai::UI {
             ImGuiIO& io = ImGui::GetIO();
             io.IniFilename = nullptr;  // don't litter the game folder with imgui.ini
             io.LogFilename = nullptr;
-            io.MouseDrawCursor = true;  // the only cursor on screen while a panel is up
 
             if (!ImGui_ImplDX11_Init(device, g_context)) {
                 logger::error("UI: ImGui DX11 backend init failed");
@@ -110,6 +109,11 @@ namespace Isekai::UI {
                 ImGuiIO& io = ImGui::GetIO();
                 UpdateDisplayAndTime(a_swapChain, io);
                 FeedImGui(io);
+
+                // Only ever draw a cursor while we own the input. Left on permanently,
+                // ours would sit on screen next to the game's own cursor whenever
+                // Skyrim opens a menu of its own (a Survival Mode prompt, say).
+                io.MouseDrawCursor = IsCapturingInput();
 
                 ImGui_ImplDX11_NewFrame();
                 ImGui::NewFrame();

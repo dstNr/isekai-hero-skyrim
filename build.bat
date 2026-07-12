@@ -11,8 +11,10 @@ set "VCPKG_ROOT=C:\Users\dstNr\vcpkg"
 
 REM Static triplet: bake spdlog/fmt/CommonLibSSE into a single self-contained
 REM plugin DLL (dynamic CRT via -md), so no extra .dll files need shipping.
+REM RelWithDebInfo, not Release: same optimisation, but it emits a .pdb. Without
+REM one, Crash Logger can only print raw addresses for our frames in a stack trace.
 cmake -S "%~dp0." -B "%~dp0build" -G Ninja ^
-  -DCMAKE_BUILD_TYPE=Release ^
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo ^
   -DVCPKG_TARGET_TRIPLET=x64-windows-static-md ^
   -DCMAKE_TOOLCHAIN_FILE="%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake"
 if errorlevel 1 exit /b 1
@@ -20,10 +22,11 @@ if errorlevel 1 exit /b 1
 cmake --build "%~dp0build"
 if errorlevel 1 exit /b 1
 
-REM Auto-deploy the single plugin DLL into the game so testing is one step.
+REM Auto-deploy plugin + symbols into the game so testing is one step.
 set "SKSE_PLUGINS=E:\SteamLibrary\steamapps\common\Skyrim Special Edition\Data\SKSE\Plugins"
 if not exist "%SKSE_PLUGINS%" mkdir "%SKSE_PLUGINS%"
 copy /Y "%~dp0build\IsekaiHeroSKSE.dll" "%SKSE_PLUGINS%\" >nul
-echo Deployed IsekaiHeroSKSE.dll -^> %SKSE_PLUGINS%
+copy /Y "%~dp0build\IsekaiHeroSKSE.pdb" "%SKSE_PLUGINS%\" >nul
+echo Deployed IsekaiHeroSKSE.dll + .pdb -^> %SKSE_PLUGINS%
 
 echo BUILD_OK
