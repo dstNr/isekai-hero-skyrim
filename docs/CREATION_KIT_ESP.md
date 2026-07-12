@@ -141,21 +141,22 @@ Am Duplikat ändern:
 
 ---
 
-## Teil D — Die Truhe platzieren
+## Teil D — entfällt
 
-Die Truhe braucht einen Ort. Wir bauen ihr eine eigene, leere Zelle, die kein Spieler
-je betritt — so kann sie mit nichts kollidieren.
-
-1. **Cell View** (Fenster links unten). Im Dropdown **Interiors** auswählen.
-2. In der Zellenliste **Rechtsklick → New**
-3. **ID:** `IsekaiVault` → **OK**
-4. Doppelklick auf `IsekaiVault` → das (leere, schwarze) Render-Fenster öffnet sich.
-5. Deine `IsekaiStorageContainer` aus dem Object Window **per Drag & Drop** ins
-   Render-Fenster ziehen.
-6. **Doppelklick auf die platzierte Truhe** → Reference-Fenster geht auf.
-7. Reiter **"Reference"**: Häkchen bei **`Persistent Reference`** setzen. ⚠️ **Wichtig** —
-   ohne das kann der Code sie nicht von überall aus ansprechen.
-8. **OK**.
+> **Frühere Fassungen dieser Anleitung sagten hier, du sollst eine Zelle anlegen, die
+> Truhe hineinstellen und sie als *Persistent Reference* markieren. Das war falsch:
+> Skyrims Creation Kit hat diesen Haken gar nicht** (er stammt aus Oblivion/Fallout).
+>
+> Nötig ist er trotzdem — eine nicht-persistente Referenz existiert nur, solange ihre
+> Zelle geladen ist, und wäre für den Code unauffindbar.
+>
+> **Lösung:** Der Code erzeugt die Referenz selbst, mit
+> `PlaceObjectAtMe(base, forcePersist = true)`. Skyrim persistiert sie sauber im
+> Savegame. Wir brauchen aus dem CK also **nur das Basis-Objekt aus Teil C** — keine
+> Zelle, keine platzierte Truhe.
+>
+> Falls du die Zelle und die Truhe darin schon angelegt hast: einfach drinlassen, der
+> Code ignoriert sie. Löschen geht auch, ist aber nicht nötig.
 
 ---
 
@@ -178,6 +179,8 @@ verifiziert haben. So gibt es keine geratene Zahl im Code.
 | Symptom | Ursache |
 |---|---|
 | Kein Feld „Actor Value" zu finden | Heißt **`Assoc. Item 1`** (Teil A) |
+| Kein Haken „Persistent Reference" | Gibt es in Skyrims CK nicht — Teil D entfällt |
+| `Detrimental` / `Hide in UI` nicht zu sehen | Der Flags-Kasten hat drei Spalten; beide sollen ohnehin **leer** bleiben |
 | CK stürzt beim Laden ab | `Skyrim.esm` **und** `Update.esm` müssen beide angehakt sein |
 | Truhe leert sich von selbst | `Respawns`-Haken vergessen (Teil C) |
 | Passives greifen nicht | Ability-Typ ist `Spell` statt `Ability` (Teil B) |
