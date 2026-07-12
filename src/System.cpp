@@ -91,6 +91,9 @@ namespace Isekai {
 
         // ---- Reincarnation flow (choice captured into g_state) ----
 
+        // perkCount is a signed 8-bit field, so this is as many as the game can hold.
+        constexpr std::int32_t kMaxPerkPoints = 127;
+
         // What each blessing grants. 0 = leave that stat untouched.
         struct Blessing {
             std::uint16_t skillLevel;   // set all 18 skills to this
@@ -105,7 +108,7 @@ namespace Isekai {
             case PowerLevel::Hero:
                 return { 50, 25, 10, 100.0f, 2000 };
             case PowerLevel::Ascended:
-                return { 100, 150, 80, 300.0f, 25000 };
+                return { 100, 150, kMaxPerkPoints, 300.0f, 25000 };
             default:  // Normal — pure challenge, no boosts
                 return { 0, 0, 0, 0.0f, 0 };
             }
@@ -144,11 +147,10 @@ namespace Isekai {
                 }
             }
 
-            // Perk points (perkCount is a signed 8-bit field — clamp to its max).
             if (b.perkPoints > 0) {
                 auto& stats = player->GetGameStatsData();
                 const int total = static_cast<int>(stats.perkCount) + b.perkPoints;
-                stats.perkCount = static_cast<std::int8_t>(std::min(total, 127));
+                stats.perkCount = static_cast<std::int8_t>(std::min(total, kMaxPerkPoints));
             }
 
             // Gold (Gold001 = 0x0000000F).
