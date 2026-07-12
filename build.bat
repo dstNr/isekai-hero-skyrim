@@ -1,5 +1,10 @@
 @echo off
-REM Build the Isekai SKSE plugin. Sets up MSVC env, then CMake configure + build.
+REM Build the Isekai SKSE plugin, then deploy it into the game.
+REM
+REM Keep this file pure ASCII. cmd reads .bat in the OEM codepage, and a stray
+REM non-ASCII byte (an em dash in a comment, say) corrupts the parse of later
+REM lines - "if errorlevel" then gets run as a command named "errorlevel".
+
 call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
 if errorlevel 1 exit /b 1
 
@@ -22,11 +27,31 @@ if errorlevel 1 exit /b 1
 cmake --build "%~dp0build"
 if errorlevel 1 exit /b 1
 
-REM Auto-deploy plugin + symbols into the game so testing is one step.
 set "SKSE_PLUGINS=E:\SteamLibrary\steamapps\common\Skyrim Special Edition\Data\SKSE\Plugins"
 if not exist "%SKSE_PLUGINS%" mkdir "%SKSE_PLUGINS%"
-copy /Y "%~dp0build\IsekaiHeroSKSE.dll" "%SKSE_PLUGINS%\" >nul
-copy /Y "%~dp0build\IsekaiHeroSKSE.pdb" "%SKSE_PLUGINS%\" >nul
-echo Deployed IsekaiHeroSKSE.dll + .pdb -^> %SKSE_PLUGINS%
 
+REM A running Skyrim holds the DLL open and the copy fails. Silently, if we let it:
+REM the build claims success, the game keeps loading the previous build, and every
+REM test after that measures stale code. That happened, and it cost hours of chasing
+REM "contradictory" results that were really the same binary three times over.
+REM So: fail loudly, and never report a deploy that did not happen.
+tasklist /FI "IMAGENAME eq SkyrimSE.exe" 2>nul | find /I "SkyrimSE.exe" >nul
+if not errorlevel 1 goto :game_running
+
+copy /Y "%~dp0build\IsekaiHeroSKSE.dll" "%SKSE_PLUGINS%\" >nul
+if errorlevel 1 goto :copy_failed
+copy /Y "%~dp0build\IsekaiHeroSKSE.pdb" "%SKSE_PLUGINS%\" >nul
+if errorlevel 1 goto :copy_failed
+
+echo Deployed IsekaiHeroSKSE.dll + .pdb -^> %SKSE_PLUGINS%
 echo BUILD_OK
+exit /b 0
+
+:game_running
+echo DEPLOY_FAILED: Skyrim is running and holding IsekaiHeroSKSE.dll open.
+echo Close the game, then build again.
+exit /b 1
+
+:copy_failed
+echo DEPLOY_FAILED: could not copy the plugin into the game folder.
+exit /b 1

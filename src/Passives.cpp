@@ -35,6 +35,65 @@ namespace Isekai::Passives {
         // Actor value -> the ability that fortifies it.
         std::map<RE::ActorValue, Ability> g_abilities;
 
+        // DIAGNOSTIC: our effects show up in the menu but do not actually fortify
+        // anything. Rather than guess which flag is missing, print ours next to the
+        // vanilla effects that demonstrably do work on the same actor value.
+        constexpr bool kCompareWithVanilla = true;
+
+        using Flag = RE::EffectSetting::EffectSettingData::Flag;
+
+        // Raw bit test rather than stl::enumeration::all(). The first attempt filtered
+        // on all(kRecover) and matched nothing, even for effects FlagNames had just
+        // printed "Recover" for — so the wrapper's semantics are not what they look
+        // like here. Bit math has no such ambiguity.
+        [[nodiscard]] bool HasFlag(const RE::EffectSetting* a_effect, Flag a_flag) {
+            return (a_effect->data.flags.underlying() &
+                    static_cast<std::uint32_t>(a_flag)) != 0;
+        }
+
+        std::string FlagNames(const RE::EffectSetting* a_effect) {
+            std::string out;
+            const auto  add = [&](Flag a_flag, const char* a_name) {
+                if (HasFlag(a_effect, a_flag)) {
+                    out += out.empty() ? "" : "|";
+                    out += a_name;
+                }
+            };
+            add(Flag::kHostile, "Hostile");
+            add(Flag::kRecover, "Recover");
+            add(Flag::kDetrimental, "Detrimental");
+            add(Flag::kNoHitEvent, "NoHitEvent");
+            add(Flag::kNoDuration, "NoDuration");
+            return out.empty() ? "(none)" : out;
+        }
+
+        // Find vanilla effects that fortify the same actor value and print their setup.
+        // Whatever they do that we do not is the answer.
+        void CompareWithVanilla(RE::ActorValue a_av) {
+            auto* data = RE::TESDataHandler::GetSingleton();
+            if (!data) {
+                return;
+            }
+
+            // No filtering, and the raw flag word alongside the decoded names. Two
+            // attempts at filtering produced answers that contradicted each other, which
+            // means an assumption in the decoding is wrong — so stop deciding what is
+            // interesting and just print the ground truth.
+            int shown = 0;
+            for (auto* effect : data->GetFormArray<RE::EffectSetting>()) {
+                if (!effect || effect->data.primaryAV != a_av || shown >= 6) {
+                    continue;
+                }
+                if (effect->data.castingType != RE::MagicSystem::CastingType::kConstantEffect) {
+                    continue;
+                }
+                logger::info("    candidate \"{}\": archetype={} rawFlags={:#010x} ({})",
+                             effect->GetName(), static_cast<int>(effect->data.archetype),
+                             effect->data.flags.underlying(), FlagNames(effect));
+                ++shown;
+            }
+        }
+
         // The magnitude baked into an ESP spell is fixed; ours has to change as the
         // player earns more. Rewriting it is easy — but an ability already running on
         // the player snapshotted the old value, so it has to be re-applied to take.
@@ -83,8 +142,15 @@ namespace Isekai::Passives {
                 continue;
             }
 
-            logger::info("Passives: \"{}\" fortifies {}", spell->GetName(),
-                         static_cast<int>(av));
+            logger::info("Passives: \"{}\" -> AV {} | archetype={} rawFlags={:#010x} ({})",
+                         spell->GetName(), static_cast<int>(av),
+                         static_cast<int>(effect->baseEffect->data.archetype),
+                         effect->baseEffect->data.flags.underlying(),
+                         FlagNames(effect->baseEffect));
+
+            if constexpr (kCompareWithVanilla) {
+                CompareWithVanilla(av);
+            }
         }
 
         logger::info("Passives: {} of {} abilities resolved", g_abilities.size(),
