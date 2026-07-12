@@ -1,6 +1,7 @@
 #include "Progression.h"
 
 #include "System.h"
+#include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
 #include "UI/SystemWindow.h"
 
@@ -157,23 +158,51 @@ namespace Isekai::Progression {
             return text;
         }
 
+        void CelebrateMilestone(const Milestone& a_milestone) {
+            const std::int32_t perks = a_milestone.endpoint ? MilestonePerkPoints() : 0;
+            if (Grant(a_milestone)) {
+                Celebrate(a_milestone.endpoint ? "MILESTONE" : "QUEST COMPLETE",
+                          a_milestone.questName, RewardText(a_milestone, perks));
+            }
+        }
+
         // Check one quest and pay out if it just finished. Safe to call repeatedly.
         void CheckQuest(RE::FormID a_formID) {
             auto*       quest = RE::TESForm::LookupByID<RE::TESQuest>(a_formID);
             const auto* milestone = FindByQuest(quest);
+            if (!milestone) {
+                return;
+            }
+
+            // Logged even when nothing is paid out: without this we cannot tell a quest
+            // event that never arrived from one that arrived and was rejected — and that
+            // was exactly the ambiguity that made `completequest` look broken.
+            logger::info("Quest event for '{}': completed={} alreadyGranted={}",
+                         milestone->questName, quest->IsCompleted(),
+                         AlreadyGranted(milestone->key));
 
             // Deliberately asking the engine whether the quest is done, rather than
             // matching a hard-coded completion stage number — one less thing to get
             // wrong, and it survives quests that finish on different stages.
-            if (!milestone || !quest->IsCompleted() || AlreadyGranted(milestone->key)) {
+            if (!quest->IsCompleted() || AlreadyGranted(milestone->key)) {
                 return;
             }
+            CelebrateMilestone(*milestone);
+        }
 
-            const std::int32_t perks = milestone->endpoint ? MilestonePerkPoints() : 0;
-            if (Grant(*milestone)) {
-                Celebrate(milestone->endpoint ? "MILESTONE" : "QUEST COMPLETE",
-                          milestone->questName, RewardText(*milestone, perks));
+        // F11: pay out the next milestone still owed, exactly as a real quest would.
+        // Tuning an animation by replaying a quest is not a workable loop.
+        constexpr std::uint32_t kDebugGrantKey = 0x57;  // DIK_F11
+
+        void DebugGrantNext() {
+            for (const auto& m : kMilestones) {
+                if (!AlreadyGranted(m.key)) {
+                    logger::info("Debug hotkey: granting '{}'", m.questName);
+                    CelebrateMilestone(m);
+                    return;
+                }
             }
+            logger::info("Debug hotkey: every milestone is already granted");
         }
 
         // Listening to two events, not one.
@@ -255,6 +284,9 @@ namespace Isekai::Progression {
             source->AddEventSink<RE::TESQuestStartStopEvent>(QuestWatcher::GetSingleton());
             logger::info("Progression: quest watcher armed (stage + start/stop)");
         }
+
+        UI::RegisterHotkey(kDebugGrantKey, DebugGrantNext);
+        logger::info("Progression: F11 grants the next milestone (debug)");
     }
 
     void CatchUpOnLoad() {

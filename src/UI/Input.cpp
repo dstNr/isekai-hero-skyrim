@@ -6,6 +6,8 @@
 
 #include <algorithm>
 #include <mutex>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace Isekai::UI {
@@ -34,6 +36,26 @@ namespace Isekai::UI {
         std::mutex g_mutex;
         Pending    g_pending;
 
+        std::mutex                                              g_hotkeyMutex;
+        std::unordered_map<std::uint32_t, std::function<void()>> g_hotkeys;
+
+        // Input events arrive on the game's input thread; hand the callback to the
+        // main thread before it touches anything.
+        void FireHotkey(std::uint32_t a_scanCode) {
+            std::function<void()> fn;
+            {
+                std::scoped_lock lock(g_hotkeyMutex);
+                const auto       it = g_hotkeys.find(a_scanCode);
+                if (it == g_hotkeys.end()) {
+                    return;
+                }
+                fn = it->second;
+            }
+            if (auto* task = SKSE::GetTaskInterface()) {
+                task->AddTask([fn = std::move(fn)]() { fn(); });
+            }
+        }
+
         class InputSink : public RE::BSTEventSink<RE::InputEvent*> {
         public:
             static InputSink* GetSingleton() {
@@ -44,7 +66,23 @@ namespace Isekai::UI {
             RE::BSEventNotifyControl ProcessEvent(
                 RE::InputEvent* const*             a_event,
                 RE::BSTEventSource<RE::InputEvent*>*) override {
-                if (!a_event || !IsCapturingInput()) {
+                if (!a_event) {
+                    return RE::BSEventNotifyControl::kContinue;
+                }
+
+                // Hotkeys work whether or not a panel is open, so they are handled
+                // before the capture check below.
+                for (auto* event = *a_event; event; event = event->next) {
+                    if (event->GetDevice() != RE::INPUT_DEVICE::kKeyboard ||
+                        event->GetEventType() != RE::INPUT_EVENT_TYPE::kButton) {
+                        continue;
+                    }
+                    if (auto* button = event->AsButtonEvent(); button && button->IsDown()) {
+                        FireHotkey(button->GetIDCode());
+                    }
+                }
+
+                if (!IsCapturingInput()) {
                     return RE::BSEventNotifyControl::kContinue;
                 }
 
@@ -101,6 +139,11 @@ namespace Isekai::UI {
         private:
             InputSink() = default;
         };
+    }
+
+    void RegisterHotkey(std::uint32_t a_scanCode, std::function<void()> a_fn) {
+        std::scoped_lock lock(g_hotkeyMutex);
+        g_hotkeys[a_scanCode] = std::move(a_fn);
     }
 
     void InstallInput() {
