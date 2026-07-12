@@ -16,6 +16,8 @@ add_commonlibsse_plugin(
         src/main.cpp
         src/System.cpp
         src/System.h
+        src/Passives.cpp
+        src/Passives.h
         src/Plugin.cpp
         src/Plugin.h
         src/Progression.cpp

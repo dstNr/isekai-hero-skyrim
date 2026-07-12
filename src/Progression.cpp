@@ -1,5 +1,6 @@
 #include "Progression.h"
 
+#include "Passives.h"
 #include "System.h"
 #include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
@@ -184,16 +185,6 @@ namespace Isekai::Progression {
             return nullptr;
         }
 
-        void ApplyPassive(const Passive& a_passive) {
-            auto* player = RE::PlayerCharacter::GetSingleton();
-            auto* avOwner = player ? player->AsActorValueOwner() : nullptr;
-            if (!avOwner) {
-                return;
-            }
-            const float base = avOwner->GetBaseActorValue(a_passive.actorValue);
-            avOwner->SetBaseActorValue(a_passive.actorValue, base + PassiveAmount(a_passive));
-        }
-
         [[nodiscard]] std::int32_t ScaledSouls(std::int32_t a_base) {
             return static_cast<std::int32_t>(std::lround(static_cast<float>(a_base) * RewardScale()));
         }
@@ -206,7 +197,11 @@ namespace Isekai::Progression {
             }
             GetState().grantedMilestones.push_back(a_milestone.key);
 
-            ApplyPassive(a_milestone.passive);
+            // The passive itself is not applied here. Passives::Refresh() recomputes
+            // every bonus from the full list of earned milestones and writes the totals
+            // into the ability spells. Deriving beats accumulating: a double-apply is
+            // then impossible, because we never add a delta to anything.
+            Passives::Refresh();
 
             const std::int32_t souls = ScaledSouls(a_milestone.dragonSouls);
             GrantDragonSouls(souls);

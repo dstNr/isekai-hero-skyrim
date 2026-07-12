@@ -1,5 +1,6 @@
 #include "System.h"
 
+#include "Passives.h"
 #include "Plugin.h"
 #include "Progression.h"
 #include "UI/LevelUpEffect.h"
@@ -297,6 +298,7 @@ namespace Isekai {
             switch (a_msg->type) {
             case SKSE::MessagingInterface::kDataLoaded:
                 Plugin::DumpForms();
+                Passives::Install();
                 UI::Install();
                 Progression::Install();
 
@@ -311,6 +313,10 @@ namespace Isekai {
             case SKSE::MessagingInterface::kPostLoadGame:
             case SKSE::MessagingInterface::kNewGame:
                 Progression::CatchUpOnLoad();
+                // Ability magnitudes live in the plugin, not the save, so they come back
+                // as whatever the ESP says (zero) on every load. Rebuild them from the
+                // milestones the save *does* remember.
+                Passives::Refresh();
                 break;
 
             default:
