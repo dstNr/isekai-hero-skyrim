@@ -20,7 +20,11 @@ namespace Isekai::Progression {
         // it: from MQ204 on, the chain is shifted by one from what it looks like
         // (MQ206 is Alduin's Bane, not The Fallen), and the Horn of Jurgen Windcaller
         // is not MQ106 at all but a sub-quest, MQ105Ustengrav.
-        constexpr bool kDumpQuestIDs = false;
+        constexpr bool kDumpQuestIDs = true;
+
+        // Editor ID prefixes worth dumping: main quest, factions, civil war, add-ons.
+        constexpr std::string_view kDumpPrefixes[] = { "MQ", "C0", "MG", "TG", "DB",
+                                                       "CW", "DLC1", "DLC2" };
 
         // A quest whose completion the System rewards.
         //
@@ -28,11 +32,12 @@ namespace Isekai::Progression {
         // (that is why `setstage MQ105 20` works in the console), so we get load-order
         // independence and DLC support for free, with no FormIDs to get wrong.
         struct Milestone {
-            std::uint32_t key;       // stable across releases; never reuse a value
-            const char*   editorID;  // e.g. "MQ105"
-            const char*   questName; // shown in the System panel
+            std::uint32_t key;         // stable across releases; never reuse a value
+            const char*   editorID;    // e.g. "MQ105"
+            const char*   questName;   // shown in the System panel
             Passive       passive;
-            bool          endpoint;  // pays perk points on top, scaled by the blessing
+            std::int32_t  dragonSouls; // 0 for most; the big beats pay souls
+            bool          endpoint;    // pays perk points on top, scaled by the blessing
         };
 
         using AV = RE::ActorValue;
@@ -46,30 +51,31 @@ namespace Isekai::Progression {
         // nothing and simply lapse, rather than silently suppressing a real reward.
         constexpr Milestone kMilestones[] = {
             // --- Main quest (names verified against the game's own quest table) ---
-            { 1101, "MQ101",          "Unbound",                       { "Survivor",         "+25 Health",        AV::kHealth,      25.0f }, false },
-            { 1102, "MQ102",          "Before the Storm",              { "Wayfarer",         "+25 Carry Weight",  AV::kCarryWeight, 25.0f }, false },
-            { 1103, "MQ103",          "Bleak Falls Barrow",            { "Tomb Raider",      "+25 Stamina",       AV::kStamina,     25.0f }, false },
-            { 1104, "MQ104",          "Dragon Rising",                 { "Dragon Slayer",    "+5% Magic Resist",  AV::kResistMagic,  5.0f }, false },
-            { 1105, "MQ105",          "The Way of the Voice",          { "Voice Wielder",    "+25 Magicka",       AV::kMagicka,     25.0f }, false },
-            { 1106, "MQ105Ustengrav", "The Horn of Jurgen Windcaller", { "Horn Bearer",      "+25 Stamina",       AV::kStamina,     25.0f }, false },
-            { 1107, "MQ106",          "A Blade in the Dark",           { "Blade in the Dark",  "+25 Health",      AV::kHealth,      25.0f }, false },
-            { 1108, "MQ201",          "Diplomatic Immunity",           { "Infiltrator",      "+25 Stamina",       AV::kStamina,     25.0f }, false },
-            { 1109, "MQ202",          "A Cornered Rat",                { "Shadow Walker",    "+25 Carry Weight",  AV::kCarryWeight, 25.0f }, false },
-            { 1110, "MQ203",          "Alduin's Wall",                 { "Loremaster",       "+25 Magicka",       AV::kMagicka,     25.0f }, false },
-            { 1111, "MQ204",          "The Throat of the World",       { "Skyborn",          "+5% Magic Resist",  AV::kResistMagic,  5.0f }, false },
-            { 1112, "MQ205",          "Elder Knowledge",               { "Time Reader",      "+25 Magicka",       AV::kMagicka,     25.0f }, false },
-            { 1113, "MQ206",          "Alduin's Bane",                 { "Time Walker",      "+5% Magic Resist",  AV::kResistMagic,  5.0f }, false },
-            { 1114, "MQ301",          "The Fallen",                    { "Dragon Trapper",   "+25 Health",        AV::kHealth,      25.0f }, false },
-            { 1115, "MQ302",          "Season Unending",               { "Peacemaker",       "+25 Carry Weight",  AV::kCarryWeight, 25.0f }, false },
-            { 1116, "MQ303",          "The World-Eater's Eyrie",       { "Sky Breaker",      "+25 Health",        AV::kHealth,      25.0f }, false },
-            { 1117, "MQ304",          "Sovngarde",                     { "Soul Walker",      "+50 Health",        AV::kHealth,      50.0f }, false },
+            //                                                                                                                  souls  endpoint
+            { 1101, "MQ101",          "Unbound",                       { "Survivor",          "+25 Health",        AV::kHealth,      25.0f },  0, false },
+            { 1102, "MQ102",          "Before the Storm",              { "Wayfarer",          "+25 Carry Weight",  AV::kCarryWeight, 25.0f },  0, false },
+            { 1103, "MQ103",          "Bleak Falls Barrow",            { "Tomb Raider",       "+25 Stamina",       AV::kStamina,     25.0f },  0, false },
+            { 1104, "MQ104",          "Dragon Rising",                 { "Dragon Slayer",     "+5% Magic Resist",  AV::kResistMagic,  5.0f },  1, false },
+            { 1105, "MQ105",          "The Way of the Voice",          { "Voice Wielder",     "+25 Magicka",       AV::kMagicka,     25.0f },  1, false },
+            { 1106, "MQ105Ustengrav", "The Horn of Jurgen Windcaller", { "Horn Bearer",       "+25 Stamina",       AV::kStamina,     25.0f },  0, false },
+            { 1107, "MQ106",          "A Blade in the Dark",           { "Blade in the Dark", "+25 Health",        AV::kHealth,      25.0f },  1, false },
+            { 1108, "MQ201",          "Diplomatic Immunity",           { "Infiltrator",       "+25 Stamina",       AV::kStamina,     25.0f },  0, false },
+            { 1109, "MQ202",          "A Cornered Rat",                { "Shadow Walker",     "+25 Carry Weight",  AV::kCarryWeight, 25.0f },  0, false },
+            { 1110, "MQ203",          "Alduin's Wall",                 { "Loremaster",        "+25 Magicka",       AV::kMagicka,     25.0f },  1, false },
+            { 1111, "MQ204",          "The Throat of the World",       { "Skyborn",           "+5% Magic Resist",  AV::kResistMagic,  5.0f },  1, false },
+            { 1112, "MQ205",          "Elder Knowledge",               { "Time Reader",       "+25 Magicka",       AV::kMagicka,     25.0f },  1, false },
+            { 1113, "MQ206",          "Alduin's Bane",                 { "Time Walker",       "+5% Magic Resist",  AV::kResistMagic,  5.0f },  2, false },
+            { 1114, "MQ301",          "The Fallen",                    { "Dragon Trapper",    "+25 Health",        AV::kHealth,      25.0f },  2, false },
+            { 1115, "MQ302",          "Season Unending",               { "Peacemaker",        "+25 Carry Weight",  AV::kCarryWeight, 25.0f },  0, false },
+            { 1116, "MQ303",          "The World-Eater's Eyrie",       { "Sky Breaker",       "+25 Health",        AV::kHealth,      25.0f },  3, false },
+            { 1117, "MQ304",          "Sovngarde",                     { "Soul Walker",       "+50 Health",        AV::kHealth,      50.0f },  3, false },
 
             // --- Endpoint: the main quest ---
-            { 1118, "MQ305",          "Dragonslayer",                  { "World Savior",     "+100 Health",       AV::kHealth,     100.0f }, true },
+            { 1118, "MQ305",          "Dragonslayer",                  { "World Savior",      "+100 Health",       AV::kHealth,     100.0f }, 10, true },
 
             // --- Endpoints: the add-ons ---
-            { 2101, "DLC1VQ08",       "Kindred Judgment",              { "Vampire's Bane",   "+15% Magic Resist", AV::kResistMagic, 15.0f }, true },
-            { 2102, "DLC2MQ06",       "At the Summit of Apocrypha",    { "Miraak's Bane",    "+100 Magicka",      AV::kMagicka,    100.0f }, true },
+            { 2101, "DLC1VQ08",       "Kindred Judgment",              { "Vampire's Bane",    "+15% Magic Resist", AV::kResistMagic, 15.0f },  5, true },
+            { 2102, "DLC2MQ06",       "At the Summit of Apocrypha",    { "Miraak's Bane",     "+100 Magicka",      AV::kMagicka,    100.0f }, 10, true },
         };
 
         // editorID -> quest, built once. Empty until Install() runs.
@@ -112,6 +118,7 @@ namespace Isekai::Progression {
             GetState().grantedMilestones.push_back(a_milestone.key);
 
             ApplyPassive(a_milestone.passive);
+            GrantDragonSouls(a_milestone.dragonSouls);
 
             std::int32_t perks = 0;
             if (a_milestone.endpoint) {
@@ -119,9 +126,9 @@ namespace Isekai::Progression {
                 GrantPerkPoints(perks);
             }
 
-            logger::info("Milestone granted: {} — passive '{}' ({}), perks +{}",
+            logger::info("Milestone granted: {} — passive '{}' ({}), perks +{}, souls +{}",
                          a_milestone.questName, a_milestone.passive.name,
-                         a_milestone.passive.effect, perks);
+                         a_milestone.passive.effect, perks, a_milestone.dragonSouls);
             return true;
         }
 
@@ -152,8 +159,11 @@ namespace Isekai::Progression {
             text += a_milestone.passive.name;
             text += "\n            ";
             text += a_milestone.passive.effect;
+            if (a_milestone.dragonSouls > 0) {
+                text += "\n\n  Dragon Souls  +" + std::to_string(a_milestone.dragonSouls);
+            }
             if (a_perks > 0) {
-                text += "\n\n  Perk Points   +" + std::to_string(a_perks);
+                text += "\n  Perk Points   +" + std::to_string(a_perks);
             }
             return text;
         }
@@ -264,7 +274,11 @@ namespace Isekai::Progression {
 
         if constexpr (kDumpQuestIDs) {
             for (const auto& [id, quest] : g_quests) {
-                if (id.starts_with("MQ") || id.starts_with("DLC1") || id.starts_with("DLC2")) {
+                const bool interesting =
+                    std::ranges::any_of(kDumpPrefixes, [&](std::string_view prefix) {
+                        return std::string_view{ id }.starts_with(prefix);
+                    });
+                if (interesting) {
                     logger::info("  quest: {} = \"{}\"", id, quest->GetName());
                 }
             }

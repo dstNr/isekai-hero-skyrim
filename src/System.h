@@ -50,6 +50,9 @@ namespace Isekai {
     // Add perk points, clamped to what the engine can actually hold (127).
     void GrantPerkPoints(std::int32_t a_points);
 
+    // Add unspent dragon souls. Unlike perk points these have no engine cap.
+    void GrantDragonSouls(std::int32_t a_souls);
+
     // Install everything: co-save serialization (persist choices + the
     // "already reincarnated" flag) and a start-method-independent trigger that
     // fires the first time the player is actually in control in the world

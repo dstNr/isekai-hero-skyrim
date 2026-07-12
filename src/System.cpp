@@ -44,21 +44,22 @@ namespace Isekai {
 
         // What each blessing grants. 0 = leave that stat untouched.
         struct Blessing {
-            std::uint16_t skillLevel;   // set all 18 skills to this
-            std::uint16_t playerLevel;  // set character level
-            std::int32_t  perkPoints;   // add to available perk points
-            float         attrBonus;    // add to base Health/Magicka/Stamina
-            std::int32_t  gold;         // add to inventory
+            std::uint16_t skillLevel;    // set all 18 skills to this
+            std::uint16_t playerLevel;   // set character level
+            std::int32_t  perkPoints;    // add to available perk points
+            float         attrBonus;     // add to base Health/Magicka/Stamina
+            std::int32_t  gold;          // add to inventory
+            std::int32_t  dragonSouls;   // add to the unspent soul pool
         };
 
         Blessing BlessingFor(PowerLevel a_power) {
             switch (a_power) {
             case PowerLevel::Hero:
-                return { 50, 25, 10, 100.0f, 2000 };
+                return { 50, 25, 10, 100.0f, 2000, 3 };
             case PowerLevel::Ascended:
-                return { 100, 150, kMaxPerkPoints, 300.0f, 25000 };
+                return { 100, 150, kMaxPerkPoints, 300.0f, 25000, 20 };
             default:  // Normal — pure challenge, no boosts
-                return { 0, 0, 0, 0.0f, 0 };
+                return { 0, 0, 0, 0.0f, 0, 0 };
             }
         }
 
@@ -96,6 +97,7 @@ namespace Isekai {
             }
 
             GrantPerkPoints(b.perkPoints);
+            GrantDragonSouls(b.dragonSouls);
 
             // Gold (Gold001 = 0x0000000F).
             if (b.gold > 0) {
@@ -104,9 +106,10 @@ namespace Isekai {
                 }
             }
 
-            logger::info("Reincarnation applied: power={} skills={} level={} perks=+{} attr=+{} gold={}",
-                         PowerName(g_state.power), b.skillLevel, b.playerLevel, b.perkPoints,
-                         b.attrBonus, b.gold);
+            logger::info(
+                "Reincarnation applied: power={} skills={} level={} perks=+{} attr=+{} gold={} souls=+{}",
+                PowerName(g_state.power), b.skillLevel, b.playerLevel, b.perkPoints, b.attrBonus,
+                b.gold, b.dragonSouls);
 
             const std::string body =
                 "REINCARNATION COMPLETE\n"
@@ -345,6 +348,22 @@ namespace Isekai {
         auto&      stats = player->GetGameStatsData();
         const auto total = static_cast<std::int32_t>(stats.perkCount) + a_points;
         stats.perkCount = static_cast<std::int8_t>(std::min(total, kMaxPerkPoints));
+    }
+
+    void GrantDragonSouls(std::int32_t a_souls) {
+        if (a_souls <= 0) {
+            return;
+        }
+        // The unspent soul pool is just an actor value — no special API, and no cap
+        // to fight, unlike perk points.
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        auto* avOwner = player ? player->AsActorValueOwner() : nullptr;
+        if (!avOwner) {
+            return;
+        }
+        const float have = avOwner->GetBaseActorValue(RE::ActorValue::kDragonSouls);
+        avOwner->SetBaseActorValue(RE::ActorValue::kDragonSouls,
+                                   have + static_cast<float>(a_souls));
     }
 
     void Install() {
