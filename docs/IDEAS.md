@@ -77,3 +77,107 @@ Mod-Installation, nicht an ein einzelnes Savegame. In C++ trivial per
   Hauptquests) oder ein bewusster Menü-Trigger sein?
 - Balance: Wie stark darf Run 2 dadurch beschleunigt werden, ohne dass die
   Isekai-Prämisse selbst trivial wird?
+
+---
+
+## System-Skilltree im Interface
+
+**Status:** 🧠 Idee, noch nicht spezifiziert
+**Ursprung:** Zwei Dinge liegen im Code bereits halb fertig herum und wollen
+zusammengeführt werden: `System.h` definiert ein `SkillFocus`-Enum
+(`Balanced/Warrior/Mage/Thief/Custom`), das aktuell **nirgendwo verwendet**
+wird — reiner Platzhalter. Und `Passives.cpp`/`Progression.cpp` haben schon
+einen sauberen Mechanismus, um Actor-Value-Boni aus einer Liste "verdienter"
+Passives *abzuleiten* (nie zu akkumulieren). Ein Skilltree im System-Interface
+würde beides tatsächlich benutzen, statt es brachliegen zu lassen.
+
+### Kernidee
+
+Ein eigenes Menü ("System: Skill Tree"), erreichbar aus dem bestehenden
+System-Interface, in dem der Spieler eine neue Währung — **System-Punkte** —
+in frei wählbare Knoten investiert. Jeder Knoten gewährt einen passiven
+Stat-Bonus (genau wie die bestehenden 8 Passives), aber der Spieler
+entscheidet *welchen*, statt dass er automatisch aus einem Milestone fällt.
+
+**Struktur:** kein linearer Pfad, sondern ein verzweigtes Netz mit
+Voraussetzungen — ähnlich Skyrims eigenem Perk-Baum. Organisiert in drei
+Regionen, die endlich `SkillFocus` einen Zweck geben:
+
+- **Warrior** — Health/Stamina-lastige Knoten, Rüstungs-/Nahkampf-Resistenzen
+- **Mage** — Magicka-lastige Knoten, Elementarresistenzen
+- **Thief** — Carry Weight/Stamina, Ausweich-/Diebstahl-nahe Stats
+
+Dazu ein kleiner neutraler **Hub** in der Mitte, von dem aus alle drei
+Branches abzweigen — Voraussetzungsketten können auch branch-übergreifend
+verlaufen (ein Warrior-Knoten kann einen Mage-Knoten als Vorbedingung
+verlangen), das Netz ist nicht strikt in drei Silos getrennt.
+
+Die bei der Reincarnation gewählte `SkillFocus`-Richtung könnte den Hub-Knoten
+der eigenen Branch vergünstigen oder direkt freischalten — ohne die anderen
+beiden Branches zu sperren. Das gibt der bisher folgenlosen Wahl im
+Reincarnation-Menü endlich eine spürbare Konsequenz.
+
+### Währung: System-Punkte
+
+Bewusst **nicht** dieselben Perk Points, die in Skyrims eigenes Perk-System
+fließen (`GrantPerkPoints`, gedeckelt bei 127 durch die Engine) — eine
+getrennte, ungedeckelte Zählgröße, analog zu Dragon Souls.
+
+**Quelle, zwei Ideen, die sich kombinieren lassen:**
+1. Jeder Milestone zahlt zusätzlich zu Passive/Souls/Perk-Points einen
+   kleinen Batzen System-Punkte aus (Endpoints entsprechend mehr) —
+   skaliert mit `RewardScale()` wie alles andere, damit die
+   Blessing-Wahl auch hier weiter mitzählt.
+2. Dragon Souls sind nach der Hauptquest ziemlich nutzlos, sobald alle
+   Word Walls leer sind. Ein Umtausch-Kurs (z. B. 1 Dragon Soul → X
+   System-Punkte) gäbe der Währung einen Sinn über Shouts hinaus — genau
+   die Art Dragon-Soul-Sink, die in `papyrus/FEATURES.md` schon als
+   offene Idee ("System Shop") herumsteht.
+
+### Technischer Ansatz
+
+**Datenmodell:** ein `SkillTree`-Modul analog zu `Progression`/`Passives` —
+eine statische Knoten-Tabelle (`key`, Voraussetzungen als Liste von Keys,
+`Passive`-Payload, Kosten in System-Punkten, Branch-Zugehörigkeit). Freigeschaltete
+Knoten landen in `State` (neues Feld neben `grantedMilestones`) und werden im
+Co-Save mitgespeichert.
+
+**Passives-Integration:** `Progression::EarnedPassives()` liefert aktuell nur
+Milestone-Passives. Naheliegend, das auf eine gemeinsame Quelle zu erweitern
+(Milestones **+** freigeschaltete Baum-Knoten), damit `Passives::Refresh()`
+unverändert weiter alles aus einer Liste ableitet, statt einen zweiten,
+parallelen Anwendungspfad zu bauen.
+
+**Grenze, die früh geklärt werden muss:** `Passives::Refresh()` treibt aktuell
+nur 8 feste Ability-Spells (`kAbilityFormIDs`), eine pro Actor Value. Ein
+Skilltree mit mehr Knoten als Actor Values bräuchte entweder mehrere Knoten
+pro Actor Value (mehrere Knoten addieren sich auf denselben Bonus — passt zum
+bestehenden "Summe aller Passives pro AV"-Modell) oder zusätzliche
+Ability-Spells in der ESP für neue Actor Values. Ersteres ist ohne
+ESP-Änderung machbar, zweites braucht Creation-Kit-Arbeit.
+
+**UI:** Das bestehende `SystemWindow` ist ein reiner Text+Button-Dialog
+(Titel, Body, Choices) — kein Graph-Layout. Ein Skilltree mit Knoten,
+Verbindungslinien und Voraussetzungs-Highlighting ist eine neue
+ImGui-Komponente (z. B. `UI/SkillTreeWindow.cpp`), die den visuellen Stil aus
+`Style.h` (Glow-Border, Corner-Brackets, Akzentfarbe) übernimmt, aber ein
+eigenes Layout braucht — vermutlich mit festen Node-Koordinaten pro Branch
+statt automatischem Graph-Layout, um die Renderlast und Komplexität klein zu
+halten.
+
+**Anknüpfung an Cross-Save Legacy:** Ein Pool aus System-Punkten +
+freigeschalteten Knoten ist genau die Art einfacher, banking-fähiger
+Zahlen-Progression, die die Legacy-Idee weiter oben als "leicht vererbbar"
+einstuft — ein Knotenpunkt für später, falls beide Features kommen.
+
+### Offene Fragen (noch zu klären, bevor das zur Task wird)
+- Exakter Umtausch-Kurs Dragon Souls → System-Punkte, falls Idee 2 kommt —
+  und ob er überhaupt nötig ist oder Milestones allein genug Fluss liefern.
+- Wie groß wird das Netz (grobe Knotenzahl pro Branch), bevor es umsetzbar
+  entworfen werden kann?
+- Respec: Sind einmal gesetzte Knoten permanent, oder gibt es (wie in
+  `papyrus/FEATURES.md` als Idee vermerkt) einen Respec-Mechanismus, der dann
+  auch System-Punkte zurückzahlen müsste?
+- Verändert die bei der Reincarnation gewählte `SkillFocus`-Richtung nur den
+  Hub-Knoten der eigenen Branch, oder auch die Kosten/Verfügbarkeit in den
+  beiden anderen Branches?
