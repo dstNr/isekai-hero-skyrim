@@ -134,23 +134,29 @@ namespace Isekai::SkillTree {
             if (!data) {
                 return;
             }
+            const auto& all = data->GetFormArray<RE::EnchantmentItem>();
+
+            // Learnable = referenced as some variant's baseEnchantment. The form list
+            // is packed with levelled-loot tiers ("Fortify Health" x6) and NPC-only
+            // enchantments; a name alone does not make something the enchanting table
+            // should offer. What disenchanting actually teaches is the BASE a variant
+            // points to — so the set of legitimate bases is exactly the set of forms
+            // being pointed at. Same duplicate lesson as the shouts, different marker.
             std::size_t known = 0;
-            for (auto* ench : data->GetFormArray<RE::EnchantmentItem>()) {
-                if (!ench) {
+            for (auto* ench : all) {
+                if (!ench || !ench->data.baseEnchantment) {
                     continue;
                 }
-                if (const char* name = ench->GetName(); !name || !*name) {
+                auto* base = ench->data.baseEnchantment;
+                if (const char* name = base->GetName(); !name || !*name) {
                     continue;
                 }
-                // The crafting menu lists base enchantments carrying the kKnown form
-                // flag — the same flag disenchanting sets.
-                auto* base = ench->data.baseEnchantment ? ench->data.baseEnchantment : ench;
                 if ((base->formFlags & RE::TESForm::RecordFlags::kKnown) == 0) {
                     base->formFlags |= RE::TESForm::RecordFlags::kKnown;
                     ++known;
                 }
             }
-            logger::info("SkillTree: {} enchantments marked known", known);
+            logger::info("SkillTree: {} base enchantments marked known", known);
         }
 
         void UnlockAllIngredients() {
