@@ -1,60 +1,103 @@
 # Isekai Hero — Skyrim SE (SKSE Plugin)
 
 An Isekai / "reincarnated hero" system for Skyrim Special Edition, built as a
-native **SKSE C++ plugin** using [CommonLibSSE-NG](https://github.com/CharmedBaryon/CommonLibSSE-NG).
+native **SKSE C++ plugin** using [CommonLibSSE-NG](https://github.com/CharmedBaryon/CommonLibSSE-NG),
+with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
 
 > **The System has chosen you. Your new life begins.**
 
-The plugin lets a reincarnated character choose an origin world, a power level,
-skills, equipment and wealth, and rewards progression (quests, milestones) with
-MMO-style effects — all driven from native code, no Creation Kit / ESP required.
-
 ---
 
-## Status
+## Features
 
-🚧 **Early C++ rewrite.** The project was previously a Papyrus mod (see
-[`papyrus/`](papyrus/) and the `papyrus-v1.0` git tag) and is being rebuilt as a
-native SKSE plugin for nicer UI and effects. Right now the repo contains a
-minimal, verified-building plugin skeleton.
+- **Reincarnation on first control.** Fires the first time the player is
+  actually in the world — works with vanilla starts, `coc`, Alternate Start,
+  Skyrim Unbound. A paced `[ SYSTEM ]` boot sequence leads into the blessing
+  choice.
+- **Three blessings** that keep mattering for the whole playthrough:
+
+  | | NORMAL | HERO | ASCENDED |
+  |---|---|---|---|
+  | Skills | — | 50 | 100 |
+  | Level (+ matching attributes) | — | 25 | 150 |
+  | Perk points | — | 10 | 127 (engine max) |
+  | Gold / Dragon souls / System Points | — | 2k / 3 / 5 | 25k / 20 / 500* |
+  | Reward scale on everything below | ×1 | ×2 | ×4 |
+
+  \*current test value — will be rebalanced.
+- **79 quest milestones** (main quest, Companions, College, Thieves Guild,
+  Dark Brotherhood, Civil War beats, Dawnguard, Dragonborn). Completing one
+  plays a level-up flourish (rings, title punch, custom sound) and pays out a
+  passive stat bonus, System Points, and on the big beats dragon souls.
+  Already-completed quests are recognised retroactively on load.
+- **Passives as real abilities.** All milestone bonuses aggregate into eight
+  `System:` abilities visible under Active Effects — recomputed from scratch
+  on every load, so they can never double-apply.
+- **System Skill Tree** (`RShift+F10` → crystal icon): 13 nodes across a hub
+  and three branches, paid with **System Points**. Includes four knowledge
+  unlocks that span *every loaded plugin* via semantic filters:
+  - all shouts + words of power ("has a description", deduplicated by name)
+  - all enchantments ("referenced as a base enchantment")
+  - all ingredient effects
+  - all spells ("has a spell tome")
+
+  Plus **Perk Synthesis**: a repeatable node converting 1 System Point into
+  5 perk points.
+- **Dimensional Storage** (HERO/ASCENDED only): one chest inventory reachable
+  from anywhere via the System panel, stocked at reincarnation with crafting
+  materials and gold. Crafting stations **borrow its contents automatically**
+  — station-aware, so the forge never shuttles alchemy ingredients around.
+- **Custom UI & sound.** Solo-Leveling-inspired panels (glow frames, corner
+  brackets, typewriter reveal, monospace terminal font), custom SFX routed
+  through the game's audio system, icon buttons, ESC handled properly.
 
 ## Requirements
 
-- **Skyrim Special Edition** + **SKSE64**
-- Runtime: works across SE / AE / VR (CommonLibSSE-NG multi-targeting)
+- **Skyrim Special Edition / Anniversary Edition** (developed against 1.6.1170)
+- **[SKSE64](https://skse.silverlock.org/)**
+- **[Address Library for SKSE Plugins](https://www.nexusmods.com/skyrimspecialedition/mods/32444)**
+
+## Installation
+
+Install `dist/IsekaiHero-v*.7z` with your mod manager (data-relative layout)
+and activate `IsekaiHero.esp`. The plugin is **ESL-flagged** — it takes no
+load order slot, overrides no vanilla records, and its position in the load
+order does not matter.
+
+In-game: **RShift + F10** opens the `[ SYSTEM ] STATUS` panel (storage and
+skill tree live behind the icon buttons in its top-right corner).
 
 ## Building
 
-Needs the C++ toolchain: **Visual Studio 2022 Build Tools** (MSVC + Windows SDK +
-CMake + Ninja) and **vcpkg**. Then:
+Toolchain: **Visual Studio 2022 Build Tools** (MSVC + Windows SDK + CMake +
+Ninja) and **vcpkg**.
 
 ```powershell
-./build.bat
+./build.bat      # configure + build + deploy DLL/PDB/icons into the game folder
+./package.ps1    # pack a mod-manager-ready 7z into dist/
 ```
 
-This sets up the MSVC environment, runs CMake with the vcpkg toolchain (which
-fetches/builds CommonLibSSE-NG on first run — slow once, cached after) and
-produces `build/IsekaiHeroSKSE.dll`.
+`build.bat` refuses to deploy while Skyrim is running (a locked DLL used to
+mean silently testing stale code). It builds `RelWithDebInfo`, so Crash
+Logger can symbolicate our frames.
 
-To test in-game, copy the DLL to `Data/SKSE/Plugins/` and launch via SKSE — it
-logs to `Documents/My Games/Skyrim Special Edition/SKSE/IsekaiHeroSKSE.log`.
+The plugin logs richly to
+`Documents/My Games/Skyrim Special Edition/SKSE/IsekaiHeroSKSE.log` — form
+resolution, milestone grants, storage traffic. It is the first place to look
+when something misbehaves.
 
-## Layout
+## Repository layout
 
-```
-├── CMakeLists.txt            # CommonLibSSE-NG plugin (add_commonlibsse_plugin)
-├── vcpkg.json                # dependency: commonlibsse-ng
-├── vcpkg-configuration.json  # vcpkg registries + baselines
-├── build.bat                 # one-shot build (vcvars + cmake)
-├── src/
-│   ├── PCH.h                 # precompiled header (CommonLibSSE-NG setup)
-│   └── main.cpp              # plugin entry point
-└── papyrus/                  # ARCHIVED original Papyrus version (v1.0)
-```
+| Path | Contents |
+|---|---|
+| `src/` | the SKSE plugin (System, Progression, SkillTree, Storage, Passives, Sounds, `UI/`) |
+| `plugin/IsekaiHero.esp` | the ESL-flagged data plugin (abilities, container, sound descriptors) |
+| `icons/`, `sounds/` | UI assets, deployed by the build/package scripts |
+| `docs/` | Creation-Kit/xEdit guide for the ESP, ideas backlog, Nexus description |
+| `papyrus/` | the archived original Papyrus version (git tag `papyrus-v1.0`) |
 
-## The archived Papyrus version
+## Status
 
-The complete, working Papyrus implementation lives in [`papyrus/`](papyrus/) and
-at the git tag **`papyrus-v1.0`** (`git checkout papyrus-v1.0`). It includes the
-full System dialog flow, progression/milestones, perks, MCM, quest-reward
-tracker and the Creation Kit guide.
+🧪 **Pre-release.** Feature-complete for a first full-modlist test run;
+balance values (starting System Points, node costs) are explicitly in a
+testing configuration.
