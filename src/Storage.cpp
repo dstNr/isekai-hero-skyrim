@@ -65,6 +65,12 @@ namespace Isekai::Storage {
                 return nullptr;
             }
 
+            // Bury it right away. PlaceObjectAtMe drops it at the player's feet, and
+            // since the stocking happens during reincarnation — not on first open —
+            // it would otherwise stand there in plain sight until first used.
+            const auto pos = a_player->GetPosition();
+            chest->SetPosition(pos.x, pos.y, pos.z - 3000.0f);
+
             GetState().storageChest = chest->GetFormID();
             logger::info("Storage: chest created ({:#x})", chest->GetFormID());
             return chest.get();
@@ -229,13 +235,32 @@ namespace Isekai::Storage {
             ++stocked;
         }
 
+        // Alchemy: every loaded ingredient, enumerated at runtime rather than kept
+        // as a hand-maintained FormID list — that covers the DLCs (and any mods)
+        // automatically, and a list of ~100 ids would be ~100 chances to be wrong.
+        constexpr std::int32_t kIngredientBase = 500;
+        std::size_t            ingredients = 0;
+        for (auto* ingredient : data->GetFormArray<RE::IngredientItem>()) {
+            if (!ingredient) {
+                continue;
+            }
+            if (const char* name = ingredient->GetName(); !name || !*name) {
+                continue;  // nameless = internal/test records, not for players
+            }
+            chest->AddObjectToContainer(
+                ingredient, nullptr,
+                static_cast<std::int32_t>(static_cast<float>(kIngredientBase) * scale), nullptr);
+            ++ingredients;
+        }
+
         if (auto* gold = RE::TESForm::LookupByID<RE::TESBoundObject>(kGold)) {
             chest->AddObjectToContainer(
                 gold, nullptr,
                 static_cast<std::int32_t>(static_cast<float>(kGoldBase) * scale), nullptr);
         }
 
-        logger::info("Storage: stocked {} material stacks + gold (scale x{})", stocked, scale);
+        logger::info("Storage: stocked {} materials + {} ingredients + gold (scale x{})",
+                     stocked, ingredients, scale);
     }
 
     void Open() {
