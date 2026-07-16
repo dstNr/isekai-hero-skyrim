@@ -230,13 +230,26 @@ namespace Isekai::Progression {
         // feel like waiting.
         constexpr std::uint32_t kFlourishLeadMs = 1600;
 
+        // Open the reward panel — but never over a live one. ShowSystemWindow
+        // replaces the open window outright, and clobbering, say, the blessing
+        // selection would throw away its callback and hang the reincarnation.
+        void ShowPanelWhenFree(std::string a_body) {
+            if (UI::IsSystemWindowOpen() || UI::IsSkillTreeOpen()) {
+                DelayedMainThread(1000, [body = std::move(a_body)]() mutable {
+                    ShowPanelWhenFree(std::move(body));
+                });
+                return;
+            }
+            UI::ShowSystemWindow("[ SYSTEM ]", std::move(a_body), { "ACCEPT" }, [](int) {});
+        }
+
         // Fire the flourish, then bring up the panel once it has played out.
         void Celebrate(std::string a_title, std::string a_subtitle, std::string a_body) {
             Sounds::Play(Sounds::Sfx::LevelUp);
             UI::PlayLevelUpEffect(std::move(a_title), std::move(a_subtitle));
 
-            DelayedMainThread(kFlourishLeadMs, [body = std::move(a_body)]() {
-                UI::ShowSystemWindow("[ SYSTEM ]", body, { "ACCEPT" }, [](int) {});
+            DelayedMainThread(kFlourishLeadMs, [body = std::move(a_body)]() mutable {
+                ShowPanelWhenFree(std::move(body));
             });
         }
 
@@ -269,6 +282,13 @@ namespace Isekai::Progression {
 
         // Check one quest and pay out if it just finished. Safe to call repeatedly.
         void CheckQuest(RE::FormID a_formID) {
+            // Nothing counts before the System is bound to the player. Alternate-start
+            // setups complete the early main quests to skip the intro — those deeds
+            // are swept up by the catch-up that runs right after the blessing instead.
+            if (!GetState().reincarnated) {
+                return;
+            }
+
             auto*       quest = RE::TESForm::LookupByID<RE::TESQuest>(a_formID);
             const auto* milestone = FindByQuest(quest);
             if (!milestone) {
@@ -530,6 +550,10 @@ namespace Isekai::Progression {
     }
 
     void CatchUpOnLoad() {
+        if (!GetState().reincarnated) {
+            return;  // the System is not bound yet; ApplyReincarnation calls back in
+        }
+
         std::vector<const Milestone*> caughtUp;
         std::int32_t                  perks = 0;
         std::int32_t                  souls = 0;

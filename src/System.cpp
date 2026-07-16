@@ -136,7 +136,12 @@ namespace Isekai {
             UI::PlayLevelUpEffect("AWAKENED", PowerName(g_state.power));
 
             DelayedMainThread(1600, [body]() {
-                UI::ShowSystemWindow("[ SYSTEM ]", body, { "CONTINUE" }, [](int) {});
+                UI::ShowSystemWindow("[ SYSTEM ]", body, { "CONTINUE" }, [](int) {
+                    // Now that the System is bound, sweep up whatever was completed
+                    // before it existed — alternate starts finish the early main
+                    // quests to skip the intro, and those deeds still count.
+                    Progression::CatchUpOnLoad();
+                });
             });
         }
 
