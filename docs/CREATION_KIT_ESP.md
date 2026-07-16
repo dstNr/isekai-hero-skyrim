@@ -183,35 +183,49 @@ Am Duplikat ändern:
 
 ---
 
-## Teil E — Sound Descriptors (4 Stück)
+## Teil E — Sound Descriptors (4 Stück, per SSEEdit)
 
 Die WAV-Dateien liegen bereits in `Data\Sound\fx\isekai\` (macht der Build-Workflow).
 
-**Object Window** → **Audio → Sound Descriptor** → Rechtsklick → **New**
+> **Warum SSEEdit statt Creation Kit?** Das CK hat einen bekannten Bug: der
+> Sound-Descriptor-Dialog stürzt beim Schließen/OK ab. SSEEdit ist hier ohnehin der
+> bessere Weg — beim Kopieren eines Vanilla-Descriptors kommen Category und Output
+> Model (also die richtige Lautstärkeregler-Anbindung) automatisch mit, statt sie
+> abtippen zu müssen.
 
-> ⚠️ **Die Reihenfolge ist wichtig.** Sound Descriptors tragen zur Laufzeit weder Namen
-> noch Editor-ID, und ihre Dateipfade sind nur als Hash gespeichert — der Code ordnet
-> sie deshalb über die FormID-Reihenfolge zu, und das CK vergibt FormIDs aufsteigend
-> in Erstellungsreihenfolge. Falls doch etwas vertauscht ist: sofort hörbar, leicht
-> korrigierbar.
+1. **`SSEEdit.exe` direkt starten** (z. B. `E:\Modlists\NYA\tools\SSEEdit 4.1.5\`) —
+   ⚠️ **nicht über MO2!** Direkt gestartet sieht es die Load-Order des Basis-Spiels,
+   also genau unser Test-Setup.
+2. Im Modul-Dialog: Rechtsklick → *Select None*, dann nur **`IsekaiHero.esp`** anhaken
+   (die Master lädt es selbst) → OK. Warten bis unten rechts
+   „Background Loader: finished" steht.
+3. Links im Baum: **`Skyrim.esm` → `Sound Descriptor`** aufklappen.
+4. In das Suchfeld **oben links** `UIMenuOKSD` eintippen + Enter → der Vanilla-Descriptor
+   für Skyrims Menü-OK-Klick wird ausgewählt.
+5. **Rechtsklick auf `UIMenuOKSD` → „Copy as new record into..."** → Häkchen bei
+   `IsekaiHero.esp` → als neue Editor-ID `IsekaiSND_LevelUp` eingeben.
+6. Den neuen Record auswählen (jetzt unter `IsekaiHero.esp → Sound Descriptor`).
+   Rechts im Datenblatt den Eintrag **`ANAM - Sound File`** suchen → Doppelklick auf den
+   Pfad → ersetzen durch `sound\fx\isekai\Cinematic_6_1.wav`.
+   *(Falls der kopierte Record mehrere Sound-Dateien listet: die überzähligen Zeilen
+   per Rechtsklick → Remove löschen, genau eine bleibt.)*
+7. Schritte 5–6 **in exakt dieser Reihenfolge** für die übrigen drei wiederholen:
 
-Zuerst **einmalig als Vorlage nachschlagen**: Öffne den Vanilla-Descriptor
-**`UIMenuOKSD`** (in der Sound-Descriptor-Liste suchen) und notiere, was dort bei
-**Category** und **Output Model** steht. Genau diese beiden Werte bekommen unsere vier
-auch — dann laufen sie über denselben UI-Lautstärkeregler wie Skyrims eigene
-Menü-Sounds. *(Nicht raten — abschreiben.)*
-
-Dann in **exakt dieser Reihenfolge** anlegen:
-
-| Nr. | ID | Sound File |
+| Nr. | Editor-ID | Sound File |
 |---|---|---|
 | 1 | `IsekaiSND_LevelUp` | `sound\fx\isekai\Cinematic_6_1.wav` |
 | 2 | `IsekaiSND_WindowOpen` | `sound\fx\isekai\Cinematic_7_2.wav` |
 | 3 | `IsekaiSND_ButtonClick` | `sound\fx\isekai\Modern_2_2.wav` |
 | 4 | `IsekaiSND_WindowClose` | `sound\fx\isekai\Modern_5_2.wav` |
 
-Für jeden: **Category** und **Output Model** wie bei `UIMenuOKSD`, die Sound-Datei über
-den Add-/File-Button auswählen, Rest auf Standard lassen.
+8. SSEEdit schließen → der Speichern-Dialog erscheint → Häkchen bei `IsekaiHero.esp`
+   lassen → OK. (Ein Backup legt SSEEdit automatisch an.)
+
+> ⚠️ **Die Reihenfolge ist wichtig.** Sound Descriptors tragen zur Laufzeit weder Namen
+> noch Editor-ID, und ihre Dateipfade sind nur als Hash gespeichert — der Code ordnet
+> sie über die FormID-Reihenfolge zu, und neue Records bekommen aufsteigende IDs in
+> Erstellungsreihenfolge. Falls doch etwas vertauscht ist: sofort hörbar, leicht
+> korrigierbar.
 
 ---
 
