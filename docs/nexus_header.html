@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1300px; height: 372px; overflow: hidden; }
+  body {
+    position: relative;
+    background:
+      radial-gradient(ellipse 620px 420px at 1020px 190px, rgba(45, 130, 200, 0.28), transparent 70%),
+      radial-gradient(ellipse 700px 300px at 260px 200px, rgba(30, 80, 130, 0.20), transparent 75%),
+      linear-gradient(160deg, #060b14 0%, #081120 55%, #04080f 100%);
+    font-family: Consolas, 'Courier New', monospace;
+  }
+
+  /* fine scanlines over everything */
+  .scanlines {
+    position: absolute; inset: 0; z-index: 5; pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom, rgba(0,0,0,0.00) 0px, rgba(0,0,0,0.00) 3px, rgba(0,0,0,0.16) 4px);
+  }
+  /* subtle grid */
+  .grid {
+    position: absolute; inset: 0; z-index: 1;
+    background:
+      linear-gradient(to right, rgba(89,204,255,0.028) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(89,204,255,0.028) 1px, transparent 1px);
+    background-size: 52px 52px;
+    mask-image: radial-gradient(ellipse 760px 340px at 58% 45%, black 20%, transparent 95%);
+    -webkit-mask-image: radial-gradient(ellipse 760px 340px at 58% 45%, black 20%, transparent 95%);
+  }
+  .vignette {
+    position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background: radial-gradient(ellipse 1100px 520px at 50% 50%, transparent 55%, rgba(0,0,0,0.42) 100%);
+  }
+
+  /* outer frame + corner brackets, like the in-game panels */
+  .frame {
+    position: absolute; inset: 12px; z-index: 4;
+    border: 1px solid rgba(89, 204, 255, 0.30);
+    box-shadow: 0 0 22px rgba(89, 204, 255, 0.12) inset;
+  }
+  .corner { position: absolute; width: 26px; height: 26px; z-index: 6; }
+  .corner.tl { top: 8px;  left: 8px;   border-top: 3px solid #59ccff; border-left: 3px solid #59ccff; }
+  .corner.tr { top: 8px;  right: 8px;  border-top: 3px solid #59ccff; border-right: 3px solid #59ccff; }
+  .corner.bl { bottom: 8px; left: 8px; border-bottom: 3px solid #59ccff; border-left: 3px solid #59ccff; }
+  .corner.br { bottom: 8px; right: 8px; border-bottom: 3px solid #59ccff; border-right: 3px solid #59ccff; }
+
+  .content { position: absolute; inset: 0; z-index: 3; }
+
+  .sysline {
+    position: absolute; left: 64px; top: 74px;
+    color: #59ccff; font-size: 17px; letter-spacing: 5px;
+    text-shadow: 0 0 12px rgba(89,204,255,0.8);
+  }
+  .sysline .dim { color: #80a6c7; text-shadow: none; }
+
+  .title {
+    position: absolute; left: 60px; top: 108px;
+    font-size: 104px; font-weight: bold; letter-spacing: 10px;
+    color: #eaf7ff;
+    text-shadow:
+      0 0 18px rgba(89, 204, 255, 0.95),
+      0 0 55px rgba(89, 204, 255, 0.55),
+      0 0 110px rgba(89, 204, 255, 0.35);
+  }
+
+  .tagline {
+    position: absolute; left: 64px; top: 242px;
+    color: #b9d8ee; font-size: 22px; letter-spacing: 2px;
+  }
+  .tagline b { color: #59ccff; font-weight: normal; text-shadow: 0 0 10px rgba(89,204,255,0.7); }
+
+  .features {
+    position: absolute; left: 64px; top: 296px;
+    color: #6d93b5; font-size: 15px; letter-spacing: 3px;
+  }
+  .features span { color: #59ccff; }
+
+  /* right side: a fragment of the skill tree with real node icons */
+  .nodes { position: absolute; right: 0; top: 0; width: 460px; height: 372px; }
+  .node {
+    position: absolute; border: 1px solid rgba(89, 204, 255, 0.75);
+    box-shadow: 0 0 26px rgba(89, 204, 255, 0.45), 0 0 4px rgba(89,204,255,0.8);
+    background: #04080f;
+  }
+  .node img { width: 100%; height: 100%; display: block; }
+  .node.main { width: 168px; height: 168px; left: 148px; top: 100px; }
+  .node.a    { width: 96px;  height: 96px;  left: 22px;  top: 42px;  opacity: 0.92; }
+  .node.b    { width: 96px;  height: 96px;  left: 336px; top: 236px; opacity: 0.92; }
+  svg.links { position: absolute; inset: 0; }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="vignette"></div>
+
+  <div class="content">
+    <div class="sysline">[ SYSTEM ] <span class="dim">// REINCARNATION PROTOCOL ACTIVE</span></div>
+    <div class="title">ISEKAI&nbsp;HERO</div>
+    <div class="tagline">The <b>System</b> has chosen you. Your new life begins.</div>
+    <div class="features">BLESSINGS <span>&#9670;</span> 79 QUEST MILESTONES <span>&#9670;</span> SKILL TREE <span>&#9670;</span> DIMENSIONAL STORAGE</div>
+
+    <div class="nodes">
+      <svg class="links" width="460" height="372">
+        <line x1="118" y1="90"  x2="148" y2="140" stroke="#59ccff" stroke-width="2" opacity="0.65"/>
+        <line x1="316" y1="268" x2="336" y2="284" stroke="#59ccff" stroke-width="2" opacity="0.65"/>
+      </svg>
+      <div class="node a"><img src="../icons/spells_03_frame.png"></div>
+      <div class="node main"><img src="../icons/spells_38_frame.png"></div>
+      <div class="node b"><img src="../icons/spells_21_frame.png"></div>
+    </div>
+  </div>
+
+  <div class="frame"></div>
+  <div class="corner tl"></div><div class="corner tr"></div>
+  <div class="corner bl"></div><div class="corner br"></div>
+  <div class="scanlines"></div>
+</body>
+</html>
