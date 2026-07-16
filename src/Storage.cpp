@@ -185,7 +185,17 @@ namespace Isekai::Storage {
                         if (auto* player = RE::PlayerCharacter::GetSingleton(); player && g_token) {
                             player->AddObjectToContainer(g_token, nullptr, 1, nullptr);
                         }
-                        Open();
+
+                        // The token is used from inside the inventory, and activating a
+                        // world object is a dead letter while a menu holds the game:
+                        // everything ran, the chest even got created — and no container
+                        // menu ever appeared. So: close the inventory, give its teardown
+                        // a beat to finish, then open the chest.
+                        if (auto* queue = RE::UIMessageQueue::GetSingleton()) {
+                            queue->AddMessage(RE::InventoryMenu::MENU_NAME,
+                                              RE::UI_MESSAGE_TYPE::kHide, nullptr);
+                        }
+                        DelayedMainThread(250, []() { Open(); });
                     });
                 }
                 return RE::BSEventNotifyControl::kContinue;
