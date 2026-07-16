@@ -317,9 +317,9 @@ namespace Isekai::Progression {
         // "System: Health" abilities — this is the ledger of where they came from.
         // ------------------------------------------------------------------
 
-        constexpr std::uint32_t kStatusKey = 0x44;       // DIK_F10
-        constexpr std::uint32_t kStatusModifier = 0x36;  // DIK_RSHIFT — F10 alone is
-                                                         // contested in a big modlist
+        constexpr std::uint32_t kStatusKey = 0x1F;       // DIK_S — "System"
+        constexpr std::uint32_t kStatusModifier = 0x36;  // DIK_RSHIFT — S alone is the
+                                                         // backward-movement key
 
         [[nodiscard]] const char* StatName(RE::ActorValue a_av) {
             switch (a_av) {
@@ -546,7 +546,7 @@ namespace Isekai::Progression {
         if constexpr (kEnableDebugGrant) {
             UI::RegisterHotkey(kDebugGrantKey, DebugGrantNext);
         }
-        logger::info("Progression: RShift+F10 opens the status panel");
+        logger::info("Progression: RShift+S opens the status panel");
     }
 
     void CatchUpOnLoad() {

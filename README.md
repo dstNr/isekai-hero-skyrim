@@ -33,7 +33,7 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
 - **Passives as real abilities.** All milestone bonuses aggregate into eight
   `System:` abilities visible under Active Effects — recomputed from scratch
   on every load, so they can never double-apply.
-- **System Skill Tree** (`RShift+F10` → crystal icon): 13 nodes across a hub
+- **System Skill Tree** (`RShift+S` → crystal icon): 13 nodes across a hub
   and three branches, paid with **System Points**. Includes four knowledge
   unlocks that span *every loaded plugin* via semantic filters:
   - all shouts + words of power ("has a description", deduplicated by name)
@@ -64,7 +64,7 @@ and activate `IsekaiHero.esp`. The plugin is **ESL-flagged** — it takes no
 load order slot, overrides no vanilla records, and its position in the load
 order does not matter.
 
-In-game: **RShift + F10** opens the `[ SYSTEM ] STATUS` panel (storage and
+In-game: **RShift + S** opens the `[ SYSTEM ] STATUS` panel (storage and
 skill tree live behind the icon buttons in its top-right corner).
 
 ## Building

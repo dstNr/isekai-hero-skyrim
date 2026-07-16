@@ -39,7 +39,7 @@ The first time you gain control of your character — regardless of how you star
 All passives aggregate into [b]System abilities visible under Active Effects[/b], and every earned title is listed in the System's status ledger. Quests you completed before installing are recognized retroactively.
 
 [size=4][b]The Skill Tree[/b][/size]
-Open the System panel ([b]Right Shift + F10[/b]) and enter the skill tree: a hub and three branches — might, arcana, shadow — paid with System Points. Besides stat nodes it holds the System's signature unlocks:
+Open the System panel ([b]Right Shift + S[/b]) and enter the skill tree: a hub and three branches — might, arcana, shadow — paid with System Points. Besides stat nodes it holds the System's signature unlocks:
 
 [list]
 [*][b]Thu'um Omniscience[/b] — every shout and every word of power
@@ -64,7 +64,7 @@ HERO and ASCENDED souls receive access to a private pocket dimension: one chest 
 [size=4][b]Installation & Compatibility[/b][/size]
 Install with your mod manager. The plugin is [b]ESL-flagged[/b] (no load order slot), adds only new records and [b]overrides nothing[/b] — load order position does not matter. No patches needed.
 
-[b]Hotkey:[/b] Right Shift + F10 opens the System status panel; storage and skill tree sit behind the icon buttons in its corner.
+[b]Hotkey:[/b] Right Shift + S opens the System status panel; storage and skill tree sit behind the icon buttons in its corner.
 
 [size=4][b]Status[/b][/size]
 Early release — balance values are still being tuned. Feedback is very welcome, especially from heavily modded setups. If something misbehaves, attach [i]Documents\My Games\Skyrim Special Edition\SKSE\IsekaiHeroSKSE.log[/i] to your report — the mod logs everything it does.
