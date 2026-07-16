@@ -101,9 +101,16 @@ namespace Isekai::SkillTree {
             }
             // Two dedup passes. "Has a description" weeds out the NPC/dragon copies —
             // but some names still exist several times WITH (differing) descriptions,
-            // so the second pass keeps exactly one form per display name: the one from
-            // the earliest plugin (lowest FormID), i.e. the original over any override
-            // or add-on copy.
+            // so the second pass keeps exactly one form per display name: the one with
+            // the lowest FormID, i.e. the oldest definition.
+            //
+            // Why lowest and not highest ("mods override by load order")? Because an
+            // override never creates a second form: it keeps the original FormID, the
+            // engine resolves the conflict at data load, and the ONE form we see here
+            // already carries the winning mod's data. Load order is baked in before we
+            // ever look. Highest-vs-lowest only picks between genuinely DISTINCT
+            // records sharing a name — and a same-named extra record is nearly always
+            // a special variant (NPC/quest copy), not a replacement.
             std::map<std::string, RE::TESShout*> byName;
             for (auto* shout : data->GetFormArray<RE::TESShout>()) {
                 if (!shout) {
