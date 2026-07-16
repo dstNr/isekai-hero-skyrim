@@ -297,7 +297,9 @@ namespace Isekai::Progression {
         // "System: Health" abilities — this is the ledger of where they came from.
         // ------------------------------------------------------------------
 
-        constexpr std::uint32_t kStatusKey = 0x44;  // DIK_F10
+        constexpr std::uint32_t kStatusKey = 0x44;       // DIK_F10
+        constexpr std::uint32_t kStatusModifier = 0x36;  // DIK_RSHIFT — F10 alone is
+                                                         // contested in a big modlist
 
         [[nodiscard]] const char* StatName(RE::ActorValue a_av) {
             switch (a_av) {
@@ -408,10 +410,12 @@ namespace Isekai::Progression {
         }
 
         // F11: pay out the next milestone still owed, exactly as a real quest would.
-        // Tuning an animation by replaying a quest is not a workable loop.
+        // Tuning an animation by replaying a quest is not a workable loop. Disabled
+        // for the modlist test runs; flip to re-arm.
+        constexpr bool          kEnableDebugGrant = false;
         constexpr std::uint32_t kDebugGrantKey = 0x57;  // DIK_F11
 
-        void DebugGrantNext() {
+        [[maybe_unused]] void DebugGrantNext() {
             for (const auto& m : kMilestones) {
                 if (!AlreadyGranted(m.key)) {
                     logger::info("Debug hotkey: granting '{}'", m.questName);
@@ -518,9 +522,11 @@ namespace Isekai::Progression {
             logger::info("Progression: quest watcher armed (stage + start/stop)");
         }
 
-        UI::RegisterHotkey(kStatusKey, ShowStatusPanel);
-        UI::RegisterHotkey(kDebugGrantKey, DebugGrantNext);
-        logger::info("Progression: F10 opens the status panel, F11 grants the next milestone (debug)");
+        UI::RegisterHotkey(kStatusKey, ShowStatusPanel, kStatusModifier);
+        if constexpr (kEnableDebugGrant) {
+            UI::RegisterHotkey(kDebugGrantKey, DebugGrantNext);
+        }
+        logger::info("Progression: RShift+F10 opens the status panel");
     }
 
     void CatchUpOnLoad() {

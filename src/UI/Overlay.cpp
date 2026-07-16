@@ -1,10 +1,12 @@
 #include "UI/Overlay.h"
 
+#include "SkillTree.h"
 #include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
 #include "UI/SkillTreeWindow.h"
 #include "UI/Style.h"
 #include "UI/SystemWindow.h"
+#include "UI/Textures.h"
 
 #include <d3d11.h>
 #include <dxgi.h>
@@ -16,6 +18,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 namespace Isekai::UI {
 
@@ -111,6 +114,22 @@ namespace Isekai::UI {
             if (!ImGui_ImplDX11_Init(device, g_context)) {
                 logger::error("UI: ImGui DX11 backend init failed");
                 return false;
+            }
+
+            // Warm the texture cache while the player is still in the main menu.
+            // Decoding half-megabyte PNGs synchronously in a panel's first frame is
+            // exactly the "hangs for a moment when I first open the menu" the tester
+            // felt — here the same cost hides behind the loading screen.
+            {
+                constexpr const char* kIconDir = "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\";
+                GetTexture(std::string(kIconDir) + "spells_03_frame.png");  // storage
+                GetTexture(std::string(kIconDir) + "spells_38_frame.png");  // skill tree
+                std::size_t count = 0;
+                const auto* nodes = SkillTree::Nodes(count);
+                for (std::size_t i = 0; i < count; ++i) {
+                    GetTexture(std::string(kIconDir) + nodes[i].icon);
+                }
+                logger::info("UI: panel icons preloaded");
             }
 
             logger::info("UI: ImGui overlay initialised");

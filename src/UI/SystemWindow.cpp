@@ -73,8 +73,11 @@ namespace Isekai::UI {
             const float fade = std::min(g_win.elapsed / kFadeInSeconds, 1.0f);
 
             // Reveal the body one character at a time, buttons only once it's done.
-            const auto revealed = static_cast<std::size_t>(
-                std::max(0.0f, (g_win.elapsed - kFadeInSeconds) * g_win.revealCharsPerSec));
+            // The reveal starts WITH the fade, not after it: gating it on the fade
+            // made even instant-reveal panels (the status ledger) sit visibly empty
+            // for a third of a second before any content appeared.
+            const auto revealed =
+                static_cast<std::size_t>(g_win.elapsed * g_win.revealCharsPerSec);
             const bool  bodyComplete = revealed >= g_win.body.size();
             std::string shownBody = bodyComplete ? g_win.body : g_win.body.substr(0, revealed);
             if (!bodyComplete) {

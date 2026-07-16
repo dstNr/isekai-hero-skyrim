@@ -44,8 +44,24 @@ namespace Isekai::UI {
         std::mutex g_mutex;
         Pending    g_pending;
 
-        std::mutex                                              g_hotkeyMutex;
-        std::unordered_map<std::uint32_t, std::function<void()>> g_hotkeys;
+        struct Hotkey {
+            std::function<void()> fn;
+            std::uint32_t         modifier = 0;  // scan code that must be held; 0 = none
+        };
+
+        std::mutex                               g_hotkeyMutex;
+        std::unordered_map<std::uint32_t, Hotkey> g_hotkeys;
+
+        // Keyboard keys currently held down, maintained from the same event stream
+        // the hotkeys use — so modifier checks cannot drift from what the game sees.
+        std::mutex                        g_heldMutex;
+        std::unordered_map<std::uint32_t, bool> g_held;
+
+        [[nodiscard]] bool IsHeld(std::uint32_t a_scanCode) {
+            std::scoped_lock lock(g_heldMutex);
+            const auto       it = g_held.find(a_scanCode);
+            return it != g_held.end() && it->second;
+        }
 
         // Input events arrive on the game's input thread; hand the callback to the
         // main thread before it touches anything.
@@ -57,7 +73,10 @@ namespace Isekai::UI {
                 if (it == g_hotkeys.end()) {
                     return;
                 }
-                fn = it->second;
+                if (it->second.modifier != 0 && !IsHeld(it->second.modifier)) {
+                    return;
+                }
+                fn = it->second.fn;
             }
             if (auto* task = SKSE::GetTaskInterface()) {
                 task->AddTask([fn = std::move(fn)]() { fn(); });
@@ -81,11 +100,23 @@ namespace Isekai::UI {
                 // Hotkeys work whether or not a panel is open, so they are handled
                 // before the capture check below.
                 for (auto* event = *a_event; event; event = event->next) {
-                    if (event->GetEventType() != RE::INPUT_EVENT_TYPE::kButton) {
+                    if (event->GetEventType() != RE::INPUT_EVENT_TYPE::kButton ||
+                        event->GetDevice() != RE::INPUT_DEVICE::kKeyboard) {
                         continue;
                     }
                     auto* button = event->AsButtonEvent();
-                    if (!button || !button->IsDown()) {
+                    if (!button) {
+                        continue;
+                    }
+
+                    // Held-key bookkeeping first, so a modifier registers before the
+                    // key it modifies is evaluated in the same batch.
+                    {
+                        std::scoped_lock lock(g_heldMutex);
+                        g_held[button->GetIDCode()] = button->IsPressed();
+                    }
+
+                    if (!button->IsDown()) {
                         continue;
                     }
 
@@ -98,9 +129,7 @@ namespace Isekai::UI {
                                      static_cast<int>(event->GetDevice()), button->GetIDCode());
                     }
 
-                    if (event->GetDevice() == RE::INPUT_DEVICE::kKeyboard) {
-                        FireHotkey(button->GetIDCode());
-                    }
+                    FireHotkey(button->GetIDCode());
                 }
 
                 if (!IsCapturingInput()) {
@@ -275,9 +304,10 @@ namespace Isekai::UI {
         };
     }
 
-    void RegisterHotkey(std::uint32_t a_scanCode, std::function<void()> a_fn) {
+    void RegisterHotkey(std::uint32_t a_scanCode, std::function<void()> a_fn,
+                        std::uint32_t a_modifier) {
         std::scoped_lock lock(g_hotkeyMutex);
-        g_hotkeys[a_scanCode] = std::move(a_fn);
+        g_hotkeys[a_scanCode] = Hotkey{ std::move(a_fn), a_modifier };
     }
 
     void InstallInput() {

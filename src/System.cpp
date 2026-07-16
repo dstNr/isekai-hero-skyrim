@@ -51,7 +51,10 @@ namespace Isekai {
             case PowerLevel::Hero:
                 return { 50, 25, 10, 2000, 3, 5 };
             case PowerLevel::Ascended:
-                return { 100, 150, kMaxPerkPoints, 25000, 20, 15 };
+                // systemPoints 500 is a TEST value for the modlist runs — enough to
+                // buy the whole tree (260) outright. Rebalance before any release
+                // (the earned-through-milestones figure for ASCENDED is ~380).
+                return { 100, 150, kMaxPerkPoints, 25000, 20, 500 };
             default:  // Normal — pure challenge, no boosts
                 return { 0, 0, 0, 0, 0, 0 };
             }
