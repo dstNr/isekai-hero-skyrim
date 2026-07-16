@@ -86,12 +86,12 @@ namespace Isekai::SkillTree {
             return std::find(unlocked.begin(), unlocked.end(), a_key) != unlocked.end();
         }
 
-        // Only base-game and DLC forms. The AE base install carries Creation Club
-        // plugins whose forms come with quest scripts attached — the storage stutter
-        // taught us not to hand those around wholesale.
-        [[nodiscard]] bool IsVanillaOrDLC(const RE::TESForm* a_form) {
-            return (a_form->GetFormID() >> 24) <= 4;
-        }
+        // All knowledge unlocks deliberately span EVERY loaded plugin, mods included:
+        // in a modded setup, "the System knows everything" should mean everything the
+        // setup knows. The filters are semantic, not plugin lists — "has a name",
+        // "has a tome", "has words" — so mod content qualifies by the same rules as
+        // vanilla. This is safe where item-shuttling was not: setting a known-flag or
+        // teaching a shout fires no container events into listening quest scripts.
 
         void UnlockAllShouts(RE::PlayerCharacter* a_player) {
             auto* data = RE::TESDataHandler::GetSingleton();
@@ -100,7 +100,7 @@ namespace Isekai::SkillTree {
             }
             std::size_t shouts = 0;
             for (auto* shout : data->GetFormArray<RE::TESShout>()) {
-                if (!shout || !IsVanillaOrDLC(shout)) {
+                if (!shout) {
                     continue;
                 }
                 if (const char* name = shout->GetName(); !name || !*name) {
@@ -124,7 +124,7 @@ namespace Isekai::SkillTree {
             }
             std::size_t known = 0;
             for (auto* ench : data->GetFormArray<RE::EnchantmentItem>()) {
-                if (!ench || !IsVanillaOrDLC(ench)) {
+                if (!ench) {
                     continue;
                 }
                 if (const char* name = ench->GetName(); !name || !*name) {
