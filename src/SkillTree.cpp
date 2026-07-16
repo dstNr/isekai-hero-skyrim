@@ -66,8 +66,12 @@ namespace Isekai::SkillTree {
               { { AV::kResistDisease, 25.0f } } },
 
             // --- Capstone ---
+            // Rooted in the Schatten children directly above it, not in the far-away
+            // branch entries: their long diagonals crossed the whole middle field and
+            // grazed every node on the way. Short V-lines, zero crossings — and a
+            // deeper gate for the capstone as a side effect.
             { 13, "World Tree", "The System blossoms through your soul.\n+100 Health, Magicka and Stamina.",
-              "spells_09_frame.png", 550.0f, 600.0f, 50, { 3, 6 }, Effect::kAttributes,
+              "spells_09_frame.png", 550.0f, 600.0f, 50, { 11, 12 }, Effect::kAttributes,
               { { AV::kHealth, 100.0f }, { AV::kMagicka, 100.0f }, { AV::kStamina, 100.0f } } },
         };
 
