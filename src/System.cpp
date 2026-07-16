@@ -28,17 +28,6 @@ namespace Isekai {
             RE::DebugNotification(a_text);
         }
 
-        std::string PowerName(PowerLevel a_power) {
-            switch (a_power) {
-            case PowerLevel::Hero:
-                return "HERO";
-            case PowerLevel::Ascended:
-                return "ASCENDED";
-            default:
-                return "NORMAL";
-            }
-        }
-
         // ---- Reincarnation flow (choice captured into g_state) ----
 
         // perkCount is a signed 8-bit field, so this is as many as the game can hold.
@@ -334,6 +323,17 @@ namespace Isekai {
             default:
                 break;
             }
+        }
+    }
+
+    std::string PowerName(PowerLevel a_power) {
+        switch (a_power) {
+        case PowerLevel::Hero:
+            return "HERO";
+        case PowerLevel::Ascended:
+            return "ASCENDED";
+        default:
+            return "NORMAL";
         }
     }
 

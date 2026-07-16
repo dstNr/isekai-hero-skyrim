@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <string>
 #include <vector>
 
 namespace Isekai {
@@ -42,6 +43,9 @@ namespace Isekai {
     };
 
     [[nodiscard]] State& GetState();
+
+    // "NORMAL" / "HERO" / "ASCENDED" — for panels and logs.
+    [[nodiscard]] std::string PowerName(PowerLevel a_power);
 
     // Multiplier on every milestone reward — passives, dragon souls, the lot.
     // The blessing taken at the start is not a one-off head start: it decides how

@@ -20,6 +20,7 @@ namespace Isekai::UI {
             std::string              body;
             std::vector<std::string> choices;
             std::function<void(int)> onSelect;
+            float                    revealCharsPerSec = 45.0f;
             float                    elapsed = 0.0f;  // seconds open; drives the reveal
         };
 
@@ -27,7 +28,6 @@ namespace Isekai::UI {
         WindowState       g_win;
         std::atomic<bool> g_open{ false };
 
-        constexpr float kRevealCharsPerSec = 45.0f;
         constexpr float kFadeInSeconds = 0.30f;
         constexpr float kPanelWidth = 720.0f;  // at 1080p; scaled with the display
 
@@ -98,7 +98,7 @@ namespace Isekai::UI {
 
             // Reveal the body one character at a time, buttons only once it's done.
             const auto revealed = static_cast<std::size_t>(
-                std::max(0.0f, (g_win.elapsed - kFadeInSeconds) * kRevealCharsPerSec));
+                std::max(0.0f, (g_win.elapsed - kFadeInSeconds) * g_win.revealCharsPerSec));
             const bool  bodyComplete = revealed >= g_win.body.size();
             std::string shownBody = bodyComplete ? g_win.body : g_win.body.substr(0, revealed);
             if (!bodyComplete) {
@@ -110,6 +110,11 @@ namespace Isekai::UI {
             ImGui::SetNextWindowPos(ImVec2{ screen.x * 0.5f, screen.y * 0.45f }, ImGuiCond_Always,
                                     ImVec2{ 0.5f, 0.5f });
             ImGui::SetNextWindowSize(ImVec2{ kPanelWidth * s, 0.0f }, ImGuiCond_Always);
+            // Auto-height, but never past the screen: a long status listing clamps here
+            // and scrolls instead (the mouse wheel is already wired through the input
+            // sink). Without the clamp the panel would simply grow off the screen.
+            ImGui::SetNextWindowSizeConstraints(ImVec2{ kPanelWidth * s, 0.0f },
+                                                ImVec2{ kPanelWidth * s, screen.y * 0.85f });
 
             ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
@@ -119,8 +124,8 @@ namespace Isekai::UI {
                                           Style::kPanelBg.w * fade });
 
             constexpr auto flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-                                   ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
-                                   ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings |
+                                   ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
+                                   ImGuiWindowFlags_NoSavedSettings |
                                    ImGuiWindowFlags_AlwaysAutoResize;
 
             int chosen = -1;
@@ -218,13 +223,14 @@ namespace Isekai::UI {
 
     void ShowSystemWindow(std::string a_title, std::string a_body,
                           std::vector<std::string> a_choices,
-                          std::function<void(int)> a_onSelect) {
+                          std::function<void(int)> a_onSelect, float a_revealCharsPerSec) {
         {
             std::scoped_lock lock(g_mutex);
             g_win.title = std::move(a_title);
             g_win.body = std::move(a_body);
             g_win.choices = std::move(a_choices);
             g_win.onSelect = std::move(a_onSelect);
+            g_win.revealCharsPerSec = std::max(a_revealCharsPerSec, 1.0f);
             g_win.elapsed = 0.0f;
         }
         SetGameInputEnabled(false);

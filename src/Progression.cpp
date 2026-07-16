@@ -7,6 +7,7 @@
 #include "UI/SystemWindow.h"
 
 #include <algorithm>
+#include <map>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -287,6 +288,87 @@ namespace Isekai::Progression {
             CelebrateMilestone(*milestone);
         }
 
+        // ------------------------------------------------------------------
+        // The status panel: where the flavour names live on after their reward
+        // window is gone. In game the buffs only ever show up as the aggregated
+        // "System: Health" abilities — this is the ledger of where they came from.
+        // ------------------------------------------------------------------
+
+        constexpr std::uint32_t kStatusKey = 0x44;  // DIK_F10
+
+        [[nodiscard]] const char* StatName(RE::ActorValue a_av) {
+            switch (a_av) {
+            case AV::kHealth:        return "Health";
+            case AV::kMagicka:       return "Magicka";
+            case AV::kStamina:       return "Stamina";
+            case AV::kCarryWeight:   return "Carry Weight";
+            case AV::kResistMagic:   return "Magic Resist";
+            case AV::kResistFire:    return "Fire Resist";
+            case AV::kResistFrost:   return "Frost Resist";
+            case AV::kResistDisease: return "Disease Resist";
+            default:                 return "?";
+            }
+        }
+
+        [[nodiscard]] std::string PadTo(std::string a_text, std::size_t a_width) {
+            if (a_text.size() < a_width) {
+                a_text.append(a_width - a_text.size(), ' ');
+            }
+            return a_text;
+        }
+
+        void ShowStatusPanel() {
+            // Never replace a live panel: opening over the blessing selection would
+            // throw away its callback, and the reincarnation would hang half-finished.
+            if (UI::IsSystemWindowOpen()) {
+                return;
+            }
+
+            std::string body;
+
+            body += "POWER LEVEL   " + PowerName(GetState().power) + "\n";
+
+            std::size_t earned = 0;
+            for (const auto& m : kMilestones) {
+                earned += AlreadyGranted(m.key) ? 1 : 0;
+            }
+            body += "MILESTONES    " + std::to_string(earned) + " / " +
+                    std::to_string(std::size(kMilestones)) + "\n";
+
+            // The aggregated totals — the same numbers the abilities carry in the
+            // magic menu, so the two views can be checked against each other.
+            std::map<RE::ActorValue, float> totals;
+            for (const auto* p : EarnedPassives()) {
+                totals[p->actorValue] += PassiveAmount(*p);
+            }
+            if (!totals.empty()) {
+                body += "\nATTUNEMENTS\n";
+                for (const auto& [av, total] : totals) {
+                    body += "  " + PadTo(StatName(av), 16) + "+" +
+                            std::to_string(static_cast<int>(total)) + "\n";
+                }
+            }
+
+            // The ledger: every earned passive with the deed it came from.
+            if (earned > 0) {
+                body += "\nPASSIVES\n";
+                for (const auto& m : kMilestones) {
+                    if (!AlreadyGranted(m.key)) {
+                        continue;
+                    }
+                    body += "  " + PadTo(m.passive.name, 20) + PadTo(PassiveEffectText(m.passive), 22) +
+                            m.questName + "\n";
+                }
+            } else {
+                body += "\nNo deeds recognised yet.";
+            }
+
+            // Instant reveal: this is a ledger, not a story beat — nobody wants to
+            // watch half a minute of typewriter before they can read their own stats.
+            UI::ShowSystemWindow("[ SYSTEM ] STATUS", std::move(body), { "CLOSE" }, [](int) {},
+                                 100000.0f);
+        }
+
         // F11: pay out the next milestone still owed, exactly as a real quest would.
         // Tuning an animation by replaying a quest is not a workable loop.
         constexpr std::uint32_t kDebugGrantKey = 0x57;  // DIK_F11
@@ -398,8 +480,9 @@ namespace Isekai::Progression {
             logger::info("Progression: quest watcher armed (stage + start/stop)");
         }
 
+        UI::RegisterHotkey(kStatusKey, ShowStatusPanel);
         UI::RegisterHotkey(kDebugGrantKey, DebugGrantNext);
-        logger::info("Progression: F11 grants the next milestone (debug)");
+        logger::info("Progression: F10 opens the status panel, F11 grants the next milestone (debug)");
     }
 
     void CatchUpOnLoad() {
