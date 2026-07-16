@@ -368,7 +368,9 @@ namespace Isekai::Progression {
             std::vector<UI::Choice>  choices;
             std::function<void(int)> onSelect = [](int) {};
             if (Storage::Available()) {
-                choices = { { "STORAGE", "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\spells_03_frame.png" },
+                choices = { { "STORAGE",
+                              "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\spells_03_frame.png",
+                              /*iconOnly=*/true },
                             { "CLOSE", {} } };
                 onSelect = [](int a_idx) {
                     if (a_idx == 0) {

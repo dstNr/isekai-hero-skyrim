@@ -200,18 +200,32 @@ namespace Isekai::UI {
                     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
                     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
 
-                    const auto  count = static_cast<float>(g_win.choices.size());
-                    const float spacing = ImGui::GetStyle().ItemSpacing.x;
-                    const float btnW = (inner - spacing * (count - 1.0f)) / count;
+                    // Icon-only choices live at the top-right, not in this row.
+                    std::size_t textCount = 0;
+                    for (const auto& c : g_win.choices) {
+                        textCount += c.iconOnly ? 0 : 1;
+                    }
 
+                    const float spacing = ImGui::GetStyle().ItemSpacing.x;
+                    const float btnW = textCount > 0
+                        ? (inner - spacing * (static_cast<float>(textCount) - 1.0f)) /
+                              static_cast<float>(textCount)
+                        : inner;
+
+                    bool first = true;
                     for (std::size_t i = 0; i < g_win.choices.size(); ++i) {
-                        if (i > 0) {
+                        const auto& choice = g_win.choices[i];
+                        if (choice.iconOnly) {
+                            continue;
+                        }
+                        if (!first) {
                             ImGui::SameLine();
                         }
-                        const auto& choice = g_win.choices[i];
+                        first = false;
+
                         ImGui::PushID(static_cast<int>(i));
 
-                        const float  btnH = 46.0f * s;
+                        const float       btnH = 46.0f * s;
                         const ImTextureID icon =
                             choice.icon.empty() ? ImTextureID{} : GetTexture(choice.icon);
 
@@ -245,6 +259,63 @@ namespace Isekai::UI {
                     ImGui::PopStyleVar(2);
                     ImGui::PopStyleColor(5);
                     ImGui::PopFont();
+                }
+
+                // --- Icon-only actions: large bare icons, anchored to the top-right,
+                // in the panel's upper half. Drawn last so they sit above any body
+                // text that happens to run underneath them. On hover: accent frame
+                // plus the label fading in to their left, so they stay self-explaining
+                // without carrying permanent text.
+                if (bodyComplete) {
+                    const float iconSize = 76.0f * s;
+                    const float inset = 22.0f * s;
+                    float       y = sepY + 16.0f * s;
+
+                    for (std::size_t i = 0; i < g_win.choices.size(); ++i) {
+                        const auto& choice = g_win.choices[i];
+                        if (!choice.iconOnly) {
+                            continue;
+                        }
+                        const ImTextureID icon =
+                            choice.icon.empty() ? ImTextureID{} : GetTexture(choice.icon);
+                        if (!icon) {
+                            continue;
+                        }
+
+                        ImGui::SetCursorScreenPos(ImVec2{ wMax.x - inset - iconSize, y });
+                        ImGui::PushID(static_cast<int>(i) + 1000);
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f });
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
+                                              ImVec4{ Style::kAccent.x, Style::kAccent.y,
+                                                      Style::kAccent.z, 0.12f });
+                        ImGui::PushStyleColor(ImGuiCol_ButtonActive,
+                                              ImVec4{ Style::kAccent.x, Style::kAccent.y,
+                                                      Style::kAccent.z, 0.28f });
+                        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2{ 2.0f * s, 2.0f * s });
+
+                        if (ImGui::ImageButton("##iconAction", icon,
+                                               ImVec2{ iconSize, iconSize })) {
+                            chosen = static_cast<int>(i);
+                        }
+                        if (ImGui::IsItemHovered()) {
+                            const ImVec2 iMin = ImGui::GetItemRectMin();
+                            const ImVec2 iMax = ImGui::GetItemRectMax();
+                            dl->AddRect(iMin, iMax, Style::Col(Style::kAccent, 0.9f), 0.0f, 0,
+                                        1.5f * s);
+                            ImGui::PushFont(Style::g_body, Style::BodySize());
+                            const ImVec2 ts = ImGui::CalcTextSize(choice.label.c_str());
+                            dl->AddText(ImVec2{ iMin.x - ts.x - 10.0f * s,
+                                                (iMin.y + iMax.y) * 0.5f - ts.y * 0.5f },
+                                        Style::Col(Style::kAccent), choice.label.c_str());
+                            ImGui::PopFont();
+                        }
+
+                        ImGui::PopStyleVar();
+                        ImGui::PopStyleColor(3);
+                        ImGui::PopID();
+
+                        y += iconSize + 10.0f * s;
+                    }
                 }
             }
             ImGui::End();

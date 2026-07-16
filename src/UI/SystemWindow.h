@@ -7,9 +7,12 @@
 namespace Isekai::UI {
 
     // A panel button: a label, and optionally a PNG icon drawn beside it.
+    // iconOnly buttons leave the bottom row entirely: they render as large, bare
+    // icons anchored to the panel's top-right (the label survives as a tooltip).
     struct Choice {
         std::string label;
         std::string icon;  // path relative to the game folder; empty = text only
+        bool        iconOnly = false;
     };
 
     // Open the System panel. Call from the main thread.
