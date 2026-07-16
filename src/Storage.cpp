@@ -152,9 +152,15 @@ namespace Isekai::Storage {
         };
 
         // ------------------------------------------------------------------
-        // The token: "using" it from the inventory (like drinking a potion) opens
-        // the storage. Consumption fires TESEquipEvent; the token is handed back
+        // The token: an effect-less ALCH item, "used" from the inventory like a
+        // potion. Consuming it fires TESEquipEvent; the token is handed back
         // immediately, so it never actually runs out.
+        //
+        // Deliberately not a ring or any other wearable: equipping touches biped
+        // slots, and every slot is contested territory between mods (cloaks,
+        // bandoliers, ...). Consumption touches no slot at all — zero conflict
+        // surface. The record's name and model are still free, so it does not have
+        // to look like a potion; only the inventory category says so.
         // ------------------------------------------------------------------
 
         class TokenWatcher : public RE::BSTEventSink<RE::TESEquipEvent> {

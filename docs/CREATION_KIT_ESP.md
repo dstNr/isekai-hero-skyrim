@@ -229,6 +229,32 @@ Die WAV-Dateien liegen bereits in `Data\Sound\fx\isekai\` (macht der Build-Workf
 
 ---
 
+## Teil G — Das Storage-Token (per SSEEdit)
+
+Der Zugang zum Dimensional Storage läuft über ein Inventar-Item: „benutzen" wie einen
+Trank → Truhe öffnet sich, das Item bleibt erhalten (der Code fängt den Konsum ab).
+
+> **Warum ein ALCH-Item und kein Ring?** Ein Ring müsste ausgerüstet werden, und
+> Ausrüstungs-Slots sind zwischen Mods hart umkämpft (Cloaks, Bandoliers, …).
+> Konsumieren berührt keinen einzigen Slot — null Konfliktfläche. Aussehen (Modell)
+> und Name des Items sind trotzdem frei wählbar; nur die Inventar-Kategorie bleibt
+> „Tränke".
+
+In SSEEdit (wie in Teil E):
+
+1. `Skyrim.esm` → Kategorie **`Potion`** → einen simplen Trank auswählen
+   (z. B. eine *Potion of Minor Healing*)
+2. Rechtsklick → **Copy as new record into…** → `IsekaiHero.esp`
+   → Editor-ID: **`IsekaiStorageToken`**
+3. Am neuen Record:
+   - **`FULL - Name`** → `Dimensional Storage`
+   - **`Effects`**-Block → Rechtsklick → **Remove** (komplett — keine Heilwirkung)
+   - **`DATA - Weight`** → `0`
+   - **`ENIT`**: `Value` → `0`, **`Sound - Consume` leeren** (sonst gluckert es beim Öffnen)
+4. Speichern beim Schließen.
+
+---
+
 ## Teil F — Speichern & einmal starten
 
 1. **File → Save** (überschreibt `IsekaiHero.esp`).

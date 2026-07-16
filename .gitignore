@@ -1,9 +1,3 @@
-# --- Sound assets (likely from a licensed SFX pack) ---
-# Kept local: committing them to a public repo would redistribute them, which the
-# pack's licence almost certainly forbids. Deployment copies them straight into the
-# game's Data\Sound folder instead.
-sounds/
-
 # --- C++ SKSE plugin build ---
 build/
 vcpkg_installed/
