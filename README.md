@@ -64,6 +64,10 @@ and activate `IsekaiHero.esp`. The plugin is **ESL-flagged** — it takes no
 load order slot, overrides no vanilla records, and its position in the load
 order does not matter.
 
+**Safe to install mid-playthrough:** on an existing save the System boots on
+the next load, already-completed milestone quests are rewarded retroactively,
+and blessings only ever raise stats — never demote an established character.
+
 In-game: **RShift + S** opens the `[ SYSTEM ] STATUS` panel (storage and
 skill tree live behind the icon buttons in its top-right corner).
 

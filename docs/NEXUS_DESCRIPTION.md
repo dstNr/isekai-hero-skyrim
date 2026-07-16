@@ -64,6 +64,8 @@ HERO and ASCENDED souls receive access to a private pocket dimension: one chest 
 [size=4][b]Installation & Compatibility[/b][/size]
 Install with your mod manager. The plugin is [b]ESL-flagged[/b] (no load order slot), adds only new records and [b]overrides nothing[/b] — load order position does not matter. No patches needed.
 
+[b]Safe to install mid-playthrough.[/b] Add it to an existing save and the System boots on your next load: you pick your blessing, and every milestone quest you have already completed is recognized and rewarded retroactively. Blessings only ever raise your stats — an established character never loses levels, skills or perks.
+
 [b]Hotkey:[/b] Right Shift + S opens the System status panel; storage and skill tree sit behind the icon buttons in its corner.
 
 [size=4][b]Status[/b][/size]
