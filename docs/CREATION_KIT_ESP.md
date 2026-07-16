@@ -242,8 +242,10 @@ Trank → Truhe öffnet sich, das Item bleibt erhalten (der Code fängt den Kons
 
 In SSEEdit (wie in Teil E):
 
-1. `Skyrim.esm` → Kategorie **`Potion`** → einen simplen Trank auswählen
+1. `Skyrim.esm` → Kategorie **`Ingestible`** → einen simplen Trank auswählen
    (z. B. eine *Potion of Minor Healing*)
+   *(xEdit nennt den Record-Typ ALCH „Ingestible" — eine Kategorie „Potion" gibt es
+   nur im Creation Kit.)*
 2. Rechtsklick → **Copy as new record into…** → `IsekaiHero.esp`
    → Editor-ID: **`IsekaiStorageToken`**
 3. Am neuen Record:
