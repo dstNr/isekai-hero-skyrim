@@ -365,8 +365,10 @@ namespace Isekai::Progression {
 
             // Instant reveal: this is a ledger, not a story beat — nobody wants to
             // watch half a minute of typewriter before they can read their own stats.
+            // Wider than the story panels: the ledger rows run to ~70 monospace
+            // characters, and at the default width the quest names wrapped mid-word.
             UI::ShowSystemWindow("[ SYSTEM ] STATUS", std::move(body), { "CLOSE" }, [](int) {},
-                                 100000.0f);
+                                 100000.0f, 980.0f);
         }
 
         // F11: pay out the next milestone still owed, exactly as a real quest would.
