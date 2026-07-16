@@ -82,20 +82,43 @@ namespace Isekai::Storage {
         // materials walk over for the duration and the leftovers walk back.
         // ------------------------------------------------------------------
 
-        // Only what a crafting station can actually consume: raw materials (MISC),
-        // alchemy ingredients, and soul gems. Gold, gear, potions and whatever else
-        // the player parked in the chest stay put — moving them bought nothing and
-        // was the main way a shuttle like this goes wrong (mis-sorted gear after a
-        // crash mid-menu, five million coins riding along for no reason).
-        [[nodiscard]] bool IsCraftingMaterial(const RE::TESBoundObject* a_obj) {
+        using BenchType = RE::TESFurniture::WorkBenchData::BenchType;
+
+        // Which workbench the player is sitting at when the crafting menu opens.
+        [[nodiscard]] BenchType CurrentBenchType() {
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            if (!player) {
+                return BenchType::kNone;
+            }
+            const auto furniture = player->GetOccupiedFurniture().get();
+            if (!furniture || !furniture->GetBaseObject()) {
+                return BenchType::kNone;
+            }
+            const auto* base = furniture->GetBaseObject()->As<RE::TESFurniture>();
+            return base ? *base->workBenchData.benchType : BenchType::kNone;
+        }
+
+        // Only what THIS station can actually consume. Every stack moved is a
+        // container event fanned out to every listening script, and the flat
+        // "lend everything" version fed the forge 191 ingredient stacks it could
+        // not use — enough VM traffic to stutter for minutes. Gold, gear, potions
+        // and whatever else the player parked in the chest never move at all.
+        [[nodiscard]] bool StationWantsItem(BenchType a_bench, const RE::TESBoundObject* a_obj) {
             if (a_obj->GetFormID() == 0x0000000F) {
                 return false;  // Gold001 is technically Misc, but no recipe eats coins
             }
             switch (a_obj->GetFormType()) {
-            case RE::FormType::Misc:
             case RE::FormType::Ingredient:
+                return a_bench == BenchType::kAlchemy ||
+                       a_bench == BenchType::kAlchemyExperiment || a_bench == BenchType::kNone;
             case RE::FormType::SoulGem:
-                return true;
+                return a_bench == BenchType::kEnchanting ||
+                       a_bench == BenchType::kEnchantingExperiment || a_bench == BenchType::kNone;
+            case RE::FormType::Misc:
+                // Smithing, tempering, smelting, tanning — everything item-shaped.
+                return a_bench != BenchType::kAlchemy && a_bench != BenchType::kAlchemyExperiment &&
+                       a_bench != BenchType::kEnchanting &&
+                       a_bench != BenchType::kEnchantingExperiment;
             default:
                 return false;
             }
@@ -108,9 +131,11 @@ namespace Isekai::Storage {
                 return;
             }
 
+            const auto bench = CurrentBenchType();
+
             g_craftLoan.clear();
             for (const auto& [obj, count] : chest->GetInventoryCounts()) {
-                if (!obj || count <= 0 || !IsCraftingMaterial(obj)) {
+                if (!obj || count <= 0 || !StationWantsItem(bench, obj)) {
                     continue;
                 }
                 g_craftLoan[obj] = count;
@@ -119,7 +144,8 @@ namespace Isekai::Storage {
             }
 
             if (!g_craftLoan.empty()) {
-                logger::info("Storage: lent {} stack(s) to the crafting menu", g_craftLoan.size());
+                logger::info("Storage: lent {} stack(s) to bench type {}", g_craftLoan.size(),
+                             static_cast<int>(bench));
             }
         }
 
@@ -148,6 +174,8 @@ namespace Isekai::Storage {
                                        nullptr, chest);
                 }
             }
+            logger::info("Storage: took back {} stack(s) from the crafting menu",
+                         g_craftLoan.size());
             g_craftLoan.clear();
         }
 
@@ -254,13 +282,19 @@ namespace Isekai::Storage {
             ++stocked;
         }
 
-        // Alchemy: every loaded ingredient, enumerated at runtime rather than kept
-        // as a hand-maintained FormID list — that covers the DLCs (and any mods)
-        // automatically, and a list of ~100 ids would be ~100 chances to be wrong.
+        // Alchemy: every vanilla ingredient, enumerated at runtime rather than kept
+        // as a hand-maintained FormID list — a list of ~90 ids would be ~90 chances
+        // to be wrong.
+        //
+        // Skyrim.esm only (plugin index 0), very much on purpose: the AE base game
+        // ships Creation Club content whose ingredients come with quest scripts
+        // listening for exactly those items. Handing 2000 of each around fired so
+        // many container events that the script VM built a minutes-long backlog —
+        // the game stuttered long after the crafting menu closed and hung on exit.
         constexpr std::int32_t kIngredientBase = 500;
         std::size_t            ingredients = 0;
         for (auto* ingredient : data->GetFormArray<RE::IngredientItem>()) {
-            if (!ingredient) {
+            if (!ingredient || (ingredient->GetFormID() >> 24) != 0) {
                 continue;
             }
             if (const char* name = ingredient->GetName(); !name || !*name) {
