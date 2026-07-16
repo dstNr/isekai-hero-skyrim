@@ -106,6 +106,18 @@ namespace Isekai::SkillTree {
                 if (const char* name = shout->GetName(); !name || !*name) {
                     continue;
                 }
+
+                // Only shouts with a description. The form list is full of NPC and
+                // dragon variants that share the player shout's name — "has a name"
+                // let those through and the shout menu filled with duplicates. The
+                // description text is what separates the player-facing shout from
+                // its copies (spotted by the duplicates all lacking one).
+                RE::BSString description;
+                shout->GetDescription(description, nullptr);
+                if (description.empty()) {
+                    continue;
+                }
+
                 a_player->AddShout(shout);
                 for (const auto& variation : shout->variations) {
                     if (variation.word) {
