@@ -33,8 +33,8 @@ namespace Isekai {
 
         // ---- Reincarnation flow (choice captured into g_state) ----
 
-        // perkCount is a signed 8-bit field, so this is as many as the game can hold.
-        constexpr std::int32_t kMaxPerkPoints = 127;
+        // kMaxPerkPoints now lives in System.h — and is 255, not 127: the field is
+        // unsigned in the engine's eyes, whatever CommonLibSSE's declaration says.
 
         // What each blessing grants. 0 = leave that stat untouched.
         struct Blessing {
@@ -468,9 +468,11 @@ namespace Isekai {
         if (!player) {
             return;
         }
-        auto&      stats = player->GetGameStatsData();
-        const auto total = static_cast<std::int32_t>(stats.perkCount) + a_points;
-        stats.perkCount = static_cast<std::int8_t>(std::min(total, kMaxPerkPoints));
+        auto& stats = player->GetGameStatsData();
+        // Unsigned read: the declared int8 turns 200+ points into negative numbers.
+        const auto held = static_cast<std::int32_t>(static_cast<std::uint8_t>(stats.perkCount));
+        const auto total = std::min(held + a_points, kMaxPerkPoints);
+        stats.perkCount = static_cast<std::int8_t>(static_cast<std::uint8_t>(total));
     }
 
     void GrantSystemPoints(std::int32_t a_points) {

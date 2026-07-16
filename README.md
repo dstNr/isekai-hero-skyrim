@@ -20,7 +20,7 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   |---|---|---|---|
   | Skills | — | 50 | 100 |
   | Level (+ matching attributes) | — | 25 | 150 |
-  | Perk points | — | 10 | 127 (engine max) |
+  | Perk points | — | 10 | 255 (engine max) |
   | Gold / Dragon souls / System Points | — | 2k / 3 / 5 | 25k / 20 / 500* |
   | Reward scale on everything below | ×1 | ×2 | ×4 |
 

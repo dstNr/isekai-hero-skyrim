@@ -2,6 +2,7 @@
 
 #include "SkillTree.h"
 #include "Sounds.h"
+#include "System.h"
 #include "UI/Overlay.h"
 #include "UI/Style.h"
 #include "UI/Textures.h"
@@ -149,7 +150,7 @@ namespace Isekai::UI {
             dl->AddText(ImVec2{ wMin.x + 28.0f * s, sepY + 12.0f * s },
                         Style::Col(Style::kAccent, fade), points.c_str());
             const std::string perks = "PERK POINTS     " + std::to_string(SkillTree::PerkPool()) +
-                                      " / 127";
+                                      " / " + std::to_string(Isekai::kMaxPerkPoints);
             dl->AddText(ImVec2{ wMin.x + 28.0f * s, sepY + 38.0f * s },
                         Style::Col(Style::kTextDim, fade), perks.c_str());
 
@@ -287,7 +288,7 @@ namespace Isekai::UI {
                         status = "LOCKED — requires a connected node";
                         statusCol = Style::Col(Style::kTextDim, fade);
                     } else if (node->effect == SkillTree::Effect::kPerkPoint &&
-                               SkillTree::PerkPool() >= 127) {
+                               SkillTree::PerkPool() >= Isekai::kMaxPerkPoints) {
                         status = "PERK POOL FULL — spend some perk points first";
                         statusCol = Style::Col(Style::kTextDim, fade);
                     } else {

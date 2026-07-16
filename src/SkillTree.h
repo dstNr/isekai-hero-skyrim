@@ -43,7 +43,7 @@ namespace Isekai::SkillTree {
     // seeded by the blessing, uncapped. Dragon souls stay out of the tree entirely.
     [[nodiscard]] std::int32_t Points();
 
-    // The player's unspent perk points (engine-capped at 127) — shown in the tree
+    // The player's unspent perk points (engine-capped at 255, unsigned) — shown in the tree
     // header because the Perk Synthesis node feeds this pool.
     [[nodiscard]] std::int32_t PerkPool();
 

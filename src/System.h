@@ -10,6 +10,12 @@
 
 namespace Isekai {
 
+    // The engine's true cap on unspent perk points. CommonLibSSE declares the field
+    // as int8, but the game treats it as UNSIGNED: a tester holding 202 points in the
+    // vanilla menu read back as -54 through the signed lens. The cap is 255, and every
+    // read must go through an unsigned cast.
+    inline constexpr std::int32_t kMaxPerkPoints = 255;
+
     // Run fn on the main thread after a_ms. Game and UI calls must happen on the main
     // thread, so a detached timer marshals back through SKSE's task interface.
     void DelayedMainThread(std::uint32_t a_ms, std::function<void()> a_fn);
@@ -68,7 +74,7 @@ namespace Isekai {
     // start, so that choice keeps mattering for the whole playthrough.
     [[nodiscard]] std::int32_t MilestonePerkPoints();
 
-    // Add perk points, clamped to what the engine can actually hold (127).
+    // Add perk points, clamped to what the engine can actually hold (kMaxPerkPoints).
     void GrantPerkPoints(std::int32_t a_points);
 
     // Add unspent dragon souls. Unlike perk points these have no engine cap.

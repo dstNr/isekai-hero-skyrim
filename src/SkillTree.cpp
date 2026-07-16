@@ -284,7 +284,10 @@ namespace Isekai::SkillTree {
 
     std::int32_t PerkPool() {
         auto* player = RE::PlayerCharacter::GetSingleton();
-        return player ? static_cast<std::int32_t>(player->GetGameStatsData().perkCount) : 0;
+        // Unsigned read — see kMaxPerkPoints in System.h for the -54 story.
+        return player ? static_cast<std::int32_t>(
+                            static_cast<std::uint8_t>(player->GetGameStatsData().perkCount))
+                      : 0;
     }
 
     bool TryUnlock(std::uint32_t a_key) {
@@ -304,7 +307,7 @@ namespace Isekai::SkillTree {
         // purchase before a full pool grants whatever still fits.
         if (node->effect == Effect::kPerkPoint) {
             constexpr std::int32_t kPerksPerPoint = 5;
-            const auto grant = std::min(kPerksPerPoint, 127 - PerkPool());
+            const auto grant = std::min(kPerksPerPoint, kMaxPerkPoints - PerkPool());
             if (grant <= 0) {
                 return false;
             }
