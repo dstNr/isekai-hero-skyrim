@@ -26,8 +26,8 @@ namespace Isekai::SkillTree {
             { 2, "Dragon's Voice", "Your Thu'um recovers faster.\n-20% shout cooldown.",
               "spells_10_frame.png", 780.0f, 110.0f, 15, { 1, 0 }, Effect::kShoutCooldown, {} },
             { 14, "Perk Synthesis",
-              "Condense System Points into raw potential.\n+1 perk point per purchase. REPEATABLE.",
-              "spells_21_frame.png", 320.0f, 110.0f, 5, { 1, 0 }, Effect::kPerkPoint, {} },
+              "Condense a System Point into raw potential.\n+5 perk points per purchase. REPEATABLE.",
+              "spells_21_frame.png", 320.0f, 110.0f, 1, { 1, 0 }, Effect::kPerkPoint, {} },
 
             // --- Kraft (left) ---
             { 3, "Vital Surge", "+100 Health.",
@@ -296,16 +296,18 @@ namespace Isekai::SkillTree {
 
         // Perk Synthesis is repeatable: it never enters unlockedNodes (IsUnlocked
         // stays false, so it keeps pulsing as buyable), it just spends and pays out.
-        // Refused at the engine cap — converting into a full pool would burn the
-        // points for nothing.
+        // The payout shrinks near the engine cap instead of burning value — the last
+        // purchase before a full pool grants whatever still fits.
         if (node->effect == Effect::kPerkPoint) {
-            if (PerkPool() >= 127) {
+            constexpr std::int32_t kPerksPerPoint = 5;
+            const auto grant = std::min(kPerksPerPoint, 127 - PerkPool());
+            if (grant <= 0) {
                 return false;
             }
             state.systemPoints -= node->cost;
-            GrantPerkPoints(1);
+            GrantPerkPoints(grant);
             Sounds::Play(Sounds::Sfx::ButtonClick);
-            logger::info("SkillTree: synthesised 1 perk point for {} SP", node->cost);
+            logger::info("SkillTree: synthesised {} perk point(s) for {} SP", grant, node->cost);
             return true;
         }
 
