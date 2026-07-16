@@ -4,6 +4,7 @@
 #include "Plugin.h"
 #include "Progression.h"
 #include "Sounds.h"
+#include "Storage.h"
 #include "UI/LevelUpEffect.h"
 #include "UI/Overlay.h"
 #include "UI/SystemWindow.h"
@@ -23,7 +24,7 @@ namespace Isekai {
         // --- Co-save serialization IDs ---
         constexpr std::uint32_t kSerID = 'ISKA';    // unique plugin id
         constexpr std::uint32_t kRecState = 'STAT';  // record tag
-        constexpr std::uint32_t kVersion = 3;        // bumped: milestone list added
+        constexpr std::uint32_t kVersion = 4;        // bumped: storage chest ref added
 
         void SystemMsg(const char* a_text) {
             RE::DebugNotification(a_text);
@@ -240,6 +241,7 @@ namespace Isekai {
             a_intf->WriteRecordData(g_state.reincarnated);
             a_intf->WriteRecordData(g_state.power);
             a_intf->WriteRecordData(g_state.skills);
+            a_intf->WriteRecordData(g_state.storageChest);
 
             const auto count = static_cast<std::uint32_t>(g_state.grantedMilestones.size());
             a_intf->WriteRecordData(count);
@@ -260,9 +262,10 @@ namespace Isekai {
                 if (type != kRecState) {
                     continue;
                 }
-                // Saves from an older layout are skipped rather than misread. The player
-                // loses the System's memory of past milestones, not their character.
-                if (version != kVersion) {
+                // v3 is still readable (it simply predates the storage chest); anything
+                // else is skipped rather than misread. The player then loses the
+                // System's memory of past milestones, not their character.
+                if (version != kVersion && version != 3) {
                     logger::warn("Save holds state version {} but we speak {} — ignoring it",
                                  version, kVersion);
                     continue;
@@ -271,6 +274,17 @@ namespace Isekai {
                 a_intf->ReadRecordData(g_state.reincarnated);
                 a_intf->ReadRecordData(g_state.power);
                 a_intf->ReadRecordData(g_state.skills);
+
+                if (version >= 4) {
+                    a_intf->ReadRecordData(g_state.storageChest);
+                    // A created reference keeps its FormID inside one save, but SKSE
+                    // may still remap across load-order changes — resolve, don't assume.
+                    RE::FormID resolved = 0;
+                    if (g_state.storageChest != 0 &&
+                        a_intf->ResolveFormID(g_state.storageChest, resolved)) {
+                        g_state.storageChest = resolved;
+                    }
+                }
 
                 std::uint32_t count = 0;
                 a_intf->ReadRecordData(count);
@@ -302,6 +316,7 @@ namespace Isekai {
                 Plugin::DumpForms();
                 Passives::Install();
                 Sounds::Install();
+                Storage::Install();
                 UI::Install();
                 Progression::Install();
 

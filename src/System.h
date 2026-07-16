@@ -40,6 +40,10 @@ namespace Isekai {
         // twice — quest stage events fire more than once, and the retroactive
         // catch-up runs on every load.
         std::vector<std::uint32_t> grantedMilestones;
+
+        // The dimensional storage chest reference, created at runtime on first use
+        // (see Storage.cpp). 0 = not created yet.
+        std::uint32_t storageChest = 0;
     };
 
     [[nodiscard]] State& GetState();
