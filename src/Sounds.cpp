@@ -11,17 +11,17 @@ namespace Isekai::Sounds {
         //
         // Read straight out of the plugin file (the SNDR records carry their editor
         // ID and WAV path right there), so each ID below is provably the sound it
-        // claims to be — no reliance on creation order:
+        // claims to be. Renumbered when the plugin was compacted into the ESL range:
         //
-        //   0x001DBF  IsekaiSND_LevelUp      fx\isekai\Cinematic_6_1.wav
-        //   0x001DC0  IsekaiSND_WindowOpen   fx\isekai\Cinematic_7_2.wav
-        //   0x001DC1  IsekaiSND_ButtonClick  fx\isekai\Modern_2_2.wav
-        //   0x001DC2  IsekaiSND_WindowClose  fx\isekai\Modern_5_2.wav
+        //   0x000D7B  IsekaiSND_LevelUp      fx\isekai\Cinematic_6_1.wav
+        //   0x000D7C  IsekaiSND_WindowOpen   fx\isekai\Cinematic_7_2.wav
+        //   0x000D7D  IsekaiSND_ButtonClick  fx\isekai\Modern_2_2.wav
+        //   0x000D7E  IsekaiSND_WindowClose  fx\isekai\Modern_5_2.wav
         constexpr std::array<RE::FormID, 4> kFormIDs = {
-            0x001DBF,  // LevelUp
-            0x001DC0,  // WindowOpen
-            0x001DC1,  // ButtonClick
-            0x001DC2,  // WindowClose
+            0x000D7B,  // LevelUp
+            0x000D7C,  // WindowOpen
+            0x000D7D,  // ButtonClick
+            0x000D7E,  // WindowClose
         };
 
         std::array<RE::BGSSoundDescriptorForm*, 4> g_descriptors{};
