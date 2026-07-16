@@ -1,5 +1,6 @@
 #include "UI/SystemWindow.h"
 
+#include "Sounds.h"
 #include "UI/Style.h"
 
 #include <imgui.h>
@@ -71,15 +72,24 @@ namespace Isekai::UI {
         // back to the main thread, where touching game state is legal.
         void Answer(int a_index) {
             std::function<void(int)> fn;
+            bool                     multiChoice = false;
             {
                 std::scoped_lock lock(g_mutex);
                 fn = std::move(g_win.onSelect);
+                multiChoice = g_win.choices.size() > 1;
                 g_win = WindowState{};
             }
             g_open.store(false, std::memory_order_release);
 
             if (auto* task = SKSE::GetTaskInterface()) {
-                task->AddTask([fn = std::move(fn), a_index]() {
+                task->AddTask([fn = std::move(fn), a_index, multiChoice]() {
+                    // Picking an option clicks; dismissing the panel whooshes. Not both:
+                    // every panel closes through a button, so playing click AND close on
+                    // the same press would double up — and a selection usually opens a
+                    // follow-up panel anyway, which brings its own open sound.
+                    Sounds::Play(multiChoice ? Sounds::Sfx::ButtonClick
+                                             : Sounds::Sfx::WindowClose);
+
                     SetGameInputEnabled(true);
                     if (fn) {
                         fn(a_index);
@@ -236,6 +246,7 @@ namespace Isekai::UI {
             g_win.width = std::max(a_width, 300.0f);
             g_win.elapsed = 0.0f;
         }
+        Sounds::Play(Sounds::Sfx::WindowOpen);
         SetGameInputEnabled(false);
         g_open.store(true, std::memory_order_release);
     }

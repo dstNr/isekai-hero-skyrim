@@ -183,7 +183,39 @@ Am Duplikat ändern:
 
 ---
 
-## Teil E — Speichern & einmal starten
+## Teil E — Sound Descriptors (4 Stück)
+
+Die WAV-Dateien liegen bereits in `Data\Sound\fx\isekai\` (macht der Build-Workflow).
+
+**Object Window** → **Audio → Sound Descriptor** → Rechtsklick → **New**
+
+> ⚠️ **Die Reihenfolge ist wichtig.** Sound Descriptors tragen zur Laufzeit weder Namen
+> noch Editor-ID, und ihre Dateipfade sind nur als Hash gespeichert — der Code ordnet
+> sie deshalb über die FormID-Reihenfolge zu, und das CK vergibt FormIDs aufsteigend
+> in Erstellungsreihenfolge. Falls doch etwas vertauscht ist: sofort hörbar, leicht
+> korrigierbar.
+
+Zuerst **einmalig als Vorlage nachschlagen**: Öffne den Vanilla-Descriptor
+**`UIMenuOKSD`** (in der Sound-Descriptor-Liste suchen) und notiere, was dort bei
+**Category** und **Output Model** steht. Genau diese beiden Werte bekommen unsere vier
+auch — dann laufen sie über denselben UI-Lautstärkeregler wie Skyrims eigene
+Menü-Sounds. *(Nicht raten — abschreiben.)*
+
+Dann in **exakt dieser Reihenfolge** anlegen:
+
+| Nr. | ID | Sound File |
+|---|---|---|
+| 1 | `IsekaiSND_LevelUp` | `sound\fx\isekai\Cinematic_6_1.wav` |
+| 2 | `IsekaiSND_WindowOpen` | `sound\fx\isekai\Cinematic_7_2.wav` |
+| 3 | `IsekaiSND_ButtonClick` | `sound\fx\isekai\Modern_2_2.wav` |
+| 4 | `IsekaiSND_WindowClose` | `sound\fx\isekai\Modern_5_2.wav` |
+
+Für jeden: **Category** und **Output Model** wie bei `UIMenuOKSD`, die Sound-Datei über
+den Add-/File-Button auswählen, Rest auf Standard lassen.
+
+---
+
+## Teil F — Speichern & einmal starten
 
 1. **File → Save** (überschreibt `IsekaiHero.esp`).
 2. Sicherstellen, dass die ESP im Spiel **aktiviert** ist (Steam-Launcher, MO2, oder

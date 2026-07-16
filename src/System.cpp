@@ -3,6 +3,7 @@
 #include "Passives.h"
 #include "Plugin.h"
 #include "Progression.h"
+#include "Sounds.h"
 #include "UI/LevelUpEffect.h"
 #include "UI/Overlay.h"
 #include "UI/SystemWindow.h"
@@ -123,7 +124,7 @@ namespace Isekai {
                 "Your new life begins.";
 
             // The biggest moment the mod has: let the flourish land before the panel.
-            RE::PlaySound("UILevelUp");
+            Sounds::Play(Sounds::Sfx::LevelUp);
             UI::PlayLevelUpEffect("AWAKENED", PowerName(g_state.power));
 
             DelayedMainThread(1600, [body]() {
@@ -300,6 +301,7 @@ namespace Isekai {
             case SKSE::MessagingInterface::kDataLoaded:
                 Plugin::DumpForms();
                 Passives::Install();
+                Sounds::Install();
                 UI::Install();
                 Progression::Install();
 

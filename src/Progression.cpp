@@ -1,6 +1,7 @@
 #include "Progression.h"
 
 #include "Passives.h"
+#include "Sounds.h"
 #include "System.h"
 #include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
@@ -224,14 +225,9 @@ namespace Isekai::Progression {
         // feel like waiting.
         constexpr std::uint32_t kFlourishLeadMs = 1600;
 
-        // Skyrim keeps its sound editor IDs (that is how the console "playsound" works),
-        // so no FormID to guess. If the ID were wrong the effect just stays silent —
-        // it cannot crash, unlike a bad form lookup.
-        constexpr const char* kMilestoneSound = "UILevelUp";
-
         // Fire the flourish, then bring up the panel once it has played out.
         void Celebrate(std::string a_title, std::string a_subtitle, std::string a_body) {
-            RE::PlaySound(kMilestoneSound);
+            Sounds::Play(Sounds::Sfx::LevelUp);
             UI::PlayLevelUpEffect(std::move(a_title), std::move(a_subtitle));
 
             DelayedMainThread(kFlourishLeadMs, [body = std::move(a_body)]() {
