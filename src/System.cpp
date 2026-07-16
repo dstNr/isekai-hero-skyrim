@@ -336,6 +336,9 @@ namespace Isekai {
                 // as whatever the ESP says (zero) on every load. Rebuild them from the
                 // milestones the save *does* remember.
                 Passives::Refresh();
+                // Chests stocked by earlier builds still hold the Creation Club
+                // ingredients that made the crafting shuttle stutter — clean them out.
+                Storage::PruneForeignStock();
                 break;
 
             default:

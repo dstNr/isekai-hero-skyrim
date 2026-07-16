@@ -208,6 +208,33 @@ namespace Isekai::Storage {
         return g_base != nullptr && IsEligible();
     }
 
+    void PruneForeignStock() {
+        auto* chest = ResolveChest();
+        if (!chest) {
+            return;
+        }
+
+        // NOTE before any public release: this deletes every non-Skyrim.esm
+        // ingredient, including ones a player might have stored deliberately. Fine
+        // while the only chests in existence are our own dev saves; needs a one-time
+        // migration flag instead if strangers' savegames ever enter the picture.
+        std::size_t pruned = 0;
+        for (const auto& [obj, count] : chest->GetInventoryCounts()) {
+            if (!obj || count <= 0 || obj->GetFormType() != RE::FormType::Ingredient) {
+                continue;
+            }
+            if ((obj->GetFormID() >> 24) == 0) {
+                continue;  // vanilla stays
+            }
+            chest->RemoveItem(obj, count, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
+            ++pruned;
+        }
+
+        if (pruned > 0) {
+            logger::info("Storage: pruned {} foreign ingredient stack(s) from the chest", pruned);
+        }
+    }
+
     void GrantStartingMaterials() {
         if (!IsEligible()) {
             return;  // NORMAL has no storage, and nothing to put in one

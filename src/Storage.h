@@ -19,4 +19,10 @@ namespace Isekai::Storage {
     // (HERO x2, ASCENDED x4 on a NORMAL-sized base that nobody ever receives,
     // since NORMAL has no storage). Called once, from the reincarnation.
     void GrantStartingMaterials();
+
+    // Remove non-vanilla ingredients from the chest. Earlier builds stocked the
+    // Creation Club ones too, whose tracker scripts made every alchemy visit
+    // stutter — chests from those saves keep the problem until cleaned. Called on
+    // every load.
+    void PruneForeignStock();
 }
