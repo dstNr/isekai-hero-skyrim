@@ -243,10 +243,14 @@ namespace Isekai::UI {
                     }
                 }
                 if (node) {
-                    const float infoY = wMax.y - 96.0f * s;
-                    dl->AddText(ImVec2{ wMin.x + 28.0f * s, infoY },
-                                Style::Col(Style::kAccent, fade), node->name);
-                    dl->AddText(ImVec2{ wMin.x + 28.0f * s, infoY + 26.0f * s },
+                    // Between the exchange button (left corner) and CLOSE (right
+                    // corner) — sharing the left corner with the exchange button made
+                    // the two write over each other.
+                    const float infoX = wMin.x + 300.0f * s;
+                    const float infoY = wMax.y - 118.0f * s;
+                    dl->AddText(ImVec2{ infoX, infoY }, Style::Col(Style::kAccent, fade),
+                                node->name);
+                    dl->AddText(ImVec2{ infoX, infoY + 26.0f * s },
                                 Style::Col(Style::kText, fade), node->desc);
 
                     std::string status;
@@ -263,8 +267,7 @@ namespace Isekai::UI {
                                         ? Style::Col(Style::kAccent, fade)
                                         : IM_COL32(220, 90, 90, static_cast<int>(255 * fade));
                     }
-                    dl->AddText(ImVec2{ wMin.x + 28.0f * s, infoY + 62.0f * s }, statusCol,
-                                status.c_str());
+                    dl->AddText(ImVec2{ infoX, infoY + 78.0f * s }, statusCol, status.c_str());
                 }
             }
 
