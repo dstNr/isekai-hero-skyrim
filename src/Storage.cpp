@@ -12,7 +12,7 @@ namespace Isekai::Storage {
     namespace {
         // Forms in IsekaiHero.esp, read out of the plugin file itself.
         constexpr RE::FormID kContainerBase = 0x000D7A;  // CONT "Dimensional Storage"
-        constexpr RE::FormID kTokenID = 0x000000;        // ALCH token — 0 until created
+        constexpr RE::FormID kTokenID = 0x001DC3;        // ALCH "Dimensional Storage" token
 
         RE::TESObjectCONT* g_base = nullptr;
         RE::AlchemyItem*   g_token = nullptr;
