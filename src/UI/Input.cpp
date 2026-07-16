@@ -218,7 +218,20 @@ namespace Isekai::UI {
 
         if (auto* menuControls = RE::MenuControls::GetSingleton()) {
             menuControls->AddHandler(MenuGuard::GetSingleton());
-            logger::info("UI: menu guard armed — ESC stays ours while a panel is open");
+
+            // AddHandler appends, and the chain stops at the FIRST handler that
+            // consumes an event — appended last, we ran after the journal handler and
+            // ESC closed our panel *and* opened Skyrim's menu on the same press.
+            // Rotate ourselves to the front so the guard sees every button first.
+            auto& handlers = menuControls->handlers;
+            if (!handlers.empty() && handlers.back() == MenuGuard::GetSingleton()) {
+                for (std::size_t i = handlers.size() - 1; i > 0; --i) {
+                    handlers[i] = handlers[i - 1];
+                }
+                handlers[0] = MenuGuard::GetSingleton();
+            }
+            logger::info("UI: menu guard armed at the front of the chain ({} handlers)",
+                         handlers.size());
         }
     }
 

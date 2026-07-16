@@ -84,26 +84,36 @@ namespace Isekai::UI {
             const float  s = Style::g_scale;
             const float  width = g_win.width * s;
             const ImVec2 screen = io.DisplaySize;
-            ImGui::SetNextWindowPos(ImVec2{ screen.x * 0.5f, screen.y * 0.45f }, ImGuiCond_Always,
-                                    ImVec2{ 0.5f, 0.5f });
-            ImGui::SetNextWindowSize(ImVec2{ width, 0.0f }, ImGuiCond_Always);
 
-            // The icon actions are drawn at absolute positions, so the height
-            // automatics know nothing about them — a panel with little text would end
-            // above the icon stack and leave it dangling outside the frame. Reserve
-            // enough height for title, the full stack, and the button row.
+            // The height is computed here, deterministically, instead of letting
+            // AlwaysAutoResize feel its way: auto-resize sizes from the PREVIOUS
+            // frame's items, and our absolutely-positioned icon actions fed their
+            // positions back into it — an unstable loop that kept leaving icons
+            // dangling over the frame. Measured against the FULL body text, so the
+            // panel also does not breathe while the typewriter runs.
             std::size_t iconActions = 0;
             for (const auto& c : g_win.choices) {
                 iconActions += c.iconOnly ? 1 : 0;
             }
-            const float minHeight =
-                iconActions > 0 ? (192.0f + 86.0f * static_cast<float>(iconActions)) * s : 0.0f;
 
-            // Auto-height, but never past the screen: a long status listing clamps here
-            // and scrolls instead (the mouse wheel is already wired through the input
-            // sink). Without the clamp the panel would simply grow off the screen.
-            ImGui::SetNextWindowSizeConstraints(ImVec2{ width, minHeight },
-                                                ImVec2{ width, screen.y * 0.85f });
+            ImGui::PushFont(Style::g_body, Style::BodySize());
+            const float  wrapW = width - 64.0f * s;
+            const ImVec2 bodySize =
+                ImGui::CalcTextSize(g_win.body.c_str(), nullptr, false, wrapW);
+            ImGui::PopFont();
+
+            const float headH = 28.0f * s + Style::TitleSize() + 32.0f * s;  // pad+title+sep zone
+            const float footH = 46.0f * s + 48.0f * s;                       // buttons + padding
+            const float iconsH = iconActions > 0
+                ? 16.0f * s + static_cast<float>(iconActions) * 86.0f * s
+                : 0.0f;
+
+            float height = headH + std::max(bodySize.y + 24.0f * s, iconsH) + footH;
+            height = std::min(height, screen.y * 0.85f);
+
+            ImGui::SetNextWindowPos(ImVec2{ screen.x * 0.5f, screen.y * 0.45f }, ImGuiCond_Always,
+                                    ImVec2{ 0.5f, 0.5f });
+            ImGui::SetNextWindowSize(ImVec2{ width, height }, ImGuiCond_Always);
 
             ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
@@ -114,8 +124,7 @@ namespace Isekai::UI {
 
             constexpr auto flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
                                    ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
-                                   ImGuiWindowFlags_NoSavedSettings |
-                                   ImGuiWindowFlags_AlwaysAutoResize;
+                                   ImGuiWindowFlags_NoSavedSettings;
 
             int chosen = -1;
 
@@ -164,6 +173,12 @@ namespace Isekai::UI {
 
                 // --- Choices, only once the text has finished typing ---
                 if (bodyComplete && !g_win.choices.empty()) {
+                    // Pin the row to the bottom of the (fixed-height) panel. When the
+                    // content is taller than the panel and scrolls, the natural cursor
+                    // is already past this point and the row simply follows the flow.
+                    const float footY = height - (46.0f + 44.0f) * s;
+                    ImGui::SetCursorPosY(std::max(ImGui::GetCursorPosY(), footY));
+
                     ImGui::PushFont(Style::g_title, Style::BodySize());
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f });
                     ImGui::PushStyleColor(

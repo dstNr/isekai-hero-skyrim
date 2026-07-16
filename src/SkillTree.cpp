@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <mutex>
+#include <string>
 
 namespace Isekai::SkillTree {
 
@@ -98,35 +99,42 @@ namespace Isekai::SkillTree {
             if (!data) {
                 return;
             }
-            std::size_t shouts = 0;
+            // Two dedup passes. "Has a description" weeds out the NPC/dragon copies —
+            // but some names still exist several times WITH (differing) descriptions,
+            // so the second pass keeps exactly one form per display name: the one from
+            // the earliest plugin (lowest FormID), i.e. the original over any override
+            // or add-on copy.
+            std::map<std::string, RE::TESShout*> byName;
             for (auto* shout : data->GetFormArray<RE::TESShout>()) {
                 if (!shout) {
                     continue;
                 }
-                if (const char* name = shout->GetName(); !name || !*name) {
+                const char* name = shout->GetName();
+                if (!name || !*name) {
                     continue;
                 }
 
-                // Only shouts with a description. The form list is full of NPC and
-                // dragon variants that share the player shout's name — "has a name"
-                // let those through and the shout menu filled with duplicates. The
-                // description text is what separates the player-facing shout from
-                // its copies (spotted by the duplicates all lacking one).
                 RE::BSString description;
                 shout->GetDescription(description, nullptr);
                 if (description.empty()) {
                     continue;
                 }
 
+                auto [it, fresh] = byName.try_emplace(name, shout);
+                if (!fresh && shout->GetFormID() < it->second->GetFormID()) {
+                    it->second = shout;
+                }
+            }
+
+            for (const auto& [name, shout] : byName) {
                 a_player->AddShout(shout);
                 for (const auto& variation : shout->variations) {
                     if (variation.word) {
                         a_player->UnlockWord(variation.word);
                     }
                 }
-                ++shouts;
             }
-            logger::info("SkillTree: {} shouts unlocked", shouts);
+            logger::info("SkillTree: {} unique shouts unlocked", byName.size());
         }
 
         void UnlockAllEnchantments() {
