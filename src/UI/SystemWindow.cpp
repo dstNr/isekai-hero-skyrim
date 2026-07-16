@@ -2,6 +2,7 @@
 
 #include "Sounds.h"
 #include "UI/Style.h"
+#include "UI/Textures.h"
 
 #include <imgui.h>
 
@@ -19,7 +20,7 @@ namespace Isekai::UI {
         struct WindowState {
             std::string              title;
             std::string              body;
-            std::vector<std::string> choices;
+            std::vector<Choice>      choices;
             std::function<void(int)> onSelect;
             float                    revealCharsPerSec = 45.0f;
             float                    width = 720.0f;  // at 1080p; scaled with display
@@ -207,10 +208,37 @@ namespace Isekai::UI {
                         if (i > 0) {
                             ImGui::SameLine();
                         }
+                        const auto& choice = g_win.choices[i];
                         ImGui::PushID(static_cast<int>(i));
-                        if (ImGui::Button(g_win.choices[i].c_str(), ImVec2{ btnW, 46.0f * s })) {
+
+                        const float  btnH = 46.0f * s;
+                        const ImTextureID icon =
+                            choice.icon.empty() ? ImTextureID{} : GetTexture(choice.icon);
+
+                        if (icon) {
+                            // ImGui has no icon+text button, so: an empty button does the
+                            // hit-testing and hover colors, and icon plus label are drawn
+                            // over it by hand, centred as one unit.
+                            if (ImGui::Button("##choice", ImVec2{ btnW, btnH })) {
+                                chosen = static_cast<int>(i);
+                            }
+                            const ImVec2 bMin = ImGui::GetItemRectMin();
+                            const ImVec2 bMax = ImGui::GetItemRectMax();
+                            const float  iconSize = btnH - 12.0f * s;
+                            const float  gap = 8.0f * s;
+                            const ImVec2 textSize = ImGui::CalcTextSize(choice.label.c_str());
+                            const float  totalW = iconSize + gap + textSize.x;
+                            const float  x = bMin.x + ((bMax.x - bMin.x) - totalW) * 0.5f;
+                            const float  cy = (bMin.y + bMax.y) * 0.5f;
+
+                            dl->AddImage(icon, ImVec2{ x, cy - iconSize * 0.5f },
+                                         ImVec2{ x + iconSize, cy + iconSize * 0.5f });
+                            dl->AddText(ImVec2{ x + iconSize + gap, cy - textSize.y * 0.5f },
+                                        Style::Col(Style::kText), choice.label.c_str());
+                        } else if (ImGui::Button(choice.label.c_str(), ImVec2{ btnW, btnH })) {
                             chosen = static_cast<int>(i);
                         }
+
                         ImGui::PopID();
                     }
 
@@ -233,7 +261,7 @@ namespace Isekai::UI {
     }
 
     void ShowSystemWindow(std::string a_title, std::string a_body,
-                          std::vector<std::string> a_choices,
+                          std::vector<Choice> a_choices,
                           std::function<void(int)> a_onSelect, float a_revealCharsPerSec,
                           float a_width) {
         {
@@ -249,6 +277,19 @@ namespace Isekai::UI {
         Sounds::Play(Sounds::Sfx::WindowOpen);
         SetGameInputEnabled(false);
         g_open.store(true, std::memory_order_release);
+    }
+
+    void ShowSystemWindow(std::string a_title, std::string a_body,
+                          std::vector<std::string> a_choices,
+                          std::function<void(int)> a_onSelect, float a_revealCharsPerSec,
+                          float a_width) {
+        std::vector<Choice> choices;
+        choices.reserve(a_choices.size());
+        for (auto& label : a_choices) {
+            choices.push_back({ std::move(label), {} });
+        }
+        ShowSystemWindow(std::move(a_title), std::move(a_body), std::move(choices),
+                         std::move(a_onSelect), a_revealCharsPerSec, a_width);
     }
 
     void DrawSystemWindow() {

@@ -6,6 +6,12 @@
 
 namespace Isekai::UI {
 
+    // A panel button: a label, and optionally a PNG icon drawn beside it.
+    struct Choice {
+        std::string label;
+        std::string icon;  // path relative to the game folder; empty = text only
+    };
+
     // Open the System panel. Call from the main thread.
     // a_onSelect receives the 0-based index of the chosen button, and is invoked
     // back on the main thread (the panel itself is drawn on the render thread).
@@ -15,6 +21,12 @@ namespace Isekai::UI {
     // a_width is in 1080p pixels (scaled with the display): the default suits story
     // panels; tabular ones like the status ledger need more room, or their columns
     // wrap and the table falls apart.
+    void ShowSystemWindow(std::string a_title, std::string a_body,
+                          std::vector<Choice> a_choices,
+                          std::function<void(int)> a_onSelect,
+                          float a_revealCharsPerSec = 45.0f, float a_width = 720.0f);
+
+    // Convenience for the common text-only case.
     void ShowSystemWindow(std::string a_title, std::string a_body,
                           std::vector<std::string> a_choices,
                           std::function<void(int)> a_onSelect,

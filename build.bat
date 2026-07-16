@@ -43,6 +43,11 @@ if errorlevel 1 goto :copy_failed
 copy /Y "%~dp0build\IsekaiHeroSKSE.pdb" "%SKSE_PLUGINS%\" >nul
 if errorlevel 1 goto :copy_failed
 
+REM Panel icons ride along; the plugin loads them from Data\SKSE\Plugins\IsekaiHero.
+if not exist "%SKSE_PLUGINS%\IsekaiHero\icons" mkdir "%SKSE_PLUGINS%\IsekaiHero\icons"
+copy /Y "%~dp0icons\*.png" "%SKSE_PLUGINS%\IsekaiHero\icons\" >nul
+if errorlevel 1 goto :copy_failed
+
 echo Deployed IsekaiHeroSKSE.dll + .pdb -^> %SKSE_PLUGINS%
 echo BUILD_OK
 exit /b 0

@@ -365,17 +365,18 @@ namespace Isekai::Progression {
             // (menu-on-menu, biped slot conflicts, phantom heal visuals); a button in
             // our own UI has none of those problems — after the panel closes there is
             // no menu in the way, and the chest opens directly into gameplay.
-            std::vector<std::string>  choices;
-            std::function<void(int)>  onSelect = [](int) {};
+            std::vector<UI::Choice>  choices;
+            std::function<void(int)> onSelect = [](int) {};
             if (Storage::Available()) {
-                choices = { "STORAGE", "CLOSE" };
+                choices = { { "STORAGE", "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\spells_03_frame.png" },
+                            { "CLOSE", {} } };
                 onSelect = [](int a_idx) {
                     if (a_idx == 0) {
                         Storage::Open();
                     }
                 };
             } else {
-                choices = { "CLOSE" };
+                choices = { { "CLOSE", {} } };
             }
 
             // Instant reveal: this is a ledger, not a story beat — nobody wants to

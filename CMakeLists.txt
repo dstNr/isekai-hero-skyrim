@@ -37,12 +37,18 @@ add_commonlibsse_plugin(
         src/UI/Style.h
         src/UI/SystemWindow.cpp
         src/UI/SystemWindow.h
+        src/UI/Textures.cpp
+        src/UI/Textures.h
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
 
 # ImGui renders straight into the game's D3D11 swap chain (see src/UI/Overlay.cpp).
 target_link_libraries(${PROJECT_NAME} PRIVATE imgui::imgui d3d11.lib dxgi.lib)
+
+# stb_image decodes the panel icon PNGs (header-only; vcpkg ships no CMake config).
+find_path(STB_INCLUDE_DIRS "stb_image.h" REQUIRED)
+target_include_directories(${PROJECT_NAME} PRIVATE ${STB_INCLUDE_DIRS})
 
 # So sources can say #include "UI/Overlay.h".
 target_include_directories(${PROJECT_NAME} PRIVATE src)
