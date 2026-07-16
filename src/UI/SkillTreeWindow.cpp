@@ -162,7 +162,25 @@ namespace Isekai::UI {
             std::size_t count = 0;
             const auto* nodes = SkillTree::Nodes(count);
 
-            // Connections first, so nodes draw over them.
+            // Connections first, so nodes draw over them. Endpoints are clipped to
+            // the node boxes' edges: aimed at the centres, the lines ran underneath
+            // the icons — and since the icon PNGs have transparent corners, they
+            // stayed visible "through" the artwork.
+            const float halfBox = kNodeSize * 0.5f * s + 2.0f * s;
+            const auto  clipToBox = [&](ImVec2 a_from, ImVec2 a_to) {
+                const float dx = a_to.x - a_from.x;
+                const float dy = a_to.y - a_from.y;
+                const float len = std::sqrt(dx * dx + dy * dy);
+                if (len < 1.0f) {
+                    return a_from;
+                }
+                const float nx = dx / len;
+                const float ny = dy / len;
+                // Distance from the centre to the square's edge along this direction.
+                const float edge = halfBox / std::max(std::abs(nx), std::abs(ny));
+                return ImVec2{ a_from.x + nx * edge, a_from.y + ny * edge };
+            };
+
             for (std::size_t i = 0; i < count; ++i) {
                 const auto& node = nodes[i];
                 for (const auto prereqKey : node.prereq) {
@@ -182,8 +200,10 @@ namespace Isekai::UI {
                     const bool  litFrom = SkillTree::IsUnlocked(from->key);
                     const bool  litBoth = litFrom && SkillTree::IsUnlocked(node.key);
                     const float alpha = (litBoth ? 0.85f : litFrom ? 0.4f : 0.15f) * fade;
-                    dl->AddLine(centerOf(*from), centerOf(node), Style::Col(Style::kAccent, alpha),
-                                (litBoth ? 2.5f : 1.5f) * s);
+                    const ImVec2 a = centerOf(*from);
+                    const ImVec2 b = centerOf(node);
+                    dl->AddLine(clipToBox(a, b), clipToBox(b, a),
+                                Style::Col(Style::kAccent, alpha), (litBoth ? 2.5f : 1.5f) * s);
                 }
             }
 
@@ -213,6 +233,11 @@ namespace Isekai::UI {
                     Style::DrawGlowBorder(dl, nMin, nMax, Style::kAccent, 0.6f * fade, 4,
                                           1.5f * s);
                 }
+                // Opaque backdrop: any line crossing near the node must terminate
+                // visually at the box, not shimmer through the icon's transparency.
+                dl->AddRectFilled(nMin, nMax,
+                                  ImGui::GetColorU32(ImVec4{ Style::kPanelBg.x, Style::kPanelBg.y,
+                                                             Style::kPanelBg.z, fade }));
                 const std::string icon = std::string(kIconDir) + node.icon;
                 if (const auto tex = GetTexture(icon)) {
                     dl->AddImage(tex, nMin, nMax, ImVec2{ 0, 0 }, ImVec2{ 1, 1 },
