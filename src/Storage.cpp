@@ -82,6 +82,25 @@ namespace Isekai::Storage {
         // materials walk over for the duration and the leftovers walk back.
         // ------------------------------------------------------------------
 
+        // Only what a crafting station can actually consume: raw materials (MISC),
+        // alchemy ingredients, and soul gems. Gold, gear, potions and whatever else
+        // the player parked in the chest stay put — moving them bought nothing and
+        // was the main way a shuttle like this goes wrong (mis-sorted gear after a
+        // crash mid-menu, five million coins riding along for no reason).
+        [[nodiscard]] bool IsCraftingMaterial(const RE::TESBoundObject* a_obj) {
+            if (a_obj->GetFormID() == 0x0000000F) {
+                return false;  // Gold001 is technically Misc, but no recipe eats coins
+            }
+            switch (a_obj->GetFormType()) {
+            case RE::FormType::Misc:
+            case RE::FormType::Ingredient:
+            case RE::FormType::SoulGem:
+                return true;
+            default:
+                return false;
+            }
+        }
+
         void LendToPlayer() {
             auto* player = RE::PlayerCharacter::GetSingleton();
             auto* chest = ResolveChest();
@@ -91,7 +110,7 @@ namespace Isekai::Storage {
 
             g_craftLoan.clear();
             for (const auto& [obj, count] : chest->GetInventoryCounts()) {
-                if (!obj || count <= 0) {
+                if (!obj || count <= 0 || !IsCraftingMaterial(obj)) {
                     continue;
                 }
                 g_craftLoan[obj] = count;
