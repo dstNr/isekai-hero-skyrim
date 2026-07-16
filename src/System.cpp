@@ -49,7 +49,6 @@ namespace Isekai {
             std::uint16_t skillLevel;    // set all 18 skills to this
             std::uint16_t playerLevel;   // set character level
             std::int32_t  perkPoints;    // add to available perk points
-            float         attrBonus;     // add to base Health/Magicka/Stamina
             std::int32_t  gold;          // add to inventory
             std::int32_t  dragonSouls;   // add to the unspent soul pool
         };
@@ -57,12 +56,23 @@ namespace Isekai {
         Blessing BlessingFor(PowerLevel a_power) {
             switch (a_power) {
             case PowerLevel::Hero:
-                return { 50, 25, 10, 100.0f, 2000, 3 };
+                return { 50, 25, 10, 2000, 3 };
             case PowerLevel::Ascended:
-                return { 100, 150, kMaxPerkPoints, 300.0f, 25000, 20 };
+                return { 100, 150, kMaxPerkPoints, 25000, 20 };
             default:  // Normal — pure challenge, no boosts
-                return { 0, 0, 0, 0.0f, 0, 0 };
+                return { 0, 0, 0, 0, 0 };
             }
+        }
+
+        // Health/Magicka/Stamina are not a separate knob: they follow the granted
+        // level. A character who levelled to N by hand would have banked (N-1) * 10
+        // attribute points; we spread them evenly across the big three. A flat +300
+        // used to make ASCENDED a paper giant — level 150 with level-30 stats.
+        [[nodiscard]] float AttributeBonusPerStat(std::uint16_t a_playerLevel) {
+            if (a_playerLevel <= 1) {
+                return 0.0f;
+            }
+            return std::round(static_cast<float>(a_playerLevel - 1) * 10.0f / 3.0f);
         }
 
         void ApplyReincarnation() {
@@ -83,11 +93,13 @@ namespace Isekai {
                 }
             }
 
-            // Attributes: add a flat bonus on top of the current base.
-            if (b.attrBonus > 0.0f && avOwner) {
+            // Attributes: what (playerLevel - 1) level-ups would have paid out,
+            // spread evenly, on top of the current base.
+            const float attrBonus = AttributeBonusPerStat(b.playerLevel);
+            if (attrBonus > 0.0f && avOwner) {
                 for (auto av : { RE::ActorValue::kHealth, RE::ActorValue::kMagicka,
                                  RE::ActorValue::kStamina }) {
-                    avOwner->SetBaseActorValue(av, avOwner->GetBaseActorValue(av) + b.attrBonus);
+                    avOwner->SetBaseActorValue(av, avOwner->GetBaseActorValue(av) + attrBonus);
                 }
             }
 
@@ -110,7 +122,7 @@ namespace Isekai {
 
             logger::info(
                 "Reincarnation applied: power={} skills={} level={} perks=+{} attr=+{} gold={} souls=+{}",
-                PowerName(g_state.power), b.skillLevel, b.playerLevel, b.perkPoints, b.attrBonus,
+                PowerName(g_state.power), b.skillLevel, b.playerLevel, b.perkPoints, attrBonus,
                 b.gold, b.dragonSouls);
 
             const std::string body =
