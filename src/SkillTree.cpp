@@ -275,31 +275,6 @@ namespace Isekai::SkillTree {
         return GetState().systemPoints;
     }
 
-    std::int32_t Souls() {
-        auto* player = RE::PlayerCharacter::GetSingleton();
-        auto* avOwner = player ? player->AsActorValueOwner() : nullptr;
-        return avOwner
-                   ? static_cast<std::int32_t>(avOwner->GetBaseActorValue(AV::kDragonSouls))
-                   : 0;
-    }
-
-    bool ConvertSoul() {
-        auto* player = RE::PlayerCharacter::GetSingleton();
-        auto* avOwner = player ? player->AsActorValueOwner() : nullptr;
-        if (!avOwner) {
-            return false;
-        }
-        const auto souls = static_cast<std::int32_t>(avOwner->GetBaseActorValue(AV::kDragonSouls));
-        if (souls < 1) {
-            return false;
-        }
-        avOwner->SetBaseActorValue(AV::kDragonSouls, static_cast<float>(souls - 1));
-        GrantSystemPoints(kSoulExchangeRate);
-        Sounds::Play(Sounds::Sfx::ButtonClick);
-        logger::info("SkillTree: converted 1 soul -> {} points", kSoulExchangeRate);
-        return true;
-    }
-
     bool TryUnlock(std::uint32_t a_key) {
         const auto* node = Find(a_key);
         if (!node || IsUnlocked(a_key) || !PrereqsMet(a_key)) {

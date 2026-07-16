@@ -148,9 +148,6 @@ namespace Isekai::UI {
             const std::string points = "SYSTEM POINTS   " + std::to_string(SkillTree::Points());
             dl->AddText(ImVec2{ wMin.x + 28.0f * s, sepY + 12.0f * s },
                         Style::Col(Style::kAccent, fade), points.c_str());
-            const std::string souls = "DRAGON SOULS    " + std::to_string(SkillTree::Souls());
-            dl->AddText(ImVec2{ wMin.x + 28.0f * s, sepY + 38.0f * s },
-                        Style::Col(Style::kTextDim, fade), souls.c_str());
 
             // --- The graph ---
             const ImVec2 origin{ wMin.x, wMin.y + kCanvasTop * s };
@@ -243,10 +240,9 @@ namespace Isekai::UI {
                     }
                 }
                 if (node) {
-                    // Between the exchange button (left corner) and CLOSE (right
-                    // corner) — sharing the left corner with the exchange button made
-                    // the two write over each other.
-                    const float infoX = wMin.x + 300.0f * s;
+                    // Bottom-left, where it lived before the (since removed) soul
+                    // exchange button briefly shared the corner with it.
+                    const float infoX = wMin.x + 28.0f * s;
                     const float infoY = wMax.y - 118.0f * s;
                     dl->AddText(ImVec2{ infoX, infoY }, Style::Col(Style::kAccent, fade),
                                 node->name);
@@ -271,7 +267,7 @@ namespace Isekai::UI {
                 }
             }
 
-            // --- Soul exchange + close, bottom corners ---
+            // --- Close button, bottom-right ---
             {
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f });
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
@@ -284,21 +280,6 @@ namespace Isekai::UI {
                 ImGui::PushStyleColor(ImGuiCol_Text, Style::kText);
                 ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
                 ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
-
-                // The soul sink from docs/IDEAS.md: once every word wall is empty,
-                // souls still buy growth. Repeat-clickable.
-                const std::string exchange =
-                    "CONVERT SOUL  +" + std::to_string(SkillTree::kSoulExchangeRate);
-                const ImVec2 exSize{ 240.0f * s, 42.0f * s };
-                ImGui::SetCursorScreenPos(ImVec2{ wMin.x + 24.0f * s,
-                                                  wMax.y - exSize.y - 20.0f * s });
-                ImGui::BeginDisabled(SkillTree::Souls() < 1);
-                if (ImGui::Button(exchange.c_str(), exSize)) {
-                    if (auto* task = SKSE::GetTaskInterface()) {
-                        task->AddTask([]() { SkillTree::ConvertSoul(); });
-                    }
-                }
-                ImGui::EndDisabled();
 
                 const ImVec2 btnSize{ 170.0f * s, 42.0f * s };
                 ImGui::SetCursorScreenPos(ImVec2{ wMax.x - btnSize.x - 24.0f * s,

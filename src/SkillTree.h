@@ -39,16 +39,8 @@ namespace Isekai::SkillTree {
     [[nodiscard]] bool PrereqsMet(std::uint32_t a_key);
 
     // The tree's currency: System Points (docs/IDEAS.md) — paid by milestones,
-    // seeded by the blessing, uncapped.
+    // seeded by the blessing, uncapped. Dragon souls stay out of the tree entirely.
     [[nodiscard]] std::int32_t Points();
-
-    // The player's unspent dragon souls — convertible into System Points, which
-    // gives souls a purpose once every word wall is empty.
-    [[nodiscard]] std::int32_t Souls();
-    inline constexpr std::int32_t kSoulExchangeRate = 3;  // 1 soul -> 3 points
-
-    // Convert one dragon soul into System Points. Main thread only.
-    bool ConvertSoul();
 
     // Spend points and unlock. Main thread only. False if locked/unaffordable/unknown.
     bool TryUnlock(std::uint32_t a_key);

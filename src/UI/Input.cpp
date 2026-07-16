@@ -7,6 +7,8 @@
 #include <imgui.h>
 
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <mutex>
 #include <unordered_map>
 #include <utility>
@@ -161,6 +163,58 @@ namespace Isekai::UI {
     }
 
     namespace {
+        // Belt to the guard's braces. Consuming the key in the handler chain has not
+        // reliably kept the journal shut (tried: front of the chain, back of the
+        // chain, swallowing until key release) — so this attacks from the other end:
+        // any journal/tween menu that opens while a System panel is up, or within a
+        // short window after one was dismissed by ESC, is immediately closed again.
+        // Menu open/close is observable regardless of input plumbing semantics.
+        std::atomic<std::int64_t> g_suppressMenusUntilMs{ 0 };
+
+        [[nodiscard]] std::int64_t NowMs() {
+            using namespace std::chrono;
+            return duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
+        }
+
+        void ArmMenuSuppressor() {
+            g_suppressMenusUntilMs.store(NowMs() + 400, std::memory_order_release);
+        }
+
+        class MenuSuppressor : public RE::BSTEventSink<RE::MenuOpenCloseEvent> {
+        public:
+            static MenuSuppressor* GetSingleton() {
+                static MenuSuppressor singleton;
+                return std::addressof(singleton);
+            }
+
+            RE::BSEventNotifyControl ProcessEvent(
+                const RE::MenuOpenCloseEvent* a_event,
+                RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override {
+                if (!a_event || !a_event->opening) {
+                    return RE::BSEventNotifyControl::kContinue;
+                }
+                const bool guarded =
+                    IsCapturingInput() ||
+                    NowMs() < g_suppressMenusUntilMs.load(std::memory_order_acquire);
+                if (!guarded) {
+                    return RE::BSEventNotifyControl::kContinue;
+                }
+
+                if (a_event->menuName == RE::JournalMenu::MENU_NAME ||
+                    a_event->menuName == RE::TweenMenu::MENU_NAME) {
+                    if (auto* queue = RE::UIMessageQueue::GetSingleton()) {
+                        queue->AddMessage(a_event->menuName, RE::UI_MESSAGE_TYPE::kHide, nullptr);
+                        logger::info("UI: suppressed {} under a System panel",
+                                     a_event->menuName.c_str());
+                    }
+                }
+                return RE::BSEventNotifyControl::kContinue;
+            }
+
+        private:
+            MenuSuppressor() = default;
+        };
+
         // Sits at the front of MenuControls' handler chain and eats button events
         // while one of our panels is open. blockPlayerInput only silences the
         // player-control handlers — the journal/tween menu opens through THIS chain,
@@ -200,6 +254,7 @@ namespace Isekai::UI {
                         // "right as the System menu closed". So the key that dismissed
                         // a panel stays swallowed until it is actually let go.
                         s_swallowDismissKey = true;
+                        ArmMenuSuppressor();
                     }
                     return true;  // consumed: nothing may fire underneath our panel
                 }
@@ -231,6 +286,10 @@ namespace Isekai::UI {
             logger::info("UI: hooked Skyrim's input event stream");
         } else {
             logger::error("UI: no input device manager — the overlay will not take clicks");
+        }
+
+        if (auto* ui = RE::UI::GetSingleton()) {
+            ui->AddEventSink<RE::MenuOpenCloseEvent>(MenuSuppressor::GetSingleton());
         }
 
         if (auto* menuControls = RE::MenuControls::GetSingleton()) {
