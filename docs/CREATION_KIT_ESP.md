@@ -206,17 +206,17 @@ Die WAV-Dateien liegen bereits in `Data\Sound\fx\isekai\` (macht der Build-Workf
    `IsekaiHero.esp` → als neue Editor-ID `IsekaiSND_LevelUp` eingeben.
 6. Den neuen Record auswählen (jetzt unter `IsekaiHero.esp → Sound Descriptor`).
    Rechts im Datenblatt den Eintrag **`ANAM - Sound File`** suchen → Doppelklick auf den
-   Pfad → ersetzen durch `sound\fx\isekai\Cinematic_6_1.wav`.
+   Pfad → ersetzen durch `fx\isekai\Cinematic_6_1.wav`.
    *(Falls der kopierte Record mehrere Sound-Dateien listet: die überzähligen Zeilen
    per Rechtsklick → Remove löschen, genau eine bleibt.)*
 7. Schritte 5–6 **in exakt dieser Reihenfolge** für die übrigen drei wiederholen:
 
 | Nr. | Editor-ID | Sound File |
 |---|---|---|
-| 1 | `IsekaiSND_LevelUp` | `sound\fx\isekai\Cinematic_6_1.wav` |
-| 2 | `IsekaiSND_WindowOpen` | `sound\fx\isekai\Cinematic_7_2.wav` |
-| 3 | `IsekaiSND_ButtonClick` | `sound\fx\isekai\Modern_2_2.wav` |
-| 4 | `IsekaiSND_WindowClose` | `sound\fx\isekai\Modern_5_2.wav` |
+| 1 | `IsekaiSND_LevelUp` | `fx\isekai\Cinematic_6_1.wav` |
+| 2 | `IsekaiSND_WindowOpen` | `fx\isekai\Cinematic_7_2.wav` |
+| 3 | `IsekaiSND_ButtonClick` | `fx\isekai\Modern_2_2.wav` |
+| 4 | `IsekaiSND_WindowClose` | `fx\isekai\Modern_5_2.wav` |
 
 8. SSEEdit schließen → der Speichern-Dialog erscheint → Häkchen bei `IsekaiHero.esp`
    lassen → OK. (Ein Backup legt SSEEdit automatisch an.)
