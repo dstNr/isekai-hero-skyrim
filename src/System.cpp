@@ -64,11 +64,14 @@ namespace Isekai {
         // level. A character who levelled to N by hand would have banked (N-1) * 10
         // attribute points; we spread them evenly across the big three. A flat +300
         // used to make ASCENDED a paper giant — level 150 with level-30 stats.
-        [[nodiscard]] float AttributeBonusPerStat(std::uint16_t a_playerLevel) {
-            if (a_playerLevel <= 1) {
+        // Takes the level actually gained: an existing-save character already banked
+        // their own level-ups, so only the granted difference pays out.
+        [[nodiscard]] float AttributeBonusPerStat(std::uint16_t a_fromLevel,
+                                                  std::uint16_t a_toLevel) {
+            if (a_toLevel <= a_fromLevel) {
                 return 0.0f;
             }
-            return std::round(static_cast<float>(a_playerLevel - 1) * 10.0f / 3.0f);
+            return std::round(static_cast<float>(a_toLevel - a_fromLevel) * 10.0f / 3.0f);
         }
 
         void ApplyReincarnation() {
@@ -80,27 +83,32 @@ namespace Isekai {
             const Blessing b = BlessingFor(g_state.power);
             auto* avOwner = player->AsActorValueOwner();
 
+            // Blessings only ever RAISE — on an existing save the character may
+            // already be past parts of the blessing, and a rebirth must not demote.
+
             // Skills: the 18 skill actor values are contiguous (kOneHanded..kEnchanting).
             if (b.skillLevel > 0 && avOwner) {
                 for (int av = static_cast<int>(RE::ActorValue::kOneHanded);
                      av <= static_cast<int>(RE::ActorValue::kEnchanting); ++av) {
-                    avOwner->SetBaseActorValue(static_cast<RE::ActorValue>(av),
-                                               static_cast<float>(b.skillLevel));
+                    const auto avEnum = static_cast<RE::ActorValue>(av);
+                    if (avOwner->GetBaseActorValue(avEnum) < static_cast<float>(b.skillLevel)) {
+                        avOwner->SetBaseActorValue(avEnum, static_cast<float>(b.skillLevel));
+                    }
                 }
             }
 
-            // Attributes: what (playerLevel - 1) level-ups would have paid out,
-            // spread evenly, on top of the current base.
-            const float attrBonus = AttributeBonusPerStat(b.playerLevel);
+            // Character level lives on the ActorBase (TESNPC); attributes follow the
+            // levels actually gained, spread evenly across the big three.
+            const std::uint16_t currentLevel = player->GetLevel();
+            const float attrBonus = AttributeBonusPerStat(std::max<std::uint16_t>(currentLevel, 1),
+                                                          b.playerLevel);
             if (attrBonus > 0.0f && avOwner) {
                 for (auto av : { RE::ActorValue::kHealth, RE::ActorValue::kMagicka,
                                  RE::ActorValue::kStamina }) {
                     avOwner->SetBaseActorValue(av, avOwner->GetBaseActorValue(av) + attrBonus);
                 }
             }
-
-            // Character level: for the player this lives on the ActorBase (TESNPC).
-            if (b.playerLevel > 0) {
+            if (b.playerLevel > currentLevel) {
                 if (auto* base = player->GetActorBase()) {
                     base->actorData.level = b.playerLevel;
                 }
