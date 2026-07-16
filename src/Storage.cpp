@@ -212,7 +212,13 @@ namespace Isekai::Storage {
         std::size_t stocked = 0;
 
         for (const auto& entry : kMaterials) {
-            auto* obj = data->LookupForm<RE::TESBoundObject>(entry.id, "Skyrim.esm");
+            // Look up under the concrete form types. TESBoundObject would be the
+            // natural common base, but it has no FORMTYPE, so the typed lookup
+            // rejects everything when asked for it — 30 materials, 30 misses.
+            RE::TESBoundObject* obj = data->LookupForm<RE::TESObjectMISC>(entry.id, "Skyrim.esm");
+            if (!obj) {
+                obj = data->LookupForm<RE::TESSoulGem>(entry.id, "Skyrim.esm");
+            }
             if (!obj) {
                 logger::error("Storage: material {:#010x} missing from Skyrim.esm", entry.id);
                 continue;
