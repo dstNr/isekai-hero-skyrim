@@ -45,8 +45,13 @@ namespace Isekai {
         // (see Storage.cpp). 0 = not created yet.
         std::uint32_t storageChest = 0;
 
-        // Skill tree nodes bought with dragon souls, by their stable key.
+        // Skill tree nodes bought with System Points, by their stable key.
         std::vector<std::uint32_t> unlockedNodes;
+
+        // The System's own currency (docs/IDEAS.md): uncapped, unlike perk points,
+        // and deliberately separate from dragon souls. Paid by milestones; souls can
+        // be converted into it as their post-main-quest sink.
+        std::int32_t systemPoints = 0;
     };
 
     [[nodiscard]] State& GetState();
@@ -68,6 +73,12 @@ namespace Isekai {
 
     // Add unspent dragon souls. Unlike perk points these have no engine cap.
     void GrantDragonSouls(std::int32_t a_souls);
+
+    // Add System Points (never negative-clamps; spending happens in SkillTree).
+    void GrantSystemPoints(std::int32_t a_points);
+
+    // System Points a milestone pays: 1 base, 5 at endpoints, times RewardScale.
+    [[nodiscard]] std::int32_t MilestoneSystemPoints(bool a_endpoint);
 
     // Install everything: co-save serialization (persist choices + the
     // "already reincarnated" flag) and a start-method-independent trigger that

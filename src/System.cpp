@@ -25,7 +25,7 @@ namespace Isekai {
         // --- Co-save serialization IDs ---
         constexpr std::uint32_t kSerID = 'ISKA';    // unique plugin id
         constexpr std::uint32_t kRecState = 'STAT';  // record tag
-        constexpr std::uint32_t kVersion = 5;        // bumped: skill tree nodes added
+        constexpr std::uint32_t kVersion = 6;        // bumped: system points added
 
         void SystemMsg(const char* a_text) {
             RE::DebugNotification(a_text);
@@ -43,16 +43,17 @@ namespace Isekai {
             std::int32_t  perkPoints;    // add to available perk points
             std::int32_t  gold;          // add to inventory
             std::int32_t  dragonSouls;   // add to the unspent soul pool
+            std::int32_t  systemPoints;  // seed for the skill tree
         };
 
         Blessing BlessingFor(PowerLevel a_power) {
             switch (a_power) {
             case PowerLevel::Hero:
-                return { 50, 25, 10, 2000, 3 };
+                return { 50, 25, 10, 2000, 3, 5 };
             case PowerLevel::Ascended:
-                return { 100, 150, kMaxPerkPoints, 25000, 20 };
+                return { 100, 150, kMaxPerkPoints, 25000, 20, 15 };
             default:  // Normal — pure challenge, no boosts
-                return { 0, 0, 0, 0, 0 };
+                return { 0, 0, 0, 0, 0, 0 };
             }
         }
 
@@ -104,6 +105,7 @@ namespace Isekai {
 
             GrantPerkPoints(b.perkPoints);
             GrantDragonSouls(b.dragonSouls);
+            GrantSystemPoints(b.systemPoints);
             Storage::GrantStartingMaterials();  // crafting stock, HERO/ASCENDED only
 
             // Gold (Gold001 = 0x0000000F).
@@ -257,8 +259,10 @@ namespace Isekai {
                 a_intf->WriteRecordData(key);
             }
 
-            logger::info("State saved (reincarnated={}, milestones={}, nodes={})",
-                         g_state.reincarnated, count, nodes);
+            a_intf->WriteRecordData(g_state.systemPoints);
+
+            logger::info("State saved (reincarnated={}, milestones={}, nodes={}, sp={})",
+                         g_state.reincarnated, count, nodes, g_state.systemPoints);
         }
 
         void LoadCallback(SKSE::SerializationInterface* a_intf) {
@@ -315,11 +319,16 @@ namespace Isekai {
                         g_state.unlockedNodes.push_back(key);
                     }
                 }
+
+                g_state.systemPoints = 0;
+                if (version >= 6) {
+                    a_intf->ReadRecordData(g_state.systemPoints);
+                }
             }
 
-            logger::info("State loaded (reincarnated={}, milestones={}, nodes={})",
+            logger::info("State loaded (reincarnated={}, milestones={}, nodes={}, sp={})",
                          g_state.reincarnated, g_state.grantedMilestones.size(),
-                         g_state.unlockedNodes.size());
+                         g_state.unlockedNodes.size(), g_state.systemPoints);
         }
 
         void RevertCallback(SKSE::SerializationInterface*) {
@@ -423,6 +432,17 @@ namespace Isekai {
         auto&      stats = player->GetGameStatsData();
         const auto total = static_cast<std::int32_t>(stats.perkCount) + a_points;
         stats.perkCount = static_cast<std::int8_t>(std::min(total, kMaxPerkPoints));
+    }
+
+    void GrantSystemPoints(std::int32_t a_points) {
+        if (a_points > 0) {
+            g_state.systemPoints += a_points;
+        }
+    }
+
+    std::int32_t MilestoneSystemPoints(bool a_endpoint) {
+        const auto base = a_endpoint ? 5.0f : 1.0f;
+        return static_cast<std::int32_t>(std::lround(base * RewardScale()));
     }
 
     void GrantDragonSouls(std::int32_t a_souls) {

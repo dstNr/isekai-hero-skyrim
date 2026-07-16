@@ -210,6 +210,9 @@ namespace Isekai::Progression {
             const std::int32_t souls = ScaledSouls(a_milestone.dragonSouls);
             GrantDragonSouls(souls);
 
+            // Every milestone feeds the skill tree's currency (docs/IDEAS.md).
+            GrantSystemPoints(MilestoneSystemPoints(a_milestone.endpoint));
+
             std::int32_t perks = 0;
             if (a_milestone.endpoint) {
                 perks = MilestonePerkPoints();
@@ -245,8 +248,10 @@ namespace Isekai::Progression {
             text += "\n            ";
             text += PassiveEffectText(a_milestone.passive);
 
+            text += "\n\n  System Points +" +
+                    std::to_string(MilestoneSystemPoints(a_milestone.endpoint));
             if (const auto souls = ScaledSouls(a_milestone.dragonSouls); souls > 0) {
-                text += "\n\n  Dragon Souls  +" + std::to_string(souls);
+                text += "\n  Dragon Souls  +" + std::to_string(souls);
             }
             if (a_perks > 0) {
                 text += "\n  Perk Points   +" + std::to_string(a_perks);
@@ -332,6 +337,7 @@ namespace Isekai::Progression {
             }
             body += "MILESTONES    " + std::to_string(earned) + " / " +
                     std::to_string(std::size(kMilestones)) + "\n";
+            body += "SYSTEM POINTS " + std::to_string(GetState().systemPoints) + "\n";
 
             // The aggregated totals — the same numbers the abilities carry in the
             // magic menu, so the two views can be checked against each other.
@@ -521,6 +527,7 @@ namespace Isekai::Progression {
         std::vector<const Milestone*> caughtUp;
         std::int32_t                  perks = 0;
         std::int32_t                  souls = 0;
+        std::int32_t                  sp = 0;
 
         for (const auto& m : kMilestones) {
             if (AlreadyGranted(m.key)) {
@@ -534,6 +541,7 @@ namespace Isekai::Progression {
                 perks += MilestonePerkPoints();
             }
             souls += ScaledSouls(m.dragonSouls);
+            sp += MilestoneSystemPoints(m.endpoint);
             if (Grant(m)) {
                 caughtUp.push_back(&m);
             }
@@ -548,6 +556,9 @@ namespace Isekai::Progression {
         std::string body = "SYNCHRONISING...\n\nThe System has recognised deeds already done.\n\n";
         for (const auto* m : caughtUp) {
             body += "  " + std::string(m->passive.name) + "   " + PassiveEffectText(m->passive) + "\n";
+        }
+        if (sp > 0) {
+            body += "\n  System Points +" + std::to_string(sp);
         }
         if (souls > 0) {
             body += "\n  Dragon Souls  +" + std::to_string(souls);

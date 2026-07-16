@@ -21,50 +21,50 @@ namespace Isekai::SkillTree {
         constexpr Node kNodes[] = {
             // --- Hub ---
             { 1, "System Core", "The System takes root.\n+25 Health, Magicka and Stamina.",
-              "spells_01_frame.png", 550.0f, 110.0f, 1, { 0, 0 }, Effect::kAttributes,
+              "spells_01_frame.png", 550.0f, 110.0f, 5, { 0, 0 }, Effect::kAttributes,
               { { AV::kHealth, 25.0f }, { AV::kMagicka, 25.0f }, { AV::kStamina, 25.0f } } },
             { 2, "Dragon's Voice", "Your Thu'um recovers faster.\n-20% shout cooldown.",
-              "spells_10_frame.png", 780.0f, 110.0f, 3, { 1, 0 }, Effect::kShoutCooldown, {} },
+              "spells_10_frame.png", 780.0f, 110.0f, 15, { 1, 0 }, Effect::kShoutCooldown, {} },
 
             // --- Kraft (left) ---
             { 3, "Vital Surge", "+100 Health.",
-              "spells_25_frame.png", 250.0f, 260.0f, 2, { 1, 0 }, Effect::kAttributes,
+              "spells_25_frame.png", 250.0f, 260.0f, 10, { 1, 0 }, Effect::kAttributes,
               { { AV::kHealth, 100.0f } } },
             { 4, "Thu'um Omniscience",
               "The System pours every dragon's voice into you.\nAll shouts and words of power unlocked.",
-              "spells_39_frame.png", 160.0f, 410.0f, 5, { 3, 0 }, Effect::kAllShouts, {} },
+              "spells_39_frame.png", 160.0f, 410.0f, 25, { 3, 0 }, Effect::kAllShouts, {} },
             { 5, "Emberguard", "+25% Fire Resist.",
-              "spells_12_frame.png", 340.0f, 410.0f, 3, { 3, 0 }, Effect::kAttributes,
+              "spells_12_frame.png", 340.0f, 410.0f, 15, { 3, 0 }, Effect::kAttributes,
               { { AV::kResistFire, 25.0f } } },
 
             // --- Arkana (right) ---
             { 6, "Mana Well", "+100 Magicka.",
-              "spells_15_frame.png", 850.0f, 260.0f, 2, { 1, 0 }, Effect::kAttributes,
+              "spells_15_frame.png", 850.0f, 260.0f, 10, { 1, 0 }, Effect::kAttributes,
               { { AV::kMagicka, 100.0f } } },
             { 7, "Arcane Omniscience",
               "Every enchantment laid bare.\nAll enchantments known without disenchanting.",
-              "spells_36_frame.png", 760.0f, 410.0f, 5, { 6, 0 }, Effect::kAllEnchantments, {} },
+              "spells_36_frame.png", 760.0f, 410.0f, 25, { 6, 0 }, Effect::kAllEnchantments, {} },
             { 8, "Frostguard", "+25% Frost Resist.",
-              "spells_16_frame.png", 940.0f, 410.0f, 3, { 6, 0 }, Effect::kAttributes,
+              "spells_16_frame.png", 940.0f, 410.0f, 15, { 6, 0 }, Effect::kAttributes,
               { { AV::kResistFrost, 25.0f } } },
             { 9, "Spell Omniscience",
               "The System reads every tome ever written.\nAll spells with a spell tome learned.",
-              "spells_37_frame.png", 850.0f, 555.0f, 8, { 7, 0 }, Effect::kAllSpells, {} },
+              "spells_37_frame.png", 850.0f, 555.0f, 40, { 7, 0 }, Effect::kAllSpells, {} },
 
             // --- Schatten (centre-down) ---
             { 10, "Swift Blood", "+100 Stamina.",
-              "spells_32_frame.png", 550.0f, 300.0f, 2, { 1, 0 }, Effect::kAttributes,
+              "spells_32_frame.png", 550.0f, 300.0f, 10, { 1, 0 }, Effect::kAttributes,
               { { AV::kStamina, 100.0f } } },
             { 11, "Alchemical Insight",
               "Every ingredient gives up its secrets.\nAll ingredient effects known.",
-              "spells_31_frame.png", 460.0f, 450.0f, 5, { 10, 0 }, Effect::kAllIngredients, {} },
+              "spells_31_frame.png", 460.0f, 450.0f, 25, { 10, 0 }, Effect::kAllIngredients, {} },
             { 12, "Plagueward", "+25% Disease Resist.",
-              "spells_34_frame.png", 640.0f, 450.0f, 3, { 10, 0 }, Effect::kAttributes,
+              "spells_34_frame.png", 640.0f, 450.0f, 15, { 10, 0 }, Effect::kAttributes,
               { { AV::kResistDisease, 25.0f } } },
 
             // --- Capstone ---
             { 13, "World Tree", "The System blossoms through your soul.\n+100 Health, Magicka and Stamina.",
-              "spells_09_frame.png", 550.0f, 600.0f, 10, { 3, 6 }, Effect::kAttributes,
+              "spells_09_frame.png", 550.0f, 600.0f, 50, { 3, 6 }, Effect::kAttributes,
               { { AV::kHealth, 100.0f }, { AV::kMagicka, 100.0f }, { AV::kStamina, 100.0f } } },
         };
 
@@ -271,6 +271,10 @@ namespace Isekai::SkillTree {
         return true;
     }
 
+    std::int32_t Points() {
+        return GetState().systemPoints;
+    }
+
     std::int32_t Souls() {
         auto* player = RE::PlayerCharacter::GetSingleton();
         auto* avOwner = player ? player->AsActorValueOwner() : nullptr;
@@ -279,34 +283,45 @@ namespace Isekai::SkillTree {
                    : 0;
     }
 
+    bool ConvertSoul() {
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        auto* avOwner = player ? player->AsActorValueOwner() : nullptr;
+        if (!avOwner) {
+            return false;
+        }
+        const auto souls = static_cast<std::int32_t>(avOwner->GetBaseActorValue(AV::kDragonSouls));
+        if (souls < 1) {
+            return false;
+        }
+        avOwner->SetBaseActorValue(AV::kDragonSouls, static_cast<float>(souls - 1));
+        GrantSystemPoints(kSoulExchangeRate);
+        Sounds::Play(Sounds::Sfx::ButtonClick);
+        logger::info("SkillTree: converted 1 soul -> {} points", kSoulExchangeRate);
+        return true;
+    }
+
     bool TryUnlock(std::uint32_t a_key) {
         const auto* node = Find(a_key);
         if (!node || IsUnlocked(a_key) || !PrereqsMet(a_key)) {
             return false;
         }
 
-        auto* player = RE::PlayerCharacter::GetSingleton();
-        auto* avOwner = player ? player->AsActorValueOwner() : nullptr;
-        if (!avOwner) {
+        auto& state = GetState();
+        if (state.systemPoints < node->cost) {
             return false;
         }
-
-        const auto souls = static_cast<std::int32_t>(avOwner->GetBaseActorValue(AV::kDragonSouls));
-        if (souls < node->cost) {
-            return false;
-        }
-        avOwner->SetBaseActorValue(AV::kDragonSouls, static_cast<float>(souls - node->cost));
+        state.systemPoints -= node->cost;
 
         {
             std::scoped_lock lock(g_mutex);
-            GetState().unlockedNodes.push_back(a_key);
+            state.unlockedNodes.push_back(a_key);
         }
 
         ApplyEffect(*node);
         Passives::Refresh();
         Sounds::Play(Sounds::Sfx::LevelUp);
 
-        logger::info("SkillTree: unlocked '{}' for {} soul(s)", node->name, node->cost);
+        logger::info("SkillTree: unlocked '{}' for {} point(s)", node->name, node->cost);
         return true;
     }
 
