@@ -6,6 +6,7 @@
 #include "System.h"
 #include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
+#include "UI/SkillTreeWindow.h"
 #include "UI/SystemWindow.h"
 
 #include <algorithm>
@@ -317,7 +318,7 @@ namespace Isekai::Progression {
         void ShowStatusPanel() {
             // Never replace a live panel: opening over the blessing selection would
             // throw away its callback, and the reincarnation would hang half-finished.
-            if (UI::IsSystemWindowOpen()) {
+            if (UI::IsSystemWindowOpen() || UI::IsSkillTreeOpen()) {
                 return;
             }
 
@@ -365,21 +366,32 @@ namespace Isekai::Progression {
             // (menu-on-menu, biped slot conflicts, phantom heal visuals); a button in
             // our own UI has none of those problems — after the panel closes there is
             // no menu in the way, and the chest opens directly into gameplay.
-            std::vector<UI::Choice>  choices;
-            std::function<void(int)> onSelect = [](int) {};
-            if (Storage::Available()) {
-                choices = { { "STORAGE",
-                              "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\spells_03_frame.png",
-                              /*iconOnly=*/true },
-                            { "CLOSE", {} } };
-                onSelect = [](int a_idx) {
-                    if (a_idx == 0) {
-                        Storage::Open();
-                    }
-                };
-            } else {
-                choices = { { "CLOSE", {} } };
+            // Icon actions stack top-right; their callback indices follow their
+            // position in the list. The tree is open to every reincarnated soul
+            // (NORMAL earns souls through milestones too); the storage stays a
+            // blessing privilege.
+            std::vector<UI::Choice>            choices;
+            std::vector<std::function<void()>> actions;
+
+            if (GetState().reincarnated) {
+                choices.push_back({ "SKILL TREE",
+                                    "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\spells_38_frame.png",
+                                    /*iconOnly=*/true });
+                actions.emplace_back([]() { UI::ShowSkillTree(); });
             }
+            if (Storage::Available()) {
+                choices.push_back({ "STORAGE",
+                                    "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\spells_03_frame.png",
+                                    /*iconOnly=*/true });
+                actions.emplace_back([]() { Storage::Open(); });
+            }
+            choices.push_back({ "CLOSE", {} });
+
+            auto onSelect = [actions = std::move(actions)](int a_idx) {
+                if (a_idx >= 0 && static_cast<std::size_t>(a_idx) < actions.size()) {
+                    actions[static_cast<std::size_t>(a_idx)]();
+                }
+            };
 
             // Instant reveal: this is a ledger, not a story beat — nobody wants to
             // watch half a minute of typewriter before they can read their own stats.

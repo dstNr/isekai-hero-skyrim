@@ -44,6 +44,9 @@ namespace Isekai {
         // The dimensional storage chest reference, created at runtime on first use
         // (see Storage.cpp). 0 = not created yet.
         std::uint32_t storageChest = 0;
+
+        // Skill tree nodes bought with dragon souls, by their stable key.
+        std::vector<std::uint32_t> unlockedNodes;
     };
 
     [[nodiscard]] State& GetState();

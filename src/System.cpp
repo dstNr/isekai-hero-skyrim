@@ -3,6 +3,7 @@
 #include "Passives.h"
 #include "Plugin.h"
 #include "Progression.h"
+#include "SkillTree.h"
 #include "Sounds.h"
 #include "Storage.h"
 #include "UI/LevelUpEffect.h"
@@ -24,7 +25,7 @@ namespace Isekai {
         // --- Co-save serialization IDs ---
         constexpr std::uint32_t kSerID = 'ISKA';    // unique plugin id
         constexpr std::uint32_t kRecState = 'STAT';  // record tag
-        constexpr std::uint32_t kVersion = 4;        // bumped: storage chest ref added
+        constexpr std::uint32_t kVersion = 5;        // bumped: skill tree nodes added
 
         void SystemMsg(const char* a_text) {
             RE::DebugNotification(a_text);
@@ -250,8 +251,14 @@ namespace Isekai {
                 a_intf->WriteRecordData(key);
             }
 
-            logger::info("State saved (reincarnated={}, milestones={})", g_state.reincarnated,
-                         count);
+            const auto nodes = static_cast<std::uint32_t>(g_state.unlockedNodes.size());
+            a_intf->WriteRecordData(nodes);
+            for (const auto key : g_state.unlockedNodes) {
+                a_intf->WriteRecordData(key);
+            }
+
+            logger::info("State saved (reincarnated={}, milestones={}, nodes={})",
+                         g_state.reincarnated, count, nodes);
         }
 
         void LoadCallback(SKSE::SerializationInterface* a_intf) {
@@ -263,10 +270,10 @@ namespace Isekai {
                 if (type != kRecState) {
                     continue;
                 }
-                // v3 is still readable (it simply predates the storage chest); anything
-                // else is skipped rather than misread. The player then loses the
-                // System's memory of past milestones, not their character.
-                if (version != kVersion && version != 3) {
+                // Older layouts stay readable (each version only appended fields);
+                // anything unknown is skipped rather than misread. The player then
+                // loses the System's memory, not their character.
+                if (version < 3 || version > kVersion) {
                     logger::warn("Save holds state version {} but we speak {} — ignoring it",
                                  version, kVersion);
                     continue;
@@ -296,10 +303,23 @@ namespace Isekai {
                     a_intf->ReadRecordData(key);
                     g_state.grantedMilestones.push_back(key);
                 }
+
+                g_state.unlockedNodes.clear();
+                if (version >= 5) {
+                    std::uint32_t nodes = 0;
+                    a_intf->ReadRecordData(nodes);
+                    g_state.unlockedNodes.reserve(nodes);
+                    for (std::uint32_t i = 0; i < nodes; ++i) {
+                        std::uint32_t key = 0;
+                        a_intf->ReadRecordData(key);
+                        g_state.unlockedNodes.push_back(key);
+                    }
+                }
             }
 
-            logger::info("State loaded (reincarnated={}, milestones={})", g_state.reincarnated,
-                         g_state.grantedMilestones.size());
+            logger::info("State loaded (reincarnated={}, milestones={}, nodes={})",
+                         g_state.reincarnated, g_state.grantedMilestones.size(),
+                         g_state.unlockedNodes.size());
         }
 
         void RevertCallback(SKSE::SerializationInterface*) {
@@ -332,6 +352,9 @@ namespace Isekai {
             case SKSE::MessagingInterface::kPostLoadGame:
             case SKSE::MessagingInterface::kNewGame:
                 Progression::CatchUpOnLoad();
+                // Knowledge unlocks and the shout-cooldown value are re-derived from
+                // the unlocked node list, same reasoning as the ability magnitudes.
+                SkillTree::ApplyOnLoad();
                 // Ability magnitudes live in the plugin, not the save, so they come back
                 // as whatever the ESP says (zero) on every load. Rebuild them from the
                 // milestones the save *does* remember.

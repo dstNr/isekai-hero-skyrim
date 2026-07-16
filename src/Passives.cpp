@@ -2,6 +2,7 @@
 
 #include "Plugin.h"
 #include "Progression.h"
+#include "SkillTree.h"
 
 #include <map>
 #include <vector>
@@ -164,11 +165,13 @@ namespace Isekai::Passives {
             return;
         }
 
-        // Total up what the earned milestones are worth, per actor value.
+        // Total up what the earned milestones are worth, per actor value —
+        // plus the flat bonuses from skill tree nodes bought with dragon souls.
         std::map<RE::ActorValue, float> totals;
         for (const auto* passive : Progression::EarnedPassives()) {
             totals[passive->actorValue] += Progression::PassiveAmount(*passive);
         }
+        SkillTree::AccumulateBonuses(totals);
 
         for (auto& [av, ability] : g_abilities) {
             const auto it = totals.find(av);

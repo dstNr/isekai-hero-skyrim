@@ -2,6 +2,7 @@
 
 #include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
+#include "UI/SkillTreeWindow.h"
 #include "UI/Style.h"
 #include "UI/SystemWindow.h"
 
@@ -136,6 +137,7 @@ namespace Isekai::UI {
                 // drawn before the cursor so it can never sit on top of it.
                 DrawLevelUpEffect();
                 DrawSystemWindow();
+                DrawSkillTree();
 
                 // Only while we own the input, and above everything else — otherwise
                 // it would sit on screen next to Skyrim's own cursor whenever the game
@@ -155,7 +157,32 @@ namespace Isekai::UI {
     }
 
     bool IsCapturingInput() {
-        return IsSystemWindowOpen();
+        return IsSystemWindowOpen() || IsSkillTreeOpen();
+    }
+
+    void SetGameHold(bool a_hold) {
+        // Deliberately NOT ControlMap::ToggleControls: that corrupted the input
+        // system (see the git history around the post-panel crash). These two are
+        // plain scalars — the pause counter a vanilla menu bumps, and the flag that
+        // stops PlayerControls from feeding its handlers.
+        static bool held = false;
+        if (a_hold == held) {
+            return;
+        }
+        held = a_hold;
+
+        if (auto* controls = RE::PlayerControls::GetSingleton()) {
+            controls->blockPlayerInput = held;
+        }
+        if (auto* ui = RE::UI::GetSingleton()) {
+            if (held) {
+                ++ui->numPausesGame;
+            } else if (ui->numPausesGame > 0) {
+                --ui->numPausesGame;
+            }
+        }
+
+        logger::info("Game {} for System panel", held ? "paused" : "resumed");
     }
 
     void Install() {

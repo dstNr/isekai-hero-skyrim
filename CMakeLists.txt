@@ -22,6 +22,8 @@ add_commonlibsse_plugin(
         src/Plugin.h
         src/Progression.cpp
         src/Progression.h
+        src/SkillTree.cpp
+        src/SkillTree.h
         src/Sounds.cpp
         src/Sounds.h
         src/Storage.cpp
@@ -34,6 +36,8 @@ add_commonlibsse_plugin(
         src/UI/LevelUpEffect.h
         src/UI/Overlay.cpp
         src/UI/Overlay.h
+        src/UI/SkillTreeWindow.cpp
+        src/UI/SkillTreeWindow.h
         src/UI/Style.h
         src/UI/SystemWindow.cpp
         src/UI/SystemWindow.h

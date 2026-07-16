@@ -1,6 +1,7 @@
 #include "UI/SystemWindow.h"
 
 #include "Sounds.h"
+#include "UI/Overlay.h"
 #include "UI/Style.h"
 #include "UI/Textures.h"
 
@@ -33,42 +34,6 @@ namespace Isekai::UI {
 
         constexpr float kFadeInSeconds = 0.30f;
 
-        // Hold the world still while a panel is up.
-        //
-        // Deliberately NOT ControlMap::ToggleControls: that corrupted the input
-        // system. The game kept running fine until the player regained control, then
-        // crashed indexing controlMap[]/devices[] with a garbage index — proven by
-        // bisection (the crash disappears with the ToggleControls call removed, and
-        // reproduced even for the blessing that writes no stats at all).
-        //
-        // These two do the same job without going near those arrays:
-        //   numPausesGame    — the very counter a vanilla menu bumps to pause the
-        //                      game. Freezes the world, so nothing swings or attacks.
-        //   blockPlayerInput — stops PlayerControls from feeding its handlers.
-        // Both are plain scalars. Bounded by g_paused so the pause count stays even.
-        bool g_paused = false;
-
-        // Main thread only.
-        void SetGameInputEnabled(bool a_enable) {
-            if (a_enable == !g_paused) {
-                return;  // already in the requested state
-            }
-            g_paused = !a_enable;
-
-            if (auto* controls = RE::PlayerControls::GetSingleton()) {
-                controls->blockPlayerInput = g_paused;
-            }
-            if (auto* ui = RE::UI::GetSingleton()) {
-                if (g_paused) {
-                    ++ui->numPausesGame;
-                } else if (ui->numPausesGame > 0) {
-                    --ui->numPausesGame;
-                }
-            }
-
-            logger::info("Game {} for System panel", g_paused ? "paused" : "resumed");
-        }
-
         // Called from the render thread once a button was clicked. Hands the answer
         // back to the main thread, where touching game state is legal.
         void Answer(int a_index) {
@@ -91,7 +56,7 @@ namespace Isekai::UI {
                     Sounds::Play(multiChoice ? Sounds::Sfx::ButtonClick
                                              : Sounds::Sfx::WindowClose);
 
-                    SetGameInputEnabled(true);
+                    SetGameHold(false);
                     if (fn) {
                         fn(a_index);
                     }
@@ -346,7 +311,7 @@ namespace Isekai::UI {
             g_win.elapsed = 0.0f;
         }
         Sounds::Play(Sounds::Sfx::WindowOpen);
-        SetGameInputEnabled(false);
+        SetGameHold(true);
         g_open.store(true, std::memory_order_release);
     }
 
