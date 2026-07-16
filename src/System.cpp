@@ -199,10 +199,40 @@ namespace Isekai {
             return true;
         }
 
+        // The cell the player was FIRST ready in. 0 = not seen yet.
+        RE::FormID g_firstReadyCell = 0;
+
         void TryTrigger() {
             if (g_state.reincarnated || !IsPlayerReady()) {
                 return;
             }
+
+            // "Ready" alone is not "in the game world". Character-creation start
+            // rooms (NYA, Alternate Start, ...) hand the player full control while
+            // they are still picking a face — the System fired the moment the room
+            // spawned. The tell: those rooms are interiors, and the real start
+            // arrives via a teleport out of them. So: if the first cell the player
+            // is ready in is an exterior, fire right away (vanilla starts, coc);
+            // if it is an interior, hold until the player reaches a DIFFERENT cell.
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            auto* cell = player ? player->GetParentCell() : nullptr;
+            if (!cell) {
+                return;
+            }
+
+            if (g_firstReadyCell == 0) {
+                g_firstReadyCell = cell->GetFormID();
+                if (cell->IsInteriorCell()) {
+                    logger::info(
+                        "Reincarnation armed, holding: first ready in interior {:#x} "
+                        "(likely a chargen room) — waiting for a cell change",
+                        g_firstReadyCell);
+                    return;
+                }
+            } else if (cell->GetFormID() == g_firstReadyCell && cell->IsInteriorCell()) {
+                return;  // still in the start room
+            }
+
             BeginReincarnation();
         }
 
@@ -336,6 +366,7 @@ namespace Isekai {
 
         void RevertCallback(SKSE::SerializationInterface*) {
             g_state = State{};
+            g_firstReadyCell = 0;  // the next game gets a fresh chargen-room detection
             logger::info("State reverted to defaults (new game / pre-load)");
         }
 
