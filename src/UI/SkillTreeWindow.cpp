@@ -148,6 +148,10 @@ namespace Isekai::UI {
             const std::string points = "SYSTEM POINTS   " + std::to_string(SkillTree::Points());
             dl->AddText(ImVec2{ wMin.x + 28.0f * s, sepY + 12.0f * s },
                         Style::Col(Style::kAccent, fade), points.c_str());
+            const std::string perks = "PERK POINTS     " + std::to_string(SkillTree::PerkPool()) +
+                                      " / 127";
+            dl->AddText(ImVec2{ wMin.x + 28.0f * s, sepY + 38.0f * s },
+                        Style::Col(Style::kTextDim, fade), perks.c_str());
 
             // --- The graph ---
             const ImVec2 origin{ wMin.x, wMin.y + kCanvasTop * s };
@@ -256,6 +260,10 @@ namespace Isekai::UI {
                         statusCol = Style::Col(Style::kAccent, fade);
                     } else if (!SkillTree::PrereqsMet(node->key)) {
                         status = "LOCKED — requires a connected node";
+                        statusCol = Style::Col(Style::kTextDim, fade);
+                    } else if (node->effect == SkillTree::Effect::kPerkPoint &&
+                               SkillTree::PerkPool() >= 127) {
+                        status = "PERK POOL FULL — spend some perk points first";
                         statusCol = Style::Col(Style::kTextDim, fade);
                     } else {
                         status = "COST   " + std::to_string(node->cost) + " system point(s)";

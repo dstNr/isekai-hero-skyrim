@@ -13,6 +13,7 @@ namespace Isekai::SkillTree {
         kAllEnchantments,  // every enchantment known, no disenchanting needed
         kAllIngredients,   // all four effects of every ingredient known
         kAllSpells,        // every spell that has a tome
+        kPerkPoint,        // +1 perk point — REPEATABLE, never enters unlockedNodes
     };
 
     struct Bonus {
@@ -41,6 +42,10 @@ namespace Isekai::SkillTree {
     // The tree's currency: System Points (docs/IDEAS.md) — paid by milestones,
     // seeded by the blessing, uncapped. Dragon souls stay out of the tree entirely.
     [[nodiscard]] std::int32_t Points();
+
+    // The player's unspent perk points (engine-capped at 127) — shown in the tree
+    // header because the Perk Synthesis node feeds this pool.
+    [[nodiscard]] std::int32_t PerkPool();
 
     // Spend points and unlock. Main thread only. False if locked/unaffordable/unknown.
     bool TryUnlock(std::uint32_t a_key);
