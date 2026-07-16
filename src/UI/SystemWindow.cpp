@@ -87,10 +87,22 @@ namespace Isekai::UI {
             ImGui::SetNextWindowPos(ImVec2{ screen.x * 0.5f, screen.y * 0.45f }, ImGuiCond_Always,
                                     ImVec2{ 0.5f, 0.5f });
             ImGui::SetNextWindowSize(ImVec2{ width, 0.0f }, ImGuiCond_Always);
+
+            // The icon actions are drawn at absolute positions, so the height
+            // automatics know nothing about them — a panel with little text would end
+            // above the icon stack and leave it dangling outside the frame. Reserve
+            // enough height for title, the full stack, and the button row.
+            std::size_t iconActions = 0;
+            for (const auto& c : g_win.choices) {
+                iconActions += c.iconOnly ? 1 : 0;
+            }
+            const float minHeight =
+                iconActions > 0 ? (192.0f + 86.0f * static_cast<float>(iconActions)) * s : 0.0f;
+
             // Auto-height, but never past the screen: a long status listing clamps here
             // and scrolls instead (the mouse wheel is already wired through the input
             // sink). Without the clamp the panel would simply grow off the screen.
-            ImGui::SetNextWindowSizeConstraints(ImVec2{ width, 0.0f },
+            ImGui::SetNextWindowSizeConstraints(ImVec2{ width, minHeight },
                                                 ImVec2{ width, screen.y * 0.85f });
 
             ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -294,6 +306,27 @@ namespace Isekai::UI {
 
     bool IsSystemWindowOpen() {
         return g_open.load(std::memory_order_acquire);
+    }
+
+    void DismissSystemWindow() {
+        if (!IsSystemWindowOpen()) {
+            return;
+        }
+
+        int         lastText = -1;
+        std::size_t textCount = 0;
+        {
+            std::scoped_lock lock(g_mutex);
+            for (std::size_t i = 0; i < g_win.choices.size(); ++i) {
+                if (!g_win.choices[i].iconOnly) {
+                    ++textCount;
+                    lastText = static_cast<int>(i);
+                }
+            }
+        }
+        if (textCount == 1 && lastText >= 0) {
+            Answer(lastText);
+        }
     }
 
     void ShowSystemWindow(std::string a_title, std::string a_body,

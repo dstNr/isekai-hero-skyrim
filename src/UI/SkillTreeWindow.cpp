@@ -77,6 +77,12 @@ namespace Isekai::UI {
         return g_open.load(std::memory_order_acquire);
     }
 
+    void DismissSkillTree() {
+        if (IsSkillTreeOpen()) {
+            RequestClose();
+        }
+    }
+
     void ShowSkillTree() {
         g_elapsed = 0.0f;
         g_hovered = 0;

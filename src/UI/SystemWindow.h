@@ -38,6 +38,11 @@ namespace Isekai::UI {
     // True while the panel is up — i.e. while it should own mouse and keyboard.
     [[nodiscard]] bool IsSystemWindowOpen();
 
+    // ESC behaviour: dismiss the panel as if its single text button (CLOSE/CONTINUE)
+    // had been clicked. Panels with an actual decision to make (several text buttons,
+    // like the blessing) ignore this — ESC must not choose for the player.
+    void DismissSystemWindow();
+
     // Draw the panel. Called by the overlay once per frame, inside an ImGui frame.
     void DrawSystemWindow();
 }

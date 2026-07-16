@@ -1,6 +1,8 @@
 #include "UI/Input.h"
 
 #include "UI/Overlay.h"
+#include "UI/SkillTreeWindow.h"
+#include "UI/SystemWindow.h"
 
 #include <imgui.h>
 
@@ -158,6 +160,49 @@ namespace Isekai::UI {
         };
     }
 
+    namespace {
+        // Sits at the front of MenuControls' handler chain and eats button events
+        // while one of our panels is open. blockPlayerInput only silences the
+        // player-control handlers — the journal/tween menu opens through THIS chain,
+        // which is why ESC used to punch straight through the System panel into
+        // Skyrim's own menu. ESC and Tab dismiss our panel instead.
+        class MenuGuard : public RE::MenuEventHandler {
+        public:
+            static MenuGuard* GetSingleton() {
+                static MenuGuard singleton;
+                return std::addressof(singleton);
+            }
+
+            bool CanProcess(RE::InputEvent* a_event) override {
+                return IsCapturingInput() && a_event &&
+                       a_event->GetEventType() == RE::INPUT_EVENT_TYPE::kButton;
+            }
+
+            bool ProcessButton(RE::ButtonEvent* a_event) override {
+                if (!IsCapturingInput()) {
+                    return false;
+                }
+
+                constexpr std::uint32_t kEsc = 0x01;  // DIK_ESCAPE
+                constexpr std::uint32_t kTab = 0x0F;  // DIK_TAB
+                if (a_event->IsDown() && a_event->GetDevice() == RE::INPUT_DEVICE::kKeyboard &&
+                    (a_event->GetIDCode() == kEsc || a_event->GetIDCode() == kTab)) {
+                    if (IsSkillTreeOpen()) {
+                        DismissSkillTree();
+                    } else {
+                        DismissSystemWindow();
+                    }
+                }
+                // Consumed either way: whatever this key means to the game's menus,
+                // it must not fire underneath ours.
+                return true;
+            }
+
+        private:
+            MenuGuard() = default;
+        };
+    }
+
     void RegisterHotkey(std::uint32_t a_scanCode, std::function<void()> a_fn) {
         std::scoped_lock lock(g_hotkeyMutex);
         g_hotkeys[a_scanCode] = std::move(a_fn);
@@ -169,6 +214,11 @@ namespace Isekai::UI {
             logger::info("UI: hooked Skyrim's input event stream");
         } else {
             logger::error("UI: no input device manager — the overlay will not take clicks");
+        }
+
+        if (auto* menuControls = RE::MenuControls::GetSingleton()) {
+            menuControls->AddHandler(MenuGuard::GetSingleton());
+            logger::info("UI: menu guard armed — ESC stays ours while a panel is open");
         }
     }
 
