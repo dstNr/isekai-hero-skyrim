@@ -9,21 +9,19 @@ namespace Isekai::Sounds {
     namespace {
         // Local FormIDs of the SNDR records in IsekaiHero.esp, in Sfx order.
         //
-        // Zero = not created yet; Play() then just stays silent. Sound descriptors
-        // carry neither an editor ID nor a name at runtime, and their file paths are
-        // stored as CRC hashes — so the records are mapped by creation order and the
-        // IDs filled in from the form dump, like the ability spells before them.
+        // Read straight out of the plugin file (the SNDR records carry their editor
+        // ID and WAV path right there), so each ID below is provably the sound it
+        // claims to be — no reliance on creation order:
         //
-        // CK creation order (see docs/CREATION_KIT_ESP.md, Teil E):
-        //   1. LevelUp      Cinematic_6_1.wav
-        //   2. WindowOpen   Cinematic_7_2.wav
-        //   3. ButtonClick  Modern_2_2.wav
-        //   4. WindowClose  Modern_5_2.wav
+        //   0x001DBF  IsekaiSND_LevelUp      fx\isekai\Cinematic_6_1.wav
+        //   0x001DC0  IsekaiSND_WindowOpen   fx\isekai\Cinematic_7_2.wav
+        //   0x001DC1  IsekaiSND_ButtonClick  fx\isekai\Modern_2_2.wav
+        //   0x001DC2  IsekaiSND_WindowClose  fx\isekai\Modern_5_2.wav
         constexpr std::array<RE::FormID, 4> kFormIDs = {
-            0x000000,  // LevelUp
-            0x000000,  // WindowOpen
-            0x000000,  // ButtonClick
-            0x000000,  // WindowClose
+            0x001DBF,  // LevelUp
+            0x001DC0,  // WindowOpen
+            0x001DC1,  // ButtonClick
+            0x001DC2,  // WindowClose
         };
 
         std::array<RE::BGSSoundDescriptorForm*, 4> g_descriptors{};
