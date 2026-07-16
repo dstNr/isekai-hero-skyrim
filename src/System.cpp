@@ -103,7 +103,6 @@ namespace Isekai {
 
             GrantPerkPoints(b.perkPoints);
             GrantDragonSouls(b.dragonSouls);
-            Storage::EnsureToken();  // HERO and ASCENDED get the storage; NORMAL does not
 
             // Gold (Gold001 = 0x0000000F).
             if (b.gold > 0) {
@@ -336,8 +335,6 @@ namespace Isekai {
                 // as whatever the ESP says (zero) on every load. Rebuild them from the
                 // milestones the save *does* remember.
                 Passives::Refresh();
-                // Characters blessed before the token existed receive theirs now.
-                Storage::EnsureToken();
                 break;
 
             default:

@@ -10,12 +10,11 @@
 namespace Isekai::Storage {
 
     namespace {
-        // Forms in IsekaiHero.esp, read out of the plugin file itself.
-        constexpr RE::FormID kContainerBase = 0x000D7A;  // CONT "Dimensional Storage"
-        constexpr RE::FormID kTokenID = 0x001DC3;        // ALCH "Dimensional Storage" token
+        // The container base object in IsekaiHero.esp ("Dimensional Storage",
+        // read out of the plugin file itself).
+        constexpr RE::FormID kContainerBase = 0x000D7A;
 
         RE::TESObjectCONT* g_base = nullptr;
-        RE::AlchemyItem*   g_token = nullptr;
 
         // What the crafting menu borrowed from storage, per base object. Never
         // persisted: the crafting menu pauses the game and cannot outlive a session.
@@ -150,68 +149,16 @@ namespace Isekai::Storage {
         private:
             CraftWatcher() = default;
         };
+    }
 
-        // ------------------------------------------------------------------
-        // The token: an effect-less ALCH item, "used" from the inventory like a
-        // potion. Consuming it fires TESEquipEvent; the token is handed back
-        // immediately, so it never actually runs out.
-        //
-        // Deliberately not a ring or any other wearable: equipping touches biped
-        // slots, and every slot is contested territory between mods (cloaks,
-        // bandoliers, ...). Consumption touches no slot at all — zero conflict
-        // surface. The record's name and model are still free, so it does not have
-        // to look like a potion; only the inventory category says so.
-        // ------------------------------------------------------------------
-
-        class TokenWatcher : public RE::BSTEventSink<RE::TESEquipEvent> {
-        public:
-            static TokenWatcher* GetSingleton() {
-                static TokenWatcher singleton;
-                return std::addressof(singleton);
-            }
-
-            RE::BSEventNotifyControl ProcessEvent(
-                const RE::TESEquipEvent*                a_event,
-                RE::BSTEventSource<RE::TESEquipEvent>*) override {
-                if (!a_event || !g_token || !a_event->equipped ||
-                    a_event->baseObject != g_token->GetFormID() ||
-                    a_event->actor.get() != RE::PlayerCharacter::GetSingleton()) {
-                    return RE::BSEventNotifyControl::kContinue;
-                }
-
-                if (auto* task = SKSE::GetTaskInterface()) {
-                    task->AddTask([]() {
-                        // Hand the consumed token straight back before opening.
-                        if (auto* player = RE::PlayerCharacter::GetSingleton(); player && g_token) {
-                            player->AddObjectToContainer(g_token, nullptr, 1, nullptr);
-                        }
-
-                        // The token is used from inside the inventory, and activating a
-                        // world object is a dead letter while a menu holds the game:
-                        // everything ran, the chest even got created — and no container
-                        // menu ever appeared. So: close the inventory, give its teardown
-                        // a beat to finish, then open the chest.
-                        if (auto* queue = RE::UIMessageQueue::GetSingleton()) {
-                            queue->AddMessage(RE::InventoryMenu::MENU_NAME,
-                                              RE::UI_MESSAGE_TYPE::kHide, nullptr);
-                        }
-                        DelayedMainThread(250, []() { Open(); });
-                    });
-                }
-                return RE::BSEventNotifyControl::kContinue;
-            }
-
-        private:
-            TokenWatcher() = default;
-        };
+    bool Available() {
+        return g_base != nullptr && IsEligible();
     }
 
     void Open() {
-        auto* ui = RE::UI::GetSingleton();
-        if (UI::IsSystemWindowOpen() || !ui) {
+        if (UI::IsSystemWindowOpen()) {
             return;
         }
-
         if (!IsEligible()) {
             RE::DebugNotification("[ SYSTEM ] ACCESS DENIED — dimensional storage requires a blessing.");
             return;
@@ -238,23 +185,6 @@ namespace Isekai::Storage {
         chest->ActivateRef(player, 0, nullptr, 1, false);
     }
 
-    void EnsureToken() {
-        if (!g_token || !IsEligible()) {
-            return;
-        }
-        auto* player = RE::PlayerCharacter::GetSingleton();
-        if (!player) {
-            return;
-        }
-
-        const auto held = player->GetInventoryCounts();
-        const auto it = held.find(g_token);
-        if (it == held.end() || it->second <= 0) {
-            player->AddObjectToContainer(g_token, nullptr, 1, nullptr);
-            logger::info("Storage: token handed to the player");
-        }
-    }
-
     void Install() {
         if (!Plugin::IsLoaded()) {
             logger::warn("Storage: {} not loaded — dimensional storage is off",
@@ -263,32 +193,17 @@ namespace Isekai::Storage {
         }
 
         auto* data = RE::TESDataHandler::GetSingleton();
-        if (!data) {
-            return;
-        }
-
-        g_base = data->LookupForm<RE::TESObjectCONT>(kContainerBase, Plugin::kFileName);
+        g_base = data ? data->LookupForm<RE::TESObjectCONT>(kContainerBase, Plugin::kFileName)
+                      : nullptr;
         if (!g_base) {
             logger::error("Storage: no container {:#08x} in {}", kContainerBase,
                           Plugin::kFileName);
             return;
         }
 
-        if (kTokenID != 0) {
-            g_token = data->LookupForm<RE::AlchemyItem>(kTokenID, Plugin::kFileName);
-        }
-        if (g_token) {
-            if (auto* events = RE::ScriptEventSourceHolder::GetSingleton()) {
-                events->AddEventSink<RE::TESEquipEvent>(TokenWatcher::GetSingleton());
-            }
-            logger::info("Storage: token wired — usable from the inventory");
-        } else {
-            logger::warn("Storage: token record missing — storage unreachable until it exists");
-        }
-
         if (auto* ui = RE::UI::GetSingleton()) {
             ui->AddEventSink<RE::MenuOpenCloseEvent>(CraftWatcher::GetSingleton());
-            logger::info("Storage: crafting menus now borrow the storage inventory");
         }
+        logger::info("Storage: reachable via the System panel; crafting borrows its inventory");
     }
 }

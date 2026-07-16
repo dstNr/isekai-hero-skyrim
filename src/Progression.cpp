@@ -2,6 +2,7 @@
 
 #include "Passives.h"
 #include "Sounds.h"
+#include "Storage.h"
 #include "System.h"
 #include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
@@ -359,12 +360,30 @@ namespace Isekai::Progression {
                 body += "\nNo deeds recognised yet.";
             }
 
+            // The storage lives behind a panel button, not an inventory item. Earlier
+            // attempts as a consumable token and as a ring both fought the engine
+            // (menu-on-menu, biped slot conflicts, phantom heal visuals); a button in
+            // our own UI has none of those problems — after the panel closes there is
+            // no menu in the way, and the chest opens directly into gameplay.
+            std::vector<std::string>  choices;
+            std::function<void(int)>  onSelect = [](int) {};
+            if (Storage::Available()) {
+                choices = { "STORAGE", "CLOSE" };
+                onSelect = [](int a_idx) {
+                    if (a_idx == 0) {
+                        Storage::Open();
+                    }
+                };
+            } else {
+                choices = { "CLOSE" };
+            }
+
             // Instant reveal: this is a ledger, not a story beat — nobody wants to
             // watch half a minute of typewriter before they can read their own stats.
             // Wider than the story panels: the ledger rows run to ~70 monospace
             // characters, and at the default width the quest names wrapped mid-word.
-            UI::ShowSystemWindow("[ SYSTEM ] STATUS", std::move(body), { "CLOSE" }, [](int) {},
-                                 100000.0f, 980.0f);
+            UI::ShowSystemWindow("[ SYSTEM ] STATUS", std::move(body), std::move(choices),
+                                 std::move(onSelect), 100000.0f, 980.0f);
         }
 
         // F11: pay out the next milestone still owed, exactly as a real quest would.
