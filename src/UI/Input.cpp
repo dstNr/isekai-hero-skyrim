@@ -174,32 +174,49 @@ namespace Isekai::UI {
             }
 
             bool CanProcess(RE::InputEvent* a_event) override {
-                return IsCapturingInput() && a_event &&
-                       a_event->GetEventType() == RE::INPUT_EVENT_TYPE::kButton;
+                if (!a_event || a_event->GetEventType() != RE::INPUT_EVENT_TYPE::kButton) {
+                    return false;
+                }
+                return IsCapturingInput() || s_swallowDismissKey;
             }
 
             bool ProcessButton(RE::ButtonEvent* a_event) override {
-                if (!IsCapturingInput()) {
-                    return false;
-                }
-
                 constexpr std::uint32_t kEsc = 0x01;  // DIK_ESCAPE
                 constexpr std::uint32_t kTab = 0x0F;  // DIK_TAB
-                if (a_event->IsDown() && a_event->GetDevice() == RE::INPUT_DEVICE::kKeyboard &&
-                    (a_event->GetIDCode() == kEsc || a_event->GetIDCode() == kTab)) {
-                    if (IsSkillTreeOpen()) {
-                        DismissSkillTree();
-                    } else {
-                        DismissSystemWindow();
+                const bool dismissKey =
+                    a_event->GetDevice() == RE::INPUT_DEVICE::kKeyboard &&
+                    (a_event->GetIDCode() == kEsc || a_event->GetIDCode() == kTab);
+
+                if (IsCapturingInput()) {
+                    if (dismissKey && a_event->IsDown()) {
+                        if (IsSkillTreeOpen()) {
+                            DismissSkillTree();
+                        } else {
+                            DismissSystemWindow();
+                        }
+                        // The panel closes on the key's DOWN — but Skyrim's journal
+                        // listens for its release. By the time the UP arrives, we no
+                        // longer capture, the up sailed through, and the journal opened
+                        // "right as the System menu closed". So the key that dismissed
+                        // a panel stays swallowed until it is actually let go.
+                        s_swallowDismissKey = true;
                     }
+                    return true;  // consumed: nothing may fire underneath our panel
                 }
-                // Consumed either way: whatever this key means to the game's menus,
-                // it must not fire underneath ours.
-                return true;
+
+                if (s_swallowDismissKey && dismissKey) {
+                    if (a_event->IsUp()) {
+                        s_swallowDismissKey = false;
+                    }
+                    return true;  // still draining the dismissing key
+                }
+                return false;  // not ours — let the chain have it
             }
 
         private:
             MenuGuard() = default;
+
+            static inline bool s_swallowDismissKey = false;
         };
     }
 
