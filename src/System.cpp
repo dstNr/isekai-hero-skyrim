@@ -103,6 +103,7 @@ namespace Isekai {
 
             GrantPerkPoints(b.perkPoints);
             GrantDragonSouls(b.dragonSouls);
+            Storage::GrantStartingMaterials();  // crafting stock, HERO/ASCENDED only
 
             // Gold (Gold001 = 0x0000000F).
             if (b.gold > 0) {

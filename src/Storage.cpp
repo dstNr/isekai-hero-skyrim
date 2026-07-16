@@ -155,6 +155,83 @@ namespace Isekai::Storage {
         return g_base != nullptr && IsEligible();
     }
 
+    void GrantStartingMaterials() {
+        if (!IsEligible()) {
+            return;  // NORMAL has no storage, and nothing to put in one
+        }
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        auto* chest = player ? GetOrCreateChest(player) : nullptr;
+        auto* data = RE::TESDataHandler::GetSingleton();
+        if (!chest || !data) {
+            return;
+        }
+
+        // Every FormID below was read out of Skyrim.esm itself (MISC/SLGM groups),
+        // not quoted from memory. Base counts are the NORMAL scale; the blessing
+        // multiplies them (HERO x2 -> 1000 each, ASCENDED x4 -> 2000 each).
+        struct Entry {
+            RE::FormID   id;
+            std::int32_t base;
+        };
+        constexpr Entry kMaterials[] = {
+            { 0x0005ACE4, 500 },  // IngotIron
+            { 0x0005ACE5, 500 },  // IngotSteel
+            { 0x0005AD93, 500 },  // IngotCorundum
+            { 0x0005AD99, 500 },  // IngotOrichalcum
+            { 0x000DB8A2, 500 },  // IngotDwarven
+            { 0x0005AD9F, 500 },  // IngotIMoonstone (refined moonstone)
+            { 0x0005ADA0, 500 },  // IngotQuicksilver
+            { 0x0005ADA1, 500 },  // IngotMalachite
+            { 0x0005AD9D, 500 },  // IngotEbony
+            { 0x0005AD9E, 500 },  // IngotGold
+            { 0x0005ACE3, 500 },  // ingotSilver
+            { 0x000DB5D2, 500 },  // Leather01
+            { 0x000800E4, 500 },  // LeatherStrips
+            { 0x0006F993, 500 },  // Firewood01
+            { 0x00033760, 500 },  // Charcoal
+            { 0x0003ADA4, 500 },  // DragonBone
+            { 0x0003ADA3, 500 },  // DragonScales
+            { 0x00063B46, 500 },  // GemAmethyst
+            { 0x00063B47, 500 },  // GemDiamond
+            { 0x00063B43, 500 },  // GemEmerald
+            { 0x00063B45, 500 },  // GemGarnet
+            { 0x00063B42, 500 },  // GemRuby
+            { 0x00063B44, 500 },  // GemSapphire
+            { 0x0006851E, 500 },  // GemAmethystFlawless
+            { 0x0006851F, 500 },  // GemDiamondFlawless
+            { 0x00068520, 500 },  // GemEmeraldFlawless
+            { 0x00068521, 500 },  // GemGarnetFlawless
+            { 0x00068522, 500 },  // gemRubyFlawless
+            { 0x00068523, 500 },  // GemSapphireFlawless
+            { 0x0002E4FF, 500 },  // SoulGemGrandFilled (for enchanting)
+        };
+        constexpr RE::FormID   kGold = 0x0000000F;   // Gold001
+        constexpr std::int32_t kGoldBase = 1'250'000;  // -> 2.5M HERO, 5M ASCENDED
+
+        const float scale = RewardScale();
+        std::size_t stocked = 0;
+
+        for (const auto& entry : kMaterials) {
+            auto* obj = data->LookupForm<RE::TESBoundObject>(entry.id, "Skyrim.esm");
+            if (!obj) {
+                logger::error("Storage: material {:#010x} missing from Skyrim.esm", entry.id);
+                continue;
+            }
+            chest->AddObjectToContainer(
+                obj, nullptr,
+                static_cast<std::int32_t>(static_cast<float>(entry.base) * scale), nullptr);
+            ++stocked;
+        }
+
+        if (auto* gold = RE::TESForm::LookupByID<RE::TESBoundObject>(kGold)) {
+            chest->AddObjectToContainer(
+                gold, nullptr,
+                static_cast<std::int32_t>(static_cast<float>(kGoldBase) * scale), nullptr);
+        }
+
+        logger::info("Storage: stocked {} material stacks + gold (scale x{})", stocked, scale);
+    }
+
     void Open() {
         if (UI::IsSystemWindowOpen()) {
             return;
