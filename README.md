@@ -107,6 +107,6 @@ when something misbehaves.
 
 ## Status
 
-🧪 **Pre-release.** Feature-complete for a first full-modlist test run;
+🧪 **Pre-release** (v0.2.0). Feature-complete for full-modlist test runs;
 balance values (starting System Points, node costs) are explicitly in a
-testing configuration.
+testing configuration. Version history in [CHANGELOG.md](CHANGELOG.md).
