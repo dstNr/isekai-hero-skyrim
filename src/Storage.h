@@ -26,6 +26,11 @@ namespace Isekai::Storage {
     // every load.
     void PruneForeignStock();
 
+    // Add any filled soul gem type the chest is currently missing. Older chests were
+    // stocked with only the grand gem; this brings existing saves up to the full set
+    // (black included) without re-adding types that are still present. Called on load.
+    void TopUpSoulGems();
+
     // --- Zero-transfer crafting support (used by CraftHooks) ---
 
     // How many of a_obj the storage chest holds (0 if no chest / not found). Read by

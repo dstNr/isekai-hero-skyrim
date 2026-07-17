@@ -4,6 +4,29 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [0.3.0] — 2026-07-17
+
+Crafting reworked to read the Dimensional Storage in place, and the storage stock
+completed. Save-safe: existing chests are topped up on load; no save format change.
+
+### Added
+- **Zero-transfer crafting.** Crafting stations now read *and consume* the
+  Dimensional Storage directly — nothing is shuttled into your inventory, so there
+  is no script-event lag and no timing race. Covers the whole forge family
+  (smithing, tempering, smelting, tanning), alchemy, and enchanting. Materials are
+  hooked in place only while you stand at a station; everything else is untouched.
+  (Technique adapted from [SCIE](https://github.com/ohfor/scie), MIT.)
+- **Every filled soul gem in storage**, black included — enumerated from the game
+  data so none is missed. Older chests are brought up to the full set on load.
+
+### Fixed
+- **All material types are available at every station.** The old lending filtered
+  by item type, so ingredient-based recipes (e.g. Daedra Hearts for Daedric
+  smithing) had no materials at the forge. The in-place hooks don't filter — if it
+  is in the chest, the recipe can use it.
+- Crafting no longer stutters when opening a station in a heavily scripted load
+  order (no more mass item shuffling).
+
 ## [0.2.1] — 2026-07-17
 
 Shout unlocking, fixed properly. No save changes — an existing save loads as-is
@@ -89,6 +112,7 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[0.3.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.3.0
 [0.2.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.2.1
 [0.2.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.2.0
 [0.1.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.1.0

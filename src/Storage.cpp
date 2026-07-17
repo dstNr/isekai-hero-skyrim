@@ -308,6 +308,36 @@ namespace Isekai::Storage {
         return ResolveChest();
     }
 
+    void TopUpSoulGems() {
+        if (!GetsStartingStock()) {
+            return;  // NORMAL keeps its empty chest
+        }
+        auto* chest = ResolveChest();
+        auto* data = RE::TESDataHandler::GetSingleton();
+        if (!chest || !data) {
+            return;
+        }
+        const float  scale = RewardScale();
+        std::size_t  added = 0;
+        for (auto* gem : data->GetFormArray<RE::TESSoulGem>()) {
+            if (!gem || (gem->GetFormID() >> 24) != 0) {
+                continue;
+            }
+            if (gem->GetContainedSoul() == RE::SOUL_LEVEL::kNone) {
+                continue;  // empty base form
+            }
+            if (ChestCount(gem) > 0) {
+                continue;  // already stocked — don't pile up
+            }
+            chest->AddObjectToContainer(
+                gem, nullptr, static_cast<std::int32_t>(500.0f * scale), nullptr);
+            ++added;
+        }
+        if (added > 0) {
+            logger::info("Storage: topped up {} missing soul gem type(s)", added);
+        }
+    }
+
     void GrantStartingMaterials() {
         if (!GetsStartingStock()) {
             return;  // NORMAL gets the chest, but empty — nothing to put in it
@@ -356,7 +386,8 @@ namespace Isekai::Storage {
             { 0x00068521, 500 },  // GemGarnetFlawless
             { 0x00068522, 500 },  // gemRubyFlawless
             { 0x00068523, 500 },  // GemSapphireFlawless
-            { 0x0002E4FF, 500 },  // SoulGemGrandFilled (for enchanting)
+            // Soul gems are stocked separately, enumerated below — one hand-picked
+            // FormID missed the black gem, which is exactly the sort of gap to avoid.
         };
         constexpr RE::FormID   kGold = 0x0000000F;   // Gold001
         constexpr std::int32_t kGoldBase = 1'250'000;  // -> 2.5M HERO, 5M ASCENDED
@@ -406,14 +437,33 @@ namespace Isekai::Storage {
             ++ingredients;
         }
 
+        // Soul gems for enchanting: every FILLED base form (petty..grand, plus the
+        // black gem), enumerated so none slips through. Empty gems can't power an
+        // enchantment, so only the pre-filled forms go in. Skyrim.esm only, same
+        // reasoning as ingredients.
+        constexpr std::int32_t kSoulGemBase = 500;
+        std::size_t            soulGems = 0;
+        for (auto* gem : data->GetFormArray<RE::TESSoulGem>()) {
+            if (!gem || (gem->GetFormID() >> 24) != 0) {
+                continue;
+            }
+            if (gem->GetContainedSoul() == RE::SOUL_LEVEL::kNone) {
+                continue;  // empty base form — useless for enchanting
+            }
+            chest->AddObjectToContainer(
+                gem, nullptr,
+                static_cast<std::int32_t>(static_cast<float>(kSoulGemBase) * scale), nullptr);
+            ++soulGems;
+        }
+
         if (auto* gold = RE::TESForm::LookupByID<RE::TESBoundObject>(kGold)) {
             chest->AddObjectToContainer(
                 gold, nullptr,
                 static_cast<std::int32_t>(static_cast<float>(kGoldBase) * scale), nullptr);
         }
 
-        logger::info("Storage: stocked {} materials + {} ingredients + gold (scale x{})",
-                     stocked, ingredients, scale);
+        logger::info("Storage: stocked {} materials + {} ingredients + {} soul gems + gold (scale x{})",
+                     stocked, ingredients, soulGems, scale);
     }
 
     void Open() {
