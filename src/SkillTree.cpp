@@ -148,15 +148,29 @@ namespace Isekai::SkillTree {
                 }
             }
 
+            std::size_t knownShouts = 0;
+            std::size_t words = 0;
             for (const auto& [name, shout] : byName) {
                 a_player->AddShout(shout);
                 for (const auto& variation : shout->variations) {
-                    if (variation.word) {
-                        a_player->UnlockWord(variation.word);
+                    if (!variation.word) {
+                        continue;
                     }
+                    // Two-pronged, because UnlockWord (Actor vfunc 0xD0) turned out to
+                    // be a no-op on the test setup — the words stayed "found but locked"
+                    // and could not even be soul-unlocked, i.e. the game never saw them
+                    // as KNOWN. So we also set the word's kKnown form flag directly, the
+                    // exact mechanism that already works for enchantments above.
+                    a_player->UnlockWord(variation.word);
+                    variation.word->formFlags |= RE::TESForm::RecordFlags::kKnown;
+                    ++words;
+                }
+                if (shout->GetKnown()) {
+                    ++knownShouts;
                 }
             }
-            logger::info("SkillTree: {} unique shouts unlocked", byName.size());
+            logger::info("SkillTree: {} unique shouts unlocked ({} known after AddShout, {} words marked)",
+                         byName.size(), knownShouts, words);
         }
 
         void UnlockAllEnchantments() {
