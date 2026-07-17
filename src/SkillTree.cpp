@@ -114,26 +114,43 @@ namespace Isekai::SkillTree {
             if (!data) {
                 return;
             }
-            // One form per display name. Among several forms sharing a name we PREFER
-            // the one with a description — that reliably picks the real player shout over
-            // the NPC/dragon copies (those carry no description). But a description is no
-            // longer a hard requirement: racial/special shouts like "Battle Cry" have no
-            // description yet are perfectly real, and the old filter dropped them
-            // entirely. So a name with only description-less forms still gets its lowest
-            // FormID kept.
-            //
-            // Tiebreak is lowest FormID (the oldest, original definition). Why lowest and
-            // not highest ("mods override by load order")? An override never creates a
-            // second form: it keeps the original FormID, the engine resolves the conflict
-            // at data load, and the ONE form we see already carries the winning mod's
-            // data. Highest-vs-lowest only decides between genuinely DISTINCT records
-            // sharing a name — and a same-named extra record is nearly always a special
-            // variant (NPC/quest copy), not a replacement.
-            struct Pick {
-                RE::TESShout* shout;
-                bool          described;
-            };
-            std::map<std::string, Pick> byName;
+            // DIAGNOSTIC: dump every named shout the game exposes, so we can see exactly
+            // how player dragon shouts differ from dragon-AI / racial ones (Battle Cry,
+            // "for dragons only", ...). Read the log, then tighten the filter below.
+            constexpr bool kDumpShouts = true;
+            if (kDumpShouts) {
+                for (auto* shout : data->GetFormArray<RE::TESShout>()) {
+                    if (!shout) {
+                        continue;
+                    }
+                    const char* name = shout->GetName();
+                    if (!name || !*name) {
+                        continue;
+                    }
+                    RE::BSString desc;
+                    shout->GetDescription(desc, nullptr);
+                    int wordCount = 0;
+                    for (const auto& v : shout->variations) {
+                        if (v.word) {
+                            ++wordCount;
+                        }
+                    }
+                    const bool power = (shout->formFlags &
+                                        RE::TESShout::RecordFlags::kTreatSpellsAsPowers) != 0;
+                    logger::info("  SHOUT [{:08X}] '{}' | desc={} | power={} | words={} | \"{}\"",
+                                 shout->GetFormID(), name, desc.empty() ? "N" : "Y",
+                                 power ? "Y" : "N", wordCount,
+                                 desc.empty() ? "" : desc.c_str());
+                }
+            }
+
+            // Description required again: it reliably picks the real player shout over the
+            // dragon/NPC copies (those carry no description). Reverted the earlier
+            // loosening — dropping the requirement let description-less dragon-only shouts
+            // slip in. Tiebreak among same-named described forms: lowest FormID (the
+            // oldest, original definition; an override reuses the FormID, so a second
+            // same-named record is a distinct NPC/quest variant, not a replacement).
+            std::map<std::string, RE::TESShout*> byName;
             for (auto* shout : data->GetFormArray<RE::TESShout>()) {
                 if (!shout) {
                     continue;
@@ -145,25 +162,19 @@ namespace Isekai::SkillTree {
 
                 RE::BSString description;
                 shout->GetDescription(description, nullptr);
-                const bool described = !description.empty();
-
-                auto [it, fresh] = byName.try_emplace(name, Pick{ shout, described });
-                if (fresh) {
+                if (description.empty()) {
                     continue;
                 }
-                Pick&      cur = it->second;
-                const bool better = (described && !cur.described) ||
-                                    (described == cur.described &&
-                                     shout->GetFormID() < cur.shout->GetFormID());
-                if (better) {
-                    cur = { shout, described };
+
+                auto [it, fresh] = byName.try_emplace(name, shout);
+                if (!fresh && shout->GetFormID() < it->second->GetFormID()) {
+                    it->second = shout;
                 }
             }
 
             std::size_t knownShouts = 0;
             std::size_t words = 0;
-            for (const auto& [name, pick] : byName) {
-                auto* shout = pick.shout;
+            for (const auto& [name, shout] : byName) {
                 a_player->AddShout(shout);
                 for (const auto& variation : shout->variations) {
                     if (!variation.word) {
