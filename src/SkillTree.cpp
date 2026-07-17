@@ -114,19 +114,26 @@ namespace Isekai::SkillTree {
             if (!data) {
                 return;
             }
-            // Two dedup passes. "Has a description" weeds out the NPC/dragon copies —
-            // but some names still exist several times WITH (differing) descriptions,
-            // so the second pass keeps exactly one form per display name: the one with
-            // the lowest FormID, i.e. the oldest definition.
+            // One form per display name. Among several forms sharing a name we PREFER
+            // the one with a description — that reliably picks the real player shout over
+            // the NPC/dragon copies (those carry no description). But a description is no
+            // longer a hard requirement: racial/special shouts like "Battle Cry" have no
+            // description yet are perfectly real, and the old filter dropped them
+            // entirely. So a name with only description-less forms still gets its lowest
+            // FormID kept.
             //
-            // Why lowest and not highest ("mods override by load order")? Because an
-            // override never creates a second form: it keeps the original FormID, the
-            // engine resolves the conflict at data load, and the ONE form we see here
-            // already carries the winning mod's data. Load order is baked in before we
-            // ever look. Highest-vs-lowest only picks between genuinely DISTINCT
-            // records sharing a name — and a same-named extra record is nearly always
-            // a special variant (NPC/quest copy), not a replacement.
-            std::map<std::string, RE::TESShout*> byName;
+            // Tiebreak is lowest FormID (the oldest, original definition). Why lowest and
+            // not highest ("mods override by load order")? An override never creates a
+            // second form: it keeps the original FormID, the engine resolves the conflict
+            // at data load, and the ONE form we see already carries the winning mod's
+            // data. Highest-vs-lowest only decides between genuinely DISTINCT records
+            // sharing a name — and a same-named extra record is nearly always a special
+            // variant (NPC/quest copy), not a replacement.
+            struct Pick {
+                RE::TESShout* shout;
+                bool          described;
+            };
+            std::map<std::string, Pick> byName;
             for (auto* shout : data->GetFormArray<RE::TESShout>()) {
                 if (!shout) {
                     continue;
@@ -138,19 +145,25 @@ namespace Isekai::SkillTree {
 
                 RE::BSString description;
                 shout->GetDescription(description, nullptr);
-                if (description.empty()) {
+                const bool described = !description.empty();
+
+                auto [it, fresh] = byName.try_emplace(name, Pick{ shout, described });
+                if (fresh) {
                     continue;
                 }
-
-                auto [it, fresh] = byName.try_emplace(name, shout);
-                if (!fresh && shout->GetFormID() < it->second->GetFormID()) {
-                    it->second = shout;
+                Pick&      cur = it->second;
+                const bool better = (described && !cur.described) ||
+                                    (described == cur.described &&
+                                     shout->GetFormID() < cur.shout->GetFormID());
+                if (better) {
+                    cur = { shout, described };
                 }
             }
 
             std::size_t knownShouts = 0;
             std::size_t words = 0;
-            for (const auto& [name, shout] : byName) {
+            for (const auto& [name, pick] : byName) {
+                auto* shout = pick.shout;
                 a_player->AddShout(shout);
                 for (const auto& variation : shout->variations) {
                     if (!variation.word) {
