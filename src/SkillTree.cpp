@@ -114,42 +114,18 @@ namespace Isekai::SkillTree {
             if (!data) {
                 return;
             }
-            // DIAGNOSTIC: dump every named shout the game exposes, so we can see exactly
-            // how player dragon shouts differ from dragon-AI / racial ones (Battle Cry,
-            // "for dragons only", ...). Read the log, then tighten the filter below.
-            constexpr bool kDumpShouts = true;
-            if (kDumpShouts) {
-                for (auto* shout : data->GetFormArray<RE::TESShout>()) {
-                    if (!shout) {
-                        continue;
-                    }
-                    const char* name = shout->GetName();
-                    if (!name || !*name) {
-                        continue;
-                    }
-                    RE::BSString desc;
-                    shout->GetDescription(desc, nullptr);
-                    int wordCount = 0;
-                    for (const auto& v : shout->variations) {
-                        if (v.word) {
-                            ++wordCount;
-                        }
-                    }
-                    const bool power = (shout->formFlags &
-                                        RE::TESShout::RecordFlags::kTreatSpellsAsPowers) != 0;
-                    logger::info("  SHOUT [{:08X}] '{}' | desc={} | power={} | words={} | \"{}\"",
-                                 shout->GetFormID(), name, desc.empty() ? "N" : "Y",
-                                 power ? "Y" : "N", wordCount,
-                                 desc.empty() ? "" : desc.c_str());
-                }
-            }
-
-            // Description required again: it reliably picks the real player shout over the
-            // dragon/NPC copies (those carry no description). Reverted the earlier
-            // loosening — dropping the requirement let description-less dragon-only shouts
-            // slip in. Tiebreak among same-named described forms: lowest FormID (the
-            // oldest, original definition; an override reuses the FormID, so a second
-            // same-named record is a distinct NPC/quest variant, not a replacement).
+            // What counts as a real player dragon shout, learned from the ground truth of
+            // a full modlist's shout dump (see git history — the diagnostic that found it):
+            //
+            //  * Has a description. The description-less forms are dragon-AI / NPC copies
+            //    and the "Fire Breath (for DRAGONS only)" oddities.
+            //  * Exactly three words. Every player dragon shout (vanilla + DLC) carries all
+            //    three. The one-word "shouts" are racial and beast GREATER POWERS reusing
+            //    the shout mechanic — Battle Cry, Voice of the Emperor, Beast Tongue, the
+            //    werewolf howls, Benthic Scream — not Thu'um the player learns at walls.
+            //
+            // Tiebreak among same-named forms: lowest FormID (the original; an override
+            // reuses the FormID, so a second same-named record is a distinct variant).
             std::map<std::string, RE::TESShout*> byName;
             for (auto* shout : data->GetFormArray<RE::TESShout>()) {
                 if (!shout) {
@@ -166,9 +142,35 @@ namespace Isekai::SkillTree {
                     continue;
                 }
 
+                int wordCount = 0;
+                for (const auto& v : shout->variations) {
+                    if (v.word) {
+                        ++wordCount;
+                    }
+                }
+                if (wordCount < 3) {
+                    continue;
+                }
+
                 auto [it, fresh] = byName.try_emplace(name, shout);
                 if (!fresh && shout->GetFormID() < it->second->GetFormID()) {
                     it->second = shout;
+                }
+            }
+
+            // Drop the dragon-AI duplicates: "Dragon Unrelenting Force" when a bare
+            // "Unrelenting Force" is also present (same shout, the beast's copy). The real
+            // DLC shout "Dragon Aspect" survives because there is no bare "Aspect".
+            {
+                const std::string prefix = "Dragon ";
+                for (auto it = byName.begin(); it != byName.end();) {
+                    const std::string& n = it->first;
+                    if (n.size() > prefix.size() && n.compare(0, prefix.size(), prefix) == 0 &&
+                        byName.find(n.substr(prefix.size())) != byName.end()) {
+                        it = byName.erase(it);
+                    } else {
+                        ++it;
+                    }
                 }
             }
 
