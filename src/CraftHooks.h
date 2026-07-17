@@ -26,8 +26,8 @@ namespace Isekai::CraftHooks {
     // fallback so item crafting never loses access to the chest.
     [[nodiscard]] bool ItemCraftingHooksActive();
 
-    // True once the alchemy iteration hooks are live (the menu reads the chest's
-    // ingredients in place). Same fallback contract as above: if they did not install,
-    // the shuttle keeps covering alchemy.
-    [[nodiscard]] bool AlchemyHooksActive();
+    // True once the iteration hooks are live — alchemy and enchanting read the chest's
+    // ingredients / soul gems in place. Same fallback contract as above: if they did not
+    // install, the shuttle keeps covering those stations.
+    [[nodiscard]] bool IterationHooksActive();
 }

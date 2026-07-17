@@ -138,13 +138,13 @@ namespace Isekai::Storage {
         // menus iterate the inventory (a hook path we have not built yet).
         [[nodiscard]] bool ShuttleStation(BenchType a_bench) {
             switch (a_bench) {
-            case BenchType::kEnchanting:
-            case BenchType::kEnchantingExperiment:
-                return true;  // enchanting still shuttled (soul-gem hooks come later)
             case BenchType::kAlchemy:
             case BenchType::kAlchemyExperiment:
-                // Alchemy reads the chest in place now — shuttle only as a fallback.
-                return !CraftHooks::AlchemyHooksActive();
+            case BenchType::kEnchanting:
+            case BenchType::kEnchantingExperiment:
+                // Alchemy and enchanting read the chest in place now — shuttle only as a
+                // fallback if the iteration hooks did not install.
+                return !CraftHooks::IterationHooksActive();
             case BenchType::kCreateObject:
             case BenchType::kSmithingWeapon:
             case BenchType::kSmithingArmor:

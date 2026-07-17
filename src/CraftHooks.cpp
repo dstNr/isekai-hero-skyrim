@@ -53,7 +53,7 @@ namespace Isekai::CraftHooks {
         RemoveItem_t _originalRemoveItem = nullptr;
 
         bool s_itemActive = false;     // Hook 3 + Hook 4 live (item crafting)
-        bool s_alchemyActive = false;  // Hook 1 + Hook 2 live (alchemy iteration)
+        bool s_iterActive = false;  // Hook 1 + Hook 2 live (alchemy + enchanting iteration)
 
         // Boundary between the player's own stacks and the chest's, cached at the start
         // of each list iteration. Main-thread only (the crafting menu runs there).
@@ -85,17 +85,27 @@ namespace Isekai::CraftHooks {
             }
         }
 
-        // Alchemy station — the iteration menu we now feed from the chest.
-        [[nodiscard]] bool AtAlchemyStation() {
+        // Iteration menus — alchemy (ingredients) and enchanting (soul gems + items).
+        // Both build their list by walking the inventory, so both get the chest appended.
+        // Our chest stocks pre-filled GRAND soul gems as a base form (no fill-state extra
+        // list), so enchanting consumes them as plainly as alchemy consumes an ingredient.
+        [[nodiscard]] bool AtIterationStation() {
             using BT = RE::TESFurniture::WorkBenchData::BenchType;
-            const auto b = CurrentBench();
-            return b == BT::kAlchemy || b == BT::kAlchemyExperiment;
+            switch (CurrentBench()) {
+            case BT::kAlchemy:
+            case BT::kAlchemyExperiment:
+            case BT::kEnchanting:
+            case BT::kEnchantingExperiment:
+                return true;
+            default:
+                return false;
+            }
         }
 
         // Where the chest backs the recipe: count-augment and consume redirect apply.
-        // Alchemy only counts once its iteration hooks are live (else the shuttle owns it).
+        // An iteration station only counts once its hooks are live (else the shuttle owns it).
         [[nodiscard]] bool AtChestBackedStation() {
-            return AtItemStation() || (AtAlchemyStation() && s_alchemyActive);
+            return AtItemStation() || (AtIterationStation() && s_iterActive);
         }
 
         // --- Hook 3: per-item count (recipe availability) ---
@@ -116,7 +126,7 @@ namespace Isekai::CraftHooks {
         std::int32_t Hook_GetContainerItemCount(RE::TESObjectREFR* a_ref, bool a_useMerchant,
                                                 bool a_unk) {
             const std::int32_t original = _originalGetContainerItemCount(a_ref, a_useMerchant, a_unk);
-            if (!a_ref || !a_ref->IsPlayerRef() || !AtAlchemyStation()) {
+            if (!a_ref || !a_ref->IsPlayerRef() || !AtIterationStation()) {
                 return original;
             }
             auto* chest = Storage::ChestRef();
@@ -131,7 +141,7 @@ namespace Isekai::CraftHooks {
         RE::InventoryEntryData* Hook_GetInventoryItemEntryAtIdx(RE::TESObjectREFR* a_ref,
                                                                std::int32_t a_idx,
                                                                bool a_useMerchant) {
-            if (!a_ref || !a_ref->IsPlayerRef() || !AtAlchemyStation()) {
+            if (!a_ref || !a_ref->IsPlayerRef() || !AtIterationStation()) {
                 return _originalGetInventoryItemEntryAtIdx(a_ref, a_idx, a_useMerchant);
             }
             auto* chest = Storage::ChestRef();
@@ -197,12 +207,12 @@ namespace Isekai::CraftHooks {
         return s_itemActive;
     }
 
-    bool AlchemyHooksActive() {
-        return s_alchemyActive;
+    bool IterationHooksActive() {
+        return s_iterActive;
     }
 
     void Install() {
-        if (s_itemActive || s_alchemyActive) {
+        if (s_itemActive || s_iterActive) {
             return;
         }
 
@@ -273,10 +283,10 @@ namespace Isekai::CraftHooks {
         // Item crafting needs count + consume; alchemy additionally needs both iteration
         // hooks. Whatever did not come up stays on the shuttle via Storage's fallback.
         s_itemActive = countOk && removeOk;
-        s_alchemyActive = s_itemActive && h1ok && h2ok;
+        s_iterActive = s_itemActive && h1ok && h2ok;
 
-        logger::info("CraftHooks: item-crafting {} (count @ {:X}, consume {}), alchemy {}",
+        logger::info("CraftHooks: item-crafting {} (count @ {:X}, consume {}), iteration {}",
                      s_itemActive ? "LIVE" : "OFF", countAddr, removeOk ? "ok" : "FAILED",
-                     s_alchemyActive ? "LIVE" : "OFF");
+                     s_iterActive ? "LIVE" : "OFF");
     }
 }
