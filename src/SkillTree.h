@@ -1,5 +1,7 @@
 #pragma once
 
+#include "System.h"  // PowerLevel
+
 #include <cstdint>
 #include <map>
 
@@ -27,7 +29,12 @@ namespace Isekai::SkillTree {
         const char*   desc;
         const char*   icon;  // file name under Data\SKSE\Plugins\IsekaiHero\icons
         float         x, y;  // layout coords in the tree canvas (1080p design space)
-        std::int32_t  cost;  // dragon souls
+        std::int32_t  cost;  // System Points
+        PowerLevel    minPower;   // minimum rebirth tier that may unlock this node.
+                                  // The System's gifts deepen with the blessing:
+                                  // NORMAL = self-made stats, HERO += omniscience,
+                                  // ASCENDED += the capstone. Higher tiers include all
+                                  // lower ones (PowerLevel is ordered Normal<Hero<Ascended).
         std::uint32_t prereq[2];  // node keys; 0 = none. All listed must be unlocked.
         Effect        effect;
         Bonus         bonus[3];
@@ -38,6 +45,13 @@ namespace Isekai::SkillTree {
 
     [[nodiscard]] bool IsUnlocked(std::uint32_t a_key);
     [[nodiscard]] bool PrereqsMet(std::uint32_t a_key);
+
+    // Is the player's rebirth tier high enough to unlock this node? Gates the strong
+    // "gift" nodes (omniscience for HERO+, capstone for ASCENDED) behind the blessing.
+    [[nodiscard]] bool TierMet(std::uint32_t a_key);
+
+    // The minimum rebirth tier a node needs — for the "requires HERO rebirth" hint.
+    [[nodiscard]] PowerLevel RequiredPower(std::uint32_t a_key);
 
     // The tree's currency: System Points (docs/IDEAS.md) — paid by milestones,
     // seeded by the blessing, uncapped. Dragon souls stay out of the tree entirely.

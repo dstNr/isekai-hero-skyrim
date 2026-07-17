@@ -51,8 +51,17 @@ Open the System panel ([b]Right Shift + S[/b]) and enter the skill tree: a hub a
 
 The knowledge unlocks are [b]mod-aware[/b]: they cover everything your load order contains, filtered semantically (a mod spell with a tome qualifies exactly like a vanilla one).
 
+[size=4][b]Progression scales with your rebirth[/b][/size]
+The blessing you choose keeps mattering — everything the System pays out is multiplied for the rest of the run:
+
+[list]
+[*][b]Reward scale[/b] on every milestone (passive stat bonuses, System Points, dragon souls): NORMAL [b]×1[/b], HERO [b]×2[/b], ASCENDED [b]×4[/b].
+[*][b]Perk points[/b] per milestone endpoint: NORMAL none, HERO +10, ASCENDED a full pool.
+[*][b]The skill tree itself deepens with the blessing.[/b] NORMAL walks the self-made half — stats, resistances, Perk Synthesis, faster Thu'um. HERO additionally unlocks the four [b]Omniscience[/b] gifts (shouts, enchantments, ingredients, spells). ASCENDED additionally unlocks the [b]World Tree[/b] capstone. Sealed nodes are visible but greyed, so you always see what a deeper rebirth would have granted.
+[/list]
+
 [size=4][b]Dimensional Storage[/b][/size]
-HERO and ASCENDED souls receive access to a private pocket dimension: one chest inventory, reachable from anywhere through the System panel, pre-stocked with crafting materials, ingredients and gold. Its contents are [b]automatically available at crafting stations[/b] — forge, alchemy table, enchanter — without moving a single item yourself.
+Every reincarnated soul receives a private pocket dimension: one chest inventory, reachable from anywhere through the System panel. Its contents are [b]automatically available at crafting stations[/b] — forge, alchemy table, enchanter — without moving a single item yourself. HERO and ASCENDED find it [b]pre-stocked[/b] with crafting materials, ingredients and gold (scaled by the blessing); NORMAL receives the same dimension [b]empty[/b], to fill as a personal stash.
 
 [size=4][b]Requirements[/b][/size]
 [list]

@@ -33,7 +33,7 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
 - **Passives as real abilities.** All milestone bonuses aggregate into eight
   `System:` abilities visible under Active Effects — recomputed from scratch
   on every load, so they can never double-apply.
-- **System Skill Tree** (`RShift+S` → crystal icon): 13 nodes across a hub
+- **System Skill Tree** (`RShift+S` → crystal icon): 14 nodes across a hub
   and three branches, paid with **System Points**. Includes four knowledge
   unlocks that span *every loaded plugin* via semantic filters:
   - all shouts + words of power ("has a description", deduplicated by name)
@@ -42,11 +42,16 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   - all spells ("has a spell tome")
 
   Plus **Perk Synthesis**: a repeatable node converting 1 System Point into
-  5 perk points.
-- **Dimensional Storage** (HERO/ASCENDED only): one chest inventory reachable
-  from anywhere via the System panel, stocked at reincarnation with crafting
-  materials and gold. Crafting stations **borrow its contents automatically**
-  — station-aware, so the forge never shuttles alchemy ingredients around.
+  5 perk points. The tree is **gated by rebirth tier** (`Node::minPower`):
+  NORMAL walks the self-made stat/utility half, HERO additionally unlocks the
+  four Omniscience gifts, ASCENDED additionally unlocks the World Tree
+  capstone. Sealed nodes render greyed with a "requires HERO/ASCENDED rebirth"
+  hint — one shared graph, one source of truth, no duplicate tables.
+- **Dimensional Storage** (every reincarnated soul): one chest inventory
+  reachable from anywhere via the System panel. Crafting stations **borrow its
+  contents automatically** — station-aware, so the forge never shuttles alchemy
+  ingredients around. HERO/ASCENDED find it pre-stocked with crafting materials
+  and gold (blessing-scaled); NORMAL gets the same dimension empty, as a stash.
 - **Custom UI & sound.** Solo-Leveling-inspired panels (glow frames, corner
   brackets, typewriter reveal, monospace terminal font), custom SFX routed
   through the game's audio system, icon buttons, ESC handled properly.

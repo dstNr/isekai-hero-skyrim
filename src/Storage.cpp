@@ -20,9 +20,16 @@ namespace Isekai::Storage {
         // persisted: the crafting menu pauses the game and cannot outlive a session.
         std::map<RE::TESBoundObject*, std::int32_t> g_craftLoan;
 
-        // Storage is part of the blessing. NORMAL chose the pure challenge — the
-        // System stays closed to them.
+        // Every reincarnated soul gets the pocket dimension — the panel button, the
+        // chest, the crafting-station lending. NORMAL chose the pure challenge, so its
+        // chest simply starts EMPTY (see GrantStartingMaterials): a usable stash, but
+        // no head start handed to it.
         [[nodiscard]] bool IsEligible() {
+            return GetState().reincarnated;
+        }
+
+        // Only HERO/ASCENDED receive a pre-stocked chest. NORMAL keeps the empty one.
+        [[nodiscard]] bool GetsStartingStock() {
             const auto& state = GetState();
             return state.reincarnated && state.power != PowerLevel::Normal;
         }
@@ -236,8 +243,8 @@ namespace Isekai::Storage {
     }
 
     void GrantStartingMaterials() {
-        if (!IsEligible()) {
-            return;  // NORMAL has no storage, and nothing to put in one
+        if (!GetsStartingStock()) {
+            return;  // NORMAL gets the chest, but empty — nothing to put in it
         }
         auto* player = RE::PlayerCharacter::GetSingleton();
         auto* chest = player ? GetOrCreateChest(player) : nullptr;
@@ -348,7 +355,7 @@ namespace Isekai::Storage {
             return;
         }
         if (!IsEligible()) {
-            RE::DebugNotification("[ SYSTEM ] ACCESS DENIED — dimensional storage requires a blessing.");
+            RE::DebugNotification("[ SYSTEM ] ACCESS DENIED — the System is not yet bound to you.");
             return;
         }
 

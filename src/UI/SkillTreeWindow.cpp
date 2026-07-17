@@ -51,7 +51,10 @@ namespace Isekai::UI {
 
         [[nodiscard]] NodeVisual VisualFor(const SkillTree::Node& a_node, float a_s) {
             const bool unlocked = SkillTree::IsUnlocked(a_node.key);
-            const bool reachable = SkillTree::PrereqsMet(a_node.key);
+            // A node gated by rebirth tier can never be taken this life — treat it as
+            // hard-locked regardless of prerequisites or points.
+            const bool reachable =
+                SkillTree::PrereqsMet(a_node.key) && SkillTree::TierMet(a_node.key);
             const bool affordable = SkillTree::Points() >= a_node.cost;
 
             if (unlocked) {
@@ -252,7 +255,7 @@ namespace Isekai::UI {
                 }
 
                 if (clicked && !SkillTree::IsUnlocked(node.key) && SkillTree::PrereqsMet(node.key) &&
-                    SkillTree::Points() >= node.cost) {
+                    SkillTree::TierMet(node.key) && SkillTree::Points() >= node.cost) {
                     const auto key = node.key;
                     if (auto* task = SKSE::GetTaskInterface()) {
                         task->AddTask([key]() { SkillTree::TryUnlock(key); });
@@ -284,6 +287,12 @@ namespace Isekai::UI {
                     if (SkillTree::IsUnlocked(node->key)) {
                         status = "UNLOCKED";
                         statusCol = Style::Col(Style::kAccent, fade);
+                    } else if (!SkillTree::TierMet(node->key)) {
+                        // A gift of a deeper blessing than this life took.
+                        status = "SEALED — requires " +
+                                 Isekai::PowerName(SkillTree::RequiredPower(node->key)) +
+                                 " rebirth";
+                        statusCol = IM_COL32(200, 150, 90, static_cast<int>(255 * fade));
                     } else if (!SkillTree::PrereqsMet(node->key)) {
                         status = "LOCKED — requires a connected node";
                         statusCol = Style::Col(Style::kTextDim, fade);

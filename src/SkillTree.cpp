@@ -18,60 +18,68 @@ namespace Isekai::SkillTree {
         // Layout: hub top-centre, three branches fanning out (Kraft left, Arkana
         // right, Schatten centre-down), capstone at the bottom. Coordinates are the
         // node centres in the tree canvas, designed at 1080p and scaled on draw.
+        // minPower column staggers the tree by rebirth tier (see Node::minPower):
+        //   NORMAL   — the whole self-made half: stats, resists, perk synthesis, Thu'um cd
+        //   HERO     — + the four Omniscience gifts (shouts / enchants / ingredients / spells)
+        //   ASCENDED — + the World Tree capstone
+        constexpr auto kN = PowerLevel::Normal;
+        constexpr auto kH = PowerLevel::Hero;
+        constexpr auto kA = PowerLevel::Ascended;
+
         constexpr Node kNodes[] = {
             // --- Hub ---
             { 1, "System Core", "The System takes root.\n+25 Health, Magicka and Stamina.",
-              "spells_01_frame.png", 550.0f, 110.0f, 5, { 0, 0 }, Effect::kAttributes,
+              "spells_01_frame.png", 550.0f, 110.0f, 5, kN, { 0, 0 }, Effect::kAttributes,
               { { AV::kHealth, 25.0f }, { AV::kMagicka, 25.0f }, { AV::kStamina, 25.0f } } },
             { 2, "Dragon's Voice", "Your Thu'um recovers faster.\n-20% shout cooldown.",
-              "spells_10_frame.png", 780.0f, 110.0f, 15, { 1, 0 }, Effect::kShoutCooldown, {} },
+              "spells_10_frame.png", 780.0f, 110.0f, 15, kN, { 1, 0 }, Effect::kShoutCooldown, {} },
             { 14, "Perk Synthesis",
               "Condense a System Point into raw potential.\n+5 perk points per purchase. REPEATABLE.",
-              "spells_21_frame.png", 320.0f, 110.0f, 1, { 1, 0 }, Effect::kPerkPoint, {} },
+              "spells_21_frame.png", 320.0f, 110.0f, 1, kN, { 1, 0 }, Effect::kPerkPoint, {} },
 
             // --- Kraft (left) ---
             { 3, "Vital Surge", "+100 Health.",
-              "spells_25_frame.png", 250.0f, 260.0f, 10, { 1, 0 }, Effect::kAttributes,
+              "spells_25_frame.png", 250.0f, 260.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
               { { AV::kHealth, 100.0f } } },
             { 4, "Thu'um Omniscience",
               "The System pours every dragon's voice into you.\nAll shouts and words of power unlocked.",
-              "spells_39_frame.png", 160.0f, 410.0f, 25, { 3, 0 }, Effect::kAllShouts, {} },
+              "spells_39_frame.png", 160.0f, 410.0f, 25, kH, { 3, 0 }, Effect::kAllShouts, {} },
             { 5, "Emberguard", "+25% Fire Resist.",
-              "spells_12_frame.png", 340.0f, 410.0f, 15, { 3, 0 }, Effect::kAttributes,
+              "spells_12_frame.png", 340.0f, 410.0f, 15, kN, { 3, 0 }, Effect::kAttributes,
               { { AV::kResistFire, 25.0f } } },
 
             // --- Arkana (right) ---
             { 6, "Mana Well", "+100 Magicka.",
-              "spells_15_frame.png", 850.0f, 260.0f, 10, { 1, 0 }, Effect::kAttributes,
+              "spells_15_frame.png", 850.0f, 260.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
               { { AV::kMagicka, 100.0f } } },
             { 7, "Arcane Omniscience",
               "Every enchantment laid bare.\nAll enchantments known without disenchanting.",
-              "spells_36_frame.png", 760.0f, 410.0f, 25, { 6, 0 }, Effect::kAllEnchantments, {} },
+              "spells_36_frame.png", 760.0f, 410.0f, 25, kH, { 6, 0 }, Effect::kAllEnchantments, {} },
             { 8, "Frostguard", "+25% Frost Resist.",
-              "spells_16_frame.png", 940.0f, 410.0f, 15, { 6, 0 }, Effect::kAttributes,
+              "spells_16_frame.png", 940.0f, 410.0f, 15, kN, { 6, 0 }, Effect::kAttributes,
               { { AV::kResistFrost, 25.0f } } },
             { 9, "Spell Omniscience",
               "The System reads every tome ever written.\nAll spells with a spell tome learned.",
-              "spells_37_frame.png", 850.0f, 555.0f, 40, { 7, 0 }, Effect::kAllSpells, {} },
+              "spells_37_frame.png", 850.0f, 555.0f, 40, kH, { 7, 0 }, Effect::kAllSpells, {} },
 
             // --- Schatten (centre-down) ---
             { 10, "Swift Blood", "+100 Stamina.",
-              "spells_32_frame.png", 550.0f, 300.0f, 10, { 1, 0 }, Effect::kAttributes,
+              "spells_32_frame.png", 550.0f, 300.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
               { { AV::kStamina, 100.0f } } },
             { 11, "Alchemical Insight",
               "Every ingredient gives up its secrets.\nAll ingredient effects known.",
-              "spells_31_frame.png", 460.0f, 450.0f, 25, { 10, 0 }, Effect::kAllIngredients, {} },
+              "spells_31_frame.png", 460.0f, 450.0f, 25, kH, { 10, 0 }, Effect::kAllIngredients, {} },
             { 12, "Plagueward", "+25% Disease Resist.",
-              "spells_34_frame.png", 640.0f, 450.0f, 15, { 10, 0 }, Effect::kAttributes,
+              "spells_34_frame.png", 640.0f, 450.0f, 15, kN, { 10, 0 }, Effect::kAttributes,
               { { AV::kResistDisease, 25.0f } } },
 
             // --- Capstone ---
             // Rooted in the Schatten children directly above it, not in the far-away
             // branch entries: their long diagonals crossed the whole middle field and
             // grazed every node on the way. Short V-lines, zero crossings — and a
-            // deeper gate for the capstone as a side effect.
+            // deeper gate for the capstone as a side effect. ASCENDED-only.
             { 13, "World Tree", "The System blossoms through your soul.\n+100 Health, Magicka and Stamina.",
-              "spells_09_frame.png", 550.0f, 600.0f, 50, { 11, 12 }, Effect::kAttributes,
+              "spells_09_frame.png", 550.0f, 600.0f, 50, kA, { 11, 12 }, Effect::kAttributes,
               { { AV::kHealth, 100.0f }, { AV::kMagicka, 100.0f }, { AV::kStamina, 100.0f } } },
         };
 
@@ -278,6 +286,21 @@ namespace Isekai::SkillTree {
         return true;
     }
 
+    PowerLevel RequiredPower(std::uint32_t a_key) {
+        const auto* node = Find(a_key);
+        return node ? node->minPower : PowerLevel::Normal;
+    }
+
+    bool TierMet(std::uint32_t a_key) {
+        const auto* node = Find(a_key);
+        if (!node) {
+            return false;
+        }
+        // PowerLevel is ordered Normal < Hero < Ascended, so a numeric compare is the
+        // whole gate: a higher rebirth tier unlocks everything a lower one could.
+        return static_cast<int>(GetState().power) >= static_cast<int>(node->minPower);
+    }
+
     std::int32_t Points() {
         return GetState().systemPoints;
     }
@@ -292,7 +315,7 @@ namespace Isekai::SkillTree {
 
     bool TryUnlock(std::uint32_t a_key) {
         const auto* node = Find(a_key);
-        if (!node || IsUnlocked(a_key) || !PrereqsMet(a_key)) {
+        if (!node || IsUnlocked(a_key) || !PrereqsMet(a_key) || !TierMet(a_key)) {
             return false;
         }
 
