@@ -25,4 +25,14 @@ namespace Isekai::Storage {
     // stutter — chests from those saves keep the problem until cleaned. Called on
     // every load.
     void PruneForeignStock();
+
+    // --- Zero-transfer crafting support (used by CraftHooks) ---
+
+    // How many of a_obj the storage chest holds (0 if no chest / not found). Read by
+    // the crafting count hook so recipes count the chest without anything moving.
+    [[nodiscard]] std::int32_t ChestCount(RE::TESBoundObject* a_obj);
+
+    // Remove up to a_count of a_obj from the chest; returns how many were actually
+    // removed. Used by the crafting consume hook to spend chest materials directly.
+    std::int32_t RemoveFromChest(RE::TESBoundObject* a_obj, std::int32_t a_count);
 }

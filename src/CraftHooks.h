@@ -19,4 +19,10 @@ namespace Isekai::CraftHooks {
     // itself against a missing/mismatched Address Library — on any failure it logs
     // and disables itself rather than risk a crash.
     void Install();
+
+    // True once the item-crafting hooks (count + consume) are live. Storage uses this
+    // to decide whether to disable the old shuttle for forge-family stations: if the
+    // hooks did NOT install (e.g. Address Library mismatch), the shuttle stays on as a
+    // fallback so item crafting never loses access to the chest.
+    [[nodiscard]] bool ItemCraftingHooksActive();
 }

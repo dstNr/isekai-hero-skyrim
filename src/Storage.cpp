@@ -1,5 +1,6 @@
 #include "Storage.h"
 
+#include "CraftHooks.h"
 #include "Plugin.h"
 #include "Sounds.h"
 #include "System.h"
@@ -131,6 +132,28 @@ namespace Isekai::Storage {
             }
         }
 
+        // The item-crafting stations (forge/smelter/tanning/grindstone/armour bench)
+        // are handled by the zero-transfer CraftHooks now — they read and consume the
+        // chest in place. Only alchemy and enchanting still shuttle, because their
+        // menus iterate the inventory (a hook path we have not built yet).
+        [[nodiscard]] bool ShuttleStation(BenchType a_bench) {
+            switch (a_bench) {
+            case BenchType::kAlchemy:
+            case BenchType::kAlchemyExperiment:
+            case BenchType::kEnchanting:
+            case BenchType::kEnchantingExperiment:
+                return true;  // iteration menus — still shuttled
+            case BenchType::kCreateObject:
+            case BenchType::kSmithingWeapon:
+            case BenchType::kSmithingArmor:
+                // Zero-transfer hooks own these. If they failed to install, fall back
+                // to shuttling so item crafting never loses access to the chest.
+                return !CraftHooks::ItemCraftingHooksActive();
+            default:
+                return false;
+            }
+        }
+
         void LendToPlayer() {
             auto* player = RE::PlayerCharacter::GetSingleton();
             auto* chest = ResolveChest();
@@ -139,6 +162,9 @@ namespace Isekai::Storage {
             }
 
             const auto bench = CurrentBenchType();
+            if (!ShuttleStation(bench)) {
+                return;  // CraftHooks covers item crafting; nothing to shuttle here
+            }
 
             g_craftLoan.clear();
             for (const auto& [obj, count] : chest->GetInventoryCounts()) {
@@ -240,6 +266,40 @@ namespace Isekai::Storage {
         if (pruned > 0) {
             logger::info("Storage: pruned {} foreign ingredient stack(s) from the chest", pruned);
         }
+    }
+
+    std::int32_t ChestCount(RE::TESBoundObject* a_obj) {
+        if (!a_obj) {
+            return 0;
+        }
+        auto* chest = ResolveChest();
+        if (!chest) {
+            return 0;
+        }
+        const auto counts = chest->GetInventoryCounts();
+        const auto it = counts.find(a_obj);
+        return it != counts.end() ? it->second : 0;
+    }
+
+    std::int32_t RemoveFromChest(RE::TESBoundObject* a_obj, std::int32_t a_count) {
+        if (!a_obj || a_count <= 0) {
+            return 0;
+        }
+        auto* chest = ResolveChest();
+        if (!chest) {
+            return 0;
+        }
+        const auto have = ChestCount(a_obj);
+        const auto toRemove = std::min(a_count, have);
+        if (toRemove <= 0) {
+            return 0;
+        }
+        // Straight destroy: the crafting recipe consumes these. No moveTo, no extra
+        // list (crafting materials carry none). chest->RemoveItem re-enters the
+        // RemoveItem vtable hook with the chest as `this`, which passes through — see
+        // CraftHooks.
+        chest->RemoveItem(a_obj, toRemove, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
+        return toRemove;
     }
 
     void GrantStartingMaterials() {
