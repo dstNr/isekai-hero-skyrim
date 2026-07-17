@@ -107,12 +107,14 @@ when something misbehaves.
 
 ## Credits
 
-The Dimensional Storage's crafting integration (reading/consuming the chest at a
-workbench without moving items) adapts the zero-transfer hooking technique from
-[SCIE — Skyrim Crafting Inventory Extender](https://github.com/ohfor/scie) by
-ohfor, used under the MIT License. SCIE is **not a runtime dependency** — its
-approach (which engine functions to intercept, the `RemoveItem` vtable slot) is
-reimplemented here, credited in the source.
+- **UI sounds** by Cyrex Studios — [UI Sound Pack](https://cyrex-studios.itch.io/ui-sound-pack)
+- **Spell icons** by The Higalina Vault — [40 Spell Icons (Fantasy Style)](https://higalina.itch.io/40-spell-icons-fantasy-style-png-512x512)
+- **Crafting integration**: the Dimensional Storage reads/consumes the chest at a
+  workbench without moving items, adapting the zero-transfer hooking technique from
+  [SCIE — Skyrim Crafting Inventory Extender](https://github.com/ohfor/scie) by
+  ohfor, used under the MIT License. SCIE is **not a runtime dependency** — its
+  approach (which engine functions to intercept, the `RemoveItem` vtable slot) is
+  reimplemented here, credited in the source.
 
 ## Status
 

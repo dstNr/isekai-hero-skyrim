@@ -81,7 +81,11 @@ Install with your mod manager. The plugin is [b]ESL-flagged[/b] (no load order s
 Early release. Feedback is very welcome, especially from heavily modded setups. If something misbehaves, attach [i]Documents\My Games\Skyrim Special Edition\SKSE\IsekaiHeroSKSE.log[/i] to your report — the mod logs everything it does.
 
 [size=4][b]Credits[/b][/size]
-The Dimensional Storage's crafting integration (reading and consuming the chest at a workbench without moving items) adapts the zero-transfer hooking technique from [url=https://github.com/ohfor/scie]SCIE — Skyrim Crafting Inventory Extender[/url] by ohfor, used under the MIT License. SCIE itself is [b]not required[/b] — its approach is reimplemented here, not depended upon.
+[list]
+[*][b]UI sounds[/b] by Cyrex Studios — [url=https://cyrex-studios.itch.io/ui-sound-pack]UI Sound Pack[/url]
+[*][b]Spell icons[/b] by The Higalina Vault — [url=https://higalina.itch.io/40-spell-icons-fantasy-style-png-512x512]40 Spell Icons (Fantasy Style)[/url]
+[*][b]Crafting integration[/b]: the Dimensional Storage reads and consumes the chest at a workbench without moving items, adapting the zero-transfer hooking technique from [url=https://github.com/ohfor/scie]SCIE — Skyrim Crafting Inventory Extender[/url] by ohfor (MIT License). SCIE itself is [b]not required[/b] — its approach is reimplemented here, not depended upon.
+[/list]
 
 [size=4][b]AI Disclaimer[/b][/size]
 This mod was developed with AI assistance: the C++ code was written together with an AI coding assistant (Claude), and the skill/UI icons are AI-generated artwork. All content was reviewed, integrated and tested by hand in real playthroughs. The sound effects are licensed third-party assets, not AI-generated.
