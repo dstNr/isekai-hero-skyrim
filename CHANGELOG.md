@@ -4,6 +4,24 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [0.2.1] — 2026-07-17
+
+Shout unlocking, fixed properly. No save changes — an existing save loads as-is
+(shouts already added to a save by 0.2.0 stay in the menu; a fresh character sees
+the clean, corrected list).
+
+### Fixed
+- **"All shouts" now actually makes them usable.** Thu'um Omniscience added the
+  shouts to the menu but the words stayed locked and could not even be unlocked
+  with dragon souls — the word-unlock call was a no-op on some setups. The word's
+  `kKnown` flag is now set directly (the same mechanism that already works for
+  enchantments), so every learned word is immediately usable, no soul needed.
+- **Only real player dragon shouts are unlocked now.** The unlock filters to
+  described, three-word Thu'um and excludes the non-player forms that used to slip
+  in: racial/beast greater powers (Battle Cry, Voice of the Emperor, Beast Tongue,
+  the werewolf howls), the dragon-AI copies (`Dragon Unrelenting Force` and kin,
+  while the real `Dragon Aspect` is kept), and the "for DRAGONS only" variants.
+
 ## [0.2.0] — 2026-07-17
 
 The first round of full-modlist testing and feedback. Save-safe: existing saves
@@ -71,5 +89,6 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[0.2.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.2.1
 [0.2.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.2.0
 [0.1.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.1.0
