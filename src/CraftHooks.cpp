@@ -101,8 +101,10 @@ namespace Isekai::CraftHooks {
                 const std::int32_t fromChest = Storage::RemoveFromChest(a_item, a_count);
                 const std::int32_t remainder = a_count - fromChest;
                 if (fromChest > 0) {
-                    logger::debug("CraftHooks: consumed {}x '{}' from storage, {} from player",
-                                  fromChest, a_item->GetName(), remainder);
+                    // info-level on purpose: one line per craft, and it is the proof that
+                    // consumption really pulls from the chest (not a silent dupe).
+                    logger::info("CraftHooks: consumed {}x '{}' from storage, {} from player",
+                                 fromChest, a_item->GetName(), remainder);
                 }
                 if (remainder <= 0) {
                     // Fully covered by the chest — do not touch the player's inventory,
