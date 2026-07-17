@@ -5,6 +5,7 @@
 #include <MinHook.h>
 
 #include <algorithm>
+#include <atomic>
 
 namespace Isekai::CraftHooks {
 
@@ -45,6 +46,24 @@ namespace Isekai::CraftHooks {
                                                       const RE::NiPoint3* a_rotate);
         RemoveItem_t _originalRemoveItem = nullptr;
 
+        // --- Phase 2b, VALIDATION ONLY (pass-through) ---
+        // Alchemy and enchanting menus ITERATE the inventory instead of asking for a
+        // per-item count, so they use two more engine functions. Before we implement the
+        // real index remapping + dedup, these hooks just observe the iteration pattern on
+        // the live version. IDs and signatures from SCIE (MIT).
+
+        // Hook 1 — GetContainerItemCount. IDs 19274 (SE) / 19700 (AE).
+        using GetContainerItemCount_t = std::int32_t (*)(RE::TESObjectREFR* a_ref,
+                                                         bool a_useMerchant, bool a_unk);
+        GetContainerItemCount_t _originalGetContainerItemCount = nullptr;
+
+        // Hook 2 — GetInventoryItemEntryAtIdx. IDs 19273 (SE) / 19699 (AE).
+        using GetInventoryItemEntryAtIdx_t =
+            RE::InventoryEntryData* (*)(RE::TESObjectREFR* a_ref, std::int32_t a_idx, bool a_useMerchant);
+        GetInventoryItemEntryAtIdx_t _originalGetInventoryItemEntryAtIdx = nullptr;
+
+        std::atomic<int> s_iterLog{ 0 };
+
         bool s_active = false;  // both hooks live → Storage disables the shuttle here
 
         // Is the player at an ITEM-crafting station? Only there do we augment counts and
@@ -68,6 +87,30 @@ namespace Isekai::CraftHooks {
             case BT::kSmithingArmor:    // armour workbench
                 return true;
             default:                    // kAlchemy / kEnchanting / none → shuttle handles it
+                return false;
+            }
+        }
+
+        // The iteration stations (alchemy, enchanting) — where Phase 2b will augment.
+        [[nodiscard]] bool AtIterationStation() {
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            if (!player) {
+                return false;
+            }
+            auto* ref = player->GetOccupiedFurniture().get().get();
+            auto* base = ref ? ref->GetBaseObject() : nullptr;
+            auto* furn = base ? base->As<RE::TESFurniture>() : nullptr;
+            if (!furn) {
+                return false;
+            }
+            using BT = RE::TESFurniture::WorkBenchData::BenchType;
+            switch (furn->workBenchData.benchType.get()) {
+            case BT::kAlchemy:
+            case BT::kAlchemyExperiment:
+            case BT::kEnchanting:
+            case BT::kEnchantingExperiment:
+                return true;
+            default:
                 return false;
             }
         }
@@ -118,6 +161,35 @@ namespace Isekai::CraftHooks {
                                        a_moveToRef, a_dropLoc, a_rotate);
         }
 
+        // Phase 2b validation — pass-through. Observe how alchemy/enchanting iterate the
+        // player inventory so the real remapping (next step) uses the true call pattern.
+        std::int32_t Hook_GetContainerItemCount(RE::TESObjectREFR* a_ref, bool a_useMerchant,
+                                                bool a_unk) {
+            const std::int32_t original = _originalGetContainerItemCount(a_ref, a_useMerchant, a_unk);
+            if (a_ref && a_ref->IsPlayerRef() && AtIterationStation()) {
+                if (const int n = ++s_iterLog; n <= 120) {
+                    logger::info("CraftHooks[2b]: GetContainerItemCount(player) = {} stacks", original);
+                }
+            }
+            return original;
+        }
+
+        RE::InventoryEntryData* Hook_GetInventoryItemEntryAtIdx(RE::TESObjectREFR* a_ref,
+                                                               std::int32_t a_idx, bool a_useMerchant) {
+            auto* entry = _originalGetInventoryItemEntryAtIdx(a_ref, a_idx, a_useMerchant);
+            if (a_ref && a_ref->IsPlayerRef() && AtIterationStation()) {
+                if (const int n = ++s_iterLog; n <= 120) {
+                    const char* nm = (entry && reinterpret_cast<std::uintptr_t>(entry) >= 0x10000 &&
+                                      entry->object)
+                                         ? entry->object->GetName()
+                                         : "<none>";
+                    logger::info("CraftHooks[2b]: GetInventoryItemEntryAtIdx(player, {}) -> '{}'",
+                                 a_idx, nm);
+                }
+            }
+            return entry;
+        }
+
     }  // namespace
 
     bool ItemCraftingHooksActive() {
@@ -159,6 +231,26 @@ namespace Isekai::CraftHooks {
             MH_Uninitialize();
             return;
         }
+
+        // Phase 2b validation hooks (pass-through). Best-effort: if either fails we log and
+        // carry on — they observe only, so a miss costs nothing but the diagnostic.
+        try {
+            REL::Relocation<std::uintptr_t> h1{ REL::VariantID(19274, 19700, 0x29f980) };
+            if (MH_CreateHook(reinterpret_cast<void*>(h1.address()),
+                              reinterpret_cast<void*>(&Hook_GetContainerItemCount),
+                              reinterpret_cast<void**>(&_originalGetContainerItemCount)) != MH_OK) {
+                logger::warn("CraftHooks[2b]: MH_CreateHook(GetContainerItemCount) failed");
+            }
+            REL::Relocation<std::uintptr_t> h2{ REL::VariantID(19273, 19699, 0x29f910) };
+            if (MH_CreateHook(reinterpret_cast<void*>(h2.address()),
+                              reinterpret_cast<void*>(&Hook_GetInventoryItemEntryAtIdx),
+                              reinterpret_cast<void**>(&_originalGetInventoryItemEntryAtIdx)) != MH_OK) {
+                logger::warn("CraftHooks[2b]: MH_CreateHook(GetInventoryItemEntryAtIdx) failed");
+            }
+        } catch (...) {
+            logger::warn("CraftHooks[2b]: validation hook lookup failed — skipping the observers");
+        }
+
         if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK) {
             logger::error("CraftHooks: MH_EnableHook failed — hooks disabled");
             return;
