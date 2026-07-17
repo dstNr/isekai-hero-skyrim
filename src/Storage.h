@@ -35,4 +35,8 @@ namespace Isekai::Storage {
     // Remove up to a_count of a_obj from the chest; returns how many were actually
     // removed. Used by the crafting consume hook to spend chest materials directly.
     std::int32_t RemoveFromChest(RE::TESBoundObject* a_obj, std::int32_t a_count);
+
+    // The storage chest reference, or nullptr if none exists yet. The iteration hooks
+    // (alchemy) read its inventory entries directly to append them to the menu list.
+    [[nodiscard]] RE::TESObjectREFR* ChestRef();
 }

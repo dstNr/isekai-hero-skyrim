@@ -138,11 +138,13 @@ namespace Isekai::Storage {
         // menus iterate the inventory (a hook path we have not built yet).
         [[nodiscard]] bool ShuttleStation(BenchType a_bench) {
             switch (a_bench) {
-            case BenchType::kAlchemy:
-            case BenchType::kAlchemyExperiment:
             case BenchType::kEnchanting:
             case BenchType::kEnchantingExperiment:
-                return true;  // iteration menus — still shuttled
+                return true;  // enchanting still shuttled (soul-gem hooks come later)
+            case BenchType::kAlchemy:
+            case BenchType::kAlchemyExperiment:
+                // Alchemy reads the chest in place now — shuttle only as a fallback.
+                return !CraftHooks::AlchemyHooksActive();
             case BenchType::kCreateObject:
             case BenchType::kSmithingWeapon:
             case BenchType::kSmithingArmor:
@@ -300,6 +302,10 @@ namespace Isekai::Storage {
         // CraftHooks.
         chest->RemoveItem(a_obj, toRemove, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
         return toRemove;
+    }
+
+    RE::TESObjectREFR* ChestRef() {
+        return ResolveChest();
     }
 
     void GrantStartingMaterials() {
