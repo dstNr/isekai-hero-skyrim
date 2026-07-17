@@ -9,7 +9,8 @@
         "dx11-binding"
       ]
     },
-    "stb"
+    "stb",
+    "minhook"
   ],
   "builtin-baseline": "cf1c7380e710d5d2b483b0645eaf442704971bac"
 }

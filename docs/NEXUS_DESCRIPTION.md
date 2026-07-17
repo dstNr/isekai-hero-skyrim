@@ -80,6 +80,9 @@ Install with your mod manager. The plugin is [b]ESL-flagged[/b] (no load order s
 [size=4][b]Status[/b][/size]
 Early release. Feedback is very welcome, especially from heavily modded setups. If something misbehaves, attach [i]Documents\My Games\Skyrim Special Edition\SKSE\IsekaiHeroSKSE.log[/i] to your report — the mod logs everything it does.
 
+[size=4][b]Credits[/b][/size]
+The Dimensional Storage's crafting integration (reading and consuming the chest at a workbench without moving items) adapts the zero-transfer hooking technique from [url=https://github.com/ohfor/scie]SCIE — Skyrim Crafting Inventory Extender[/url] by ohfor, used under the MIT License. SCIE itself is [b]not required[/b] — its approach is reimplemented here, not depended upon.
+
 [size=4][b]AI Disclaimer[/b][/size]
 This mod was developed with AI assistance: the C++ code was written together with an AI coding assistant (Claude), and the skill/UI icons are AI-generated artwork. All content was reviewed, integrated and tested by hand in real playthroughs. The sound effects are licensed third-party assets, not AI-generated.
 ```

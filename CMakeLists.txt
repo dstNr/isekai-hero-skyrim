@@ -8,6 +8,7 @@ project(
 
 find_package(CommonLibSSE CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
+find_package(minhook CONFIG REQUIRED)
 
 add_commonlibsse_plugin(
     ${PROJECT_NAME}
@@ -28,6 +29,8 @@ add_commonlibsse_plugin(
         src/Sounds.h
         src/Storage.cpp
         src/Storage.h
+        src/CraftHooks.cpp
+        src/CraftHooks.h
         src/Logger.h
         src/PCH.h
         src/UI/Input.cpp
@@ -48,7 +51,8 @@ add_commonlibsse_plugin(
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
 
 # ImGui renders straight into the game's D3D11 swap chain (see src/UI/Overlay.cpp).
-target_link_libraries(${PROJECT_NAME} PRIVATE imgui::imgui d3d11.lib dxgi.lib)
+# MinHook detours the crafting inventory-count functions (see src/CraftHooks.cpp).
+target_link_libraries(${PROJECT_NAME} PRIVATE imgui::imgui d3d11.lib dxgi.lib minhook::minhook)
 
 # stb_image decodes the panel icon PNGs (header-only; vcpkg ships no CMake config).
 find_path(STB_INCLUDE_DIRS "stb_image.h" REQUIRED)

@@ -105,6 +105,15 @@ when something misbehaves.
 | `docs/` | Creation-Kit/xEdit guide for the ESP, ideas backlog, Nexus description |
 | `papyrus/` | the archived original Papyrus version (git tag `papyrus-v1.0`) |
 
+## Credits
+
+The Dimensional Storage's crafting integration (reading/consuming the chest at a
+workbench without moving items) adapts the zero-transfer hooking technique from
+[SCIE — Skyrim Crafting Inventory Extender](https://github.com/ohfor/scie) by
+ohfor, used under the MIT License. SCIE is **not a runtime dependency** — its
+approach (which engine functions to intercept, the `RemoveItem` vtable slot) is
+reimplemented here, credited in the source.
+
 ## Status
 
 🧪 **Pre-release** (v0.2.1). Feature-complete for full-modlist test runs;

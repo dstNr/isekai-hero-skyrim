@@ -1,5 +1,6 @@
 #include "System.h"
 
+#include "CraftHooks.h"
 #include "Passives.h"
 #include "Plugin.h"
 #include "Progression.h"
@@ -394,6 +395,7 @@ namespace Isekai {
                 Passives::Install();
                 Sounds::Install();
                 Storage::Install();
+                CraftHooks::Install();  // zero-transfer crafting (validation build for now)
                 UI::Install();
                 Progression::Install();
 
