@@ -52,6 +52,21 @@ namespace Isekai::CraftHooks {
                                                       const RE::NiPoint3* a_rotate);
         RemoveItem_t _originalRemoveItem = nullptr;
 
+        // Hook 5 — PlayerCharacter::GetItemCount. IDs 19275 (SE) / 19701 (AE). This is
+        // the count Papyrus scripts hit (Actor.GetItemCount), so other mods' pre-craft
+        // prompts — e.g. "empower this enchantment with a flawless gem?" — read it. It's
+        // a DIFFERENT function from the menu's count (Hook 3), so without its own hook
+        // those scripts see only the player's carried stock, never the chest.
+        using PlayerGetItemCount_t = std::int32_t (*)(RE::PlayerCharacter* a_this,
+                                                      RE::TESBoundObject* a_obj);
+        PlayerGetItemCount_t _originalPlayerGetItemCount = nullptr;
+
+        // Set while inside Hook 5. If PlayerCharacter::GetItemCount internally calls the
+        // standalone count (Hook 3), this stops that inner call from adding the chest a
+        // second time — Hook 5 adds it once, at the outer level. Per-thread because
+        // Papyrus may run the native off the main thread.
+        thread_local bool s_inPlayerCount = false;
+
         bool s_itemActive = false;     // Hook 3 + Hook 4 live (item crafting)
         bool s_iterActive = false;  // Hook 1 + Hook 2 live (alchemy + enchanting iteration)
 
@@ -112,14 +127,30 @@ namespace Isekai::CraftHooks {
         std::int32_t Hook_GetInventoryItemCount(RE::InventoryChanges* a_inv,
                                                 RE::TESBoundObject* a_item, void* a_filter) {
             const std::int32_t original = _originalGetInventoryItemCount(a_inv, a_item, a_filter);
-            if (!a_item || !AtChestBackedStation()) {
-                return original;
+            if (!a_item || s_inPlayerCount || !AtChestBackedStation()) {
+                return original;  // s_inPlayerCount: Hook 5 is already adding the chest
             }
             auto* player = RE::PlayerCharacter::GetSingleton();
             if (!player || a_inv != player->GetInventoryChanges()) {
                 return original;
             }
             return original + Storage::ChestCount(a_item);
+        }
+
+        // --- Hook 5: Papyrus-side per-item count (other mods' pre-craft prompts) ---
+        std::int32_t Hook_PlayerGetItemCount(RE::PlayerCharacter* a_this, RE::TESBoundObject* a_obj) {
+            s_inPlayerCount = true;
+            const std::int32_t original = _originalPlayerGetItemCount(a_this, a_obj);
+            s_inPlayerCount = false;
+
+            if (!a_obj || !AtChestBackedStation()) {
+                return original;
+            }
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            if (a_this != player) {
+                return original;
+            }
+            return original + Storage::ChestCount(a_obj);
         }
 
         // --- Hook 1: total stack count of a container ---
@@ -262,6 +293,19 @@ namespace Isekai::CraftHooks {
                                  reinterpret_cast<void**>(&_originalGetInventoryItemEntryAtIdx)) == MH_OK;
         } catch (...) {
             logger::warn("CraftHooks: iteration hook lookup failed — alchemy stays on the shuttle");
+        }
+
+        // Script-side count hook (best-effort): so other mods' Papyrus prompts see the
+        // chest at a station too. A miss only means such prompts miss the chest.
+        try {
+            REL::Relocation<std::uintptr_t> pg{ REL::RelocationID(19275, 19701) };
+            if (MH_CreateHook(reinterpret_cast<void*>(pg.address()),
+                              reinterpret_cast<void*>(&Hook_PlayerGetItemCount),
+                              reinterpret_cast<void**>(&_originalPlayerGetItemCount)) != MH_OK) {
+                logger::warn("CraftHooks: MH_CreateHook(PlayerCharacter::GetItemCount) failed");
+            }
+        } catch (...) {
+            logger::warn("CraftHooks: PlayerCharacter::GetItemCount lookup failed — script counts unhooked");
         }
 
         if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK) {
