@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 
 namespace Isekai::CraftHooks {
 
@@ -76,26 +77,58 @@ namespace Isekai::CraftHooks {
         std::int32_t g_playerBoundary = 0;
         std::int32_t g_chestStacks = 0;
 
-        // The single gate for every hook: a crafting menu is open. This is far more
-        // robust than checking occupied furniture. When the recipe list is first built —
-        // where a crafting overhaul's item-count CONDITIONS are evaluated to decide which
-        // recipes even appear — the furniture occupation is not reliably set yet, so a
-        // furniture check let those recipes vanish (their condition saw an empty chest).
-        // The menu is already on the UI stack at that point. It also covers the moment
-        // another mod's Papyrus prompt (e.g. "empower with a flawless gem?") runs, since
-        // that fires while the crafting menu is still open. Forge / alchemy / enchanting
-        // all share the one CraftingMenu; the iteration hooks (1/2) still only fire for
-        // the menus that actually walk the inventory.
-        [[nodiscard]] bool AtCraftingMenu() {
+        // The scope every hook augments within — a crafting interaction. Deliberately
+        // NOT global: outside these it must stay off, or quests/barter/dropping would
+        // treat the chest as your pocket. Three OR'd signals, each safe (all mean
+        // "crafting"), together robust against timing:
+        //
+        //   1. A crafting menu is open — covers the whole menu, incl. the recipe-list
+        //      build where an overhaul's item-count CONDITIONS decide visibility.
+        //   2. You are occupying a crafting furniture.
+        //   3. You just activated a crafting station — this one is essential because some
+        //      mods pop a prompt ("empower with a flawless gem?") BEFORE the menu opens
+        //      and before furniture is occupied. Opened by the activate sink, closed on
+        //      menu close, with a real-time backstop so an aborted activation can't leave
+        //      it stuck open.
+        std::atomic<bool>      g_craftContext{ false };
+        std::atomic<long long> g_contextExpiryMs{ 0 };
+
+        [[nodiscard]] long long NowMs() {
+            return std::chrono::duration_cast<std::chrono::milliseconds>(
+                       std::chrono::steady_clock::now().time_since_epoch())
+                .count();
+        }
+
+        [[nodiscard]] bool AtCraftingMenuOpen() {
             auto* ui = RE::UI::GetSingleton();
             return ui && ui->IsMenuOpen(RE::CraftingMenu::MENU_NAME);
+        }
+
+        [[nodiscard]] bool AtCraftingFurniture() {
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            if (!player) {
+                return false;
+            }
+            auto* ref = player->GetOccupiedFurniture().get().get();
+            auto* base = ref ? ref->GetBaseObject() : nullptr;
+            auto* furn = base ? base->As<RE::TESFurniture>() : nullptr;
+            return furn && furn->workBenchData.benchType.get() !=
+                               RE::TESFurniture::WorkBenchData::BenchType::kNone;
+        }
+
+        [[nodiscard]] bool InCraftContext() {
+            if (AtCraftingMenuOpen() || AtCraftingFurniture()) {
+                return true;
+            }
+            return g_craftContext.load(std::memory_order_relaxed) &&
+                   NowMs() < g_contextExpiryMs.load(std::memory_order_relaxed);
         }
 
         // --- Hook 3: per-item count (recipe availability) ---
         std::int32_t Hook_GetInventoryItemCount(RE::InventoryChanges* a_inv,
                                                 RE::TESBoundObject* a_item, void* a_filter) {
             const std::int32_t original = _originalGetInventoryItemCount(a_inv, a_item, a_filter);
-            if (!a_item || s_inPlayerCount || !AtCraftingMenu()) {
+            if (!a_item || s_inPlayerCount || !InCraftContext()) {
                 return original;  // s_inPlayerCount: Hook 5 is already adding the chest
             }
             auto* player = RE::PlayerCharacter::GetSingleton();
@@ -111,7 +144,7 @@ namespace Isekai::CraftHooks {
             const std::int32_t original = _originalPlayerGetItemCount(a_this, a_obj);
             s_inPlayerCount = false;
 
-            if (!a_obj || !AtCraftingMenu()) {
+            if (!a_obj || !InCraftContext()) {
                 return original;
             }
             auto* player = RE::PlayerCharacter::GetSingleton();
@@ -133,7 +166,7 @@ namespace Isekai::CraftHooks {
         std::int32_t Hook_GetContainerItemCount(RE::TESObjectREFR* a_ref, bool a_useMerchant,
                                                 bool a_unk) {
             const std::int32_t original = _originalGetContainerItemCount(a_ref, a_useMerchant, a_unk);
-            if (!a_ref || !a_ref->IsPlayerRef() || !AtCraftingMenu()) {
+            if (!a_ref || !a_ref->IsPlayerRef() || !InCraftContext()) {
                 return original;
             }
             auto* chest = Storage::ChestRef();
@@ -148,7 +181,7 @@ namespace Isekai::CraftHooks {
         RE::InventoryEntryData* Hook_GetInventoryItemEntryAtIdx(RE::TESObjectREFR* a_ref,
                                                                std::int32_t a_idx,
                                                                bool a_useMerchant) {
-            if (!a_ref || !a_ref->IsPlayerRef() || !AtCraftingMenu()) {
+            if (!a_ref || !a_ref->IsPlayerRef() || !InCraftContext()) {
                 return _originalGetInventoryItemEntryAtIdx(a_ref, a_idx, a_useMerchant);
             }
             auto* chest = Storage::ChestRef();
@@ -191,7 +224,7 @@ namespace Isekai::CraftHooks {
                                              const RE::NiPoint3* a_rotate) {
             auto* player = RE::PlayerCharacter::GetSingleton();
             if (player && a_this == player && a_item && a_count > 0 &&
-                a_reason == RE::ITEM_REMOVE_REASON::kRemove && AtCraftingMenu()) {
+                a_reason == RE::ITEM_REMOVE_REASON::kRemove && InCraftContext()) {
                 const std::int32_t fromChest = Storage::RemoveFromChest(a_item, a_count);
                 const std::int32_t remainder = a_count - fromChest;
                 if (fromChest > 0) {
@@ -207,6 +240,55 @@ namespace Isekai::CraftHooks {
             return _originalRemoveItem(a_this, a_result, a_item, a_count, a_reason, a_extraList,
                                        a_moveToRef, a_dropLoc, a_rotate);
         }
+
+        // Opens the crafting context the instant a crafting station is activated — before
+        // any mod's pre-menu prompt runs. Closed again on crafting-menu close (below).
+        class ActivateWatcher : public RE::BSTEventSink<RE::TESActivateEvent> {
+        public:
+            static ActivateWatcher* GetSingleton() {
+                static ActivateWatcher singleton;
+                return std::addressof(singleton);
+            }
+            RE::BSEventNotifyControl ProcessEvent(
+                const RE::TESActivateEvent* a_event,
+                RE::BSTEventSource<RE::TESActivateEvent>*) override {
+                if (a_event && a_event->actionRef && a_event->actionRef->IsPlayerRef() &&
+                    a_event->objectActivated) {
+                    auto* base = a_event->objectActivated->GetBaseObject();
+                    auto* furn = base ? base->As<RE::TESFurniture>() : nullptr;
+                    if (furn && furn->workBenchData.benchType.get() !=
+                                    RE::TESFurniture::WorkBenchData::BenchType::kNone) {
+                        g_craftContext.store(true, std::memory_order_relaxed);
+                        g_contextExpiryMs.store(NowMs() + 20000, std::memory_order_relaxed);
+                    }
+                }
+                return RE::BSEventNotifyControl::kContinue;
+            }
+
+        private:
+            ActivateWatcher() = default;
+        };
+
+        // Closes the context when the crafting menu closes.
+        class MenuCloseWatcher : public RE::BSTEventSink<RE::MenuOpenCloseEvent> {
+        public:
+            static MenuCloseWatcher* GetSingleton() {
+                static MenuCloseWatcher singleton;
+                return std::addressof(singleton);
+            }
+            RE::BSEventNotifyControl ProcessEvent(
+                const RE::MenuOpenCloseEvent* a_event,
+                RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override {
+                if (a_event && !a_event->opening &&
+                    a_event->menuName == RE::CraftingMenu::MENU_NAME) {
+                    g_craftContext.store(false, std::memory_order_relaxed);
+                }
+                return RE::BSEventNotifyControl::kContinue;
+            }
+
+        private:
+            MenuCloseWatcher() = default;
+        };
 
     }  // namespace
 
@@ -304,6 +386,17 @@ namespace Isekai::CraftHooks {
         // hooks. Whatever did not come up stays on the shuttle via Storage's fallback.
         s_itemActive = countOk && removeOk;
         s_iterActive = s_itemActive && h1ok && h2ok;
+
+        // Event sinks that open/close the crafting context (for pre-menu prompts). Only
+        // needed when the hooks are live.
+        if (s_itemActive) {
+            if (auto* src = RE::ScriptEventSourceHolder::GetSingleton()) {
+                src->AddEventSink<RE::TESActivateEvent>(ActivateWatcher::GetSingleton());
+            }
+            if (auto* ui = RE::UI::GetSingleton()) {
+                ui->AddEventSink<RE::MenuOpenCloseEvent>(MenuCloseWatcher::GetSingleton());
+            }
+        }
 
         logger::info("CraftHooks: item-crafting {} (count @ {:X}, consume {}), iteration {}",
                      s_itemActive ? "LIVE" : "OFF", countAddr, removeOk ? "ok" : "FAILED",
