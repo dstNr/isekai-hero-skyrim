@@ -211,22 +211,47 @@ namespace Isekai::SkillTree {
             // enchantments; a name alone does not make something the enchanting table
             // should offer. What disenchanting actually teaches is the BASE a variant
             // points to — so the set of legitimate bases is exactly the set of forms
-            // being pointed at. Same duplicate lesson as the shouts, different marker.
-            std::size_t known = 0;
+            // being pointed at.
+            //
+            // Dedup by display name, same lesson as the shouts: several distinct base
+            // forms can share a name ("Fortify Destruction" at different magnitudes),
+            // and marking them all known lists the effect several times at the table.
+            // Keep one per name (lowest FormID, the original) known and clear the flag
+            // on the same-named siblings. Harmless — the applied magnitude scales with
+            // the player's skill, not the base form, so one per name is all you need.
+            std::map<std::string, RE::EnchantmentItem*> byName;
             for (auto* ench : all) {
                 if (!ench || !ench->data.baseEnchantment) {
                     continue;
                 }
                 auto* base = ench->data.baseEnchantment;
-                if (const char* name = base->GetName(); !name || !*name) {
+                const char* name = base->GetName();
+                if (!name || !*name) {
                     continue;
                 }
-                if ((base->formFlags & RE::TESForm::RecordFlags::kKnown) == 0) {
-                    base->formFlags |= RE::TESForm::RecordFlags::kKnown;
-                    ++known;
+                auto [it, fresh] = byName.try_emplace(name, base);
+                if (!fresh && base->GetFormID() < it->second->GetFormID()) {
+                    it->second = base;
                 }
             }
-            logger::info("SkillTree: {} base enchantments marked known", known);
+            using EnchFlag = RE::TESForm::RecordFlags;
+            for (auto* ench : all) {
+                if (!ench || !ench->data.baseEnchantment) {
+                    continue;
+                }
+                auto* base = ench->data.baseEnchantment;
+                const char* name = base->GetName();
+                if (!name || !*name) {
+                    continue;
+                }
+                if (byName[name] == base) {
+                    base->formFlags |= EnchFlag::kKnown;
+                } else {
+                    base->formFlags &= ~static_cast<std::uint32_t>(EnchFlag::kKnown);
+                }
+            }
+            logger::info("SkillTree: {} unique enchantments marked known (deduped by name)",
+                         byName.size());
         }
 
         void UnlockAllIngredients() {
