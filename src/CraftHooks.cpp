@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstring>
 
 namespace Isekai::CraftHooks {
 
@@ -124,10 +125,30 @@ namespace Isekai::CraftHooks {
                    NowMs() < g_contextExpiryMs.load(std::memory_order_relaxed);
         }
 
+        // TEMP diagnostic: log the count hooks for a couple of telltale item names, BEFORE
+        // any gate, to see which function the forge conditions and the empower prompt call
+        // and whether the crafting context is active at that moment.
+        void DiagCount(const char* a_tag, RE::TESBoundObject* a_obj, std::int32_t a_original) {
+            if (!a_obj) {
+                return;
+            }
+            const char* nm = a_obj->GetName();
+            if (!nm || !(std::strstr(nm, "Flawless") || std::strstr(nm, "Ingot"))) {
+                return;
+            }
+            static std::atomic<int> s_diag{ 0 };
+            if (s_diag.fetch_add(1, std::memory_order_relaxed) < 150) {
+                logger::info("[{}] '{}' orig={} ctx={} menu={} furn={} chest={}", a_tag, nm,
+                             a_original, InCraftContext(), AtCraftingMenuOpen(),
+                             AtCraftingFurniture(), Storage::ChestCount(a_obj));
+            }
+        }
+
         // --- Hook 3: per-item count (recipe availability) ---
         std::int32_t Hook_GetInventoryItemCount(RE::InventoryChanges* a_inv,
                                                 RE::TESBoundObject* a_item, void* a_filter) {
             const std::int32_t original = _originalGetInventoryItemCount(a_inv, a_item, a_filter);
+            DiagCount("H3", a_item, original);
             if (!a_item || s_inPlayerCount || !InCraftContext()) {
                 return original;  // s_inPlayerCount: Hook 5 is already adding the chest
             }
@@ -143,6 +164,7 @@ namespace Isekai::CraftHooks {
             s_inPlayerCount = true;
             const std::int32_t original = _originalPlayerGetItemCount(a_this, a_obj);
             s_inPlayerCount = false;
+            DiagCount("H5", a_obj, original);
 
             if (!a_obj || !InCraftContext()) {
                 return original;
