@@ -137,20 +137,21 @@ namespace Isekai::Storage {
         // chest in place. Only alchemy and enchanting still shuttle, because their
         // menus iterate the inventory (a hook path we have not built yet).
         [[nodiscard]] bool ShuttleStation(BenchType a_bench) {
+            // The in-place CraftHooks cover every crafting menu now. The shuttle only
+            // survives as a fallback for the (unlikely) case the core hooks failed to
+            // install — then it lends at any crafting bench.
+            if (CraftHooks::ItemCraftingHooksActive()) {
+                return false;
+            }
             switch (a_bench) {
             case BenchType::kAlchemy:
             case BenchType::kAlchemyExperiment:
             case BenchType::kEnchanting:
             case BenchType::kEnchantingExperiment:
-                // Alchemy and enchanting read the chest in place now — shuttle only as a
-                // fallback if the iteration hooks did not install.
-                return !CraftHooks::IterationHooksActive();
             case BenchType::kCreateObject:
             case BenchType::kSmithingWeapon:
             case BenchType::kSmithingArmor:
-                // Zero-transfer hooks own these. If they failed to install, fall back
-                // to shuttling so item crafting never loses access to the chest.
-                return !CraftHooks::ItemCraftingHooksActive();
+                return true;
             default:
                 return false;
             }

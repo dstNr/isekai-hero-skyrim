@@ -5,6 +5,7 @@
 #include <MinHook.h>
 
 #include <algorithm>
+#include <atomic>
 
 namespace Isekai::CraftHooks {
 
@@ -75,59 +76,26 @@ namespace Isekai::CraftHooks {
         std::int32_t g_playerBoundary = 0;
         std::int32_t g_chestStacks = 0;
 
-        [[nodiscard]] RE::TESFurniture::WorkBenchData::BenchType CurrentBench() {
-            using BT = RE::TESFurniture::WorkBenchData::BenchType;
-            auto* player = RE::PlayerCharacter::GetSingleton();
-            if (!player) {
-                return BT::kNone;
-            }
-            auto* ref = player->GetOccupiedFurniture().get().get();
-            auto* base = ref ? ref->GetBaseObject() : nullptr;
-            auto* furn = base ? base->As<RE::TESFurniture>() : nullptr;
-            return furn ? furn->workBenchData.benchType.get() : BT::kNone;
-        }
-
-        // Item-crafting station (ConstructibleObjectMenu family) — count + consume.
-        [[nodiscard]] bool AtItemStation() {
-            using BT = RE::TESFurniture::WorkBenchData::BenchType;
-            switch (CurrentBench()) {
-            case BT::kCreateObject:
-            case BT::kSmithingWeapon:
-            case BT::kSmithingArmor:
-                return true;
-            default:
-                return false;
-            }
-        }
-
-        // Iteration menus — alchemy (ingredients) and enchanting (soul gems + items).
-        // Both build their list by walking the inventory, so both get the chest appended.
-        // Our chest stocks pre-filled GRAND soul gems as a base form (no fill-state extra
-        // list), so enchanting consumes them as plainly as alchemy consumes an ingredient.
-        [[nodiscard]] bool AtIterationStation() {
-            using BT = RE::TESFurniture::WorkBenchData::BenchType;
-            switch (CurrentBench()) {
-            case BT::kAlchemy:
-            case BT::kAlchemyExperiment:
-            case BT::kEnchanting:
-            case BT::kEnchantingExperiment:
-                return true;
-            default:
-                return false;
-            }
-        }
-
-        // Where the chest backs the recipe: count-augment and consume redirect apply.
-        // An iteration station only counts once its hooks are live (else the shuttle owns it).
-        [[nodiscard]] bool AtChestBackedStation() {
-            return AtItemStation() || (AtIterationStation() && s_iterActive);
+        // The single gate for every hook: a crafting menu is open. This is far more
+        // robust than checking occupied furniture. When the recipe list is first built —
+        // where a crafting overhaul's item-count CONDITIONS are evaluated to decide which
+        // recipes even appear — the furniture occupation is not reliably set yet, so a
+        // furniture check let those recipes vanish (their condition saw an empty chest).
+        // The menu is already on the UI stack at that point. It also covers the moment
+        // another mod's Papyrus prompt (e.g. "empower with a flawless gem?") runs, since
+        // that fires while the crafting menu is still open. Forge / alchemy / enchanting
+        // all share the one CraftingMenu; the iteration hooks (1/2) still only fire for
+        // the menus that actually walk the inventory.
+        [[nodiscard]] bool AtCraftingMenu() {
+            auto* ui = RE::UI::GetSingleton();
+            return ui && ui->IsMenuOpen(RE::CraftingMenu::MENU_NAME);
         }
 
         // --- Hook 3: per-item count (recipe availability) ---
         std::int32_t Hook_GetInventoryItemCount(RE::InventoryChanges* a_inv,
                                                 RE::TESBoundObject* a_item, void* a_filter) {
             const std::int32_t original = _originalGetInventoryItemCount(a_inv, a_item, a_filter);
-            if (!a_item || s_inPlayerCount || !AtChestBackedStation()) {
+            if (!a_item || s_inPlayerCount || !AtCraftingMenu()) {
                 return original;  // s_inPlayerCount: Hook 5 is already adding the chest
             }
             auto* player = RE::PlayerCharacter::GetSingleton();
@@ -143,12 +111,20 @@ namespace Isekai::CraftHooks {
             const std::int32_t original = _originalPlayerGetItemCount(a_this, a_obj);
             s_inPlayerCount = false;
 
-            if (!a_obj || !AtChestBackedStation()) {
+            if (!a_obj || !AtCraftingMenu()) {
                 return original;
             }
             auto* player = RE::PlayerCharacter::GetSingleton();
             if (a_this != player) {
                 return original;
+            }
+            // Diagnostic (capped): confirms this function is on the script/condition path
+            // during a crafting menu. If a symptom persists and NO such line appears, the
+            // path uses a different function than 19701.
+            static std::atomic<int> s_h5log{ 0 };
+            if (const int n = ++s_h5log; n <= 40) {
+                logger::info("CraftHooks[H5]: PlayerGetItemCount('{}') player={} +chest={}",
+                             a_obj->GetName(), original, Storage::ChestCount(a_obj));
             }
             return original + Storage::ChestCount(a_obj);
         }
@@ -157,7 +133,7 @@ namespace Isekai::CraftHooks {
         std::int32_t Hook_GetContainerItemCount(RE::TESObjectREFR* a_ref, bool a_useMerchant,
                                                 bool a_unk) {
             const std::int32_t original = _originalGetContainerItemCount(a_ref, a_useMerchant, a_unk);
-            if (!a_ref || !a_ref->IsPlayerRef() || !AtIterationStation()) {
+            if (!a_ref || !a_ref->IsPlayerRef() || !AtCraftingMenu()) {
                 return original;
             }
             auto* chest = Storage::ChestRef();
@@ -172,7 +148,7 @@ namespace Isekai::CraftHooks {
         RE::InventoryEntryData* Hook_GetInventoryItemEntryAtIdx(RE::TESObjectREFR* a_ref,
                                                                std::int32_t a_idx,
                                                                bool a_useMerchant) {
-            if (!a_ref || !a_ref->IsPlayerRef() || !AtIterationStation()) {
+            if (!a_ref || !a_ref->IsPlayerRef() || !AtCraftingMenu()) {
                 return _originalGetInventoryItemEntryAtIdx(a_ref, a_idx, a_useMerchant);
             }
             auto* chest = Storage::ChestRef();
@@ -215,7 +191,7 @@ namespace Isekai::CraftHooks {
                                              const RE::NiPoint3* a_rotate) {
             auto* player = RE::PlayerCharacter::GetSingleton();
             if (player && a_this == player && a_item && a_count > 0 &&
-                a_reason == RE::ITEM_REMOVE_REASON::kRemove && AtChestBackedStation()) {
+                a_reason == RE::ITEM_REMOVE_REASON::kRemove && AtCraftingMenu()) {
                 const std::int32_t fromChest = Storage::RemoveFromChest(a_item, a_count);
                 const std::int32_t remainder = a_count - fromChest;
                 if (fromChest > 0) {
