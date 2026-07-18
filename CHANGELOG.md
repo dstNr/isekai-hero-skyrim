@@ -4,6 +4,24 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [0.3.1] — 2026-07-17
+
+Follow-up fixes to the crafting rework. No save format change.
+
+### Fixed
+- **Other mods' pre-craft checks now see the Dimensional Storage.** Scripts and
+  recipe conditions read a different item-count path (`PlayerCharacter::GetItemCount`)
+  than the crafting menu does, so anything gated on "do you have this material" only
+  saw your carried inventory. Two symptoms this fixes:
+  - Enchantment "empower" prompts (e.g. spend a flawless gem) now offer gems that
+    live in the storage.
+  - Crafting overhauls that hide recipes behind an item-in-inventory condition no
+    longer hide the ones whose materials are in the storage. The count hook is scoped
+    to crafting stations, so nothing changes elsewhere.
+- **No more duplicate enchantments at the table.** "Arcane Omniscience" marked every
+  same-named base enchantment known, listing an effect several times. It now keeps one
+  per name (harmless — applied strength scales with your skill, not the base form).
+
 ## [0.3.0] — 2026-07-17
 
 Crafting reworked to read the Dimensional Storage in place, and the storage stock
@@ -112,6 +130,7 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[0.3.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.3.1
 [0.3.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.3.0
 [0.2.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.2.1
 [0.2.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.2.0
