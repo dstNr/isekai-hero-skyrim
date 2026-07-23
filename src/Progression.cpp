@@ -6,7 +6,7 @@
 #include "System.h"
 #include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
-#include "UI/PrismaTree.h"
+#include "UI/Prisma.h"
 #include "UI/SkillTreeWindow.h"
 #include "UI/SystemWindow.h"
 
@@ -417,8 +417,8 @@ namespace Isekai::Progression {
                                     /*iconOnly=*/true });
                 actions.emplace_back([]() {
                     // Web tree if the optional PrismaUI patch is installed, else ImGui.
-                    if (UI::PrismaTree::Active()) {
-                        UI::PrismaTree::Open();
+                    if (UI::Prisma::Active()) {
+                        UI::Prisma::OpenTree();
                     } else {
                         UI::ShowSkillTree();
                     }

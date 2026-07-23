@@ -10,7 +10,7 @@
 #include "Storage.h"
 #include "UI/LevelUpEffect.h"
 #include "UI/Overlay.h"
-#include "UI/PrismaTree.h"
+#include "UI/Prisma.h"
 #include "UI/SystemWindow.h"
 
 #include <algorithm>
@@ -464,7 +464,7 @@ namespace Isekai {
                 Storage::Install();
                 CraftHooks::Install();  // zero-transfer crafting (validation build for now)
                 UI::Install();
-                UI::PrismaTree::Install();  // optional web skill tree; no-op without the patch
+                UI::Prisma::Install();  // optional web UI; no-op without the patch
                 Progression::Install();
 
                 if (auto* ui = RE::UI::GetSingleton()) {

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 project(
     IsekaiHeroSKSE
-    VERSION 0.6.0
+    VERSION 0.7.0
     LANGUAGES CXX
 )
 
@@ -42,8 +42,8 @@ add_commonlibsse_plugin(
         src/UI/LevelUpEffect.h
         src/UI/Overlay.cpp
         src/UI/Overlay.h
-        src/UI/PrismaTree.cpp
-        src/UI/PrismaTree.h
+        src/UI/Prisma.cpp
+        src/UI/Prisma.h
         src/UI/SkillTreeWindow.cpp
         src/UI/SkillTreeWindow.h
         src/UI/Style.h

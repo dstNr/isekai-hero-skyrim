@@ -10,7 +10,7 @@
 
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
-$version = "0.6.0"
+$version = "0.7.0"
 
 $stage = Join-Path $root "build\prisma-patch"
 $dist = Join-Path $root "dist"

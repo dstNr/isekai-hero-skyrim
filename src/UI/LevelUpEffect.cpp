@@ -1,5 +1,6 @@
 #include "UI/LevelUpEffect.h"
 
+#include "UI/Prisma.h"
 #include "UI/Style.h"
 
 #include <imgui.h>
@@ -53,6 +54,11 @@ namespace Isekai::UI {
     }
 
     void PlayLevelUpEffect(std::string a_title, std::string a_subtitle) {
+        // Route the flourish through the web view when the PrismaUI patch is live.
+        if (Prisma::Active()) {
+            Prisma::Flourish(std::move(a_title), std::move(a_subtitle));
+            return;
+        }
         {
             std::scoped_lock lock(g_mutex);
             g_title = std::move(a_title);

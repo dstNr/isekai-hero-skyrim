@@ -2,6 +2,7 @@
 
 #include "Sounds.h"
 #include "UI/Overlay.h"
+#include "UI/Prisma.h"
 #include "UI/Style.h"
 #include "UI/Textures.h"
 
@@ -351,6 +352,14 @@ namespace Isekai::UI {
                           std::vector<Choice> a_choices,
                           std::function<void(int)> a_onSelect, float a_revealCharsPerSec,
                           float a_width) {
+        // Optional web renderer: hand the whole panel to PrismaUI when the patch is live.
+        // It owns focus/pause and calls the selection back on the main thread — the ImGui
+        // path below (state, SetGameHold, DrawPanel) is skipped entirely.
+        if (Prisma::Active()) {
+            Prisma::ShowPanel(std::move(a_title), std::move(a_body), std::move(a_choices),
+                              std::move(a_onSelect), a_revealCharsPerSec, a_width);
+            return;
+        }
         {
             std::scoped_lock lock(g_mutex);
             g_win.title = std::move(a_title);

@@ -4,6 +4,20 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [0.7.0] — 2026-07-23
+
+The optional PrismaUI patch now covers the **whole** UI, not just the skill tree.
+
+### Changed
+- **PrismaUI patch extended to every panel.** With the patch (and PrismaUI) installed,
+  the System dialog panels — blessing/awakening choice, the status ledger with its
+  icon buttons, milestone payouts — and the level-up flourish now render through the
+  web view too, alongside the skill tree. One view, several screens; the plugin hands
+  each its data and takes the clicks back. Still fully auto-detected with a safe ImGui
+  fallback whenever the patch or the framework is absent — the base mod is unchanged.
+  (The renamed patch archive `IsekaiHero-PrismaUI-Patch-v0.7.0.7z` replaces the
+  tree-only 0.6.0 one; re-download if you use it.)
+
 ## [0.6.0] — 2026-07-23
 
 Optional web UI for the skill tree. No change at all unless you install both the
@@ -218,6 +232,7 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[0.7.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.7.0
 [0.6.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.6.0
 [0.5.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.5.0
 [0.4.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.4.0
