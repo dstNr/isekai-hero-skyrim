@@ -125,6 +125,19 @@
   .lnk.half { stroke: rgba(90,210,255,0.5);  stroke-width: 1.7; }
   .lnk.off  { stroke: rgba(125,165,200,0.22); stroke-width: 1.2; }
 
+  /* Utility rail: the repeatable, always-open upgrades (no prerequisites) don't hang
+     off the branch graph, so instead of leaving them floating they get their own
+     labelled dock on the left, set off by a soft divider and a faint tint. */
+  #urail { position: absolute; left: 0; top: 0; bottom: 0; width: 118px;
+           display: flex; flex-direction: column; align-items: center; padding-top: 6px;
+           background: linear-gradient(90deg, rgba(90,210,255,0.045), transparent);
+           border-right: 1px solid rgba(90,210,255,0.14); }
+  #urailHead { color: var(--dim); font-size: 10px; letter-spacing: 0.32em;
+               text-transform: uppercase; opacity: 0.75; }
+  #urailNodes { flex: 1; display: flex; flex-direction: column; align-items: center;
+                justify-content: center; gap: clamp(20px, 3.4vh, 46px); }
+  .node.docked { position: relative; margin: 0; }   /* flows in the rail, not absolute */
+
   .node { position: absolute; width: 62px; height: 62px; margin: -31px 0 0 -31px;
           border-radius: 10px; display: flex; align-items: center; justify-content: center;
           background: linear-gradient(160deg, rgba(20,36,58,0.95), rgba(9,17,30,0.95));
@@ -252,6 +265,10 @@
       </div>
       <div id="tRule" class="rule"></div>
       <div id="canvas">
+        <div id="urail">
+          <div id="urailHead" class="mono">Utility</div>
+          <div id="urailNodes"></div>
+        </div>
         <svg id="lines"></svg>
         <div id="tip"><div id="tipName"></div><div id="tipDesc"></div><div id="tipStatus"></div></div>
       </div>
@@ -292,6 +309,11 @@ const $ = (id) => document.getElementById(id);
 
 const DESIGN_W = 1120, DESIGN_H = 760;   // the scaled stage
 const NODE_R = 31;                       // half a node box, in canvas px
+const RAIL = 130;                        // utility-rail width + gap, reserved on the left
+
+/* Utility nodes are the repeatable, prerequisite-free upgrades. They live in the left
+   rail, not the branch graph, so they're excluded from the graph layout. */
+const isUtil = (n) => n.repeatable && !n.prereq[0] && !n.prereq[1];
 
 function showScreen(name) {
   ["tree", "panel", "flourish"].forEach(s => $("screen-" + s).classList.toggle("active", s === name));
@@ -316,16 +338,20 @@ const byKey = new Map();
 function layout() {
   const canvas = $("canvas");
   const W = canvas.clientWidth, H = canvas.clientHeight;
-  if (!TREE.nodes.length || !W || !H) return null;
+  const graph = TREE.nodes.filter(n => !isUtil(n));
+  if (!graph.length || !W || !H) return null;
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  TREE.nodes.forEach(n => {
+  graph.forEach(n => {
     if (n.x < minX) minX = n.x; if (n.x > maxX) maxX = n.x;
     if (n.y < minY) minY = n.y; if (n.y > maxY) maxY = n.y;
   });
   const cw = Math.max(1, maxX - minX), ch = Math.max(1, maxY - minY);
   const pad = NODE_R + 24;
-  const k = Math.min((W - pad * 2) / cw, (H - pad * 2) / ch);
-  return { k, W, H, ox: (W - cw * k) / 2 - minX * k, oy: (H - ch * k) / 2 - minY * k };
+  const availW = W - RAIL;                       // graph lives right of the utility rail
+  const k = Math.min((availW - pad * 2) / cw, (H - pad * 2) / ch);
+  return { k, W, H,
+           ox: RAIL + (availW - cw * k) / 2 - minX * k,
+           oy: (H - ch * k) / 2 - minY * k };
 }
 const posOf = (L, n) => ({ x: L.ox + n.x * L.k, y: L.oy + n.y * L.k });
 
@@ -364,11 +390,14 @@ function showTip(n, el) {
   const s = statusOf(n);
   $("tipStatus").textContent = s.t;
   $("tipStatus").style.color = s.c;
-  // Place beside the node, flipping before it runs off the canvas.
-  const cx = parseFloat(el.style.left), cy = parseFloat(el.style.top);
-  const flip = cx > $("canvas").clientWidth - 360;
-  tip.style.left = (flip ? cx - 316 : cx + 46) + "px";
-  tip.style.top = Math.max(0, cy - 40) + "px";
+  // Position from the element's actual box (works for graph nodes AND rail nodes,
+  // whose positions come from flex layout, not inline left/top). Flip before it runs
+  // off the right edge.
+  const canvas = $("canvas"), cr = canvas.getBoundingClientRect(), er = el.getBoundingClientRect();
+  const cx = er.left - cr.left + er.width / 2, cy = er.top - cr.top + er.height / 2;
+  const flip = cx > canvas.clientWidth - 330;
+  tip.style.left = (flip ? cx - 316 - 26 : cx + 42) + "px";
+  tip.style.top = Math.max(4, cy - 40) + "px";
   tip.classList.add("show");
 }
 function hideTip() { hoverKey = 0; $("tip").classList.remove("show"); }
@@ -418,10 +447,11 @@ function renderTree() {
 
   // --- nodes: create once, then update in place ---
   TREE.nodes.forEach((n, i) => {
+    const util = isUtil(n);
     let el = nodeEls.get(n.key);
     if (!el) {
       el = document.createElement("div");
-      el.className = "node";
+      el.className = util ? "node docked" : "node";
       el.style.animationDelay = (i * 20) + "ms";
       const img = document.createElement("img");
       img.src = "icons/" + n.icon;
@@ -433,7 +463,7 @@ function renderTree() {
         const cur = byKey.get(n.key);
         if (cur && stateOf(cur) === "buyable") callBack("isekaiBuy", String(n.key));
       });
-      canvas.appendChild(el);
+      (util ? $("urailNodes") : canvas).appendChild(el);
       nodeEls.set(n.key, el);
     }
 
@@ -441,9 +471,11 @@ function renderTree() {
     STATES.forEach(s => el.classList.remove(s));
     el.classList.add(stateOf(n));
 
-    const p = posOf(L, n);
-    el.style.left = p.x + "px";
-    el.style.top = p.y + "px";
+    if (!util) {                     // rail nodes are placed by flex, not coordinates
+      const p = posOf(L, n);
+      el.style.left = p.x + "px";
+      el.style.top = p.y + "px";
+    }
 
     let pip = el.querySelector(".rank");
     if (n.repeatable && n.rank > 0) {
