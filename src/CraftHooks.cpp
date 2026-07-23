@@ -7,7 +7,8 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
-#include <cstring>
+#include <thread>
+#include <unordered_map>
 
 namespace Isekai::CraftHooks {
 
@@ -83,6 +84,43 @@ namespace Isekai::CraftHooks {
         bool s_itemActive = false;     // Hook 3 + Hook 4 live (item crafting)
         bool s_iterActive = false;  // Hook 1 + Hook 2 live (alchemy + enchanting iteration)
 
+        // The member count function (Hook 6) is one of the game's hottest, and it fires
+        // off the main thread too. We only ever augment on the main thread — where the
+        // crafting menu and its condition evaluation run — so the chest cache below is
+        // touched by exactly one thread and needs no lock, and we never poke game objects
+        // from a worker thread.
+        std::thread::id g_mainThread;
+
+        [[nodiscard]] bool OnMainThread() {
+            return std::this_thread::get_id() == g_mainThread;
+        }
+
+        // Cached chest counts. Rebuilt lazily; invalidated when the crafting context opens,
+        // when it closes, and after a consume. This keeps the hot count hooks from calling
+        // the heavy GetInventoryCounts on every single query (the per-call version crashed).
+        std::unordered_map<RE::TESBoundObject*, std::int32_t> g_chestCache;
+        bool                                                  g_chestCacheValid = false;
+
+        void InvalidateChestCache() {
+            g_chestCacheValid = false;
+        }
+
+        [[nodiscard]] std::int32_t ChestCountCached(RE::TESBoundObject* a_obj) {
+            if (!g_chestCacheValid) {
+                g_chestCache.clear();
+                if (auto* chest = Storage::ChestRef()) {
+                    for (const auto& [obj, cnt] : chest->GetInventoryCounts()) {
+                        if (obj && cnt > 0) {
+                            g_chestCache[obj] = cnt;
+                        }
+                    }
+                }
+                g_chestCacheValid = true;
+            }
+            const auto it = g_chestCache.find(a_obj);
+            return it != g_chestCache.end() ? it->second : 0;
+        }
+
         // Boundary between the player's own stacks and the chest's, cached at the start
         // of each list iteration. Main-thread only (the crafting menu runs there).
         std::int32_t g_playerBoundary = 0;
@@ -135,30 +173,13 @@ namespace Isekai::CraftHooks {
                    NowMs() < g_contextExpiryMs.load(std::memory_order_relaxed);
         }
 
-        // TEMP diagnostic: log the count hooks for a couple of telltale item names, BEFORE
-        // any gate, to see which function the forge conditions and the empower prompt call
-        // and whether the crafting context is active at that moment.
-        void DiagCount(const char* a_tag, RE::TESBoundObject* a_obj, std::int32_t a_original) {
-            if (!a_obj) {
-                return;
-            }
-            const char* nm = a_obj->GetName();
-            if (!nm || !(std::strstr(nm, "Flawless") || std::strstr(nm, "Ingot"))) {
-                return;
-            }
-            static std::atomic<int> s_diag{ 0 };
-            if (s_diag.fetch_add(1, std::memory_order_relaxed) < 150) {
-                logger::info("[{}] '{}' orig={} ctx={} menu={} furn={} chest={}", a_tag, nm,
-                             a_original, InCraftContext(), AtCraftingMenuOpen(),
-                             AtCraftingFurniture(), Storage::ChestCount(a_obj));
-            }
-        }
-
         // Shared tail for the per-item count hooks: add the chest, but only at the
-        // outermost count call (so a nested standalone→member chain can't double it),
-        // only while crafting, and only for the player's own inventory changes.
+        // outermost count call (so a nested standalone→member chain can't double it), only
+        // on the main thread (the count functions fire off-thread too, and poking game
+        // objects from a worker crashes), only while crafting, and only for the player's
+        // own inventory changes.
         [[nodiscard]] bool ShouldAddChest(RE::InventoryChanges* a_inv) {
-            if (s_countDepth != 0 || !InCraftContext()) {
+            if (s_countDepth != 0 || !OnMainThread() || !InCraftContext()) {
                 return false;
             }
             auto* player = RE::PlayerCharacter::GetSingleton();
@@ -171,11 +192,10 @@ namespace Isekai::CraftHooks {
             ++s_countDepth;
             const std::int32_t original = _originalGetInventoryItemCount(a_inv, a_item, a_filter);
             --s_countDepth;
-            DiagCount("H3", a_item, original);
             if (!a_item || !ShouldAddChest(a_inv)) {
                 return original;
             }
-            return original + Storage::ChestCount(a_item);
+            return original + ChestCountCached(a_item);
         }
 
         // --- Hook 6: InventoryChanges::GetItemCount (member) — recipe conditions + Papyrus ---
@@ -184,11 +204,10 @@ namespace Isekai::CraftHooks {
             ++s_countDepth;
             const std::int16_t original = _originalInvChangesGetItemCount(a_this, a_obj);
             --s_countDepth;
-            DiagCount("HM", a_obj, original);
             if (!a_obj || !ShouldAddChest(a_this)) {
                 return original;
             }
-            const std::int32_t total = static_cast<std::int32_t>(original) + Storage::ChestCount(a_obj);
+            const std::int32_t total = static_cast<std::int32_t>(original) + ChestCountCached(a_obj);
             return static_cast<std::int16_t>(std::min(total, 32767));
         }
 
@@ -197,15 +216,14 @@ namespace Isekai::CraftHooks {
             ++s_countDepth;
             const std::int32_t original = _originalPlayerGetItemCount(a_this, a_obj);
             --s_countDepth;
-            DiagCount("H5", a_obj, original);
-            if (!a_obj || s_countDepth != 0 || !InCraftContext()) {
+            if (!a_obj || s_countDepth != 0 || !OnMainThread() || !InCraftContext()) {
                 return original;
             }
             auto* player = RE::PlayerCharacter::GetSingleton();
             if (a_this != player) {
                 return original;
             }
-            return original + Storage::ChestCount(a_obj);
+            return original + ChestCountCached(a_obj);
         }
 
         // --- Hook 1: total stack count of a container ---
@@ -274,6 +292,7 @@ namespace Isekai::CraftHooks {
                 const std::int32_t fromChest = Storage::RemoveFromChest(a_item, a_count);
                 const std::int32_t remainder = a_count - fromChest;
                 if (fromChest > 0) {
+                    InvalidateChestCache();  // the chest shrank — counts must be re-read
                     logger::info("CraftHooks: consumed {}x '{}' from storage, {} from player",
                                  fromChest, a_item->GetName(), remainder);
                 }
@@ -306,6 +325,7 @@ namespace Isekai::CraftHooks {
                                     RE::TESFurniture::WorkBenchData::BenchType::kNone) {
                         g_craftContext.store(true, std::memory_order_relaxed);
                         g_contextExpiryMs.store(NowMs() + 20000, std::memory_order_relaxed);
+                        InvalidateChestCache();  // fresh counts for this crafting session
                     }
                 }
                 return RE::BSEventNotifyControl::kContinue;
@@ -328,6 +348,7 @@ namespace Isekai::CraftHooks {
                 if (a_event && !a_event->opening &&
                     a_event->menuName == RE::CraftingMenu::MENU_NAME) {
                     g_craftContext.store(false, std::memory_order_relaxed);
+                    InvalidateChestCache();
                 }
                 return RE::BSEventNotifyControl::kContinue;
             }
@@ -350,6 +371,10 @@ namespace Isekai::CraftHooks {
         if (s_itemActive || s_iterActive) {
             return;
         }
+
+        // kDataLoaded runs on the main thread — remember it, so the count hooks only ever
+        // augment from here.
+        g_mainThread = std::this_thread::get_id();
 
         // Resolve the count function through Address Library first. A missing/mismatched
         // library throws or returns 0 — bail loudly rather than patch a wrong address.
