@@ -31,23 +31,26 @@
   .screen.active { display: flex; }
 
   /* Backdrop: vignette + faint scanlines, so the game reads as "behind glass". */
+  /* Lighter centre so the scene shows through the (now translucent) panel; the vignette
+     still darkens the edges to keep focus on the window. */
   .backdrop { position: fixed; inset: 0;
     background:
-      repeating-linear-gradient(180deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 3px),
-      radial-gradient(ellipse 70% 60% at 50% 45%, rgba(26,110,160,0.18), transparent 70%),
-      radial-gradient(ellipse at center, rgba(2,5,10,0.55), rgba(2,5,10,0.86));
+      repeating-linear-gradient(180deg, rgba(255,255,255,0.016) 0 1px, transparent 1px 3px),
+      radial-gradient(ellipse 70% 60% at 50% 45%, rgba(26,110,160,0.16), transparent 70%),
+      radial-gradient(ellipse at center, rgba(2,5,10,0.30), rgba(2,5,10,0.74));
     animation: veilIn 0.35s var(--ease) both; }
   @keyframes veilIn { from { opacity: 0; } to { opacity: 1; } }
 
   /* ---------- Shared glass surface ---------- */
   /* NOTE: deliberately no backdrop-filter. A full-screen blur is re-computed every
-     frame in Ultralight and was the main source of the stutter in the System menu;
-     a slightly more opaque surface reads almost the same and costs nothing. */
+     frame in Ultralight and was the main source of the stutter in the System menu.
+     Instead the surface is simply translucent (~0.82) — the scene shows through a
+     little, which reads as "glass" and costs nothing. */
   .glass {
     position: relative;
     background:
-      linear-gradient(180deg, rgba(90,210,255,0.07), transparent 22%),
-      linear-gradient(180deg, rgba(9,18,33,0.97), rgba(12,24,41,0.95));
+      linear-gradient(180deg, rgba(90,210,255,0.08), transparent 22%),
+      linear-gradient(160deg, rgba(9,18,33,0.84), rgba(12,24,41,0.78));
     box-shadow:
       0 0 0 1px rgba(90,210,255,0.22),
       0 0 34px rgba(26,110,160,0.28),
