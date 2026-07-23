@@ -9,21 +9,31 @@
 #include <chrono>
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 namespace Isekai::CraftHooks {
 
     namespace {
 
         // ----------------------------------------------------------------------------
-        // Zero-transfer crafting: crafting stations read AND consume the Dimensional
-        // Storage in place — nothing moves, so no VM event flood and no timing race.
+        // Crafting stations read AND consume the Dimensional Storage in place — the
+        // display count and the consume both come from the chest, nothing is shuttled.
         //
         //   * Item crafting (forge/smelter/tanning/grindstone/armour bench) asks a
         //     per-recipe COUNT and consumes on craft → Hook 3 + Hook 4.
         //   * Alchemy ITERATES the inventory to build its ingredient list → Hook 1 +
         //     Hook 2, plus Hook 3/4 for the count/consume paths.
-        //   * Enchanting also iterates but consumes soul gems (with fill state) — kept
-        //     on the old shuttle for now; its careful hook comes next.
+        //
+        // ONE thing a count hook cannot do: satisfy a recipe-VISIBILITY condition. CCOR
+        // (and kin) hide recipes behind `GetItemCount material >= 1`, which the engine's
+        // condition system reads straight off the real inventory — never through any
+        // hookable count function (we tried the standalone, the member and the
+        // PlayerCharacter one; none is on that path). The only thing that satisfies such
+        // a condition is a real item in the inventory. So at a forge-family bench we lend
+        // exactly ONE of each stored material the player lacks (LendTokens), the recipe
+        // then shows, the count/consume hooks present and spend the FULL chest, and the
+        // leftover tokens go back on menu close. One item per type, not stacks — no flood.
         //
         // Technique, IDs and the RemoveItem vtable slot adapted from SCIE by ohfor
         // (MIT): https://github.com/ohfor/scie
@@ -56,29 +66,9 @@ namespace Isekai::CraftHooks {
                                                       const RE::NiPoint3* a_rotate);
         RemoveItem_t _originalRemoveItem = nullptr;
 
-        // Hook 5 — PlayerCharacter::GetItemCount. IDs 19275 (SE) / 19701 (AE). This is
-        // the count Papyrus scripts hit (Actor.GetItemCount), so other mods' pre-craft
-        // prompts — e.g. "empower this enchantment with a flawless gem?" — read it. It's
-        // a DIFFERENT function from the menu's count (Hook 3), so without its own hook
-        // those scripts see only the player's carried stock, never the chest.
-        using PlayerGetItemCount_t = std::int32_t (*)(RE::PlayerCharacter* a_this,
-                                                      RE::TESBoundObject* a_obj);
-        PlayerGetItemCount_t _originalPlayerGetItemCount = nullptr;
-
-        // Hook 6 — InventoryChanges::GetItemCount (the MEMBER function). IDs 15868 (SE) /
-        // 16047 (AE). This is the one that matters most: recipe CONDITIONS (CCOR's
-        // "hide recipes you lack the material for") and Papyrus GetItemCount read THIS,
-        // not the standalone Hook 3 uses for the menu display. Without it, the chest
-        // shows in the material readout but the recipe stays hidden until you carry one.
-        // Returns int16.
-        using InvChangesGetItemCount_t = std::int16_t (*)(RE::InventoryChanges* a_this,
-                                                          RE::TESBoundObject* a_obj);
-        InvChangesGetItemCount_t _originalInvChangesGetItemCount = nullptr;
-
-        // All the count hooks share this re-entrancy depth. Any of them may internally
-        // call another (e.g. the standalone calls the member); only the OUTERMOST call
-        // adds the chest, so it can never be counted twice. Per-thread because Papyrus
-        // may run a count off the main thread.
+        // Re-entrancy depth for the standalone count hook: it may internally call the
+        // member count, so only the OUTERMOST call adds the chest and it can never be
+        // counted twice. Per-thread because a count may run off the main thread.
         thread_local int s_countDepth = 0;
 
         bool s_itemActive = false;     // Hook 3 + Hook 4 live (item crafting)
@@ -139,6 +129,106 @@ namespace Isekai::CraftHooks {
             g_chestCache.clear();
         }
 
+        // --- Recipe-visibility tokens (main thread only, in the event sinks) ---
+        using BenchType = RE::TESFurniture::WorkBenchData::BenchType;
+
+        // The one item of each material we lent the player so a foreign `>= 1` visibility
+        // condition passes. Raw base-form pointers — never freed, and only ever touched on
+        // the main thread, so no lock.
+        std::vector<RE::TESBoundObject*> g_lentTokens;
+
+        // Only the forge family gates recipes on carried materials (CCOR). Alchemy and
+        // enchanting don't hide recipes that way, and their soul-gem/ingredient stock is
+        // served by the iteration path — no tokens there.
+        [[nodiscard]] bool BenchWantsTokens(BenchType a_bench) {
+            return a_bench == BenchType::kCreateObject ||
+                   a_bench == BenchType::kSmithingWeapon ||
+                   a_bench == BenchType::kSmithingArmor;
+        }
+
+        // Exactly the materials some crafting recipe requires — the components of every
+        // BGSConstructibleObject, Misc or Ingredient. Built once at Install. Tokening only
+        // these (rather than every stored ingredient) keeps the lent set to the few dozen
+        // things the forge family actually gates on, so the per-open item shuffle stays
+        // tiny. Soul gems carry fill-state extra data and are never tokened.
+        std::unordered_set<RE::TESBoundObject*> g_recipeMaterials;
+
+        void BuildRecipeMaterialSet() {
+            auto* data = RE::TESDataHandler::GetSingleton();
+            if (!data) {
+                return;
+            }
+            for (auto* cobj : data->GetFormArray<RE::BGSConstructibleObject>()) {
+                if (!cobj) {
+                    continue;
+                }
+                cobj->requiredItems.ForEachContainerObject([](RE::ContainerObject& a_c) {
+                    if (a_c.obj) {
+                        const auto t = a_c.obj->GetFormType();
+                        if (t == RE::FormType::Misc || t == RE::FormType::Ingredient) {
+                            g_recipeMaterials.insert(a_c.obj);
+                        }
+                    }
+                    return RE::BSContainer::ForEachResult::kContinue;
+                });
+            }
+            logger::info("CraftHooks: tracking {} recipe material type(s) for visibility tokens",
+                         g_recipeMaterials.size());
+        }
+
+        // Hand every still-held token back to the chest. kStoreInContainer (not kRemove),
+        // so Hook 4 lets it pass straight through instead of treating it as a consume.
+        void ReturnTokens() {
+            if (g_lentTokens.empty()) {
+                return;
+            }
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            auto* chest = Storage::ChestRef();
+            if (player && chest) {
+                const auto held = player->GetInventoryCounts();
+                for (auto* obj : g_lentTokens) {
+                    const auto it = held.find(obj);
+                    if (it != held.end() && it->second > 0) {
+                        player->RemoveItem(obj, 1, RE::ITEM_REMOVE_REASON::kStoreInContainer,
+                                           nullptr, chest);
+                    }
+                }
+            }
+            g_lentTokens.clear();
+        }
+
+        // Lend one of each stored forge material the player is not already carrying, so a
+        // foreign `GetItemCount >= 1` visibility condition passes and the recipe appears.
+        // MUST run before OpenCraftSession snapshots the chest, so the cached counts match
+        // the (now one-lower) chest. Main thread only.
+        void LendTokens() {
+            ReturnTokens();  // sweep up anything stranded by an aborted session first
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            auto* chest = Storage::ChestRef();
+            if (!player || !chest) {
+                return;
+            }
+            const auto held = player->GetInventoryCounts();
+            // GetInventoryCounts hands back a copy, so removing from the chest inside the
+            // loop is safe.
+            for (const auto& [obj, cnt] : chest->GetInventoryCounts()) {
+                if (!obj || cnt <= 0 || !g_recipeMaterials.contains(obj)) {
+                    continue;
+                }
+                if (const auto it = held.find(obj); it != held.end() && it->second > 0) {
+                    continue;  // already carrying one — the condition already passes
+                }
+                // a_this is the chest here, so the player-scoped Hook 4 ignores this move.
+                chest->RemoveItem(obj, 1, RE::ITEM_REMOVE_REASON::kStoreInContainer, nullptr,
+                                  player);
+                g_lentTokens.push_back(obj);
+            }
+            if (!g_lentTokens.empty()) {
+                logger::info("CraftHooks: lent {} material token(s) for recipe visibility",
+                             g_lentTokens.size());
+            }
+        }
+
         // Chest count of an item — a locked map read, no game objects, safe from any thread.
         [[nodiscard]] std::int32_t ChestCountCached(RE::TESBoundObject* a_obj) {
             std::scoped_lock lock(g_cacheMutex);
@@ -183,31 +273,6 @@ namespace Isekai::CraftHooks {
                 return original;
             }
             return original + ChestCountCached(a_item);
-        }
-
-        // --- Hook 6: InventoryChanges::GetItemCount (member) — recipe conditions + Papyrus ---
-        std::int16_t Hook_InvChangesGetItemCount(RE::InventoryChanges* a_this,
-                                                 RE::TESBoundObject* a_obj) {
-            ++s_countDepth;
-            const std::int16_t original = _originalInvChangesGetItemCount(a_this, a_obj);
-            --s_countDepth;
-            if (!a_obj || !ShouldAddChest(a_this)) {
-                return original;
-            }
-            const std::int32_t total = static_cast<std::int32_t>(original) + ChestCountCached(a_obj);
-            return static_cast<std::int16_t>(std::min(total, 32767));
-        }
-
-        // --- Hook 5: PlayerCharacter::GetItemCount (belt-and-braces; rarely the path) ---
-        std::int32_t Hook_PlayerGetItemCount(RE::PlayerCharacter* a_this, RE::TESBoundObject* a_obj) {
-            ++s_countDepth;
-            const std::int32_t original = _originalPlayerGetItemCount(a_this, a_obj);
-            --s_countDepth;
-            if (!a_obj || s_countDepth != 0 || !InCraftContext() ||
-                a_this != RE::PlayerCharacter::GetSingleton()) {
-                return original;  // GetSingleton() is a plain global read, safe off-thread
-            }
-            return original + ChestCountCached(a_obj);
         }
 
         // --- Hook 1: total stack count of a container ---
@@ -305,12 +370,17 @@ namespace Isekai::CraftHooks {
                     a_event->objectActivated) {
                     auto* base = a_event->objectActivated->GetBaseObject();
                     auto* furn = base ? base->As<RE::TESFurniture>() : nullptr;
-                    if (furn && furn->workBenchData.benchType.get() !=
-                                    RE::TESFurniture::WorkBenchData::BenchType::kNone) {
-                        // Main thread (game event) — safe to snapshot the session here, so
-                        // even a pre-menu prompt sees the chest.
+                    const auto bench = furn ? furn->workBenchData.benchType.get() : BenchType::kNone;
+                    if (bench != BenchType::kNone) {
+                        // Main thread (game event) — safe to touch game objects here. This
+                        // fires as the bench is activated, BEFORE the menu builds its recipe
+                        // list, which is exactly when the visibility tokens have to be in
+                        // place.
                         g_craftContext.store(true, std::memory_order_relaxed);
                         g_contextExpiryMs.store(NowMs() + 20000, std::memory_order_relaxed);
+                        if (BenchWantsTokens(bench)) {
+                            LendTokens();  // must precede the snapshot below
+                        }
                         OpenCraftSession();
                     }
                 }
@@ -339,6 +409,7 @@ namespace Isekai::CraftHooks {
                     } else {
                         g_menuOpen.store(false, std::memory_order_relaxed);
                         g_craftContext.store(false, std::memory_order_relaxed);
+                        ReturnTokens();  // leftover tokens go home; consumed ones stay spent
                         CloseCraftSession();
                     }
                 }
@@ -412,35 +483,6 @@ namespace Isekai::CraftHooks {
             logger::warn("CraftHooks: iteration hook lookup failed — alchemy stays on the shuttle");
         }
 
-        // Script-side count hook (best-effort): so other mods' Papyrus prompts see the
-        // chest at a station too. A miss only means such prompts miss the chest.
-        try {
-            REL::Relocation<std::uintptr_t> pg{ REL::RelocationID(19275, 19701) };
-            if (MH_CreateHook(reinterpret_cast<void*>(pg.address()),
-                              reinterpret_cast<void*>(&Hook_PlayerGetItemCount),
-                              reinterpret_cast<void**>(&_originalPlayerGetItemCount)) != MH_OK) {
-                logger::warn("CraftHooks: MH_CreateHook(PlayerCharacter::GetItemCount) failed");
-            }
-        } catch (...) {
-            logger::warn("CraftHooks: PlayerCharacter::GetItemCount lookup failed — script counts unhooked");
-        }
-
-        // Member count hook — THE one recipe conditions and Papyrus actually read. Without
-        // it, condition-gated recipes (CCOR) stay hidden and pre-craft prompts miss the
-        // chest even though the menu display shows it.
-        bool memberOk = false;
-        try {
-            REL::Relocation<std::uintptr_t> m{ REL::RelocationID(15868, 16047) };
-            memberOk = MH_CreateHook(reinterpret_cast<void*>(m.address()),
-                                     reinterpret_cast<void*>(&Hook_InvChangesGetItemCount),
-                                     reinterpret_cast<void**>(&_originalInvChangesGetItemCount)) == MH_OK;
-            if (!memberOk) {
-                logger::warn("CraftHooks: MH_CreateHook(InventoryChanges::GetItemCount) failed");
-            }
-        } catch (...) {
-            logger::warn("CraftHooks: InventoryChanges::GetItemCount lookup failed");
-        }
-
         if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK) {
             logger::error("CraftHooks: MH_EnableHook failed — hooks disabled");
             return;
@@ -462,9 +504,10 @@ namespace Isekai::CraftHooks {
         s_itemActive = countOk && removeOk;
         s_iterActive = s_itemActive && h1ok && h2ok;
 
-        // Event sinks that open/close the crafting context (for pre-menu prompts). Only
-        // needed when the hooks are live.
+        // Event sinks that open/close the crafting context (for pre-menu prompts) and lend
+        // the visibility tokens. Only needed when the hooks are live.
         if (s_itemActive) {
+            BuildRecipeMaterialSet();
             if (auto* src = RE::ScriptEventSourceHolder::GetSingleton()) {
                 src->AddEventSink<RE::TESActivateEvent>(ActivateWatcher::GetSingleton());
             }
@@ -473,8 +516,8 @@ namespace Isekai::CraftHooks {
             }
         }
 
-        logger::info("CraftHooks: item-crafting {} (count @ {:X}, consume {}), iteration {}, member-count {}",
+        logger::info("CraftHooks: item-crafting {} (count @ {:X}, consume {}), iteration {}",
                      s_itemActive ? "LIVE" : "OFF", countAddr, removeOk ? "ok" : "FAILED",
-                     s_iterActive ? "LIVE" : "OFF", memberOk ? "ok" : "FAILED");
+                     s_iterActive ? "LIVE" : "OFF");
     }
 }

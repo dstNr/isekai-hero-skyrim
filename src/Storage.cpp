@@ -7,6 +7,8 @@
 #include "UI/SystemWindow.h"
 
 #include <map>
+#include <set>
+#include <string_view>
 
 namespace Isekai::Storage {
 
@@ -33,6 +35,26 @@ namespace Isekai::Storage {
         [[nodiscard]] bool GetsStartingStock() {
             const auto& state = GetState();
             return state.reincarnated && state.power != PowerLevel::Normal;
+        }
+
+        // The official game masters. We freely stock and keep their ingredients; anything
+        // else (Creation Club, mods) is held at arm's length for ingredients specifically,
+        // because CC ingredients ship tracker scripts that flood the VM when handled in
+        // bulk — the very stutter this feature was rebuilt to avoid. Misc materials carry
+        // no such scripts, so those we take from any plugin (see GrantStartingMaterials).
+        [[nodiscard]] bool IsOfficialMaster(const RE::TESForm* a_form) {
+            if (!a_form) {
+                return false;
+            }
+            const auto* file = a_form->GetFile(0);
+            if (!file) {
+                return false;
+            }
+            using namespace std::string_view_literals;
+            const auto name = file->GetFilename();
+            return name == "Skyrim.esm"sv || name == "Update.esm"sv ||
+                   name == "Dawnguard.esm"sv || name == "HearthFires.esm"sv ||
+                   name == "Dragonborn.esm"sv;
         }
 
         // The one chest reference, created on first use.
@@ -250,17 +272,21 @@ namespace Isekai::Storage {
             return;
         }
 
-        // NOTE before any public release: this deletes every non-Skyrim.esm
-        // ingredient, including ones a player might have stored deliberately. Fine
-        // while the only chests in existence are our own dev saves; needs a one-time
-        // migration flag instead if strangers' savegames ever enter the picture.
+        // Drops every ingredient that isn't from an official master — i.e. the Creation
+        // Club and mod ones whose tracker scripts make bulk handling stutter. DLC
+        // ingredients (corkbulb root & co) are official masters, so they stay.
+        //
+        // NOTE before any public release: this also deletes non-official ingredients a
+        // player might have stored deliberately. Fine while the only chests in existence
+        // are our own dev saves; needs a one-time migration flag instead if strangers'
+        // savegames ever enter the picture.
         std::size_t pruned = 0;
         for (const auto& [obj, count] : chest->GetInventoryCounts()) {
             if (!obj || count <= 0 || obj->GetFormType() != RE::FormType::Ingredient) {
                 continue;
             }
-            if ((obj->GetFormID() >> 24) == 0) {
-                continue;  // vanilla stays
+            if (IsOfficialMaster(obj)) {
+                continue;  // Skyrim + DLC stay
             }
             chest->RemoveItem(obj, count, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
             ++pruned;
@@ -309,47 +335,11 @@ namespace Isekai::Storage {
         return ResolveChest();
     }
 
-    void TopUpSoulGems() {
-        if (!GetsStartingStock()) {
-            return;  // NORMAL keeps its empty chest
-        }
-        auto* chest = ResolveChest();
-        auto* data = RE::TESDataHandler::GetSingleton();
-        if (!chest || !data) {
-            return;
-        }
-        const float  scale = RewardScale();
-        std::size_t  added = 0;
-        for (auto* gem : data->GetFormArray<RE::TESSoulGem>()) {
-            if (!gem || (gem->GetFormID() >> 24) != 0) {
-                continue;
-            }
-            if (gem->GetContainedSoul() == RE::SOUL_LEVEL::kNone) {
-                continue;  // empty base form
-            }
-            if (ChestCount(gem) > 0) {
-                continue;  // already stocked — don't pile up
-            }
-            chest->AddObjectToContainer(
-                gem, nullptr, static_cast<std::int32_t>(500.0f * scale), nullptr);
-            ++added;
-        }
-        if (added > 0) {
-            logger::info("Storage: topped up {} missing soul gem type(s)", added);
-        }
-    }
-
-    void GrantStartingMaterials() {
-        if (!GetsStartingStock()) {
-            return;  // NORMAL gets the chest, but empty — nothing to put in it
-        }
-        auto* player = RE::PlayerCharacter::GetSingleton();
-        auto* chest = player ? GetOrCreateChest(player) : nullptr;
-        auto* data = RE::TESDataHandler::GetSingleton();
-        if (!chest || !data) {
-            return;
-        }
-
+    // Shared stocking core. topUpOnly (the load path) skips any type already present, so
+    // an existing chest gains only what is NEW — add-on materials, DLC ingredients — and
+    // never refills what the player has spent; it also leaves the gold alone. The grant
+    // path (topUpOnly=false, from reincarnation) fills everything and seeds the gold.
+    static void StockChest(RE::TESObjectREFR* chest, RE::TESDataHandler* data, bool topUpOnly) {
         // Every FormID below was read out of Skyrim.esm itself (MISC/SLGM groups),
         // not quoted from memory. Base counts are the NORMAL scale; the blessing
         // multiplies them (HERO x2 -> 1000 each, ASCENDED x4 -> 2000 each).
@@ -394,12 +384,30 @@ namespace Isekai::Storage {
         constexpr std::int32_t kGoldBase = 1'250'000;  // -> 2.5M HERO, 5M ASCENDED
 
         const float scale = RewardScale();
-        std::size_t stocked = 0;
+        constexpr std::int32_t kBase = 500;  // -> 1000 HERO, 2000 ASCENDED
 
+        // One stock helper, deduplicated: a form reached by two paths (say a gem that is
+        // both hand-picked and a recipe component) is added exactly once.
+        std::set<RE::TESBoundObject*> seen;
+        std::size_t                   stocked = 0;
+        const auto stock = [&](RE::TESBoundObject* obj, std::int32_t base) {
+            if (!obj || !seen.insert(obj).second) {
+                return;
+            }
+            if (topUpOnly && ChestCount(obj) > 0) {
+                return;  // load path: never pile onto or refill what's already there
+            }
+            chest->AddObjectToContainer(
+                obj, nullptr, static_cast<std::int32_t>(static_cast<float>(base) * scale), nullptr);
+            ++stocked;
+        };
+
+        // 1) Guaranteed vanilla core: the ingots/leather/gems (incl. FLAWLESS gems, which
+        //    the enchant "empower" uses and no forge recipe requires, so the recipe sweep
+        //    below would miss them) and dragon parts.
         for (const auto& entry : kMaterials) {
-            // Look up under the concrete form types. TESBoundObject would be the
-            // natural common base, but it has no FORMTYPE, so the typed lookup
-            // rejects everything when asked for it — 30 materials, 30 misses.
+            // Look up under the concrete form types. TESBoundObject would be the natural
+            // common base, but it has no FORMTYPE, so the typed lookup rejects everything.
             RE::TESBoundObject* obj = data->LookupForm<RE::TESObjectMISC>(entry.id, "Skyrim.esm");
             if (!obj) {
                 obj = data->LookupForm<RE::TESSoulGem>(entry.id, "Skyrim.esm");
@@ -408,63 +416,108 @@ namespace Isekai::Storage {
                 logger::error("Storage: material {:#010x} missing from Skyrim.esm", entry.id);
                 continue;
             }
-            chest->AddObjectToContainer(
-                obj, nullptr,
-                static_cast<std::int32_t>(static_cast<float>(entry.base) * scale), nullptr);
-            ++stocked;
+            stock(obj, entry.base);
         }
 
-        // Alchemy: every vanilla ingredient, enumerated at runtime rather than kept
-        // as a hand-maintained FormID list — a list of ~90 ids would be ~90 chances
-        // to be wrong.
-        //
-        // Skyrim.esm only (plugin index 0), very much on purpose: the AE base game
-        // ships Creation Club content whose ingredients come with quest scripts
-        // listening for exactly those items. Handing 2000 of each around fired so
-        // many container events that the script VM built a minutes-long backlog —
-        // the game stuttered long after the crafting menu closed and hung on exit.
-        constexpr std::int32_t kIngredientBase = 500;
-        std::size_t            ingredients = 0;
+        // 2) Every material any crafting recipe actually requires — from ANY plugin, so
+        //    DLC and add-on materials come along (chitin plate, netch leather, modded
+        //    ingots, ...). Sourcing from the recipe components (not a blind "all Misc")
+        //    keeps clutter out: only things a recipe consumes are stocked. Misc from any
+        //    plugin; ingredients (Daedra Heart & co) only from official masters — a CC/mod
+        //    ingredient may drag a tracker script that floods the VM in bulk.
+        std::size_t recipeMats = 0;
+        for (auto* cobj : data->GetFormArray<RE::BGSConstructibleObject>()) {
+            if (!cobj) {
+                continue;
+            }
+            cobj->requiredItems.ForEachContainerObject([&](RE::ContainerObject& a_c) {
+                auto* obj = a_c.obj;
+                if (obj && !seen.contains(obj)) {
+                    const auto type = obj->GetFormType();
+                    const bool wanted = type == RE::FormType::Misc ||
+                                        (type == RE::FormType::Ingredient && IsOfficialMaster(obj));
+                    if (wanted) {
+                        if (const char* name = obj->GetName(); name && *name) {
+                            stock(obj, kBase);
+                            ++recipeMats;
+                        }
+                    }
+                }
+                return RE::BSContainer::ForEachResult::kContinue;
+            });
+        }
+
+        // 3) Alchemy: every ingredient from the official masters (Skyrim + DLC — corkbulb
+        //    root, ash yam, ...), enumerated rather than hand-listed. CC/mod ingredients
+        //    stay out for the tracker-script reason above.
+        std::size_t ingredients = 0;
         for (auto* ingredient : data->GetFormArray<RE::IngredientItem>()) {
-            if (!ingredient || (ingredient->GetFormID() >> 24) != 0) {
+            if (!ingredient || !IsOfficialMaster(ingredient)) {
                 continue;
             }
             if (const char* name = ingredient->GetName(); !name || !*name) {
                 continue;  // nameless = internal/test records, not for players
             }
-            chest->AddObjectToContainer(
-                ingredient, nullptr,
-                static_cast<std::int32_t>(static_cast<float>(kIngredientBase) * scale), nullptr);
-            ++ingredients;
+            if (!seen.contains(ingredient)) {
+                ++ingredients;
+            }
+            stock(ingredient, kBase);
         }
 
-        // Soul gems for enchanting: every FILLED base form (petty..grand, plus the
-        // black gem), enumerated so none slips through. Empty gems can't power an
-        // enchantment, so only the pre-filled forms go in. Skyrim.esm only, same
-        // reasoning as ingredients.
-        constexpr std::int32_t kSoulGemBase = 500;
-        std::size_t            soulGems = 0;
+        // 4) Enchanting: every FILLED soul gem base form from the official masters (petty
+        //    .. grand + black). Empty gems can't power an enchantment, so they stay out.
+        std::size_t soulGems = 0;
         for (auto* gem : data->GetFormArray<RE::TESSoulGem>()) {
-            if (!gem || (gem->GetFormID() >> 24) != 0) {
+            if (!gem || !IsOfficialMaster(gem)) {
                 continue;
             }
             if (gem->GetContainedSoul() == RE::SOUL_LEVEL::kNone) {
                 continue;  // empty base form — useless for enchanting
             }
-            chest->AddObjectToContainer(
-                gem, nullptr,
-                static_cast<std::int32_t>(static_cast<float>(kSoulGemBase) * scale), nullptr);
-            ++soulGems;
+            if (!seen.contains(gem)) {
+                ++soulGems;
+            }
+            stock(gem, kBase);
         }
 
-        if (auto* gold = RE::TESForm::LookupByID<RE::TESBoundObject>(kGold)) {
-            chest->AddObjectToContainer(
-                gold, nullptr,
-                static_cast<std::int32_t>(static_cast<float>(kGoldBase) * scale), nullptr);
+        if (!topUpOnly) {
+            if (auto* gold = RE::TESForm::LookupByID<RE::TESBoundObject>(kGold)) {
+                chest->AddObjectToContainer(
+                    gold, nullptr,
+                    static_cast<std::int32_t>(static_cast<float>(kGoldBase) * scale), nullptr);
+            }
         }
 
-        logger::info("Storage: stocked {} materials + {} ingredients + {} soul gems + gold (scale x{})",
-                     stocked, ingredients, soulGems, scale);
+        logger::info("Storage: {} {} stacks ({} recipe materials, {} ingredients, "
+                     "{} soul gems){} (scale x{})",
+                     topUpOnly ? "topped up" : "stocked", stocked, recipeMats, ingredients,
+                     soulGems, topUpOnly ? "" : " + gold", scale);
+    }
+
+    // Reincarnation path: create the chest (HERO/ASCENDED only) and fill it completely.
+    void GrantStartingMaterials() {
+        if (!GetsStartingStock()) {
+            return;  // NORMAL gets the chest, but empty — nothing to put in it
+        }
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        auto* chest = player ? GetOrCreateChest(player) : nullptr;
+        auto* data = RE::TESDataHandler::GetSingleton();
+        if (chest && data) {
+            StockChest(chest, data, /*topUpOnly=*/false);
+        }
+    }
+
+    // Load path: bring an existing chest up to the current material set (add-on materials,
+    // DLC ingredients, any missing soul gem) without refilling spent stacks.
+    void TopUpStock() {
+        if (!GetsStartingStock()) {
+            return;  // NORMAL keeps its empty chest
+        }
+        auto* chest = ResolveChest();
+        auto* data = RE::TESDataHandler::GetSingleton();
+        if (chest && data) {
+            StockChest(chest, data, /*topUpOnly=*/true);
+        }
     }
 
     void Open() {

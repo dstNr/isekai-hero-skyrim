@@ -26,10 +26,11 @@ namespace Isekai::Storage {
     // every load.
     void PruneForeignStock();
 
-    // Add any filled soul gem type the chest is currently missing. Older chests were
-    // stocked with only the grand gem; this brings existing saves up to the full set
-    // (black included) without re-adding types that are still present. Called on load.
-    void TopUpSoulGems();
+    // Bring an existing chest up to the current material set — add-on/DLC materials, any
+    // ingredient or filled soul gem type it is missing — without refilling stacks the
+    // player has spent or touching the gold. Older saves therefore gain new materials on
+    // load without a fresh reincarnation. Called on every load.
+    void TopUpStock();
 
     // --- Zero-transfer crafting support (used by CraftHooks) ---
 

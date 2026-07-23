@@ -420,8 +420,9 @@ namespace Isekai {
                 // Chests stocked by earlier builds still hold the Creation Club
                 // ingredients that made the crafting shuttle stutter — clean them out.
                 Storage::PruneForeignStock();
-                // And bring older chests up to the full soul gem set (black included).
-                Storage::TopUpSoulGems();
+                // And bring older chests up to the current material set — add-on/DLC
+                // materials, missing ingredients, the full soul gem set (black included).
+                Storage::TopUpStock();
                 break;
 
             default:
