@@ -61,7 +61,7 @@ The blessing you choose keeps mattering — everything the System pays out is mu
 [/list]
 
 [size=4][b]Dimensional Storage[/b][/size]
-Every reincarnated soul receives a private pocket dimension: one chest inventory, reachable from anywhere through the System panel. Its contents are [b]automatically available at crafting stations[/b] — forge, alchemy table, enchanter — without moving a single item yourself. HERO and ASCENDED find it [b]pre-stocked[/b] with crafting materials, ingredients and gold (scaled by the blessing); NORMAL receives the same dimension [b]empty[/b], to fill as a personal stash.
+Every reincarnated soul receives a private pocket dimension: one chest inventory, reachable from anywhere through the System panel. Its contents are [b]automatically available at crafting stations[/b] — forge, alchemy table, enchanter — without moving a single item yourself. It [b]holds up inside a full crafting-overhaul stack[/b]: recipes a mod hides behind "do you carry this material?" still show, and pre-craft prompts like an enchanter's "empower with a flawless gem?" see the stored gems. Stock is drawn from what recipes require, so DLC materials (chitin plate, netch leather, corkbulb root…) come along. HERO and ASCENDED find it [b]pre-stocked[/b] (scaled by the blessing); NORMAL receives the same dimension [b]empty[/b], to fill as a personal stash.
 
 [size=4][b]Requirements[/b][/size]
 [list]

@@ -4,6 +4,47 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [0.4.0] — 2026-07-23
+
+Crafting now holds up inside a full overhaul stack, and the Dimensional Storage
+survives a long playthrough. Save-safe: existing chests are repaired and topped up
+on load; no save format change.
+
+### Added
+- **Recipes gated behind "do you carry this material" now show up.** Crafting
+  overhauls like Complete Crafting Overhaul Remastered hide a recipe until you hold
+  one of its components — a check the game reads straight off your real inventory,
+  which no material-count hook can reach. When you step up to a forge/tanning
+  rack/smelter/grindstone the storage now lends a single unit of each stored recipe
+  material you lack, so the recipe appears; the full stock is still shown and spent
+  from the chest, and the loaner goes back when you leave. One item per type, not
+  stacks — no event flood. (Same trick Workbench Containers uses, done in-engine.)
+- **Other mods' pre-craft prompts see the storage too.** An "empower this
+  enchantment with a flawless gem?" prompt (e.g. Thaumaturgy) reads your carried
+  inventory before the menu opens; the enchanter now lends stored gems the same way,
+  so those prompts offer what's in the Dimensional Storage.
+- **DLC and add-on crafting materials are stocked.** Materials are drawn from what
+  recipes actually require, so DLC components come along — chitin plate, netch
+  leather, corkbulb root and the rest of Solstheim's smithing/alchemy set. Existing
+  chests gain them on load without a fresh start.
+
+### Fixed
+- **Storage that stopped opening after a long questline is repaired.** Finishing the
+  Dragonborn main quest (many in-game days without opening the chest) let a cell
+  reset leave the storage's hidden container disabled — clicking it just dropped you
+  back to the game. It now detects an orphaned container and rebuilds it, **keeping
+  every stored item**. Hardened against any cell-reset scenario, not just that one.
+- **No more endless bear traps / stutter after visiting a station.** Lending scripted
+  modded materials (a craftable bear trap, a campfire kit) tripped their
+  "container changed" scripts into spawning copies of themselves. Everything the
+  storage moves or stocks is now limited to the official masters (Skyrim + DLC),
+  which carry no such scripts — the requested DLC materials still come through, since
+  DLC *is* official.
+- **Materials are reliably available at every station again.** A thread-safety rework
+  of the in-place crafting hooks fixed a case where the storage's materials were
+  counted but not offered, and removed two count hooks that never actually reached
+  the recipe/prompt code they were meant for.
+
 ## [0.3.1] — 2026-07-17
 
 Follow-up fixes to the crafting rework. No save format change.
@@ -130,6 +171,7 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[0.4.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.4.0
 [0.3.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.3.1
 [0.3.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.3.0
 [0.2.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.2.1

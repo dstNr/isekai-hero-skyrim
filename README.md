@@ -48,10 +48,16 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   capstone. Sealed nodes render greyed with a "requires HERO/ASCENDED rebirth"
   hint — one shared graph, one source of truth, no duplicate tables.
 - **Dimensional Storage** (every reincarnated soul): one chest inventory
-  reachable from anywhere via the System panel. Crafting stations **borrow its
-  contents automatically** — station-aware, so the forge never shuttles alchemy
-  ingredients around. HERO/ASCENDED find it pre-stocked with crafting materials
-  and gold (blessing-scaled); NORMAL gets the same dimension empty, as a stash.
+  reachable from anywhere via the System panel. Crafting stations **read and
+  consume its contents in place** — the material count and the recipe both see
+  the chest without anything being shuttled around. It holds up inside a full
+  overhaul stack: recipes a mod hides behind "do you carry this?" still appear
+  (a single unit of each stored material is lent while you craft, then returned),
+  and other mods' pre-craft prompts — an enchanter's "empower with a flawless
+  gem?" — see the stored gems too. Stock is drawn from what recipes require, so
+  DLC materials come along (chitin plate, netch leather, corkbulb root).
+  HERO/ASCENDED find it pre-stocked (blessing-scaled); NORMAL gets the same
+  dimension empty, as a stash.
 - **Custom UI & sound.** Solo-Leveling-inspired panels (glow frames, corner
   brackets, typewriter reveal, monospace terminal font), custom SFX routed
   through the game's audio system, icon buttons, ESC handled properly.
@@ -118,6 +124,6 @@ when something misbehaves.
 
 ## Status
 
-🧪 **Pre-release** (v0.3.1). Feature-complete for full-modlist test runs;
+🧪 **Pre-release** (v0.4.0). Feature-complete for full-modlist test runs;
 balance values (starting System Points, node costs) are explicitly in a
 testing configuration. Version history in [CHANGELOG.md](CHANGELOG.md).
