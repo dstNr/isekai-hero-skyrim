@@ -40,13 +40,14 @@
   @keyframes veilIn { from { opacity: 0; } to { opacity: 1; } }
 
   /* ---------- Shared glass surface ---------- */
+  /* NOTE: deliberately no backdrop-filter. A full-screen blur is re-computed every
+     frame in Ultralight and was the main source of the stutter in the System menu;
+     a slightly more opaque surface reads almost the same and costs nothing. */
   .glass {
     position: relative;
     background:
       linear-gradient(180deg, rgba(90,210,255,0.07), transparent 22%),
-      linear-gradient(180deg, var(--surface), var(--surface-2));
-    -webkit-backdrop-filter: blur(18px) saturate(1.3);
-    backdrop-filter: blur(18px) saturate(1.3);
+      linear-gradient(180deg, rgba(9,18,33,0.97), rgba(12,24,41,0.95));
     box-shadow:
       0 0 0 1px rgba(90,210,255,0.22),
       0 0 34px rgba(26,110,160,0.28),
@@ -115,6 +116,14 @@
   #tRule { margin: 12px 0 0; }
   #canvas { position: relative; flex: 1; margin-top: 4px; }
   #lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  /* Unlocked paths get a wide translucent halo plus a bright core line — reads as a
+     glow without a per-line filter (cheap). Solid strokes throughout: a gradient on a
+     <line> has a degenerate bounding box and renders black. */
+  .lnk { stroke-linecap: round; fill: none; }
+  .lnk.halo { stroke: rgba(90,210,255,0.22); stroke-width: 8; }
+  .lnk.on   { stroke: #9fe6ff; stroke-width: 2.4; }
+  .lnk.half { stroke: rgba(90,210,255,0.5);  stroke-width: 1.7; }
+  .lnk.off  { stroke: rgba(125,165,200,0.22); stroke-width: 1.2; }
 
   .node { position: absolute; width: 62px; height: 62px; margin: -31px 0 0 -31px;
           border-radius: 10px; display: flex; align-items: center; justify-content: center;
@@ -132,12 +141,16 @@
   .node.owned::after { content: ""; position: absolute; inset: -1px; border-radius: 10px;
     background: linear-gradient(160deg, rgba(90,210,255,0.16), transparent 60%); pointer-events: none; }
 
-  .node.buyable { border-color: rgba(90,210,255,0.75); cursor: pointer;
-                  animation: nodeIn 0.4s var(--ease) both, breathe 2.1s ease-in-out infinite 0.4s; }
+  /* The "you can take me" pulse lives on a pseudo-element and animates OPACITY only.
+     Two reasons: animating box-shadow repaints every frame (stutter), and putting a
+     second animation on .node itself would restart the entrance animation every time
+     the state class changes — which made all nodes blink on each purchase. */
+  .node.buyable { border-color: rgba(90,210,255,0.75); cursor: pointer; }
   .node.buyable img { filter: grayscale(0.05) brightness(1); }
-  @keyframes breathe {
-    0%,100% { box-shadow: 0 0 10px rgba(90,210,255,0.30), inset 0 0 10px rgba(90,210,255,0.06); }
-    50%     { box-shadow: 0 0 30px rgba(90,210,255,0.75), inset 0 0 18px rgba(90,210,255,0.18); } }
+  .node.buyable::before { content: ""; position: absolute; inset: -3px; border-radius: 12px;
+    box-shadow: 0 0 26px rgba(90,210,255,0.85), inset 0 0 16px rgba(90,210,255,0.18);
+    opacity: 0.25; animation: breathe 2.1s ease-in-out infinite; pointer-events: none; }
+  @keyframes breathe { 0%,100% { opacity: 0.22; } 50% { opacity: 1; } }
 
   .node.poor   { border-color: rgba(138,168,196,0.4); }
   .node.poor   img { filter: grayscale(0.5) brightness(0.7); }
@@ -239,13 +252,7 @@
       </div>
       <div id="tRule" class="rule"></div>
       <div id="canvas">
-        <svg id="lines" viewBox="0 0 1068 560" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#5ad2ff" /><stop offset="100%" stop-color="#1b7fb0" />
-            </linearGradient>
-          </defs>
-        </svg>
+        <svg id="lines"></svg>
         <div id="tip"><div id="tipName"></div><div id="tipDesc"></div><div id="tipStatus"></div></div>
       </div>
       <div id="tFoot">
@@ -283,11 +290,8 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
 
-/* The plugin authors node coordinates in a 1120x760 panel whose canvas starts 70px
-   down. Inside the stage we lay the graph out in its own padded box, so map once. */
-const DESIGN_W = 1120, DESIGN_H = 760;
-const SRC_X0 = 52, SRC_Y0 = 96, SRC_W = 1016, SRC_H = 536;   // node-coordinate extents
-const VB_W = 1068, VB_H = 560;                                // svg viewBox
+const DESIGN_W = 1120, DESIGN_H = 760;   // the scaled stage
+const NODE_R = 31;                       // half a node box, in canvas px
 
 function showScreen(name) {
   ["tree", "panel", "flourish"].forEach(s => $("screen-" + s).classList.toggle("active", s === name));
@@ -306,8 +310,30 @@ function fitTree() {
 let TREE = { points: 0, perks: 0, perkMax: 255, nodes: [] };
 const byKey = new Map();
 
-const mapX = (x) => (x - SRC_X0) / SRC_W * VB_W;
-const mapY = (y) => (y - SRC_Y0) / SRC_H * VB_H;
+/* Fit the graph to whatever the canvas measures: derive the extents from the data
+   rather than hardcoding them, scale uniformly (never stretch) and centre. That keeps
+   the layout balanced and stops the leftmost column hugging the frame. */
+function layout() {
+  const canvas = $("canvas");
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  if (!TREE.nodes.length || !W || !H) return null;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  TREE.nodes.forEach(n => {
+    if (n.x < minX) minX = n.x; if (n.x > maxX) maxX = n.x;
+    if (n.y < minY) minY = n.y; if (n.y > maxY) maxY = n.y;
+  });
+  const cw = Math.max(1, maxX - minX), ch = Math.max(1, maxY - minY);
+  const pad = NODE_R + 24;
+  const k = Math.min((W - pad * 2) / cw, (H - pad * 2) / ch);
+  return { k, W, H, ox: (W - cw * k) / 2 - minX * k, oy: (H - ch * k) / 2 - minY * k };
+}
+const posOf = (L, n) => ({ x: L.ox + n.x * L.k, y: L.oy + n.y * L.k });
+
+/* Pull point a toward b so lines stop at the tile edge instead of running underneath. */
+function trimTo(a, b, r) {
+  const dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx * dx + dy * dy) || 1;
+  return { x: a.x + dx / len * r, y: a.y + dy / len * r };
+}
 
 function stateOf(n) {
   if (n.owned) return "owned";
@@ -327,7 +353,11 @@ function statusOf(n) {
   return { t: n.cost + " system point(s)" + tag, c: ok ? "var(--accent)" : "var(--danger)" };
 }
 
+let hoverKey = 0;
+
 function showTip(n, el) {
+  if (!n || !el) return;
+  hoverKey = n.key;
   const tip = $("tip");
   $("tipName").textContent = n.name;
   $("tipDesc").textContent = n.desc;
@@ -341,63 +371,104 @@ function showTip(n, el) {
   tip.style.top = Math.max(0, cy - 40) + "px";
   tip.classList.add("show");
 }
-function hideTip() { $("tip").classList.remove("show"); }
+function hideTip() { hoverKey = 0; $("tip").classList.remove("show"); }
 
+const STATES = ["owned", "buyable", "poor", "sealed", "locked"];
+const nodeEls = new Map();   // node key -> element, kept across refreshes
+let builtFor = "";           // which node set is currently in the DOM
+
+/* Refreshes never tear the graph down — buying a node used to rebuild every element,
+   which replayed the staggered entrance animation and made the whole tree blink. */
 function renderTree() {
   $("hPoints").textContent = TREE.points;
   $("hPerks").textContent = TREE.perks + " / " + TREE.perkMax;
 
-  const canvas = $("canvas");
-  [...canvas.querySelectorAll(".node")].forEach(e => e.remove());
-  const svg = $("lines");
-  [...svg.querySelectorAll("line")].forEach(e => e.remove());
+  const L = layout();
+  if (!L) return;
 
   byKey.clear();
   TREE.nodes.forEach(n => byKey.set(n.key, n));
 
-  // Connections, drawn in the svg's own viewBox space so they scale with the box.
+  const canvas = $("canvas");
+  const sig = TREE.nodes.map(n => n.key).join(",");
+  if (sig !== builtFor) {                    // different tree -> start clean
+    [...canvas.querySelectorAll(".node")].forEach(e => e.remove());
+    nodeEls.clear();
+  }
+
+  // --- connections (cheap to rebuild; there are only a handful) ---
+  const svg = $("lines");
+  svg.setAttribute("viewBox", "0 0 " + L.W + " " + L.H);
+  svg.innerHTML = "";
+  const addLine = (a, b, cls) => {
+    const el = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    el.setAttribute("x1", a.x); el.setAttribute("y1", a.y);
+    el.setAttribute("x2", b.x); el.setAttribute("y2", b.y);
+    el.setAttribute("class", "lnk " + cls);
+    svg.appendChild(el);
+  };
   TREE.nodes.forEach(n => (n.prereq || []).forEach(pk => {
     if (!pk) return;
     const from = byKey.get(pk); if (!from) return;
-    const both = from.owned && n.owned;
-    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    line.setAttribute("x1", mapX(from.x)); line.setAttribute("y1", mapY(from.y));
-    line.setAttribute("x2", mapX(n.x));    line.setAttribute("y2", mapY(n.y));
-    line.setAttribute("stroke", both ? "url(#lg)" : "rgba(90,210,255,0.9)");
-    line.setAttribute("stroke-width", both ? 2.2 : 1.2);
-    line.setAttribute("opacity", both ? 0.95 : from.owned ? 0.4 : 0.14);
-    if (both) { line.setAttribute("stroke-dasharray", "7 7");
-                line.innerHTML = '<animate attributeName="stroke-dashoffset" from="28" to="0" dur="1.1s" repeatCount="indefinite"/>'; }
-    svg.appendChild(line);
+    const p = posOf(L, from), q = posOf(L, n);
+    const a = trimTo(p, q, NODE_R + 5), b = trimTo(q, p, NODE_R + 5);
+    if (from.owned && n.owned) { addLine(a, b, "halo"); addLine(a, b, "on"); }
+    else                        { addLine(a, b, from.owned ? "half" : "off"); }
   }));
 
-  // Nodes, positioned as a % of the canvas box so they track the svg exactly.
-  const w = canvas.clientWidth, h = canvas.clientHeight;
+  // --- nodes: create once, then update in place ---
   TREE.nodes.forEach((n, i) => {
-    const el = document.createElement("div");
-    el.className = "node " + stateOf(n);
-    el.style.left = (mapX(n.x) / VB_W * w) + "px";
-    el.style.top  = (mapY(n.y) / VB_H * h) + "px";
-    el.style.animationDelay = (i * 22) + "ms";
-
-    const img = document.createElement("img");
-    img.src = "icons/" + n.icon; img.onerror = () => { img.style.display = "none"; };
-    el.appendChild(img);
-
-    if (n.repeatable && n.rank > 0) {
-      const pip = document.createElement("div"); pip.className = "rank"; pip.textContent = n.rank;
-      el.appendChild(pip);
+    let el = nodeEls.get(n.key);
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "node";
+      el.style.animationDelay = (i * 20) + "ms";
+      const img = document.createElement("img");
+      img.src = "icons/" + n.icon;
+      img.onerror = () => { img.style.display = "none"; };
+      el.appendChild(img);
+      el.addEventListener("mouseenter", () => showTip(byKey.get(n.key), el));
+      el.addEventListener("mouseleave", hideTip);
+      el.addEventListener("click", () => {
+        const cur = byKey.get(n.key);
+        if (cur && stateOf(cur) === "buyable") callBack("isekaiBuy", String(n.key));
+      });
+      canvas.appendChild(el);
+      nodeEls.set(n.key, el);
     }
-    el.addEventListener("mouseenter", () => showTip(n, el));
-    el.addEventListener("mouseleave", hideTip);
-    el.addEventListener("click", () => { if (stateOf(n) === "buyable") callBack("isekaiBuy", String(n.key)); });
-    canvas.appendChild(el);
+
+    // Swap only the state class, so .node's entrance animation is never restarted.
+    STATES.forEach(s => el.classList.remove(s));
+    el.classList.add(stateOf(n));
+
+    const p = posOf(L, n);
+    el.style.left = p.x + "px";
+    el.style.top = p.y + "px";
+
+    let pip = el.querySelector(".rank");
+    if (n.repeatable && n.rank > 0) {
+      if (!pip) { pip = document.createElement("div"); pip.className = "rank"; el.appendChild(pip); }
+      pip.textContent = n.rank;
+    } else if (pip) {
+      pip.remove();
+    }
   });
+
+  builtFor = sig;
+
+  // Keep the tooltip alive across a refresh: after buying, the cursor is still on the
+  // node, so re-render its card with the new state instead of letting it vanish.
+  if (hoverKey && nodeEls.has(hoverKey) && byKey.has(hoverKey)) {
+    showTip(byKey.get(hoverKey), nodeEls.get(hoverKey));
+  }
 }
 
 window.isekaiShowTree = (data) => {
   try { TREE = (typeof data === "string") ? JSON.parse(data) : data; } catch (e) { return; }
-  showScreen("tree"); hideTip(); fitTree();
+  const wasOpen = $("screen-tree").classList.contains("active");
+  showScreen("tree");
+  if (!wasOpen) hideTip();             // a refresh keeps whatever the cursor is on
+  fitTree();
   requestAnimationFrame(renderTree);   // let the stage lay out before measuring the canvas
 };
 function closeTree() { callBack("isekaiCloseTree", ""); }
