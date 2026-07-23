@@ -70,13 +70,15 @@ namespace Isekai::Storage {
                 return nullptr;
             }
             auto* chest = RE::TESForm::LookupByID<RE::TESObjectREFR>(state.storageChest);
-            if (!chest) {
+            if (!chest || chest->IsDeleted()) {
                 // The save lost it (mangled by a save cleaner, most likely). Recreate
                 // rather than dangle — the contents are gone either way, but the
-                // feature keeps working.
+                // feature keeps working. (A merely disabled/orphaned ref is NOT lost —
+                // that is repaired in Open, keeping the contents.)
                 logger::warn("Storage: chest {:#x} vanished from the save — starting a new one",
                              state.storageChest);
                 state.storageChest = 0;
+                return nullptr;
             }
             return chest;
         }
@@ -104,6 +106,46 @@ namespace Isekai::Storage {
             GetState().storageChest = chest->GetFormID();
             logger::info("Storage: chest created ({:#x})", chest->GetFormID());
             return chest.get();
+        }
+
+        // Rebuild the chest when its reference has been orphaned — disabled or stripped of
+        // its 3D by a cell reset. Reported after finishing the Dragonborn questline: many
+        // in-game days pass without opening the storage, the cell it last sat in resets,
+        // and ActivateRef then opens a container menu that instantly closes ("throws me
+        // back to the game"). CommonLibSSE exposes no Enable(), so instead of resurrecting
+        // the husk we move its inventory — which lives in the reference data, not the 3D,
+        // so it survives — into a fresh reference and repoint the co-save at it.
+        [[nodiscard]] RE::TESObjectREFR* RebuildChest(RE::PlayerCharacter* a_player,
+                                                      RE::TESObjectREFR* a_old) {
+            if (!g_base) {
+                return nullptr;
+            }
+            const auto fresh = a_player->PlaceObjectAtMe(g_base, /*forcePersist=*/true);
+            if (!fresh) {
+                logger::error("Storage: rebuild PlaceObjectAtMe failed");
+                return nullptr;
+            }
+
+            std::size_t moved = 0;
+            if (a_old) {
+                // a_old->RemoveItem re-enters the CraftHooks RemoveItem hook with the OLD
+                // chest as `this` (not the player) — it passes straight through.
+                for (const auto& [obj, count] : a_old->GetInventoryCounts()) {
+                    if (obj && count > 0) {
+                        a_old->RemoveItem(obj, count, RE::ITEM_REMOVE_REASON::kStoreInContainer,
+                                          nullptr, fresh.get());
+                        ++moved;
+                    }
+                }
+                a_old->Disable();  // no Enable() to undo this; the husk just goes dormant
+            }
+
+            const auto pos = a_player->GetPosition();
+            fresh->SetPosition(pos.x, pos.y, pos.z - 3000.0f);
+            GetState().storageChest = fresh->GetFormID();
+            logger::warn("Storage: rebuilt orphaned chest -> {:#x}, migrated {} stack(s)",
+                         fresh->GetFormID(), moved);
+            return fresh.get();
         }
 
         // ------------------------------------------------------------------
@@ -547,12 +589,38 @@ namespace Isekai::Storage {
             return;
         }
 
+        // A ref a cell reset left disabled can't host a container menu — repair it (moves
+        // the contents to a fresh ref) before trying to move/activate the husk.
+        if (chest->IsDisabled()) {
+            logger::warn("Storage: chest {:#x} disabled at open — rebuilding", chest->GetFormID());
+            chest = RebuildChest(player, chest);
+            if (!chest) {
+                RE::DebugNotification("[ SYSTEM ] storage is re-anchoring — try again in a moment.");
+                return;
+            }
+        }
+
         // Keep the chest in the player's cell (so it is loaded and activatable), but
         // far below the floor, where its model can never be seen. The activation is a
         // direct call, not a look-at, so where it sits makes no difference.
         chest->MoveTo(player);
-        const auto pos = player->GetPosition();
+        auto pos = player->GetPosition();
         chest->SetPosition(pos.x, pos.y, pos.z - 3000.0f);
+
+        // If the move still didn't attach 3D, the ref is orphaned some other way — rebuild
+        // and place the fresh one, which PlaceObjectAtMe drops into the loaded cell.
+        if (!chest->Is3DLoaded()) {
+            logger::warn("Storage: chest {:#x} has no 3D after move — rebuilding",
+                         chest->GetFormID());
+            chest = RebuildChest(player, chest);
+            if (!chest) {
+                RE::DebugNotification("[ SYSTEM ] storage is re-anchoring — try again in a moment.");
+                return;
+            }
+            chest->MoveTo(player);
+            pos = player->GetPosition();
+            chest->SetPosition(pos.x, pos.y, pos.z - 3000.0f);
+        }
 
         Sounds::Play(Sounds::Sfx::WindowOpen);
         chest->ActivateRef(player, 0, nullptr, 1, false);
