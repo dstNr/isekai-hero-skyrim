@@ -1,5 +1,6 @@
 #include "Progression.h"
 
+#include "Config.h"
 #include "Passives.h"
 #include "Sounds.h"
 #include "Storage.h"
@@ -318,9 +319,9 @@ namespace Isekai::Progression {
         // "System: Health" abilities — this is the ledger of where they came from.
         // ------------------------------------------------------------------
 
-        constexpr std::uint32_t kStatusKey = 0x1F;       // DIK_S — "System"
-        constexpr std::uint32_t kStatusModifier = 0x36;  // DIK_RSHIFT — S alone is the
-                                                         // backward-movement key
+        // The status-panel hotkey is configurable now (Config::SystemMenuKey /
+        // ::SystemMenuModifier, from IsekaiHero.ini). Defaults: Right Shift + S — "S" for
+        // System, held with RShift because S alone is the backward-movement key.
 
         [[nodiscard]] const char* StatName(RE::ActorValue a_av) {
             switch (a_av) {
@@ -559,11 +560,13 @@ namespace Isekai::Progression {
             logger::info("Progression: quest watcher armed (stage + start/stop)");
         }
 
-        UI::RegisterHotkey(kStatusKey, ShowStatusPanel, kStatusModifier);
+        UI::RegisterHotkey(Config::SystemMenuKey(), ShowStatusPanel,
+                           Config::SystemMenuModifier());
         if constexpr (kEnableDebugGrant) {
             UI::RegisterHotkey(kDebugGrantKey, DebugGrantNext);
         }
-        logger::info("Progression: RShift+S opens the status panel");
+        logger::info("Progression: system-menu hotkey registered (key={:#x}, modifier={:#x})",
+                     Config::SystemMenuKey(), Config::SystemMenuModifier());
     }
 
     void CatchUpOnLoad() {

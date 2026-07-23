@@ -4,7 +4,7 @@
 
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
-$version = "0.7.0"
+$version = "0.7.1"
 
 $stage = Join-Path $root "build\package"
 $dist = Join-Path $root "dist"

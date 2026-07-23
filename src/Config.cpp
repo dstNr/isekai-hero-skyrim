@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <fstream>
 #include <string>
 
@@ -11,7 +12,9 @@ namespace Isekai::Config {
         // Relative to the game root (where SkyrimSE.exe runs), the standard SKSE layout.
         constexpr const char* kIniPath = "Data\\SKSE\\Plugins\\IsekaiHero.ini";
 
-        bool g_hideSealedNodes = false;
+        bool          g_hideSealedNodes = false;
+        std::uint32_t g_systemMenuKey = 0x1F;       // DIK_S
+        std::uint32_t g_systemMenuModifier = 0x36;  // DIK_RSHIFT
 
         [[nodiscard]] std::string Trim(std::string a_s) {
             const auto notSpace = [](unsigned char c) { return !std::isspace(c); };
@@ -30,10 +33,23 @@ namespace Isekai::Config {
             const std::string v = Lower(a_val);
             return v == "1" || v == "true" || v == "yes" || v == "on";
         }
+
+        // A DirectInput scan code, hex ("0x1F") or decimal ("31"). Base 0 lets the same
+        // parse handle both. On garbage, keep whatever default was passed in.
+        [[nodiscard]] std::uint32_t AsScanCode(const std::string& a_val, std::uint32_t a_def) {
+            try {
+                return static_cast<std::uint32_t>(std::stoul(a_val, nullptr, 0));
+            } catch (...) {
+                return a_def;
+            }
+        }
     }
 
     void Load() {
-        g_hideSealedNodes = false;  // defaults, overwritten only by an explicit key
+        // Defaults, overwritten only by an explicit key below.
+        g_hideSealedNodes = false;
+        g_systemMenuKey = 0x1F;       // DIK_S
+        g_systemMenuModifier = 0x36;  // DIK_RSHIFT
 
         std::ifstream in(kIniPath);
         if (!in) {
@@ -57,13 +73,26 @@ namespace Isekai::Config {
             const std::string val = Trim(line.substr(eq + 1));
             if (key == "hidesealednodes") {
                 g_hideSealedNodes = AsBool(val);
+            } else if (key == "systemmenukey") {
+                g_systemMenuKey = AsScanCode(val, g_systemMenuKey);
+            } else if (key == "systemmenumodifier") {
+                g_systemMenuModifier = AsScanCode(val, g_systemMenuModifier);
             }
         }
 
-        logger::info("Config: HideSealedNodes={}", g_hideSealedNodes);
+        logger::info("Config: HideSealedNodes={}, SystemMenuKey={:#x}, SystemMenuModifier={:#x}",
+                     g_hideSealedNodes, g_systemMenuKey, g_systemMenuModifier);
     }
 
     bool HideSealedNodes() {
         return g_hideSealedNodes;
+    }
+
+    std::uint32_t SystemMenuKey() {
+        return g_systemMenuKey;
+    }
+
+    std::uint32_t SystemMenuModifier() {
+        return g_systemMenuModifier;
     }
 }

@@ -4,6 +4,14 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [0.7.1] — 2026-07-23
+
+### Added
+- **The System-menu hotkey is remappable** via `IsekaiHero.ini` (`[Hotkey]`) — set
+  `SystemMenuKey` and `SystemMenuModifier` to any DirectInput scan codes (hex or
+  decimal; modifier `0` = none). Defaults unchanged: Right Shift + S. The ini lists the
+  common scan codes.
+
 ## [0.7.0] — 2026-07-23
 
 The optional PrismaUI patch now covers the **whole** UI, not just the skill tree.
@@ -232,6 +240,7 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[0.7.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.7.1
 [0.7.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.7.0
 [0.6.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.6.0
 [0.5.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.5.0

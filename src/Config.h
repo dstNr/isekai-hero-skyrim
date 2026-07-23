@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 // Lightweight INI settings, read once at kDataLoaded from
 // Data\SKSE\Plugins\IsekaiHero.ini. Absent file / keys fall back to defaults, so
 // the mod runs fine with no ini at all.
@@ -12,4 +14,12 @@ namespace Isekai::Config {
     // Skill tree: hide nodes gated above the player's rebirth tier instead of showing
     // them greyed with a "requires HERO/ASCENDED" hint. Default false (show greyed).
     [[nodiscard]] bool HideSealedNodes();
+
+    // The key that opens the [ SYSTEM ] menu, as a DirectInput scan code. Default 0x1F
+    // (S). Read once at load; the hotkey is registered from it.
+    [[nodiscard]] std::uint32_t SystemMenuKey();
+
+    // Scan code that must be held with the key above. Default 0x36 (Right Shift);
+    // 0 = no modifier (the key alone opens the menu).
+    [[nodiscard]] std::uint32_t SystemMenuModifier();
 }

@@ -91,8 +91,9 @@ order does not matter.
 the next load, already-completed milestone quests are rewarded retroactively,
 and blessings only ever raise stats — never demote an established character.
 
-In-game: **RShift + S** opens the `[ SYSTEM ] STATUS` panel (storage and
-skill tree live behind the icon buttons in its top-right corner).
+In-game: **RShift + S** (remappable in `IsekaiHero.ini`) opens the
+`[ SYSTEM ] STATUS` panel (storage and skill tree live behind the icon buttons
+in its top-right corner).
 
 ## Building
 
@@ -136,6 +137,6 @@ when something misbehaves.
 
 ## Status
 
-🧪 **Pre-release** (v0.7.0). Feature-complete for full-modlist test runs;
+🧪 **Pre-release** (v0.7.1). Feature-complete for full-modlist test runs;
 balance values (starting System Points, node costs) are explicitly in a
 testing configuration. Version history in [CHANGELOG.md](CHANGELOG.md).
