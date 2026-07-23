@@ -157,21 +157,33 @@
   .node.owned::after { content: ""; position: absolute; inset: -1px; border-radius: 10px;
     background: linear-gradient(160deg, rgba(90,210,255,0.16), transparent 60%); pointer-events: none; }
 
-  /* The "you can take me" pulse lives on a pseudo-element and animates OPACITY only.
-     Two reasons: animating box-shadow repaints every frame (stutter), and putting a
-     second animation on .node itself would restart the entrance animation every time
-     the state class changes — which made all nodes blink on each purchase. */
-  .node.buyable { border-color: rgba(90,210,255,0.75); cursor: pointer; }
+  /* Buyable pulse: a bordered ring animated by TRANSFORM (scale) + opacity only — pure
+     compositing, no per-frame re-raster. The previous version animated a blurred
+     box-shadow's opacity, which Ultralight re-rasterised every frame on every buyable
+     node and was the remaining stutter. A static (un-animated) glow gives the resting
+     "this one is affordable" cue for free. The pulse lives on ::before so swapping the
+     node's state class never restarts the entrance animation (no blink on purchase). */
+  .node.buyable { border-color: rgba(90,210,255,0.8); cursor: pointer;
+                  box-shadow: 0 0 13px rgba(90,210,255,0.26); }
   .node.buyable img { filter: grayscale(0.05) brightness(1); }
-  .node.buyable::before { content: ""; position: absolute; inset: -3px; border-radius: 12px;
-    box-shadow: 0 0 26px rgba(90,210,255,0.85), inset 0 0 16px rgba(90,210,255,0.18);
-    opacity: 0.25; animation: breathe 2.1s ease-in-out infinite; pointer-events: none; }
-  @keyframes breathe { 0%,100% { opacity: 0.22; } 50% { opacity: 1; } }
+  .node.buyable::before { content: ""; position: absolute; inset: -3px; border-radius: 13px;
+    border: 1.5px solid rgba(90,210,255,0.7); pointer-events: none;
+    animation: pulse 2.1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1);    opacity: 0.35; }
+                     50%     { transform: scale(1.09); opacity: 0.9; } }
 
   .node.poor   { border-color: rgba(138,168,196,0.4); }
   .node.poor   img { filter: grayscale(0.5) brightness(0.7); }
-  .node.sealed { border-color: rgba(224,168,96,0.6); border-style: dashed; }
-  .node.sealed img { filter: grayscale(0.85) brightness(0.45) sepia(0.5); }
+
+  /* Sealed (gated by a deeper rebirth): an amber-lit tile behind a fine diagonal
+     hatch, like something locked away — replaces the plain dashed border. Static. */
+  .node.sealed { border-color: rgba(224,168,96,0.5);
+                 box-shadow: inset 0 0 18px rgba(224,168,96,0.12), 0 0 10px rgba(224,168,96,0.10); }
+  .node.sealed img { filter: grayscale(0.9) brightness(0.42) sepia(0.4); opacity: 0.82; }
+  .node.sealed::after { content: ""; position: absolute; inset: 0; border-radius: 10px;
+    pointer-events: none;
+    background: repeating-linear-gradient(135deg, rgba(224,168,96,0.13) 0 1px, transparent 1px 8px); }
+
   .node.locked { opacity: 0.5; }
 
   .node:hover { transform: scale(1.16) translateY(-2px); border-color: #fff; z-index: 5;
