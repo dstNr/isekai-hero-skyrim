@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Isekai Hero — Playground</title>
+<style>
+  /* ==========================================================================
+     The playground fakes what PrismaUI gives the view for free in-game: a
+     transparent overlay composited over a running scene. Here the "scene" is a
+     dim gameplay-ish backdrop, and the real view is loaded in an iframe on top
+     of it, driven by mock.js exactly as the SKSE plugin drives it.
+     ========================================================================== */
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; background: #05070c; overflow: hidden;
+               font-family: "Segoe UI", system-ui, sans-serif; }
+
+  #scene {
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 42%, rgba(40, 60, 90, 0.35), transparent 70%),
+      radial-gradient(circle at 30% 80%, rgba(120, 70, 30, 0.18), transparent 55%),
+      linear-gradient(180deg, #0a1018, #04060a);
+  }
+  #scene::after {
+    content: "SCENE — gameplay renders here";
+    position: absolute; left: 50%; bottom: 12%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.1); font-size: 12px; letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
+  /* The view, transparent-backed, exactly as PrismaUI composites it. */
+  #view {
+    position: fixed; inset: 0; width: 100%; height: 100%; border: 0;
+    background: transparent; transition: opacity 0.25s ease;
+  }
+  #view.is-hidden { opacity: 0; pointer-events: none; }
+
+  /* --- control dock (not part of the mod; the playground's own chrome) --- */
+  #dock {
+    position: fixed; left: 12px; top: 12px; z-index: 10;
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    max-width: 640px;
+    padding: 10px 12px;
+    background: rgba(6, 10, 16, 0.82);
+    border: 1px solid rgba(120, 160, 200, 0.22);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    font-size: 12px; color: #b9c6d6;
+  }
+  #dock strong { color: #7fd0ff; letter-spacing: 0.12em; font-size: 11px;
+                 text-transform: uppercase; margin-right: 4px; }
+  #dock .sep { width: 100%; height: 0; }
+  #dock button {
+    background: rgba(30, 46, 66, 0.7); color: #cfe0f0;
+    border: 1px solid rgba(120, 160, 200, 0.3); border-radius: 5px;
+    padding: 6px 10px; cursor: pointer; font: inherit; letter-spacing: 0.04em;
+  }
+  #dock button:hover { border-color: #5ad2ff; color: #fff; }
+  #dock button.ghost { background: transparent; }
+  #dock select {
+    background: rgba(30, 46, 66, 0.7); color: #cfe0f0;
+    border: 1px solid rgba(120, 160, 200, 0.3); border-radius: 5px;
+    padding: 5px 8px; font: inherit;
+  }
+  #dock .pts { font-family: Consolas, monospace; color: #7fd0ff; }
+
+  #log {
+    position: fixed; right: 12px; bottom: 12px; z-index: 10;
+    width: 260px; max-height: 160px; overflow: auto;
+    padding: 8px 10px;
+    background: rgba(6, 10, 16, 0.82);
+    border: 1px solid rgba(120, 160, 200, 0.22);
+    border-radius: 8px;
+    font-family: Consolas, monospace; font-size: 11px; color: #8aa8c4;
+  }
+  #log b { color: #7fd0ff; display: block; margin-bottom: 4px; letter-spacing: 0.1em; }
+  #log div { opacity: 0.85; }
+</style>
+</head>
+<body>
+  <div id="scene"></div>
+
+  <!-- The real, unmodified view. Served over http so parent↔iframe share an
+       origin (see playground/serve.mjs for why that matters). -->
+  <iframe id="view"
+          src="/prisma-patch/PrismaUI/views/IsekaiHero/index.html"
+          allowtransparency="true"></iframe>
+
+  <div id="dock">
+    <strong>Screens</strong>
+    <button id="btnTree">Skill Tree</button>
+    <button id="btnPanel">Dialog</button>
+    <button id="btnChoice">Choice</button>
+    <button id="btnFlourish">Level&nbsp;Up</button>
+
+    <div class="sep"></div>
+
+    <strong>Points</strong>
+    <button id="btnP10" class="ghost">+10</button>
+    <button id="btnP1" class="ghost">+1</button>
+    <span class="pts" id="ptsView">—</span>
+
+    <strong style="margin-left:8px">Rebirth</strong>
+    <select id="tier">
+      <option value="0">Normal</option>
+      <option value="1">Hero</option>
+      <option value="2" selected>Ascended</option>
+    </select>
+
+    <button id="btnReset" class="ghost" style="margin-left:8px">Reset</button>
+  </div>
+
+  <div id="log"><b>Callbacks</b></div>
+
+  <script src="mock.js"></script>
+  <script>
+    "use strict";
+    var frame = document.getElementById("view");
+    var logEl = document.getElementById("log");
+    var ptsView = document.getElementById("ptsView");
+
+    // mock.js pushes callback traffic here so the plugin round-trips are visible.
+    window.VS_LOG = function (msg) {
+      var d = document.createElement("div");
+      d.textContent = "▸ " + msg;
+      logEl.appendChild(d);
+      logEl.scrollTop = logEl.scrollHeight;
+      refreshPts();
+    };
+
+    function refreshPts() {
+      if (window.IsekaiMock) ptsView.textContent = window.IsekaiMock.state().points;
+    }
+
+    frame.addEventListener("load", function () {
+      // Same handshake the plugin does on DOM-ready: install callbacks, then a
+      // screen can be pushed. We wait a tick so the view's own scripts have run.
+      window.IsekaiMock.attach(frame);
+      setTimeout(function () {
+        window.IsekaiMock.openTree();
+        refreshPts();
+      }, 60);
+    });
+
+    document.getElementById("btnTree").onclick = function () { window.IsekaiMock.openTree(); };
+
+    document.getElementById("btnPanel").onclick = function () {
+      window.IsekaiMock.showPanel({
+        title: "A Voice in the Dark",
+        body: "You awaken on cold stone, the System's sigil burning behind your "
+            + "eyes. It offers a single word, and asks whether you will listen.",
+        reveal: 45,
+        width: 640,
+        buttons: [{ label: "Listen", icon: "spells_01_frame.png", iconOnly: false }],
+        onSelect: function (i) { window.VS_LOG("panel resolved: " + i); }
+      });
+    };
+
+    document.getElementById("btnChoice").onclick = function () {
+      window.IsekaiMock.showPanel({
+        title: "The System Offers a Gift",
+        body: "Three paths open before you. Choose, and the blessing is bound to "
+            + "your soul for this life.",
+        reveal: 60,
+        width: 720,
+        buttons: [
+          { label: "Vitality", icon: "spells_25_frame.png", iconOnly: false },
+          { label: "Arcana", icon: "spells_15_frame.png", iconOnly: false },
+          { label: "Shadow", icon: "spells_32_frame.png", iconOnly: false }
+        ],
+        onSelect: function (i) { window.VS_LOG("gift chosen: " + i); }
+      });
+    };
+
+    document.getElementById("btnFlourish").onclick = function () {
+      window.IsekaiMock.flourish("REBIRTH", "The System awakens");
+    };
+
+    document.getElementById("btnP10").onclick = function () { window.IsekaiMock.addPoints(10); refreshPts(); };
+    document.getElementById("btnP1").onclick  = function () { window.IsekaiMock.addPoints(1);  refreshPts(); };
+
+    document.getElementById("tier").onchange = function (e) {
+      window.IsekaiMock.setTier(parseInt(e.target.value, 10));
+    };
+
+    document.getElementById("btnReset").onclick = function () {
+      window.IsekaiMock.reset();
+      document.getElementById("tier").value = String(window.IsekaiMock.getTier());
+      logEl.innerHTML = "<b>Callbacks</b>";
+      refreshPts();
+    };
+  </script>
+</body>
+</html>
