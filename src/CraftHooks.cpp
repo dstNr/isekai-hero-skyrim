@@ -64,11 +64,21 @@ namespace Isekai::CraftHooks {
                                                       RE::TESBoundObject* a_obj);
         PlayerGetItemCount_t _originalPlayerGetItemCount = nullptr;
 
-        // Set while inside Hook 5. If PlayerCharacter::GetItemCount internally calls the
-        // standalone count (Hook 3), this stops that inner call from adding the chest a
-        // second time — Hook 5 adds it once, at the outer level. Per-thread because
-        // Papyrus may run the native off the main thread.
-        thread_local bool s_inPlayerCount = false;
+        // Hook 6 — InventoryChanges::GetItemCount (the MEMBER function). IDs 15868 (SE) /
+        // 16047 (AE). This is the one that matters most: recipe CONDITIONS (CCOR's
+        // "hide recipes you lack the material for") and Papyrus GetItemCount read THIS,
+        // not the standalone Hook 3 uses for the menu display. Without it, the chest
+        // shows in the material readout but the recipe stays hidden until you carry one.
+        // Returns int16.
+        using InvChangesGetItemCount_t = std::int16_t (*)(RE::InventoryChanges* a_this,
+                                                          RE::TESBoundObject* a_obj);
+        InvChangesGetItemCount_t _originalInvChangesGetItemCount = nullptr;
+
+        // All the count hooks share this re-entrancy depth. Any of them may internally
+        // call another (e.g. the standalone calls the member); only the OUTERMOST call
+        // adds the chest, so it can never be counted twice. Per-thread because Papyrus
+        // may run a count off the main thread.
+        thread_local int s_countDepth = 0;
 
         bool s_itemActive = false;     // Hook 3 + Hook 4 live (item crafting)
         bool s_iterActive = false;  // Hook 1 + Hook 2 live (alchemy + enchanting iteration)
@@ -144,42 +154,56 @@ namespace Isekai::CraftHooks {
             }
         }
 
-        // --- Hook 3: per-item count (recipe availability) ---
-        std::int32_t Hook_GetInventoryItemCount(RE::InventoryChanges* a_inv,
-                                                RE::TESBoundObject* a_item, void* a_filter) {
-            const std::int32_t original = _originalGetInventoryItemCount(a_inv, a_item, a_filter);
-            DiagCount("H3", a_item, original);
-            if (!a_item || s_inPlayerCount || !InCraftContext()) {
-                return original;  // s_inPlayerCount: Hook 5 is already adding the chest
+        // Shared tail for the per-item count hooks: add the chest, but only at the
+        // outermost count call (so a nested standalone→member chain can't double it),
+        // only while crafting, and only for the player's own inventory changes.
+        [[nodiscard]] bool ShouldAddChest(RE::InventoryChanges* a_inv) {
+            if (s_countDepth != 0 || !InCraftContext()) {
+                return false;
             }
             auto* player = RE::PlayerCharacter::GetSingleton();
-            if (!player || a_inv != player->GetInventoryChanges()) {
+            return player && a_inv == player->GetInventoryChanges();
+        }
+
+        // --- Hook 3: standalone GetInventoryItemCount — the menu's material readout ---
+        std::int32_t Hook_GetInventoryItemCount(RE::InventoryChanges* a_inv,
+                                                RE::TESBoundObject* a_item, void* a_filter) {
+            ++s_countDepth;
+            const std::int32_t original = _originalGetInventoryItemCount(a_inv, a_item, a_filter);
+            --s_countDepth;
+            DiagCount("H3", a_item, original);
+            if (!a_item || !ShouldAddChest(a_inv)) {
                 return original;
             }
             return original + Storage::ChestCount(a_item);
         }
 
-        // --- Hook 5: Papyrus-side per-item count (other mods' pre-craft prompts) ---
-        std::int32_t Hook_PlayerGetItemCount(RE::PlayerCharacter* a_this, RE::TESBoundObject* a_obj) {
-            s_inPlayerCount = true;
-            const std::int32_t original = _originalPlayerGetItemCount(a_this, a_obj);
-            s_inPlayerCount = false;
-            DiagCount("H5", a_obj, original);
+        // --- Hook 6: InventoryChanges::GetItemCount (member) — recipe conditions + Papyrus ---
+        std::int16_t Hook_InvChangesGetItemCount(RE::InventoryChanges* a_this,
+                                                 RE::TESBoundObject* a_obj) {
+            ++s_countDepth;
+            const std::int16_t original = _originalInvChangesGetItemCount(a_this, a_obj);
+            --s_countDepth;
+            DiagCount("HM", a_obj, original);
+            if (!a_obj || !ShouldAddChest(a_this)) {
+                return original;
+            }
+            const std::int32_t total = static_cast<std::int32_t>(original) + Storage::ChestCount(a_obj);
+            return static_cast<std::int16_t>(std::min(total, 32767));
+        }
 
-            if (!a_obj || !InCraftContext()) {
+        // --- Hook 5: PlayerCharacter::GetItemCount (belt-and-braces; rarely the path) ---
+        std::int32_t Hook_PlayerGetItemCount(RE::PlayerCharacter* a_this, RE::TESBoundObject* a_obj) {
+            ++s_countDepth;
+            const std::int32_t original = _originalPlayerGetItemCount(a_this, a_obj);
+            --s_countDepth;
+            DiagCount("H5", a_obj, original);
+            if (!a_obj || s_countDepth != 0 || !InCraftContext()) {
                 return original;
             }
             auto* player = RE::PlayerCharacter::GetSingleton();
             if (a_this != player) {
                 return original;
-            }
-            // Diagnostic (capped): confirms this function is on the script/condition path
-            // during a crafting menu. If a symptom persists and NO such line appears, the
-            // path uses a different function than 19701.
-            static std::atomic<int> s_h5log{ 0 };
-            if (const int n = ++s_h5log; n <= 40) {
-                logger::info("CraftHooks[H5]: PlayerGetItemCount('{}') player={} +chest={}",
-                             a_obj->GetName(), original, Storage::ChestCount(a_obj));
             }
             return original + Storage::ChestCount(a_obj);
         }
@@ -388,6 +412,22 @@ namespace Isekai::CraftHooks {
             logger::warn("CraftHooks: PlayerCharacter::GetItemCount lookup failed — script counts unhooked");
         }
 
+        // Member count hook — THE one recipe conditions and Papyrus actually read. Without
+        // it, condition-gated recipes (CCOR) stay hidden and pre-craft prompts miss the
+        // chest even though the menu display shows it.
+        bool memberOk = false;
+        try {
+            REL::Relocation<std::uintptr_t> m{ REL::RelocationID(15868, 16047) };
+            memberOk = MH_CreateHook(reinterpret_cast<void*>(m.address()),
+                                     reinterpret_cast<void*>(&Hook_InvChangesGetItemCount),
+                                     reinterpret_cast<void**>(&_originalInvChangesGetItemCount)) == MH_OK;
+            if (!memberOk) {
+                logger::warn("CraftHooks: MH_CreateHook(InventoryChanges::GetItemCount) failed");
+            }
+        } catch (...) {
+            logger::warn("CraftHooks: InventoryChanges::GetItemCount lookup failed");
+        }
+
         if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK) {
             logger::error("CraftHooks: MH_EnableHook failed — hooks disabled");
             return;
@@ -420,8 +460,8 @@ namespace Isekai::CraftHooks {
             }
         }
 
-        logger::info("CraftHooks: item-crafting {} (count @ {:X}, consume {}), iteration {}",
+        logger::info("CraftHooks: item-crafting {} (count @ {:X}, consume {}), iteration {}, member-count {}",
                      s_itemActive ? "LIVE" : "OFF", countAddr, removeOk ? "ok" : "FAILED",
-                     s_iterActive ? "LIVE" : "OFF");
+                     s_iterActive ? "LIVE" : "OFF", memberOk ? "ok" : "FAILED");
     }
 }
