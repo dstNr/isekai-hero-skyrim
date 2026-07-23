@@ -56,6 +56,13 @@ namespace Isekai::UI {
             return Config::HideSealedNodes() && !SkillTree::TierMet(a_node.key);
         }
 
+        // The always-open repeatable upgrades (no prerequisites) — grouped into their own
+        // labelled column on the left, off to the side of the branch graph, so they don't
+        // float there disconnected. Mirrors the web patch's utility rail.
+        [[nodiscard]] bool IsUtilityNode(const SkillTree::Node& a_node) {
+            return a_node.repeatable && a_node.prereq[0] == 0 && a_node.prereq[1] == 0;
+        }
+
         // A repeatable node is "done" only once it hits its rank cap; below that it keeps
         // showing as buyable. One-shot nodes are done the moment they're owned.
         [[nodiscard]] bool NodeMaxed(const SkillTree::Node& a_node) {
@@ -88,6 +95,12 @@ namespace Isekai::UI {
                 // Reachable but too poor: visible, quietly waiting.
                 return { Style::Col(Style::kTextDim, 0.8f), 1.5f * a_s,
                          IM_COL32(150, 150, 150, 255), false };
+            }
+            if (!SkillTree::TierMet(a_node.key)) {
+                // Sealed by rebirth tier — an amber lock, so it reads distinctly from a
+                // plain grey "prerequisite missing" node.
+                return { IM_COL32(210, 158, 96, 220), 1.5f * a_s, IM_COL32(160, 120, 74, 210),
+                         false };
             }
             // Locked behind prerequisites: greyed down hard.
             return { Style::Col(Style::kTextDim, 0.35f), 1.0f * a_s,
@@ -176,9 +189,13 @@ namespace Isekai::UI {
                         Style::Col(Style::kTextDim, fade), perks.c_str());
 
             // --- The graph ---
-            const ImVec2 origin{ wMin.x, wMin.y + kCanvasTop * s };
-            const auto   centerOf = [&](const SkillTree::Node& n) {
-                return ImVec2{ origin.x + n.x * s, origin.y + n.y * s };
+            // Utility nodes (x≈95 in the data) are nudged further left so they sit in a
+            // distinct rail, clear of the branch graph's leftmost node (Thu'um at x≈160).
+            constexpr float kUtilShift = 50.0f;
+            const ImVec2    origin{ wMin.x, wMin.y + kCanvasTop * s };
+            const auto      centerOf = [&](const SkillTree::Node& n) {
+                const float x = IsUtilityNode(n) ? n.x - kUtilShift : n.x;
+                return ImVec2{ origin.x + x * s, origin.y + n.y * s };
             };
 
             std::size_t count = 0;
@@ -222,13 +239,51 @@ namespace Isekai::UI {
                     if (!from || NodeHidden(*from)) {
                         continue;
                     }
-                    const bool  litFrom = SkillTree::IsUnlocked(from->key);
-                    const bool  litBoth = litFrom && SkillTree::IsUnlocked(node.key);
-                    const float alpha = (litBoth ? 0.85f : litFrom ? 0.4f : 0.15f) * fade;
+                    const bool   litFrom = SkillTree::IsUnlocked(from->key);
+                    const bool   litBoth = litFrom && SkillTree::IsUnlocked(node.key);
                     const ImVec2 a = centerOf(*from);
                     const ImVec2 b = centerOf(node);
-                    dl->AddLine(clipToBox(a, b), clipToBox(b, a),
-                                Style::Col(Style::kAccent, alpha), (litBoth ? 2.5f : 1.5f) * s);
+                    const ImVec2 p = clipToBox(a, b), q = clipToBox(b, a);
+                    if (litBoth) {
+                        // A fully-unlocked path: a wide faint halo under a bright core,
+                        // so active connections read as glowing energy.
+                        dl->AddLine(p, q, Style::Col(Style::kAccent, 0.18f * fade), 6.0f * s);
+                        dl->AddLine(p, q, Style::Col(Style::kAccent, 0.95f * fade), 2.4f * s);
+                    } else {
+                        dl->AddLine(p, q, Style::Col(Style::kAccent, (litFrom ? 0.4f : 0.15f) * fade),
+                                    1.5f * s);
+                    }
+                }
+            }
+
+            // --- Utility rail: a label and a divider framing the always-open repeatable
+            // column, so the three nodes read as a deliberate group rather than floaters.
+            // Drawn before the nodes so they sit on top.
+            {
+                ImVec2 uMin{ FLT_MAX, FLT_MAX }, uMax{ -FLT_MAX, -FLT_MAX };
+                int    uCount = 0;
+                for (std::size_t i = 0; i < count; ++i) {
+                    if (!IsUtilityNode(nodes[i]) || NodeHidden(nodes[i])) {
+                        continue;
+                    }
+                    const ImVec2 c = centerOf(nodes[i]);
+                    uMin.x = std::min(uMin.x, c.x);
+                    uMin.y = std::min(uMin.y, c.y);
+                    uMax.x = std::max(uMax.x, c.x);
+                    uMax.y = std::max(uMax.y, c.y);
+                    ++uCount;
+                }
+                if (uCount > 0) {
+                    const float hb = kNodeSize * 0.5f * s;
+                    const float divX = uMax.x + hb + 26.0f * s;
+                    dl->AddLine(ImVec2{ divX, uMin.y - hb - 28.0f * s },
+                                ImVec2{ divX, uMax.y + hb + 16.0f * s },
+                                Style::Col(Style::kAccent, 0.16f * fade), 1.0f * s);
+                    const char*  ul = "UTILITY";
+                    const ImVec2 ts = ImGui::CalcTextSize(ul);
+                    dl->AddText(ImVec2{ (uMin.x + uMax.x) * 0.5f - ts.x * 0.5f,
+                                        uMin.y - hb - 26.0f * s },
+                                Style::Col(Style::kTextDim, 0.9f * fade), ul);
                 }
             }
 
