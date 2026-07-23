@@ -349,6 +349,14 @@ namespace Isekai::Progression {
                 return;
             }
 
+            // Don't pop up over a game menu. The hotkey's 'S' collides with typing —
+            // searching the inventory for "Salmon", entering a console command, naming an
+            // enchantment — and every one of those menus pauses the game, so a paused game
+            // means "a menu already has the keyboard; leave it alone".
+            if (auto* ui = RE::UI::GetSingleton(); ui && ui->GameIsPaused()) {
+                return;
+            }
+
             std::string body;
 
             body += "POWER LEVEL   " + PowerName(GetState().power) + "\n";
