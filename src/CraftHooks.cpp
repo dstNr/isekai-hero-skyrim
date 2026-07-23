@@ -139,11 +139,22 @@ namespace Isekai::CraftHooks {
 
         // Only the forge family gates recipes on carried materials (CCOR). Alchemy and
         // enchanting don't hide recipes that way, and their soul-gem/ingredient stock is
-        // served by the iteration path — no tokens there.
+        // served by the iteration path — no material tokens there.
+        //
+        // Enchanting is included for the OTHER reason tokens exist: a mod's pre-craft
+        // Papyrus prompt (Thaumaturgy's "empower this enchantment with a flawless gem?")
+        // reads the real inventory via GetItemCount before the menu even opens. Our C++
+        // activate sink runs synchronously, ahead of that queued Papyrus fragment, so a
+        // gem lent here is already carried when the prompt asks. (Soul gems — the enchant
+        // power source — still come from the iteration path, not tokens.)
+        [[nodiscard]] bool IsEnchantBench(BenchType a_bench) {
+            return a_bench == BenchType::kEnchanting ||
+                   a_bench == BenchType::kEnchantingExperiment;
+        }
         [[nodiscard]] bool BenchWantsTokens(BenchType a_bench) {
             return a_bench == BenchType::kCreateObject ||
                    a_bench == BenchType::kSmithingWeapon ||
-                   a_bench == BenchType::kSmithingArmor;
+                   a_bench == BenchType::kSmithingArmor || IsEnchantBench(a_bench);
         }
 
         // Exactly the materials some crafting recipe requires — the components of every
@@ -197,22 +208,31 @@ namespace Isekai::CraftHooks {
             g_lentTokens.clear();
         }
 
-        // Lend one of each stored forge material the player is not already carrying, so a
-        // foreign `GetItemCount >= 1` visibility condition passes and the recipe appears.
-        // MUST run before OpenCraftSession snapshots the chest, so the cached counts match
-        // the (now one-lower) chest. Main thread only.
-        void LendTokens() {
+        // Lend one of each stored material the player is not already carrying, so a foreign
+        // `GetItemCount >= 1` check passes: at a forge, that is every smithing-recipe
+        // component (so CCOR shows the recipe); at an enchanter, it is every stored Misc
+        // item (so a gem-spending "empower" prompt sees the gems). MUST run before
+        // OpenCraftSession snapshots the chest, so the cached counts match the (now
+        // one-lower) chest. Main thread only.
+        void LendTokens(BenchType a_bench) {
             ReturnTokens();  // sweep up anything stranded by an aborted session first
             auto* player = RE::PlayerCharacter::GetSingleton();
             auto* chest = Storage::ChestRef();
             if (!player || !chest) {
                 return;
             }
+            const bool enchant = IsEnchantBench(a_bench);
             const auto held = player->GetInventoryCounts();
             // GetInventoryCounts hands back a copy, so removing from the chest inside the
             // loop is safe.
             for (const auto& [obj, cnt] : chest->GetInventoryCounts()) {
-                if (!obj || cnt <= 0 || !g_recipeMaterials.contains(obj)) {
+                if (!obj || cnt <= 0) {
+                    continue;
+                }
+                // Forge: recipe components. Enchanter: any Misc (gems for "empower").
+                const bool wanted = enchant ? obj->GetFormType() == RE::FormType::Misc
+                                            : g_recipeMaterials.contains(obj);
+                if (!wanted) {
                     continue;
                 }
                 if (const auto it = held.find(obj); it != held.end() && it->second > 0) {
@@ -379,7 +399,7 @@ namespace Isekai::CraftHooks {
                         g_craftContext.store(true, std::memory_order_relaxed);
                         g_contextExpiryMs.store(NowMs() + 20000, std::memory_order_relaxed);
                         if (BenchWantsTokens(bench)) {
-                            LendTokens();  // must precede the snapshot below
+                            LendTokens(bench);  // must precede the snapshot below
                         }
                         OpenCraftSession();
                     }
