@@ -1,5 +1,6 @@
 #include "System.h"
 
+#include "Config.h"
 #include "CraftHooks.h"
 #include "Passives.h"
 #include "Plugin.h"
@@ -26,7 +27,7 @@ namespace Isekai {
         // --- Co-save serialization IDs ---
         constexpr std::uint32_t kSerID = 'ISKA';    // unique plugin id
         constexpr std::uint32_t kRecState = 'STAT';  // record tag
-        constexpr std::uint32_t kVersion = 6;        // bumped: system points added
+        constexpr std::uint32_t kVersion = 8;        // 7: shattered flag; 8: repeatable node ranks
 
         void SystemMsg(const char* a_text) {
             RE::DebugNotification(a_text);
@@ -81,7 +82,10 @@ namespace Isekai {
                 return;
             }
 
-            const Blessing b = BlessingFor(g_state.power);
+            // A SHATTERED awakening keeps the tier (RewardScale and the deeper tree still
+            // read g_state.power) but takes no flat starting grant at all — same mortal
+            // floor as NORMAL, everything below earned rather than handed over.
+            const Blessing b = g_state.shattered ? Blessing{} : BlessingFor(g_state.power);
             auto* avOwner = player->AsActorValueOwner();
 
             // Blessings only ever RAISE — on an existing save the character may
@@ -135,7 +139,8 @@ namespace Isekai {
             const std::string body =
                 "REINCARNATION COMPLETE\n"
                 "\n"
-                "  Power level   " + PowerName(g_state.power) + "\n"
+                "  Power level   " + PowerName(g_state.power) +
+                (g_state.shattered ? "  (SHATTERED)" : "") + "\n"
                 "\n"
                 "The System is now bound to your soul.\n"
                 "Your new life begins.";
@@ -154,6 +159,31 @@ namespace Isekai {
             });
         }
 
+        // Second step for HERO/ASCENDED: take the power now, or earn it. FULL is the
+        // blessing as designed (flat skills/level/fortune); SHATTERED keeps the tier's
+        // reward pace and deep tree but starts you at the mortal floor.
+        void ShowPathSelection() {
+            UI::ShowSystemWindow(
+                "[ SYSTEM ]",
+                "The " + PowerName(g_state.power) + " blessing resonates.\n"
+                "How will you receive it?\n"
+                "\n"
+                "  FULL       Awaken at once — skills, level and\n"
+                "             fortune granted now.\n"
+                "  SHATTERED  The System is fractured. Begin as any\n"
+                "             mortal, but its rewards still flow faster\n"
+                "             and its deepest gifts stay open to you.\n"
+                "             Higher ceiling, same floor — earn it.\n"
+                "\n"
+                "Choose how you rise:",
+                std::vector<std::string>{ "FULL AWAKENING", "SHATTERED" },
+                [](int a_idx) {
+                    g_state.shattered = (a_idx == 1);
+                    logger::info("Awakening path: {}", g_state.shattered ? "SHATTERED" : "FULL");
+                    ApplyReincarnation();
+                });
+        }
+
         void ShowPowerSelection() {
             UI::ShowSystemWindow(
                 "[ SYSTEM ]",
@@ -168,8 +198,15 @@ namespace Isekai {
                 { "NORMAL", "HERO", "ASCENDED" },
                 [](int a_idx) {
                     g_state.power = static_cast<PowerLevel>(std::clamp(a_idx, 0, 2));
+                    g_state.shattered = false;
                     logger::info("Power level selected: {} ({})", a_idx, PowerName(g_state.power));
-                    ApplyReincarnation();
+                    // NORMAL has no floor to skip, so it never asks; HERO/ASCENDED choose
+                    // full-vs-shattered next.
+                    if (g_state.power == PowerLevel::Normal) {
+                        ApplyReincarnation();
+                    } else {
+                        ShowPathSelection();
+                    }
                 });
         }
 
@@ -308,8 +345,17 @@ namespace Isekai {
 
             a_intf->WriteRecordData(g_state.systemPoints);
 
-            logger::info("State saved (reincarnated={}, milestones={}, nodes={}, sp={})",
-                         g_state.reincarnated, count, nodes, g_state.systemPoints);
+            a_intf->WriteRecordData(g_state.shattered);  // v7
+
+            const auto ranks = static_cast<std::uint32_t>(g_state.nodeRanks.size());  // v8
+            a_intf->WriteRecordData(ranks);
+            for (const auto& [key, rank] : g_state.nodeRanks) {
+                a_intf->WriteRecordData(key);
+                a_intf->WriteRecordData(rank);
+            }
+
+            logger::info("State saved (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={})",
+                         g_state.reincarnated, count, nodes, g_state.systemPoints, g_state.shattered);
         }
 
         void LoadCallback(SKSE::SerializationInterface* a_intf) {
@@ -371,11 +417,30 @@ namespace Isekai {
                 if (version >= 6) {
                     a_intf->ReadRecordData(g_state.systemPoints);
                 }
+
+                g_state.shattered = false;
+                if (version >= 7) {
+                    a_intf->ReadRecordData(g_state.shattered);
+                }
+
+                g_state.nodeRanks.clear();
+                if (version >= 8) {
+                    std::uint32_t ranks = 0;
+                    a_intf->ReadRecordData(ranks);
+                    g_state.nodeRanks.reserve(ranks);
+                    for (std::uint32_t i = 0; i < ranks; ++i) {
+                        std::uint32_t key = 0;
+                        std::int32_t  rank = 0;
+                        a_intf->ReadRecordData(key);
+                        a_intf->ReadRecordData(rank);
+                        g_state.nodeRanks.emplace_back(key, rank);
+                    }
+                }
             }
 
-            logger::info("State loaded (reincarnated={}, milestones={}, nodes={}, sp={})",
+            logger::info("State loaded (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={})",
                          g_state.reincarnated, g_state.grantedMilestones.size(),
-                         g_state.unlockedNodes.size(), g_state.systemPoints);
+                         g_state.unlockedNodes.size(), g_state.systemPoints, g_state.shattered);
         }
 
         void RevertCallback(SKSE::SerializationInterface*) {
@@ -391,6 +456,7 @@ namespace Isekai {
         void OnSKSEMessage(SKSE::MessagingInterface::Message* a_msg) {
             switch (a_msg->type) {
             case SKSE::MessagingInterface::kDataLoaded:
+                Config::Load();
                 Plugin::DumpForms();
                 Passives::Install();
                 Sounds::Install();

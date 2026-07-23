@@ -4,6 +4,35 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [0.5.0] — 2026-07-23
+
+Acting on a detailed player report: more ways to play, more to spend points on,
+and a couple of quality-of-life fixes. Save-safe — an existing save keeps its
+blessing, nodes and points; the new fields default cleanly on load.
+
+### Added
+- **"Shattered" awakening for HERO and ASCENDED.** After choosing the blessing you
+  now choose how you receive it. **Full** is the blessing as before — skills, level
+  and fortune granted at once. **Shattered** keeps the tier's payoff (the ×2 / ×4
+  reward pace and the deeper skill tree it unlocks) but takes **no** flat starting
+  grant: you begin at the same mortal floor as NORMAL and earn every step. Higher
+  ceiling, same floor — for players who want the power but want to work for it.
+- **Repeatable utility nodes in the skill tree.** Three new NORMAL-tier nodes you can
+  buy again and again, so there is always something to spend System Points on:
+  **Fleet of Foot** (+3% move speed per rank, up to +30%), **Beast of Burden**
+  (+25 carry weight per rank) and **Enduring Vigor** (+25 Health/Magicka/Stamina per
+  rank). Each purchase shows its current rank. (No attack-speed node — that road is
+  a well-known source of animation and mod conflicts.)
+- **Optional settings ini** (`Data/SKSE/Plugins/IsekaiHero.ini`) — ships with defaults,
+  safe to delete. First setting: **`HideSealedNodes`** — hide skill-tree nodes gated
+  above your rebirth tier instead of showing them greyed with a "requires HERO/ASCENDED"
+  hint.
+
+### Fixed
+- **The System hotkey no longer fires while a menu is open.** Right Shift + S used to
+  pop the panel open mid-typing — searching an inventory for "Salmon", entering a
+  console command. It now stays quiet whenever a menu has the keyboard.
+
 ## [0.4.0] — 2026-07-23
 
 Crafting now holds up inside a full overhaul stack, and the Dimensional Storage
@@ -171,6 +200,7 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[0.5.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.5.0
 [0.4.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.4.0
 [0.3.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.3.1
 [0.3.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.3.0

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Isekai {
@@ -42,6 +43,12 @@ namespace Isekai {
         PowerLevel power = PowerLevel::Normal;
         SkillFocus skills = SkillFocus::Balanced;
 
+        // "Shattered" awakening: keep the blessing's TIER (reward scale + the deeper
+        // skill tree it unlocks) but skip the flat starting grant — skills, level,
+        // gear, gold, the seeded points. A HERO/ASCENDED who wants the higher ceiling
+        // without the handed-out floor earns every step at the blessing's pace.
+        bool shattered = false;
+
         // Milestones already paid out, by their stable key. Guards against paying
         // twice — quest stage events fire more than once, and the retroactive
         // catch-up runs on every load.
@@ -51,8 +58,14 @@ namespace Isekai {
         // (see Storage.cpp). 0 = not created yet.
         std::uint32_t storageChest = 0;
 
-        // Skill tree nodes bought with System Points, by their stable key.
+        // Skill tree nodes bought with System Points, by their stable key. One-shot
+        // nodes only — each appears at most once.
         std::vector<std::uint32_t> unlockedNodes;
+
+        // Purchase counts for REPEATABLE nodes (incremental stat boosts), by node key.
+        // These never enter unlockedNodes (so they stay buyable), so their rank — how
+        // many times bought — is tracked here and drives the accumulated bonus.
+        std::vector<std::pair<std::uint32_t, std::int32_t>> nodeRanks;
 
         // The System's own currency (docs/IDEAS.md): uncapped, unlike perk points,
         // and deliberately separate from dragon souls. Paid by milestones; souls can

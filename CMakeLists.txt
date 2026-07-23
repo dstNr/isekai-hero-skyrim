@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 project(
     IsekaiHeroSKSE
-    VERSION 0.4.0
+    VERSION 0.5.0
     LANGUAGES CXX
 )
 
@@ -15,6 +15,8 @@ add_commonlibsse_plugin(
     AUTHOR "dstNr"
     SOURCES
         src/main.cpp
+        src/Config.cpp
+        src/Config.h
         src/System.cpp
         src/System.h
         src/Passives.cpp

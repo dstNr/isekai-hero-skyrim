@@ -15,7 +15,9 @@ namespace Isekai::SkillTree {
         kAllEnchantments,  // every enchantment known, no disenchanting needed
         kAllIngredients,   // all four effects of every ingredient known
         kAllSpells,        // every spell that has a tome
-        kPerkPoint,        // +1 perk point — REPEATABLE, never enters unlockedNodes
+        kPerkPoint,        // +5 perk points — REPEATABLE, never enters unlockedNodes
+        kMoveSpeed,        // +N% movement speed per rank (kSpeedMult, set directly —
+                           // no fortify ability exists for it) — REPEATABLE
     };
 
     struct Bonus {
@@ -38,6 +40,13 @@ namespace Isekai::SkillTree {
         std::uint32_t prereq[2];  // node keys; 0 = none. All listed must be unlocked.
         Effect        effect;
         Bonus         bonus[3];
+
+        // REPEATABLE nodes can be bought again and again: they never enter
+        // unlockedNodes (so they keep pulsing as buyable) — their purchase count lives
+        // in State::nodeRanks and drives the accumulated bonus. maxRank caps it (0 =
+        // uncapped). One-shot nodes leave both at their defaults.
+        bool         repeatable = false;
+        std::int32_t maxRank = 0;
     };
 
     // The whole tree, for the window to draw.
@@ -45,6 +54,10 @@ namespace Isekai::SkillTree {
 
     [[nodiscard]] bool IsUnlocked(std::uint32_t a_key);
     [[nodiscard]] bool PrereqsMet(std::uint32_t a_key);
+
+    // How many times a REPEATABLE node has been bought (0 for one-shot or unbought).
+    // Drives the hover readout ("RANK 3 / 10") and the accumulated bonus.
+    [[nodiscard]] std::int32_t Rank(std::uint32_t a_key);
 
     // Is the player's rebirth tier high enough to unlock this node? Gates the strong
     // "gift" nodes (omniscience for HERO+, capstone for ASCENDED) behind the blessing.

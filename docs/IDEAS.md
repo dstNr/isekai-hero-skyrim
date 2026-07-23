@@ -181,3 +181,32 @@ einstuft — ein Knotenpunkt für später, falls beide Features kommen.
 - Verändert die bei der Reincarnation gewählte `SkillFocus`-Richtung nur den
   Hub-Knoten der eigenen Branch, oder auch die Kosten/Verfügbarkeit in den
   beiden anderen Branches?
+
+---
+
+## User-Feedback-Backlog (Nexus, v0.4.x)
+
+Sammlung aus einem ausführlichen User-Report. Umgesetzt in v0.5.0: das
+"Shattered"-Erwachen (Segens-Tier ohne flachen Start-Grant), repeatable
+Utility-Knoten (Fleet of Foot / Beast of Burden / Enduring Vigor) und die
+optionale INI `HideSealedNodes`. Der Hotkey öffnet nicht mehr über einem
+offenen Spielmenü. Offen / auf der Roadmap:
+
+- **Storage-Codex als physischer Fallback (Item 4).** Ein Buch/Item im Inventar
+  (per Default vorhanden, nicht wegwerfbar), das die Dimensional Storage öffnet
+  — als Backup, falls das ImGui-Overlay mal klemmt, und als Zugang ohne
+  Crafting-Station. Umsetzung: kleines MISC/BOOK in der ESP + Aktivierungs-Hook
+  (oder Papyrus-Fragment), das `Storage::Open()` ruft. Klein–mittel.
+  *Hinweis:* Storage ist bereits jederzeit über das RShift+S-Panel erreichbar
+  (nicht nur am Tisch); der Cell-Reset-Reparatur-Fix (v0.4.0) entschärft den
+  "Menü klemmt"-Fall schon deutlich — der Codex ist der Gürtel zur Hosenträger.
+
+- **Keybind voll remapbar + Modifier wählbar (Ctrl statt RShift).** Braucht die
+  Config (INI existiert seit v0.5.0 — dort ein `[Hotkey]`-Abschnitt mit
+  Scancode + Modifier ergänzen und `Progression.cpp`/`Input.cpp` daraus
+  speisen). Mittel.
+
+- **Noch mehr Knoten-Varietät.** Weitere repeatable Stats über die bereits
+  unterstützten Actor Values (Resistenzen, Regen-Raten). Move Speed läuft schon
+  über direktes `kSpeedMult`-Setzen; Attack Speed bleibt bewusst außen vor
+  (Animations-/Mod-Konflikte, vom User selbst so eingeordnet).

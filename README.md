@@ -25,6 +25,10 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   | Reward scale on everything below | ×1 | ×2 | ×4 |
 
   \*current test value — will be rebalanced.
+
+  HERO and ASCENDED additionally choose **Full** or **Shattered**: Full grants
+  the flat start above; **Shattered** keeps only the tier's reward scale and the
+  deeper skill tree, starting you at the NORMAL floor — the higher ceiling, earned.
 - **79 quest milestones** (main quest, Companions, College, Thieves Guild,
   Dark Brotherhood, Civil War beats, Dawnguard, Dragonborn). Completing one
   plays a level-up flourish (rings, title punch, custom sound) and pays out a
@@ -33,20 +37,22 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
 - **Passives as real abilities.** All milestone bonuses aggregate into eight
   `System:` abilities visible under Active Effects — recomputed from scratch
   on every load, so they can never double-apply.
-- **System Skill Tree** (`RShift+S` → crystal icon): 14 nodes across a hub
-  and three branches, paid with **System Points**. Includes four knowledge
-  unlocks that span *every loaded plugin* via semantic filters:
+- **System Skill Tree** (`RShift+S` → crystal icon): a hub and three branches,
+  paid with **System Points**. Includes four knowledge unlocks that span
+  *every loaded plugin* via semantic filters:
   - all shouts + words of power ("has a description", deduplicated by name)
   - all enchantments ("referenced as a base enchantment")
   - all ingredient effects
   - all spells ("has a spell tome")
 
-  Plus **Perk Synthesis**: a repeatable node converting 1 System Point into
-  5 perk points. The tree is **gated by rebirth tier** (`Node::minPower`):
-  NORMAL walks the self-made stat/utility half, HERO additionally unlocks the
-  four Omniscience gifts, ASCENDED additionally unlocks the World Tree
-  capstone. Sealed nodes render greyed with a "requires HERO/ASCENDED rebirth"
-  hint — one shared graph, one source of truth, no duplicate tables.
+  Plus **repeatable** nodes with no lock-out: **Perk Synthesis** (1 System Point
+  → 5 perk points) and utility ranks — **Fleet of Foot** (move speed), **Beast of
+  Burden** (carry weight), **Enduring Vigor** (Health/Magicka/Stamina). The tree is
+  **gated by rebirth tier** (`Node::minPower`): NORMAL walks the self-made
+  stat/utility half, HERO additionally unlocks the four Omniscience gifts, ASCENDED
+  additionally unlocks the World Tree capstone. Sealed nodes render greyed with a
+  "requires HERO/ASCENDED rebirth" hint (or hidden entirely — see
+  `IsekaiHero.ini`) — one shared graph, one source of truth, no duplicate tables.
 - **Dimensional Storage** (every reincarnated soul): one chest inventory
   reachable from anywhere via the System panel. Crafting stations **read and
   consume its contents in place** — the material count and the recipe both see
@@ -124,6 +130,6 @@ when something misbehaves.
 
 ## Status
 
-🧪 **Pre-release** (v0.4.0). Feature-complete for full-modlist test runs;
+🧪 **Pre-release** (v0.5.0). Feature-complete for full-modlist test runs;
 balance values (starting System Points, node costs) are explicitly in a
 testing configuration. Version history in [CHANGELOG.md](CHANGELOG.md).

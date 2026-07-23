@@ -4,7 +4,7 @@
 
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
-$version = "0.4.0"
+$version = "0.5.0"
 
 $stage = Join-Path $root "build\package"
 $dist = Join-Path $root "dist"
@@ -23,6 +23,9 @@ $plugins = Join-Path $stage "SKSE\Plugins"
 New-Item -ItemType Directory -Force $plugins | Out-Null
 Copy-Item (Join-Path $root "build\IsekaiHeroSKSE.dll") $plugins
 Copy-Item (Join-Path $root "build\IsekaiHeroSKSE.pdb") $plugins
+
+# --- optional settings ini (ships with defaults; safe to delete in-game) ---
+Copy-Item (Join-Path $root "IsekaiHero.ini") $plugins
 
 # --- panel icons ---
 $icons = Join-Path $plugins "IsekaiHero\icons"

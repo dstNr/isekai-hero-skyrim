@@ -1,5 +1,6 @@
 #include "UI/SkillTreeWindow.h"
 
+#include "Config.h"
 #include "SkillTree.h"
 #include "Sounds.h"
 #include "System.h"
@@ -49,8 +50,25 @@ namespace Isekai::UI {
             bool  glow;
         };
 
+        // With HideSealedNodes set, a node gated above the current rebirth tier is not
+        // drawn at all (nor its connecting lines) instead of showing greyed. Default off.
+        [[nodiscard]] bool NodeHidden(const SkillTree::Node& a_node) {
+            return Config::HideSealedNodes() && !SkillTree::TierMet(a_node.key);
+        }
+
+        // A repeatable node is "done" only once it hits its rank cap; below that it keeps
+        // showing as buyable. One-shot nodes are done the moment they're owned.
+        [[nodiscard]] bool NodeMaxed(const SkillTree::Node& a_node) {
+            return a_node.repeatable && a_node.maxRank > 0 &&
+                   SkillTree::Rank(a_node.key) >= a_node.maxRank;
+        }
+
+        [[nodiscard]] bool NodeOwned(const SkillTree::Node& a_node) {
+            return a_node.repeatable ? NodeMaxed(a_node) : SkillTree::IsUnlocked(a_node.key);
+        }
+
         [[nodiscard]] NodeVisual VisualFor(const SkillTree::Node& a_node, float a_s) {
-            const bool unlocked = SkillTree::IsUnlocked(a_node.key);
+            const bool unlocked = NodeOwned(a_node);
             // A node gated by rebirth tier can never be taken this life — treat it as
             // hard-locked regardless of prerequisites or points.
             const bool reachable =
@@ -187,6 +205,9 @@ namespace Isekai::UI {
 
             for (std::size_t i = 0; i < count; ++i) {
                 const auto& node = nodes[i];
+                if (NodeHidden(node)) {
+                    continue;
+                }
                 for (const auto prereqKey : node.prereq) {
                     if (prereqKey == 0) {
                         continue;
@@ -198,7 +219,7 @@ namespace Isekai::UI {
                             break;
                         }
                     }
-                    if (!from) {
+                    if (!from || NodeHidden(*from)) {
                         continue;
                     }
                     const bool  litFrom = SkillTree::IsUnlocked(from->key);
@@ -216,6 +237,9 @@ namespace Isekai::UI {
             const float half = kNodeSize * 0.5f * s;
             for (std::size_t i = 0; i < count; ++i) {
                 const auto&  node = nodes[i];
+                if (NodeHidden(node)) {
+                    continue;
+                }
                 const ImVec2 c = centerOf(node);
                 const ImVec2 nMin{ c.x - half, c.y - half };
                 const ImVec2 nMax{ c.x + half, c.y + half };
@@ -254,7 +278,7 @@ namespace Isekai::UI {
                                 Style::Col(Style::kText, 0.9f), 0.0f, 0, 1.0f * s);
                 }
 
-                if (clicked && !SkillTree::IsUnlocked(node.key) && SkillTree::PrereqsMet(node.key) &&
+                if (clicked && !NodeOwned(node) && SkillTree::PrereqsMet(node.key) &&
                     SkillTree::TierMet(node.key) && SkillTree::Points() >= node.cost) {
                     const auto key = node.key;
                     if (auto* task = SKSE::GetTaskInterface()) {
@@ -282,9 +306,20 @@ namespace Isekai::UI {
                     dl->AddText(ImVec2{ infoX, infoY + 26.0f * s },
                                 Style::Col(Style::kText, fade), node->desc);
 
+                    // Repeatable nodes carry a "RANK n / max" suffix so the reader can see
+                    // how far they've pushed it (max shown only when capped).
+                    const std::string rankTag =
+                        node->repeatable
+                            ? "   RANK " + std::to_string(SkillTree::Rank(node->key)) +
+                                  (node->maxRank > 0 ? " / " + std::to_string(node->maxRank) : "")
+                            : std::string{};
+
                     std::string status;
                     ImU32       statusCol;
-                    if (SkillTree::IsUnlocked(node->key)) {
+                    if (node->repeatable && NodeMaxed(*node)) {
+                        status = "MAXED" + rankTag;
+                        statusCol = Style::Col(Style::kAccent, fade);
+                    } else if (!node->repeatable && SkillTree::IsUnlocked(node->key)) {
                         status = "UNLOCKED";
                         statusCol = Style::Col(Style::kAccent, fade);
                     } else if (!SkillTree::TierMet(node->key)) {
@@ -301,7 +336,8 @@ namespace Isekai::UI {
                         status = "PERK POOL FULL — spend some perk points first";
                         statusCol = Style::Col(Style::kTextDim, fade);
                     } else {
-                        status = "COST   " + std::to_string(node->cost) + " system point(s)";
+                        status = "COST   " + std::to_string(node->cost) + " system point(s)" +
+                                 rankTag;
                         statusCol = SkillTree::Points() >= node->cost
                                         ? Style::Col(Style::kAccent, fade)
                                         : IM_COL32(220, 90, 90, static_cast<int>(255 * fade));

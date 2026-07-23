@@ -359,7 +359,8 @@ namespace Isekai::Progression {
 
             std::string body;
 
-            body += "POWER LEVEL   " + PowerName(GetState().power) + "\n";
+            body += "POWER LEVEL   " + PowerName(GetState().power) +
+                    (GetState().shattered ? "  (SHATTERED)" : "") + "\n";
 
             std::size_t earned = 0;
             for (const auto& m : kMilestones) {

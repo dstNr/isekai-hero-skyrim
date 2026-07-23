@@ -81,6 +81,21 @@ namespace Isekai::SkillTree {
             { 13, "World Tree", "The System blossoms through your soul.\n+100 Health, Magicka and Stamina.",
               "spells_09_frame.png", 550.0f, 600.0f, 50, kA, { 11, 12 }, Effect::kAttributes,
               { { AV::kHealth, 100.0f }, { AV::kMagicka, 100.0f }, { AV::kStamina, 100.0f } } },
+
+            // --- Utility (left margin, REPEATABLE) ---
+            // Incremental stats that are otherwise fiddly to raise, and give NORMAL a
+            // reason to keep spending. No prerequisites — always open, tier NORMAL, so
+            // every rebirth can grind them. Deliberately NOT attack speed (a well-known
+            // source of animation/mod conflicts).
+            { 16, "Beast of Burden", "The System shoulders your load.\n+25 Carry Weight per rank.",
+              "spells_22_frame.png", 95.0f, 190.0f, 2, kN, { 0, 0 }, Effect::kAttributes,
+              { { AV::kCarryWeight, 25.0f } }, true, 0 },
+            { 15, "Fleet of Foot", "The System quickens your stride.\n+3% movement speed per rank.",
+              "spells_28_frame.png", 95.0f, 330.0f, 3, kN, { 0, 0 }, Effect::kMoveSpeed,
+              { { AV::kSpeedMult, 3.0f } }, true, 10 },
+            { 17, "Enduring Vigor", "The System deepens your reserves.\n+25 Health, Magicka and Stamina per rank.",
+              "spells_06_frame.png", 95.0f, 470.0f, 4, kN, { 0, 0 }, Effect::kAttributes,
+              { { AV::kHealth, 25.0f }, { AV::kMagicka, 25.0f }, { AV::kStamina, 25.0f } }, true, 0 },
         };
 
         // Unlock state lives in State::unlockedNodes (co-save). The tree window reads
@@ -100,6 +115,26 @@ namespace Isekai::SkillTree {
         [[nodiscard]] bool IsUnlockedNoLock(std::uint32_t a_key) {
             const auto& unlocked = GetState().unlockedNodes;
             return std::find(unlocked.begin(), unlocked.end(), a_key) != unlocked.end();
+        }
+
+        // Purchase count of a repeatable node (State::nodeRanks). Caller holds g_mutex.
+        [[nodiscard]] std::int32_t RankNoLock(std::uint32_t a_key) {
+            for (const auto& [key, rank] : GetState().nodeRanks) {
+                if (key == a_key) {
+                    return rank;
+                }
+            }
+            return 0;
+        }
+
+        void AddRankNoLock(std::uint32_t a_key) {
+            for (auto& [key, rank] : GetState().nodeRanks) {
+                if (key == a_key) {
+                    ++rank;
+                    return;
+                }
+            }
+            GetState().nodeRanks.emplace_back(a_key, 1);
         }
 
         // All knowledge unlocks deliberately span EVERY loaded plugin, mods included:
@@ -321,6 +356,18 @@ namespace Isekai::SkillTree {
             case Effect::kAllSpells:
                 UnlockAllSpells(player);
                 break;
+            case Effect::kMoveSpeed:
+                // No fortify ability exists for kSpeedMult, so set the base value directly
+                // to 100 (vanilla) + step*rank. Absolute and recomputed from the rank, so
+                // re-applying on load or after another purchase is idempotent — never
+                // stacks or drifts.
+                if (auto* avOwner = player->AsActorValueOwner()) {
+                    const float step = a_node.bonus[0].amount;
+                    avOwner->SetBaseActorValue(
+                        AV::kSpeedMult,
+                        100.0f + step * static_cast<float>(Rank(a_node.key)));
+                }
+                break;
             default:
                 break;
             }
@@ -380,7 +427,18 @@ namespace Isekai::SkillTree {
 
     bool TryUnlock(std::uint32_t a_key) {
         const auto* node = Find(a_key);
-        if (!node || IsUnlocked(a_key) || !PrereqsMet(a_key) || !TierMet(a_key)) {
+        if (!node) {
+            return false;
+        }
+        // A one-shot node locks out once owned; a repeatable one never does.
+        if (!node->repeatable && IsUnlocked(a_key)) {
+            return false;
+        }
+        if (!PrereqsMet(a_key) || !TierMet(a_key)) {
+            return false;
+        }
+        // Repeatable nodes may carry a rank cap.
+        if (node->repeatable && node->maxRank > 0 && Rank(a_key) >= node->maxRank) {
             return false;
         }
 
@@ -410,14 +468,20 @@ namespace Isekai::SkillTree {
 
         {
             std::scoped_lock lock(g_mutex);
-            state.unlockedNodes.push_back(a_key);
+            if (node->repeatable) {
+                AddRankNoLock(a_key);  // stays buyable; the rank drives the bonus
+            } else {
+                state.unlockedNodes.push_back(a_key);
+            }
         }
 
-        ApplyEffect(*node);
+        ApplyEffect(*node);  // move speed reads the fresh rank; attribute nodes are no-ops
         Passives::Refresh();
         Sounds::Play(Sounds::Sfx::LevelUp);
 
-        logger::info("SkillTree: unlocked '{}' for {} point(s)", node->name, node->cost);
+        logger::info("SkillTree: unlocked '{}'{} for {} point(s)", node->name,
+                     node->repeatable ? (" -> rank " + std::to_string(Rank(a_key))) : std::string{},
+                     node->cost);
         return true;
     }
 
@@ -432,6 +496,15 @@ namespace Isekai::SkillTree {
                 ApplyEffect(*node);
             }
         }
+        // Repeatable nodes live in nodeRanks, not unlockedNodes. Re-assert theirs too:
+        // move speed is a direct actor-value set a fresh load would otherwise lose (the
+        // attribute repeatables ride Passives::Refresh via AccumulateBonuses, so their
+        // ApplyEffect is a harmless no-op).
+        for (const auto& node : kNodes) {
+            if (node.repeatable && Rank(node.key) > 0) {
+                ApplyEffect(node);
+            }
+        }
         if (!unlocked.empty()) {
             logger::info("SkillTree: re-applied {} node(s) from the save", unlocked.size());
         }
@@ -440,14 +513,25 @@ namespace Isekai::SkillTree {
     void AccumulateBonuses(std::map<RE::ActorValue, float>& a_totals) {
         std::scoped_lock lock(g_mutex);
         for (const auto& node : kNodes) {
-            if (node.effect != Effect::kAttributes || !IsUnlockedNoLock(node.key)) {
+            if (node.effect != Effect::kAttributes) {
+                continue;
+            }
+            // Repeatable nodes contribute once per rank; one-shot nodes once if owned.
+            const std::int32_t times =
+                node.repeatable ? RankNoLock(node.key) : (IsUnlockedNoLock(node.key) ? 1 : 0);
+            if (times <= 0) {
                 continue;
             }
             for (const auto& bonus : node.bonus) {
                 if (bonus.av != AV::kNone) {
-                    a_totals[bonus.av] += bonus.amount;
+                    a_totals[bonus.av] += bonus.amount * static_cast<float>(times);
                 }
             }
         }
+    }
+
+    std::int32_t Rank(std::uint32_t a_key) {
+        std::scoped_lock lock(g_mutex);
+        return RankNoLock(a_key);
     }
 }

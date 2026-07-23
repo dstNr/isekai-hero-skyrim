@@ -1,0 +1,69 @@
+#include "Config.h"
+
+#include <algorithm>
+#include <cctype>
+#include <fstream>
+#include <string>
+
+namespace Isekai::Config {
+
+    namespace {
+        // Relative to the game root (where SkyrimSE.exe runs), the standard SKSE layout.
+        constexpr const char* kIniPath = "Data\\SKSE\\Plugins\\IsekaiHero.ini";
+
+        bool g_hideSealedNodes = false;
+
+        [[nodiscard]] std::string Trim(std::string a_s) {
+            const auto notSpace = [](unsigned char c) { return !std::isspace(c); };
+            a_s.erase(a_s.begin(), std::find_if(a_s.begin(), a_s.end(), notSpace));
+            a_s.erase(std::find_if(a_s.rbegin(), a_s.rend(), notSpace).base(), a_s.end());
+            return a_s;
+        }
+
+        [[nodiscard]] std::string Lower(std::string a_s) {
+            std::transform(a_s.begin(), a_s.end(), a_s.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            return a_s;
+        }
+
+        [[nodiscard]] bool AsBool(const std::string& a_val) {
+            const std::string v = Lower(a_val);
+            return v == "1" || v == "true" || v == "yes" || v == "on";
+        }
+    }
+
+    void Load() {
+        g_hideSealedNodes = false;  // defaults, overwritten only by an explicit key
+
+        std::ifstream in(kIniPath);
+        if (!in) {
+            logger::info("Config: no ini at {} — using defaults", kIniPath);
+            return;
+        }
+
+        // Deliberately section-agnostic: a flat key=value scan is enough for our handful
+        // of settings and keeps the parser trivial. Lines starting ';' or '#' (or an
+        // inline trailer of one) are comments.
+        std::string line;
+        while (std::getline(in, line)) {
+            if (const auto cut = line.find_first_of(";#"); cut != std::string::npos) {
+                line.erase(cut);
+            }
+            const auto eq = line.find('=');
+            if (eq == std::string::npos) {
+                continue;
+            }
+            const std::string key = Lower(Trim(line.substr(0, eq)));
+            const std::string val = Trim(line.substr(eq + 1));
+            if (key == "hidesealednodes") {
+                g_hideSealedNodes = AsBool(val);
+            }
+        }
+
+        logger::info("Config: HideSealedNodes={}", g_hideSealedNodes);
+    }
+
+    bool HideSealedNodes() {
+        return g_hideSealedNodes;
+    }
+}
