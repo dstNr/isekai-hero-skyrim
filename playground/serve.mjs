@@ -85,9 +85,24 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log("\n  Isekai Hero playground");
-  console.log("  → http://localhost:" + PORT + "/playground/\n");
-  console.log("  Serving repo root:", ROOT);
-  console.log("  Ctrl+C to stop.\n");
-});
+/* If the chosen port is busy, step to the next one instead of crashing with an
+   EADDRINUSE stack trace — a leftover instance shouldn't block a restart. */
+function listen(port, triesLeft) {
+  server.once("error", (err) => {
+    if (err.code === "EADDRINUSE" && triesLeft > 0) {
+      console.log("  port " + port + " is busy — trying " + (port + 1) + " …");
+      listen(port + 1, triesLeft - 1);
+    } else {
+      console.error("\n  Could not start the server: " + (err && err.message) + "\n");
+      process.exit(1);
+    }
+  });
+  server.listen(port, () => {
+    console.log("\n  Isekai Hero playground");
+    console.log("  → http://localhost:" + port + "/playground/\n");
+    console.log("  Serving repo root:", ROOT);
+    console.log("  Ctrl+C to stop.\n");
+  });
+}
+
+listen(PORT, 12);
