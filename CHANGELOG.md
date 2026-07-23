@@ -4,51 +4,11 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
-## [0.7.1] — 2026-07-23
-
-### Added
-- **The System-menu hotkey is remappable** via `IsekaiHero.ini` (`[Hotkey]`) — set
-  `SystemMenuKey` and `SystemMenuModifier` to any DirectInput scan codes (hex or
-  decimal; modifier `0` = none). Defaults unchanged: Right Shift + S. The ini lists the
-  common scan codes.
-
-## [0.7.0] — 2026-07-23
-
-The optional PrismaUI patch now covers the **whole** UI, not just the skill tree.
-
-### Changed
-- **PrismaUI patch extended to every panel.** With the patch (and PrismaUI) installed,
-  the System dialog panels — blessing/awakening choice, the status ledger with its
-  icon buttons, milestone payouts — and the level-up flourish now render through the
-  web view too, alongside the skill tree. One view, several screens; the plugin hands
-  each its data and takes the clicks back. Still fully auto-detected with a safe ImGui
-  fallback whenever the patch or the framework is absent — the base mod is unchanged.
-  (The renamed patch archive `IsekaiHero-PrismaUI-Patch-v0.7.0.7z` replaces the
-  tree-only 0.6.0 one; re-download if you use it.)
-
-## [0.6.0] — 2026-07-23
-
-Optional web UI for the skill tree. No change at all unless you install both the
-patch and PrismaUI — the base mod's requirements stay SKSE + Address Library.
-
-### Added
-- **Optional PrismaUI skill-tree patch.** A separate download renders the skill tree
-  as an HTML/CSS view through the [PrismaUI](https://www.prismaui.dev) framework
-  instead of the built-in ImGui one — same tree, same data, richer presentation. The
-  base mod's DLL auto-detects at load: if PrismaUI **and** the patch's view files are
-  both present the web tree is used; otherwise it falls back to the ImGui tree, always
-  safe. The tree data stays single-source in the plugin (handed to the view as JSON,
-  clicks call back into the same purchase logic) — nothing to keep in sync by hand.
-  - Patch archive: `IsekaiHero-PrismaUI-Patch-v*.7z` (just the view files under
-    `Data/PrismaUI/views/IsekaiHero/`). No extra DLL.
-  - Player requirements for the patch: **Prisma UI** and **Media Keys Fix** (PrismaUI's
-    own dependency). The base mod needs neither.
-
 ## [0.5.0] — 2026-07-23
 
-Acting on a detailed player report: more ways to play, more to spend points on,
-and a couple of quality-of-life fixes. Save-safe — an existing save keeps its
-blessing, nodes and points; the new fields default cleanly on load.
+Acting on a detailed player report: more ways to play, more to spend points on, an
+optional web UI, and a couple of quality-of-life fixes. Save-safe — an existing save
+keeps its blessing, nodes and points; the new fields default cleanly on load.
 
 ### Added
 - **"Shattered" awakening for HERO and ASCENDED.** After choosing the blessing you
@@ -64,9 +24,24 @@ blessing, nodes and points; the new fields default cleanly on load.
   rank). Each purchase shows its current rank. (No attack-speed node — that road is
   a well-known source of animation and mod conflicts.)
 - **Optional settings ini** (`Data/SKSE/Plugins/IsekaiHero.ini`) — ships with defaults,
-  safe to delete. First setting: **`HideSealedNodes`** — hide skill-tree nodes gated
-  above your rebirth tier instead of showing them greyed with a "requires HERO/ASCENDED"
-  hint.
+  safe to delete.
+  - **`HideSealedNodes`** — hide skill-tree nodes gated above your rebirth tier instead
+    of showing them greyed with a "requires HERO/ASCENDED" hint.
+  - **Remappable System-menu hotkey** (`[Hotkey]`): `SystemMenuKey` and
+    `SystemMenuModifier` take any DirectInput scan code (hex or decimal; modifier `0` =
+    none). Default unchanged — Right Shift + S. The ini lists the common codes.
+- **Optional PrismaUI UI patch.** A separate download renders the **whole** Isekai UI —
+  the skill tree, the System dialog panels (blessing/awakening choice, the status
+  ledger, milestone payouts) and the level-up flourish — as an HTML/CSS view through
+  the [PrismaUI](https://www.prismaui.dev) framework instead of the built-in ImGui one.
+  The base mod's DLL auto-detects at load: with PrismaUI **and** the patch's view files
+  both present the web UI is used; otherwise it falls back to ImGui, always safe. UI
+  data stays single-source in the plugin (handed to the view as JSON, clicks call back
+  into the same logic) — nothing to keep in sync by hand.
+  - Patch archive: `IsekaiHero-PrismaUI-Patch-v*.7z` (just the view files under
+    `Data/PrismaUI/views/IsekaiHero/`). No extra DLL.
+  - Player requirements for the patch: **Prisma UI** and **Media Keys Fix** (PrismaUI's
+    own dependency). The base mod needs neither.
 
 ### Fixed
 - **The System hotkey no longer fires while a menu is open.** Right Shift + S used to
@@ -240,9 +215,6 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
-[0.7.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.7.1
-[0.7.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.7.0
-[0.6.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.6.0
 [0.5.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.5.0
 [0.4.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.4.0
 [0.3.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.3.1
