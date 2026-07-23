@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
-#include <thread>
+#include <mutex>
 #include <unordered_map>
 
 namespace Isekai::CraftHooks {
@@ -84,63 +84,20 @@ namespace Isekai::CraftHooks {
         bool s_itemActive = false;     // Hook 3 + Hook 4 live (item crafting)
         bool s_iterActive = false;  // Hook 1 + Hook 2 live (alchemy + enchanting iteration)
 
-        // The member count function (Hook 6) is one of the game's hottest, and it fires
-        // off the main thread too. We only ever augment on the main thread — where the
-        // crafting menu and its condition evaluation run — so the chest cache below is
-        // touched by exactly one thread and needs no lock, and we never poke game objects
-        // from a worker thread.
-        std::thread::id g_mainThread;
+        // --- Crafting session state, thread-safe by construction ---
+        // The count functions (Hook 3/5/6) fire on several threads, and the member one is
+        // extremely hot. So the hooks touch NO game objects — only the atomics and the
+        // locked cache below. Every game-object read (menu state, the player's inventory
+        // changes, the chest contents) happens once, on the main thread, in the event sinks
+        // that open/close a crafting session. That is what stops the crashes AND keeps the
+        // augmentation working regardless of which thread a count runs on.
+        std::atomic<bool>                  g_menuOpen{ false };       // a CraftingMenu is open
+        std::atomic<bool>                  g_craftContext{ false };   // a station was just activated
+        std::atomic<long long>             g_contextExpiryMs{ 0 };    // backstop for an aborted activate
+        std::atomic<RE::InventoryChanges*> g_playerInvChanges{ nullptr };  // captured on the main thread
 
-        [[nodiscard]] bool OnMainThread() {
-            return std::this_thread::get_id() == g_mainThread;
-        }
-
-        // Cached chest counts. Rebuilt lazily; invalidated when the crafting context opens,
-        // when it closes, and after a consume. This keeps the hot count hooks from calling
-        // the heavy GetInventoryCounts on every single query (the per-call version crashed).
-        std::unordered_map<RE::TESBoundObject*, std::int32_t> g_chestCache;
-        bool                                                  g_chestCacheValid = false;
-
-        void InvalidateChestCache() {
-            g_chestCacheValid = false;
-        }
-
-        [[nodiscard]] std::int32_t ChestCountCached(RE::TESBoundObject* a_obj) {
-            if (!g_chestCacheValid) {
-                g_chestCache.clear();
-                if (auto* chest = Storage::ChestRef()) {
-                    for (const auto& [obj, cnt] : chest->GetInventoryCounts()) {
-                        if (obj && cnt > 0) {
-                            g_chestCache[obj] = cnt;
-                        }
-                    }
-                }
-                g_chestCacheValid = true;
-            }
-            const auto it = g_chestCache.find(a_obj);
-            return it != g_chestCache.end() ? it->second : 0;
-        }
-
-        // Boundary between the player's own stacks and the chest's, cached at the start
-        // of each list iteration. Main-thread only (the crafting menu runs there).
-        std::int32_t g_playerBoundary = 0;
-        std::int32_t g_chestStacks = 0;
-
-        // The scope every hook augments within — a crafting interaction. Deliberately
-        // NOT global: outside these it must stay off, or quests/barter/dropping would
-        // treat the chest as your pocket. Three OR'd signals, each safe (all mean
-        // "crafting"), together robust against timing:
-        //
-        //   1. A crafting menu is open — covers the whole menu, incl. the recipe-list
-        //      build where an overhaul's item-count CONDITIONS decide visibility.
-        //   2. You are occupying a crafting furniture.
-        //   3. You just activated a crafting station — this one is essential because some
-        //      mods pop a prompt ("empower with a flawless gem?") BEFORE the menu opens
-        //      and before furniture is occupied. Opened by the activate sink, closed on
-        //      menu close, with a real-time backstop so an aborted activation can't leave
-        //      it stuck open.
-        std::atomic<bool>      g_craftContext{ false };
-        std::atomic<long long> g_contextExpiryMs{ 0 };
+        std::mutex                                            g_cacheMutex;
+        std::unordered_map<RE::TESBoundObject*, std::int32_t> g_chestCache;  // guarded by g_cacheMutex
 
         [[nodiscard]] long long NowMs() {
             return std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -148,42 +105,72 @@ namespace Isekai::CraftHooks {
                 .count();
         }
 
-        [[nodiscard]] bool AtCraftingMenuOpen() {
-            auto* ui = RE::UI::GetSingleton();
-            return ui && ui->IsMenuOpen(RE::CraftingMenu::MENU_NAME);
-        }
-
-        [[nodiscard]] bool AtCraftingFurniture() {
-            auto* player = RE::PlayerCharacter::GetSingleton();
-            if (!player) {
-                return false;
-            }
-            auto* ref = player->GetOccupiedFurniture().get().get();
-            auto* base = ref ? ref->GetBaseObject() : nullptr;
-            auto* furn = base ? base->As<RE::TESFurniture>() : nullptr;
-            return furn && furn->workBenchData.benchType.get() !=
-                               RE::TESFurniture::WorkBenchData::BenchType::kNone;
-        }
-
+        // In a crafting interaction? Atomics only, so it is safe from any thread. The menu
+        // flag covers the whole menu (incl. the recipe-list build where CCOR's item-count
+        // conditions decide visibility); the activate context covers the window BEFORE the
+        // menu opens, where some mods pop a prompt ("empower with a flawless gem?").
         [[nodiscard]] bool InCraftContext() {
-            if (AtCraftingMenuOpen() || AtCraftingFurniture()) {
+            if (g_menuOpen.load(std::memory_order_relaxed)) {
                 return true;
             }
             return g_craftContext.load(std::memory_order_relaxed) &&
                    NowMs() < g_contextExpiryMs.load(std::memory_order_relaxed);
         }
 
-        // Shared tail for the per-item count hooks: add the chest, but only at the
-        // outermost count call (so a nested standalone→member chain can't double it), only
-        // on the main thread (the count functions fire off-thread too, and poking game
-        // objects from a worker crashes), only while crafting, and only for the player's
-        // own inventory changes.
-        [[nodiscard]] bool ShouldAddChest(RE::InventoryChanges* a_inv) {
-            if (s_countDepth != 0 || !OnMainThread() || !InCraftContext()) {
-                return false;
-            }
+        // Snapshot the player's inventory-changes pointer and the chest's counts. MAIN
+        // THREAD ONLY (event sinks) — the one place we read game objects for crafting.
+        void OpenCraftSession() {
             auto* player = RE::PlayerCharacter::GetSingleton();
-            return player && a_inv == player->GetInventoryChanges();
+            g_playerInvChanges.store(player ? player->GetInventoryChanges() : nullptr,
+                                     std::memory_order_relaxed);
+            std::scoped_lock lock(g_cacheMutex);
+            g_chestCache.clear();
+            if (auto* chest = Storage::ChestRef()) {
+                for (const auto& [obj, cnt] : chest->GetInventoryCounts()) {
+                    if (obj && cnt > 0) {
+                        g_chestCache[obj] = cnt;
+                    }
+                }
+            }
+        }
+
+        void CloseCraftSession() {
+            std::scoped_lock lock(g_cacheMutex);
+            g_chestCache.clear();
+        }
+
+        // Chest count of an item — a locked map read, no game objects, safe from any thread.
+        [[nodiscard]] std::int32_t ChestCountCached(RE::TESBoundObject* a_obj) {
+            std::scoped_lock lock(g_cacheMutex);
+            const auto it = g_chestCache.find(a_obj);
+            return it != g_chestCache.end() ? it->second : 0;
+        }
+
+        // Keep the cache in step with a chest consume, again without touching game objects.
+        void DecrementCache(RE::TESBoundObject* a_obj, std::int32_t a_n) {
+            std::scoped_lock lock(g_cacheMutex);
+            const auto it = g_chestCache.find(a_obj);
+            if (it != g_chestCache.end()) {
+                it->second -= a_n;
+                if (it->second <= 0) {
+                    g_chestCache.erase(it);
+                }
+            }
+        }
+
+        // Boundary between the player's own stacks and the chest's, cached at the start
+        // of each list iteration. Main-thread only (the crafting menu runs there).
+        std::int32_t g_playerBoundary = 0;
+        std::int32_t g_chestStacks = 0;
+
+        // Shared tail for the per-item count hooks: add the chest, but only at the outermost
+        // count call (so a nested standalone→member chain can't double it), only while
+        // crafting, and only for the player's own inventory changes — compared against the
+        // pointer we cached on the main thread, so this stays a plain pointer test with no
+        // game-object access.
+        [[nodiscard]] bool ShouldAddChest(RE::InventoryChanges* a_inv) {
+            return s_countDepth == 0 && a_inv &&
+                   a_inv == g_playerInvChanges.load(std::memory_order_relaxed) && InCraftContext();
         }
 
         // --- Hook 3: standalone GetInventoryItemCount — the menu's material readout ---
@@ -216,12 +203,9 @@ namespace Isekai::CraftHooks {
             ++s_countDepth;
             const std::int32_t original = _originalPlayerGetItemCount(a_this, a_obj);
             --s_countDepth;
-            if (!a_obj || s_countDepth != 0 || !OnMainThread() || !InCraftContext()) {
-                return original;
-            }
-            auto* player = RE::PlayerCharacter::GetSingleton();
-            if (a_this != player) {
-                return original;
+            if (!a_obj || s_countDepth != 0 || !InCraftContext() ||
+                a_this != RE::PlayerCharacter::GetSingleton()) {
+                return original;  // GetSingleton() is a plain global read, safe off-thread
             }
             return original + ChestCountCached(a_obj);
         }
@@ -292,7 +276,7 @@ namespace Isekai::CraftHooks {
                 const std::int32_t fromChest = Storage::RemoveFromChest(a_item, a_count);
                 const std::int32_t remainder = a_count - fromChest;
                 if (fromChest > 0) {
-                    InvalidateChestCache();  // the chest shrank — counts must be re-read
+                    DecrementCache(a_item, fromChest);  // keep the display in step
                     logger::info("CraftHooks: consumed {}x '{}' from storage, {} from player",
                                  fromChest, a_item->GetName(), remainder);
                 }
@@ -323,9 +307,11 @@ namespace Isekai::CraftHooks {
                     auto* furn = base ? base->As<RE::TESFurniture>() : nullptr;
                     if (furn && furn->workBenchData.benchType.get() !=
                                     RE::TESFurniture::WorkBenchData::BenchType::kNone) {
+                        // Main thread (game event) — safe to snapshot the session here, so
+                        // even a pre-menu prompt sees the chest.
                         g_craftContext.store(true, std::memory_order_relaxed);
                         g_contextExpiryMs.store(NowMs() + 20000, std::memory_order_relaxed);
-                        InvalidateChestCache();  // fresh counts for this crafting session
+                        OpenCraftSession();
                     }
                 }
                 return RE::BSEventNotifyControl::kContinue;
@@ -335,26 +321,32 @@ namespace Isekai::CraftHooks {
             ActivateWatcher() = default;
         };
 
-        // Closes the context when the crafting menu closes.
-        class MenuCloseWatcher : public RE::BSTEventSink<RE::MenuOpenCloseEvent> {
+        // Opens the session when the crafting menu opens (belt-and-braces to the activate
+        // sink, and the reliable close). Both fire on the main thread.
+        class MenuWatcher : public RE::BSTEventSink<RE::MenuOpenCloseEvent> {
         public:
-            static MenuCloseWatcher* GetSingleton() {
-                static MenuCloseWatcher singleton;
+            static MenuWatcher* GetSingleton() {
+                static MenuWatcher singleton;
                 return std::addressof(singleton);
             }
             RE::BSEventNotifyControl ProcessEvent(
                 const RE::MenuOpenCloseEvent* a_event,
                 RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override {
-                if (a_event && !a_event->opening &&
-                    a_event->menuName == RE::CraftingMenu::MENU_NAME) {
-                    g_craftContext.store(false, std::memory_order_relaxed);
-                    InvalidateChestCache();
+                if (a_event && a_event->menuName == RE::CraftingMenu::MENU_NAME) {
+                    if (a_event->opening) {
+                        g_menuOpen.store(true, std::memory_order_relaxed);
+                        OpenCraftSession();
+                    } else {
+                        g_menuOpen.store(false, std::memory_order_relaxed);
+                        g_craftContext.store(false, std::memory_order_relaxed);
+                        CloseCraftSession();
+                    }
                 }
                 return RE::BSEventNotifyControl::kContinue;
             }
 
         private:
-            MenuCloseWatcher() = default;
+            MenuWatcher() = default;
         };
 
     }  // namespace
@@ -371,10 +363,6 @@ namespace Isekai::CraftHooks {
         if (s_itemActive || s_iterActive) {
             return;
         }
-
-        // kDataLoaded runs on the main thread — remember it, so the count hooks only ever
-        // augment from here.
-        g_mainThread = std::this_thread::get_id();
 
         // Resolve the count function through Address Library first. A missing/mismatched
         // library throws or returns 0 — bail loudly rather than patch a wrong address.
@@ -481,7 +469,7 @@ namespace Isekai::CraftHooks {
                 src->AddEventSink<RE::TESActivateEvent>(ActivateWatcher::GetSingleton());
             }
             if (auto* ui = RE::UI::GetSingleton()) {
-                ui->AddEventSink<RE::MenuOpenCloseEvent>(MenuCloseWatcher::GetSingleton());
+                ui->AddEventSink<RE::MenuOpenCloseEvent>(MenuWatcher::GetSingleton());
             }
         }
 
