@@ -8,6 +8,7 @@
 #include <atomic>
 #include <chrono>
 #include <mutex>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -157,11 +158,34 @@ namespace Isekai::CraftHooks {
                    a_bench == BenchType::kSmithingArmor || IsEnchantBench(a_bench);
         }
 
+        // Only official-master items are ever tokened. Moving a scripted mod item in and
+        // out of the inventory each station visit fires its OnContainerChanged handler —
+        // and some (deployable "bear traps", campfire kit, ...) react by spawning more of
+        // themselves, flooding the VM into an endless-item stutter. Vanilla + DLC materials
+        // carry no such scripts, so those are safe to shuffle. (DLC IS official, so the
+        // add-on materials the player asked for — chitin plate, netch leather, corkbulb
+        // root — still get tokens.)
+        [[nodiscard]] bool IsOfficialMaster(const RE::TESForm* a_form) {
+            if (!a_form) {
+                return false;
+            }
+            const auto* file = a_form->GetFile(0);
+            if (!file) {
+                return false;
+            }
+            using namespace std::string_view_literals;
+            const auto name = file->GetFilename();
+            return name == "Skyrim.esm"sv || name == "Update.esm"sv ||
+                   name == "Dawnguard.esm"sv || name == "HearthFires.esm"sv ||
+                   name == "Dragonborn.esm"sv;
+        }
+
         // Exactly the materials some crafting recipe requires — the components of every
-        // BGSConstructibleObject, Misc or Ingredient. Built once at Install. Tokening only
-        // these (rather than every stored ingredient) keeps the lent set to the few dozen
-        // things the forge family actually gates on, so the per-open item shuffle stays
-        // tiny. Soul gems carry fill-state extra data and are never tokened.
+        // BGSConstructibleObject, Misc or Ingredient, restricted to official masters (see
+        // IsOfficialMaster). Built once at Install. Tokening only these (rather than every
+        // stored ingredient) keeps the lent set to the few dozen things the forge family
+        // actually gates on, so the per-open item shuffle stays tiny. Soul gems carry
+        // fill-state extra data and are never tokened.
         std::unordered_set<RE::TESBoundObject*> g_recipeMaterials;
 
         void BuildRecipeMaterialSet() {
@@ -174,7 +198,7 @@ namespace Isekai::CraftHooks {
                     continue;
                 }
                 cobj->requiredItems.ForEachContainerObject([](RE::ContainerObject& a_c) {
-                    if (a_c.obj) {
+                    if (a_c.obj && IsOfficialMaster(a_c.obj)) {
                         const auto t = a_c.obj->GetFormType();
                         if (t == RE::FormType::Misc || t == RE::FormType::Ingredient) {
                             g_recipeMaterials.insert(a_c.obj);
@@ -229,8 +253,11 @@ namespace Isekai::CraftHooks {
                 if (!obj || cnt <= 0) {
                     continue;
                 }
-                // Forge: recipe components. Enchanter: any Misc (gems for "empower").
-                const bool wanted = enchant ? obj->GetFormType() == RE::FormType::Misc
+                // Forge: recipe components (already official-only). Enchanter: any official
+                // Misc (gems for "empower") — the official filter keeps scripted mod items
+                // out of the shuffle here too.
+                const bool wanted = enchant ? (obj->GetFormType() == RE::FormType::Misc &&
+                                               IsOfficialMaster(obj))
                                             : g_recipeMaterials.contains(obj);
                 if (!wanted) {
                     continue;

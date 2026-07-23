@@ -272,28 +272,35 @@ namespace Isekai::Storage {
             return;
         }
 
-        // Drops every ingredient that isn't from an official master — i.e. the Creation
-        // Club and mod ones whose tracker scripts make bulk handling stutter. DLC
-        // ingredients (corkbulb root & co) are official masters, so they stay.
+        // Drops every ingredient AND misc material that isn't from an official master —
+        // the Creation Club / mod ones whose scripts misbehave in bulk (CC ingredient
+        // trackers; modded deployables like bear traps that spawn copies of themselves).
+        // Earlier builds stocked modded recipe materials; this sweeps them back out of an
+        // existing chest on load. DLC content (corkbulb root, chitin plate, ...) is an
+        // official master and stays. Soul gems/gold are left untouched.
         //
-        // NOTE before any public release: this also deletes non-official ingredients a
-        // player might have stored deliberately. Fine while the only chests in existence
-        // are our own dev saves; needs a one-time migration flag instead if strangers'
-        // savegames ever enter the picture.
+        // NOTE before any public release: this also deletes non-official items a player
+        // might have stored deliberately. Fine while the only chests in existence are our
+        // own dev saves; needs a one-time migration flag instead if strangers' savegames
+        // ever enter the picture.
         std::size_t pruned = 0;
         for (const auto& [obj, count] : chest->GetInventoryCounts()) {
-            if (!obj || count <= 0 || obj->GetFormType() != RE::FormType::Ingredient) {
+            if (!obj || count <= 0) {
                 continue;
             }
-            if (IsOfficialMaster(obj)) {
-                continue;  // Skyrim + DLC stay
+            const auto type = obj->GetFormType();
+            if (type != RE::FormType::Ingredient && type != RE::FormType::Misc) {
+                continue;  // only materials; gear/gold/soul gems are the player's to keep
+            }
+            if (obj->GetFormID() == 0x0000000F || IsOfficialMaster(obj)) {
+                continue;  // gold and all Skyrim + DLC materials stay
             }
             chest->RemoveItem(obj, count, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
             ++pruned;
         }
 
         if (pruned > 0) {
-            logger::info("Storage: pruned {} foreign ingredient stack(s) from the chest", pruned);
+            logger::info("Storage: pruned {} foreign material stack(s) from the chest", pruned);
         }
     }
 
@@ -419,12 +426,13 @@ namespace Isekai::Storage {
             stock(obj, entry.base);
         }
 
-        // 2) Every material any crafting recipe actually requires — from ANY plugin, so
-        //    DLC and add-on materials come along (chitin plate, netch leather, modded
-        //    ingots, ...). Sourcing from the recipe components (not a blind "all Misc")
-        //    keeps clutter out: only things a recipe consumes are stocked. Misc from any
-        //    plugin; ingredients (Daedra Heart & co) only from official masters — a CC/mod
-        //    ingredient may drag a tracker script that floods the VM in bulk.
+        // 2) Every material an OFFICIAL-master recipe requires (Misc or ingredient),
+        //    sourced from the recipe components rather than a blind "all Misc" so only
+        //    things a recipe actually consumes are stocked — and so DLC materials come
+        //    along (chitin plate, netch leather, corkbulb root). Restricted to official
+        //    masters on purpose: a modded crafting material can be a scripted deployable
+        //    (bear traps, campfire kit) whose OnContainerChanged handler spawns copies of
+        //    itself and floods the VM. Vanilla + DLC materials carry no such scripts.
         std::size_t recipeMats = 0;
         for (auto* cobj : data->GetFormArray<RE::BGSConstructibleObject>()) {
             if (!cobj) {
@@ -432,10 +440,10 @@ namespace Isekai::Storage {
             }
             cobj->requiredItems.ForEachContainerObject([&](RE::ContainerObject& a_c) {
                 auto* obj = a_c.obj;
-                if (obj && !seen.contains(obj)) {
+                if (obj && IsOfficialMaster(obj) && !seen.contains(obj)) {
                     const auto type = obj->GetFormType();
-                    const bool wanted = type == RE::FormType::Misc ||
-                                        (type == RE::FormType::Ingredient && IsOfficialMaster(obj));
+                    const bool wanted =
+                        type == RE::FormType::Misc || type == RE::FormType::Ingredient;
                     if (wanted) {
                         if (const char* name = obj->GetName(); name && *name) {
                             stock(obj, kBase);
