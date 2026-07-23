@@ -4,6 +4,24 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [0.6.0] — 2026-07-23
+
+Optional web UI for the skill tree. No change at all unless you install both the
+patch and PrismaUI — the base mod's requirements stay SKSE + Address Library.
+
+### Added
+- **Optional PrismaUI skill-tree patch.** A separate download renders the skill tree
+  as an HTML/CSS view through the [PrismaUI](https://www.prismaui.dev) framework
+  instead of the built-in ImGui one — same tree, same data, richer presentation. The
+  base mod's DLL auto-detects at load: if PrismaUI **and** the patch's view files are
+  both present the web tree is used; otherwise it falls back to the ImGui tree, always
+  safe. The tree data stays single-source in the plugin (handed to the view as JSON,
+  clicks call back into the same purchase logic) — nothing to keep in sync by hand.
+  - Patch archive: `IsekaiHero-PrismaUI-Patch-v*.7z` (just the view files under
+    `Data/PrismaUI/views/IsekaiHero/`). No extra DLL.
+  - Player requirements for the patch: **Prisma UI** and **Media Keys Fix** (PrismaUI's
+    own dependency). The base mod needs neither.
+
 ## [0.5.0] — 2026-07-23
 
 Acting on a detailed player report: more ways to play, more to spend points on,
@@ -200,6 +218,7 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[0.6.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.6.0
 [0.5.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.5.0
 [0.4.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.4.0
 [0.3.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.3.1

@@ -6,6 +6,7 @@
 #include "System.h"
 #include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
+#include "UI/PrismaTree.h"
 #include "UI/SkillTreeWindow.h"
 #include "UI/SystemWindow.h"
 
@@ -414,7 +415,14 @@ namespace Isekai::Progression {
                 choices.push_back({ "SKILL TREE",
                                     "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\spells_38_frame.png",
                                     /*iconOnly=*/true });
-                actions.emplace_back([]() { UI::ShowSkillTree(); });
+                actions.emplace_back([]() {
+                    // Web tree if the optional PrismaUI patch is installed, else ImGui.
+                    if (UI::PrismaTree::Active()) {
+                        UI::PrismaTree::Open();
+                    } else {
+                        UI::ShowSkillTree();
+                    }
+                });
             }
             if (Storage::Available()) {
                 choices.push_back({ "STORAGE",

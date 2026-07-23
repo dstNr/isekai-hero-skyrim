@@ -53,6 +53,11 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   additionally unlocks the World Tree capstone. Sealed nodes render greyed with a
   "requires HERO/ASCENDED rebirth" hint (or hidden entirely — see
   `IsekaiHero.ini`) — one shared graph, one source of truth, no duplicate tables.
+
+  An **optional [PrismaUI](https://www.prismaui.dev) patch** renders this same tree
+  as an HTML/CSS view instead of ImGui — auto-detected at load, with a safe ImGui
+  fallback whenever the patch or the framework is absent. The base mod depends on
+  neither. See `prisma-patch/` and `package-prisma-patch.ps1`.
 - **Dimensional Storage** (every reincarnated soul): one chest inventory
   reachable from anywhere via the System panel. Crafting stations **read and
   consume its contents in place** — the material count and the recipe both see
@@ -130,6 +135,6 @@ when something misbehaves.
 
 ## Status
 
-🧪 **Pre-release** (v0.5.0). Feature-complete for full-modlist test runs;
+🧪 **Pre-release** (v0.6.0). Feature-complete for full-modlist test runs;
 balance values (starting System Points, node costs) are explicitly in a
 testing configuration. Version history in [CHANGELOG.md](CHANGELOG.md).

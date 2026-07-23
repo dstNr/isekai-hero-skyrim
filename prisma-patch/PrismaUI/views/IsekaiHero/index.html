@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Isekai Hero — System Skill Tree</title>
+<style>
+  :root {
+    --bg:      rgba(5, 13, 26, 0.94);
+    --accent:  #59ccff;
+    --text:    #d9f0ff;
+    --dim:     #80a6c7;
+    --amber:   #c8965a;
+    --locked:  #2c3a47;
+    --node:    64px;   /* design px, matches the ImGui tree */
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none;
+      font-family: Consolas, "Courier New", monospace; }
+
+  html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+
+  /* Full-screen dim behind the panel. */
+  #veil {
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.35), rgba(0,0,0,0.7));
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Fixed design canvas, scaled to the viewport by JS (--scale). */
+  #stage {
+    position: relative;
+    width: 1120px; height: 760px;
+    transform: scale(var(--scale, 1));
+    transform-origin: center center;
+    background: var(--bg);
+    border: 1px solid rgba(89, 204, 255, 0.35);
+    box-shadow: 0 0 24px rgba(89,204,255,0.15), inset 0 0 60px rgba(89,204,255,0.04);
+  }
+
+  /* Corner brackets. */
+  .bracket { position: absolute; width: 26px; height: 26px;
+             border: 2px solid var(--accent); opacity: 0.85; }
+  .bracket.tl { top: 10px;    left: 10px;    border-right: 0; border-bottom: 0; }
+  .bracket.tr { top: 10px;    right: 10px;   border-left: 0;  border-bottom: 0; }
+  .bracket.bl { bottom: 10px; left: 10px;    border-right: 0; border-top: 0; }
+  .bracket.br { bottom: 10px; right: 10px;   border-left: 0;  border-top: 0; }
+
+  #title { position: absolute; top: 20px; left: 0; right: 0; text-align: center;
+           color: var(--accent); letter-spacing: 3px; font-size: 22px;
+           text-shadow: 0 0 12px rgba(89,204,255,0.5); }
+
+  #sep { position: absolute; top: 58px; left: 24px; right: 24px; height: 1px;
+         background: rgba(89,204,255,0.4); }
+
+  .header { position: absolute; left: 28px; color: var(--accent); font-size: 15px;
+            letter-spacing: 1px; }
+  #hPoints { top: 70px; }
+  #hPerks  { top: 94px; color: var(--dim); }
+
+  #canvas { position: absolute; top: 70px; left: 0; width: 1120px; height: 620px; }
+  #lines  { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  .node {
+    position: absolute; width: var(--node); height: var(--node);
+    margin-left: calc(var(--node) / -2); margin-top: calc(var(--node) / -2);
+    background: var(--bg); border: 2px solid var(--locked);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.08s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .node img { width: 100%; height: 100%; object-fit: contain;
+              filter: grayscale(0.7) brightness(0.4); transition: filter 0.2s ease; }
+
+  .node.owned   { border-color: var(--accent);
+                  box-shadow: 0 0 14px rgba(89,204,255,0.55), inset 0 0 8px rgba(89,204,255,0.25); }
+  .node.owned   img { filter: none; }
+
+  .node.buyable { border-color: var(--accent); cursor: pointer;
+                  animation: pulse 1.6s ease-in-out infinite; }
+  .node.buyable img { filter: grayscale(0.1) brightness(0.95); }
+
+  .node.poor    { border-color: var(--dim); }
+  .node.poor    img { filter: grayscale(0.4) brightness(0.65); }
+
+  .node.sealed  { border-color: var(--amber); border-style: dashed; }
+  .node.sealed  img { filter: grayscale(0.85) brightness(0.4) sepia(0.4); }
+
+  .node.locked  { border-color: var(--locked); }
+
+  .node:hover   { transform: scale(1.12); outline: 1px solid var(--text); }
+
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 6px rgba(89,204,255,0.35); }
+    50%     { box-shadow: 0 0 18px rgba(89,204,255,0.85); }
+  }
+
+  /* Repeatable rank pip. */
+  .rank { position: absolute; bottom: -6px; right: -6px; min-width: 18px; height: 18px;
+          padding: 0 4px; background: var(--bg); border: 1px solid var(--accent);
+          color: var(--accent); font-size: 11px; line-height: 16px; text-align: center; }
+
+  /* Hover info, bottom-left. */
+  #info { position: absolute; left: 28px; bottom: 24px; width: 620px; }
+  #iName   { color: var(--accent); font-size: 17px; letter-spacing: 1px; }
+  #iDesc   { color: var(--text); font-size: 14px; margin-top: 6px; white-space: pre-line; line-height: 1.4; }
+  #iStatus { font-size: 14px; margin-top: 12px; letter-spacing: 1px; }
+
+  /* Close button, bottom-right. */
+  #close { position: absolute; right: 24px; bottom: 20px; width: 170px; height: 42px;
+           background: transparent; color: var(--text); border: 1px solid var(--accent);
+           letter-spacing: 3px; font-size: 15px; cursor: pointer; }
+  #close:hover  { background: rgba(89,204,255,0.18); }
+  #close:active { background: rgba(89,204,255,0.35); }
+</style>
+</head>
+<body>
+  <div id="veil">
+    <div id="stage">
+      <div class="bracket tl"></div><div class="bracket tr"></div>
+      <div class="bracket bl"></div><div class="bracket br"></div>
+      <div id="title">[ SYSTEM ] SKILL TREE</div>
+      <div id="sep"></div>
+      <div class="header" id="hPoints">SYSTEM POINTS   —</div>
+      <div class="header" id="hPerks">PERK POINTS     —</div>
+      <div id="canvas">
+        <svg id="lines" viewBox="0 0 1120 620" preserveAspectRatio="none"></svg>
+      </div>
+      <div id="info">
+        <div id="iName"></div>
+        <div id="iDesc"></div>
+        <div id="iStatus"></div>
+      </div>
+      <button id="close" onclick="closeTree()">CLOSE</button>
+    </div>
+  </div>
+
+<script>
+"use strict";
+
+// Node field sits 70px below the panel top (matches the ImGui canvasTop). The tree
+// coordinates are authored in that same design space, so nodes drop straight in.
+const CANVAS_TOP = 70;
+
+let TREE = { points: 0, perks: 0, perkMax: 255, nodes: [] };
+const byKey = new Map();
+
+function fitScale() {
+  const s = Math.min(window.innerWidth / 1120, window.innerHeight / 760);
+  document.documentElement.style.setProperty("--scale", s.toFixed(4));
+}
+window.addEventListener("resize", fitScale);
+
+function stateOf(n) {
+  if (n.owned) return "owned";
+  const reachable = n.prereqMet && n.tierMet;
+  if (reachable && TREE.points >= n.cost) return "buyable";
+  if (reachable) return "poor";
+  if (!n.tierMet) return "sealed";
+  return "locked";
+}
+
+function statusText(n) {
+  const st = stateOf(n);
+  const rankTag = n.repeatable
+    ? "   RANK " + n.rank + (n.maxRank > 0 ? " / " + n.maxRank : "")
+    : "";
+  if (n.repeatable && n.maxRank > 0 && n.rank >= n.maxRank)
+    return { text: "MAXED" + rankTag, col: "var(--accent)" };
+  if (n.owned) return { text: "UNLOCKED", col: "var(--accent)" };
+  if (!n.tierMet)
+    return { text: "SEALED — requires " + n.reqPower + " rebirth", col: "var(--amber)" };
+  if (!n.prereqMet)
+    return { text: "LOCKED — requires a connected node", col: "var(--dim)" };
+  const afford = TREE.points >= n.cost;
+  return {
+    text: "COST   " + n.cost + " system point(s)" + rankTag,
+    col: afford ? "var(--accent)" : "#dc5a5a"
+  };
+}
+
+function showInfo(n) {
+  document.getElementById("iName").textContent = n.name;
+  document.getElementById("iDesc").textContent = n.desc;
+  const s = statusText(n);
+  const el = document.getElementById("iStatus");
+  el.textContent = s.text;
+  el.style.color = s.col;
+}
+function clearInfo() {
+  document.getElementById("iName").textContent = "";
+  document.getElementById("iDesc").textContent = "";
+  document.getElementById("iStatus").textContent = "";
+}
+
+function render() {
+  document.getElementById("hPoints").textContent = "SYSTEM POINTS   " + TREE.points;
+  document.getElementById("hPerks").textContent =
+    "PERK POINTS     " + TREE.perks + " / " + TREE.perkMax;
+
+  const canvas = document.getElementById("canvas");
+  // Wipe previous nodes (keep the <svg>).
+  [...canvas.querySelectorAll(".node")].forEach(e => e.remove());
+  const svg = document.getElementById("lines");
+  svg.innerHTML = "";
+
+  byKey.clear();
+  TREE.nodes.forEach(n => byKey.set(n.key, n));
+
+  // Connections first (under the nodes). y is in canvas space (already minus CANVAS_TOP).
+  TREE.nodes.forEach(n => {
+    (n.prereq || []).forEach(pk => {
+      if (!pk) return;
+      const from = byKey.get(pk);
+      if (!from) return;
+      const lit = from.owned && n.owned ? 0.85 : from.owned ? 0.4 : 0.15;
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", from.x);   line.setAttribute("y1", from.y - CANVAS_TOP);
+      line.setAttribute("x2", n.x);      line.setAttribute("y2", n.y - CANVAS_TOP);
+      line.setAttribute("stroke", "rgba(89,204,255," + lit + ")");
+      line.setAttribute("stroke-width", from.owned && n.owned ? 2.5 : 1.5);
+      svg.appendChild(line);
+    });
+  });
+
+  // Nodes.
+  TREE.nodes.forEach(n => {
+    const el = document.createElement("div");
+    el.className = "node " + stateOf(n);
+    el.style.left = n.x + "px";
+    el.style.top  = (n.y - CANVAS_TOP) + "px";
+
+    const img = document.createElement("img");
+    img.src = "icons/" + n.icon;
+    img.onerror = () => { img.style.display = "none"; };
+    el.appendChild(img);
+
+    if (n.repeatable && n.rank > 0) {
+      const pip = document.createElement("div");
+      pip.className = "rank";
+      pip.textContent = n.rank;
+      el.appendChild(pip);
+    }
+
+    el.addEventListener("mouseenter", () => showInfo(n));
+    el.addEventListener("mouseleave", clearInfo);
+    el.addEventListener("click", () => {
+      if (stateOf(n) === "buyable") buyNode(n.key);
+    });
+
+    canvas.appendChild(el);
+  });
+}
+
+function buyNode(key) {
+  // JS -> SKSE. PrismaUI injects window.isekaiBuy via RegisterJSListener.
+  if (window.isekaiBuy) window.isekaiBuy(String(key));
+}
+function closeTree() {
+  if (window.isekaiClose) window.isekaiClose("");
+}
+
+// SKSE -> JS: the plugin pushes the whole tree as an object literal.
+window.isekaiSetTree = (data) => {
+  try {
+    TREE = (typeof data === "string") ? JSON.parse(data) : data;
+  } catch (e) {
+    return;
+  }
+  fitScale();
+  render();
+};
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeTree();
+});
+
+fitScale();
+</script>
+</body>
+</html>
