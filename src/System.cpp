@@ -168,7 +168,7 @@ namespace Isekai {
                 "Your new life begins.";
 
             // The biggest moment the mod has: let the flourish land before the panel.
-            Sounds::Play(Sounds::Sfx::LevelUp);
+            // (The sting comes with the flourish — PlayLevelUpEffect owns it.)
             UI::PlayLevelUpEffect("AWAKENED", PowerName(g_state.power));
 
             DelayedMainThread(1600, [body]() {
@@ -315,7 +315,6 @@ namespace Isekai {
                                      : "The blessing that slept in your soul opens\n"
                                        "its eyes. The System reaches further.");
 
-            Sounds::Play(Sounds::Sfx::LevelUp);
             UI::PlayLevelUpEffect(ascended ? "TRANSCENDED" : "AWAKENED", PowerName(a_tier));
             DelayedMainThread(1600, [body]() {
                 UI::ShowSystemWindow("[ SYSTEM ]", body, { "CONTINUE" }, [](int) {});

@@ -210,7 +210,7 @@ namespace Isekai::UI::Prisma {
             if (auto* task = SKSE::GetTaskInterface()) {
                 task->AddTask([]() {
                     HideView();
-                    Sounds::Play(Sounds::Sfx::WindowClose);
+                    Sounds::PlayDelayed(Sounds::Sfx::WindowClose, Sounds::kResumeGraceMs);
                 });
             }
         }
@@ -238,7 +238,9 @@ namespace Isekai::UI::Prisma {
                     HideView();  // also unpauses (Unfocus)
                     // Selecting clicks; dismissing a single-button panel whooshes — same
                     // rule the ImGui panel uses, so chained panels don't double up sounds.
-                    Sounds::Play(multi ? Sounds::Sfx::ButtonClick : Sounds::Sfx::WindowClose);
+                    // Delayed past the unpause frame, or the engine's resume pass eats it.
+                    Sounds::PlayDelayed(multi ? Sounds::Sfx::ButtonClick : Sounds::Sfx::WindowClose,
+                                        Sounds::kResumeGraceMs);
                     if (fn) {
                         fn(idx);
                     }

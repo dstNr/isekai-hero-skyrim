@@ -1,6 +1,7 @@
 #include "Sounds.h"
 
 #include "Plugin.h"
+#include "System.h"  // DelayedMainThread
 
 #include <array>
 
@@ -65,8 +66,19 @@ namespace Isekai::Sounds {
         if (!descriptor) {
             return;
         }
-        if (auto* audio = RE::BSAudioManager::GetSingleton()) {
-            audio->Play(descriptor);
+        auto* audio = RE::BSAudioManager::GetSingleton();
+        if (!audio) {
+            return;
         }
+        // The return value matters for once: a refused sound and a sound that
+        // started and was then cut short are indistinguishable by ear, and we had
+        // to tell them apart to track down a missing level-up sting.
+        if (!audio->Play(descriptor)) {
+            logger::warn("Sounds: engine refused sfx {}", static_cast<int>(a_sfx));
+        }
+    }
+
+    void PlayDelayed(Sfx a_sfx, std::uint32_t a_ms) {
+        DelayedMainThread(a_ms, [a_sfx]() { Play(a_sfx); });
     }
 }

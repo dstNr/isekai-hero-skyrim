@@ -2,7 +2,6 @@
 
 #include "Config.h"
 #include "Passives.h"
-#include "Sounds.h"
 #include "Storage.h"
 #include "System.h"
 #include "UI/Input.h"
@@ -247,7 +246,6 @@ namespace Isekai::Progression {
 
         // Fire the flourish, then bring up the panel once it has played out.
         void Celebrate(std::string a_title, std::string a_subtitle, std::string a_body) {
-            Sounds::Play(Sounds::Sfx::LevelUp);
             UI::PlayLevelUpEffect(std::move(a_title), std::move(a_subtitle));
 
             DelayedMainThread(kFlourishLeadMs, [body = std::move(a_body)]() mutable {
