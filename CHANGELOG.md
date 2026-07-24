@@ -58,8 +58,9 @@ keeps its blessing, nodes and points; the new fields default cleanly on load.
   into the same logic) — nothing to keep in sync by hand.
   - Patch archive: `IsekaiHero-PrismaUI-Patch-v*.7z` (just the view files under
     `Data/PrismaUI/views/IsekaiHero/`). No extra DLL.
-  - Player requirements for the patch: **Prisma UI** and **Media Keys Fix** (PrismaUI's
-    own dependency). The base mod needs neither.
+  - Player requirements for the patch:
+    **[PrismaUI](https://www.nexusmods.com/skyrimspecialedition/mods/148718)** and
+    **Media Keys Fix** (PrismaUI's own dependency). The base mod needs neither.
 
 ### Fixed
 - **The System hotkey no longer fires while a menu is open.** Right Shift + S used to

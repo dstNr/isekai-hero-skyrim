@@ -71,7 +71,7 @@ Every reincarnated soul receives a private pocket dimension: one chest inventory
 [size=4][b]Optional: the PrismaUI patch[/b][/size]
 A separate download renders the [b]whole interface[/b] — skill tree, System panels, level-up flourish — as a modern HTML/CSS view instead of the built-in one. Same mod, same logic, different skin. The base mod detects it at load and falls back safely on its own UI when it is absent, so the patch is entirely optional and needs no new save.
 
-Only the patch requires [url=https://www.nexusmods.com/skyrimspecialedition/mods/136471]PrismaUI[/url] (and its own Media Keys Fix dependency). The base mod requires neither.
+Only the patch requires [url=https://www.nexusmods.com/skyrimspecialedition/mods/148718]PrismaUI[/url] (and its own Media Keys Fix dependency). The base mod requires neither.
 
 [size=4][b]Settings[/b][/size]
 An optional ini at [i]Data/SKSE/Plugins/IsekaiHero.ini[/i] — ships with sane defaults, safe to delete:

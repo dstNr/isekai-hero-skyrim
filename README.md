@@ -63,7 +63,8 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   on stat nodes and reverts their effects; the knowledge unlocks and Perk Synthesis
   are excluded, since neither can honestly be taken back.
 
-  An **optional [PrismaUI](https://www.prismaui.dev) patch** renders the **whole UI**
+  An **optional [PrismaUI](https://www.nexusmods.com/skyrimspecialedition/mods/148718)
+  patch** renders the **whole UI**
   — this tree plus the System dialog panels and the level-up flourish — as an HTML/CSS
   view instead of ImGui. Auto-detected at load, with a safe ImGui fallback whenever the
   patch or the framework is absent. The base mod depends on neither. See `prisma-patch/`,
