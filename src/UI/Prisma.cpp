@@ -69,6 +69,7 @@ namespace Isekai::UI::Prisma {
             j += "\"points\":" + std::to_string(SkillTree::Points()) + ",";
             j += "\"perks\":" + std::to_string(SkillTree::PerkPool()) + ",";
             j += "\"perkMax\":" + std::to_string(Isekai::kMaxPerkPoints) + ",";
+            j += "\"respec\":" + std::to_string(SkillTree::RespecRefund()) + ",";
             j += "\"nodes\":[";
             for (std::size_t i = 0; i < count; ++i) {
                 const auto&        n = nodes[i];
@@ -191,6 +192,15 @@ namespace Isekai::UI::Prisma {
             }
         }
 
+        void OnRespec(const char*) {
+            if (auto* task = SKSE::GetTaskInterface()) {
+                task->AddTask([]() {
+                    SkillTree::Respec();
+                    PushTree();  // reflect the refunded points and cleared nodes
+                });
+            }
+        }
+
         void OnCloseTree(const char*) {
             if (auto* task = SKSE::GetTaskInterface()) {
                 task->AddTask([]() {
@@ -256,6 +266,7 @@ namespace Isekai::UI::Prisma {
         }
 
         g_api->RegisterJSListener(g_view, "isekaiBuy", OnBuy);
+        g_api->RegisterJSListener(g_view, "isekaiRespec", OnRespec);
         g_api->RegisterJSListener(g_view, "isekaiCloseTree", OnCloseTree);
         g_api->RegisterJSListener(g_view, "isekaiChoose", OnChoose);
         g_api->Hide(g_view);

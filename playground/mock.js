@@ -59,6 +59,11 @@
 
   var PERK_MAX = 255; // Isekai::kMaxPerkPoints (see System.h)
 
+  /* Mirrors SkillTree.cpp::IsRefundable. Not refundable: the four Omniscience unlocks
+     (4, 7, 9, 11) — they write knowledge the player keeps — and Perk Synthesis (14),
+     whose points already became perk points. */
+  var NO_REFUND = { 4: 1, 7: 1, 9: 1, 11: 1, 14: 1 };
+
   /* --- mutable game state (co-save equivalents) --------------------------- */
   function freshState() {
     return {
@@ -101,12 +106,35 @@
 
   function tierMet(n) { return G.tier >= n.req; }
 
+  function refundable(n) { return !NO_REFUND[n.key]; }
+
+  /* RespecRefund / Respec, mirroring the plugin. */
+  function respecAmount() {
+    var total = 0;
+    NODES.forEach(function (n) {
+      if (!refundable(n)) return;
+      total += n.rep ? n.cost * rankOf(n.key) : (isUnlocked(n.key) ? n.cost : 0);
+    });
+    return total;
+  }
+
+  function doRespec() {
+    var refund = respecAmount();
+    if (refund <= 0) return;
+    NODES.forEach(function (n) {
+      if (!refundable(n)) return;
+      if (n.rep) { delete G.ranks[n.key]; } else { delete G.unlocked[n.key]; }
+    });
+    G.points += refund;
+  }
+
   /* --- buildTreeJson: same shape as Prisma.cpp::BuildTreeJson ------------- */
   function buildTree() {
     return {
       points: G.points,
       perks: G.perks,
       perkMax: PERK_MAX,
+      respec: respecAmount(),
       nodes: NODES.map(function (n) {
         return {
           key: n.key,
@@ -176,6 +204,12 @@
       tryUnlock(key);
       pushTree();                 // OnBuy: TryUnlock then PushTree
       global.VS_LOG && global.VS_LOG("buy " + key + " → points " + G.points);
+    };
+
+    w.isekaiRespec = function () {
+      doRespec();
+      pushTree();
+      global.VS_LOG && global.VS_LOG("respec → points " + G.points);
     };
 
     w.isekaiCloseTree = function () {

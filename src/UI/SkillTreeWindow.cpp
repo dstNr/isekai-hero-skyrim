@@ -30,6 +30,7 @@ namespace Isekai::UI {
         // Render-thread state.
         float         g_elapsed = 0.0f;   // drives fade-in and the "affordable" pulse
         std::uint32_t g_hovered = 0;      // node key under the cursor, 0 = none
+        float         g_respecArmedUntil = 0.0f;  // respec waits for a confirming second click
 
         // Close from the render thread: hand the unpause to the main thread, same
         // pattern as SystemWindow::Answer.
@@ -121,6 +122,7 @@ namespace Isekai::UI {
     void ShowSkillTree() {
         g_elapsed = 0.0f;
         g_hovered = 0;
+        g_respecArmedUntil = 0.0f;
         Sounds::Play(Sounds::Sfx::WindowOpen);
         SetGameHold(true);
         g_open.store(true, std::memory_order_release);
@@ -420,6 +422,32 @@ namespace Isekai::UI {
                                                   wMax.y - btnSize.y - 20.0f * s });
                 if (ImGui::Button("CLOSE", btnSize)) {
                     RequestClose();
+                }
+
+                // Respec, left of CLOSE. Two-click confirm rather than a nested dialog:
+                // the first press arms it, a second within a few seconds commits.
+                if (const std::int32_t refund = SkillTree::RespecRefund(); refund > 0) {
+                    const bool        armed = g_elapsed < g_respecArmedUntil;
+                    const std::string label =
+                        armed ? "CONFIRM?" : ("RESPEC  +" + std::to_string(refund));
+                    ImGui::SetCursorScreenPos(ImVec2{ wMax.x - btnSize.x * 2.0f - 34.0f * s,
+                                                      wMax.y - btnSize.y - 20.0f * s });
+                    if (ImGui::Button(label.c_str(), btnSize)) {
+                        if (armed) {
+                            g_respecArmedUntil = 0.0f;
+                            if (auto* task = SKSE::GetTaskInterface()) {
+                                task->AddTask([]() { SkillTree::Respec(); });
+                            }
+                        } else {
+                            g_respecArmedUntil = g_elapsed + 3.0f;
+                        }
+                    }
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip(
+                            "Refunds the System Points spent on stat nodes.\n"
+                            "Knowledge unlocks and Perk Synthesis stay — the System\n"
+                            "cannot un-teach what you already know.");
+                    }
                 }
 
                 ImGui::PopStyleVar(2);

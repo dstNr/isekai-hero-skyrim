@@ -77,6 +77,20 @@ namespace Isekai::SkillTree {
     // Spend points and unlock. Main thread only. False if locked/unaffordable/unknown.
     bool TryUnlock(std::uint32_t a_key);
 
+    // How many System Points a respec would hand back: the cost of every node whose
+    // effect can actually be undone. 0 when there is nothing to refund.
+    //
+    // Deliberately NOT refundable, and left untouched by Respec():
+    //   * the four Omniscience unlocks — they write knowledge the player keeps (known
+    //     flags on shouts/enchantments/ingredients, learned spells). Taking that back
+    //     would also erase what they learned legitimately.
+    //   * Perk Synthesis — its points already became perk points, most likely spent.
+    [[nodiscard]] std::int32_t RespecRefund();
+
+    // Refund those nodes and clear them, reverting their effects. Main thread only.
+    // False if there was nothing to give back.
+    bool Respec();
+
     // Re-assert everything the unlocked nodes promise. Knowledge unlocks and the
     // shout-cooldown value do not live in the save the way items do — like the
     // ability magnitudes, they are re-derived from the node list on every load.

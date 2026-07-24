@@ -207,7 +207,15 @@
 
   #tFoot { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
   #tHint { color: var(--dim); font-size: 12px; letter-spacing: 0.16em; opacity: 0.7; }
-  #tClose { padding: 12px 34px; font-size: 13px; }
+  #tActions { display: flex; gap: 12px; }
+  #tActions .btn { padding: 12px 30px; font-size: 13px; }
+  /* Respec is amber, not cyan — it takes something away rather than granting it. */
+  #tRespec { border-color: rgba(224,168,96,0.5); }
+  #tRespec:hover { border-color: var(--amber);
+                   box-shadow: 0 0 22px rgba(224,168,96,0.32), inset 0 0 22px rgba(224,168,96,0.12); }
+  #tRespec.armed { border-color: var(--amber); color: #fff;
+                   box-shadow: 0 0 20px rgba(224,168,96,0.55); }
+  #tRespec.hidden { display: none; }
 
   /* ======================= DIALOG PANEL ======================= */
   #panel { width: min(var(--pw, 720px), 92vw); max-height: 88vh;
@@ -347,7 +355,10 @@
       </div>
       <div id="tFoot">
         <div id="tHint" class="mono">Click a glowing node to unlock · ESC to close</div>
-        <button id="tClose" class="btn mono" onclick="closeTree()">Close</button>
+        <div id="tActions">
+          <button id="tRespec" class="btn mono" onclick="respecClick()"></button>
+          <button id="tClose" class="btn mono" onclick="closeTree()">Close</button>
+        </div>
       </div>
     </div>
   </div>
@@ -490,6 +501,7 @@ let builtFor = "";           // which node set is currently in the DOM
 function renderTree() {
   $("hPoints").textContent = TREE.points;
   $("hPerks").textContent = TREE.perks + " / " + TREE.perkMax;
+  renderRespec();
 
   const L = layout();
   if (!L) return;
@@ -583,6 +595,31 @@ window.isekaiShowTree = (data) => {
   requestAnimationFrame(renderTree);   // let the stage lay out before measuring the canvas
 };
 function closeTree() { callBack("isekaiCloseTree", ""); }
+
+/* Respec: two-click confirm instead of a nested dialog. The first press arms the
+   button, a second within 3s commits; anything else disarms it. */
+let respecArmed = 0;
+function renderRespec() {
+  const btn = $("tRespec");
+  const amount = TREE.respec || 0;
+  btn.classList.toggle("hidden", amount <= 0);
+  if (amount <= 0) { respecArmed = 0; btn.classList.remove("armed"); return; }
+  btn.classList.toggle("armed", !!respecArmed);
+  btn.textContent = respecArmed ? "Confirm?" : "Respec  +" + amount;
+  btn.title = "Refunds the System Points spent on stat nodes.\n"
+            + "Knowledge unlocks and Perk Synthesis stay — the System cannot "
+            + "un-teach what you already know.";
+}
+function respecClick() {
+  if (respecArmed) {
+    clearTimeout(respecArmed);
+    respecArmed = 0;
+    callBack("isekaiRespec", "");
+  } else {
+    respecArmed = setTimeout(() => { respecArmed = 0; renderRespec(); }, 3000);
+  }
+  renderRespec();
+}
 
 /* ---------------- DIALOG PANEL ---------------- */
 let PANEL = { title: "", body: "", reveal: 45, width: 720, buttons: [] };

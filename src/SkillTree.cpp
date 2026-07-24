@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <mutex>
 #include <string>
+#include <vector>
 
 namespace Isekai::SkillTree {
 
@@ -135,6 +136,26 @@ namespace Isekai::SkillTree {
                 }
             }
             GetState().nodeRanks.emplace_back(a_key, 1);
+        }
+
+        void ClearRankNoLock(std::uint32_t a_key) {
+            auto& ranks = GetState().nodeRanks;
+            ranks.erase(std::remove_if(ranks.begin(), ranks.end(),
+                                       [a_key](const auto& e) { return e.first == a_key; }),
+                        ranks.end());
+        }
+
+        // Only nodes whose effect can be fully undone may be refunded — see the note on
+        // RespecRefund in the header for why knowledge and Perk Synthesis are excluded.
+        [[nodiscard]] bool IsRefundable(Effect a_effect) {
+            switch (a_effect) {
+            case Effect::kAttributes:     // flows through Passives::Refresh
+            case Effect::kShoutCooldown:  // a single actor value we can set back
+            case Effect::kMoveSpeed:      // recomputed from the rank, so rank 0 = vanilla
+                return true;
+            default:
+                return false;
+            }
         }
 
         // All knowledge unlocks deliberately span EVERY loaded plugin, mods included:
@@ -533,5 +554,74 @@ namespace Isekai::SkillTree {
     std::int32_t Rank(std::uint32_t a_key) {
         std::scoped_lock lock(g_mutex);
         return RankNoLock(a_key);
+    }
+
+    std::int32_t RespecRefund() {
+        std::scoped_lock lock(g_mutex);
+        std::int32_t total = 0;
+        for (const auto& node : kNodes) {
+            if (!IsRefundable(node.effect)) {
+                continue;
+            }
+            total += node.repeatable ? node.cost * RankNoLock(node.key)
+                                     : (IsUnlockedNoLock(node.key) ? node.cost : 0);
+        }
+        return total;
+    }
+
+    bool Respec() {
+        std::int32_t              refund = 0;
+        std::vector<const Node*>  cleared;
+        {
+            std::scoped_lock lock(g_mutex);
+            auto&            unlocked = GetState().unlockedNodes;
+            for (const auto& node : kNodes) {
+                if (!IsRefundable(node.effect)) {
+                    continue;
+                }
+                if (node.repeatable) {
+                    const std::int32_t rank = RankNoLock(node.key);
+                    if (rank <= 0) {
+                        continue;
+                    }
+                    refund += node.cost * rank;
+                    ClearRankNoLock(node.key);
+                } else {
+                    if (!IsUnlockedNoLock(node.key)) {
+                        continue;
+                    }
+                    refund += node.cost;
+                    unlocked.erase(std::remove(unlocked.begin(), unlocked.end(), node.key),
+                                   unlocked.end());
+                }
+                cleared.push_back(&node);
+            }
+        }
+        if (refund <= 0) {
+            return false;
+        }
+
+        GetState().systemPoints += refund;
+
+        // Undo the direct actor-value writes. Attribute nodes need nothing here — they
+        // are re-derived from the (now shorter) unlocked list by Passives::Refresh.
+        // ApplyEffect must run outside the lock: it reads Rank(), which takes g_mutex.
+        if (auto* player = RE::PlayerCharacter::GetSingleton()) {
+            if (auto* avOwner = player->AsActorValueOwner()) {
+                for (const auto* node : cleared) {
+                    if (node->effect == Effect::kShoutCooldown) {
+                        avOwner->SetBaseActorValue(AV::kShoutRecoveryMult, 1.0f);
+                    } else if (node->effect == Effect::kMoveSpeed) {
+                        ApplyEffect(*node);  // rank is 0 now → back to the vanilla 100
+                    }
+                }
+            }
+        }
+        Passives::Refresh();
+        Sounds::Play(Sounds::Sfx::LevelUp);
+
+        logger::info("SkillTree: respec refunded {} point(s) across {} node(s)", refund,
+                     cleared.size());
+        return true;
     }
 }
