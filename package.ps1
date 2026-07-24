@@ -2,9 +2,14 @@
 # Run after build.bat. The ESP is taken from the repo copy (plugin/), which is
 # the ESL-flagged, FormID-compacted build — see the git history for how it was made.
 
+# -Version overrides the archive name only (nothing inside the mod carries it).
+# Use it for test builds — "0.5.0-soundfix" — so a released archive is never
+# overwritten by a work-in-progress one of the same name.
+param([string]$Version = "0.5.0")
+
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
-$version = "0.5.0"
+$version = $Version
 
 $stage = Join-Path $root "build\package"
 $dist = Join-Path $root "dist"

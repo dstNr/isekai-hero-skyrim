@@ -8,9 +8,13 @@
 #   - Prisma UI - Next-Gen Web UI Framework (SKSE)
 #   - Media Keys Fix (SKSE)  [PrismaUI's own requirement]
 
+# -Version overrides the archive name only, same as package.ps1 — for test builds
+# that must not overwrite a released archive.
+param([string]$Version = "0.5.0")
+
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
-$version = "0.5.0"
+$version = $Version
 
 $stage = Join-Path $root "build\prisma-patch"
 $dist = Join-Path $root "dist"
