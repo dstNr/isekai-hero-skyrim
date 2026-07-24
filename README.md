@@ -29,6 +29,12 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   HERO and ASCENDED additionally choose **Full** or **Shattered**: Full grants
   the flat start above; **Shattered** keeps only the tier's reward scale and the
   deeper skill tree, starting you at the NORMAL floor — the higher ceiling, earned.
+
+  A fourth choice, **Dormant**, does not pick a tier at all: you start at NORMAL
+  and the blessing wakes on its own — HERO at level 25, ASCENDED at level 80
+  (configurable, `[Dormant]` in the ini). Nothing arrives early, nothing stays
+  sealed for good. It is orthogonal to the question above, so Dormant + Shattered
+  grows only the System's reach and never hands over a grant.
 - **79 quest milestones** (main quest, Companions, College, Thieves Guild,
   Dark Brotherhood, Civil War beats, Dawnguard, Dragonborn). Completing one
   plays a level-up flourish (rings, title punch, custom sound) and pays out a
@@ -51,8 +57,11 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   **gated by rebirth tier** (`Node::minPower`): NORMAL walks the self-made
   stat/utility half, HERO additionally unlocks the four Omniscience gifts, ASCENDED
   additionally unlocks the World Tree capstone. Sealed nodes render greyed with a
-  "requires HERO/ASCENDED rebirth" hint (or hidden entirely — see
-  `IsekaiHero.ini`) — one shared graph, one source of truth, no duplicate tables.
+  "requires HERO/ASCENDED rebirth" hint — or, on a dormant blessing, the level they
+  awaken at (or hidden entirely — see `IsekaiHero.ini`) — one shared graph, one
+  source of truth, no duplicate tables. A **Respec** button refunds the points spent
+  on stat nodes and reverts their effects; the knowledge unlocks and Perk Synthesis
+  are excluded, since neither can honestly be taken back.
 
   An **optional [PrismaUI](https://www.prismaui.dev) patch** renders the **whole UI**
   — this tree plus the System dialog panels and the level-up flourish — as an HTML/CSS

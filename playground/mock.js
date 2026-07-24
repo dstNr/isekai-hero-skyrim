@@ -70,6 +70,7 @@
       points: 30,             // System Points
       perks: 0,               // perk pool
       tier: TIER.Ascended,    // rebirth tier reached (start high so nothing is sealed)
+      dormant: false,         // DORMANT blessing: sealed nodes name a LEVEL, not a rebirth
       unlocked: {},           // key -> true, one-shot nodes
       ranks: {}               // key -> count, repeatable nodes
     };
@@ -105,6 +106,11 @@
   }
 
   function tierMet(n) { return G.tier >= n.req; }
+
+  /* Isekai::AwakeningLevelFor — 0 unless the blessing is dormant. The levels match
+     the ini defaults (DormantHeroLevel / DormantAscendedLevel). */
+  var DORMANT_LEVEL = [0, 25, 80];
+  function awakeningLevelFor(req) { return G.dormant ? (DORMANT_LEVEL[req] || 0) : 0; }
 
   function refundable(n) { return !NO_REFUND[n.key]; }
 
@@ -151,6 +157,7 @@
           rank: rankOf(n.key),
           maxRank: n.maxRank || 0,
           reqPower: TIER_NAME[n.req],
+          reqLevel: awakeningLevelFor(n.req),
           prereq: [n.prereq[0] || 0, n.prereq[1] || 0]
         };
       })
@@ -273,6 +280,8 @@
     addPoints: function (n) { G.points = Math.max(0, G.points + n); pushTree(); },
     setTier: function (t) { G.tier = t; pushTree(); },
     getTier: function () { return G.tier; },
+    setDormant: function (b) { G.dormant = !!b; pushTree(); },
+    getDormant: function () { return G.dormant; },
     reset: function () { G = freshState(); pushTree(); },
 
     state: function () { return G; }

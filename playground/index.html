@@ -108,6 +108,10 @@
       <option value="2" selected>Ascended</option>
     </select>
 
+    <label style="margin-left:8px" title="Sealed nodes name the level they awaken at instead of a rebirth">
+      <input type="checkbox" id="dormant"> Dormant
+    </label>
+
     <button id="btnReset" class="ghost" style="margin-left:8px">Reset</button>
   </div>
 
@@ -184,9 +188,14 @@
       window.IsekaiMock.setTier(parseInt(e.target.value, 10));
     };
 
+    document.getElementById("dormant").onchange = function (e) {
+      window.IsekaiMock.setDormant(e.target.checked);
+    };
+
     document.getElementById("btnReset").onclick = function () {
       window.IsekaiMock.reset();
       document.getElementById("tier").value = String(window.IsekaiMock.getTier());
+      document.getElementById("dormant").checked = window.IsekaiMock.getDormant();
       logEl.innerHTML = "<b>Callbacks</b>";
       refreshPts();
     };

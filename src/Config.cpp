@@ -15,6 +15,8 @@ namespace Isekai::Config {
         bool          g_hideSealedNodes = false;
         std::uint32_t g_systemMenuKey = 0x1F;       // DIK_S
         std::uint32_t g_systemMenuModifier = 0x36;  // DIK_RSHIFT
+        std::uint16_t g_dormantHeroLevel = 25;
+        std::uint16_t g_dormantAscendedLevel = 80;
 
         [[nodiscard]] std::string Trim(std::string a_s) {
             const auto notSpace = [](unsigned char c) { return !std::isspace(c); };
@@ -43,6 +45,17 @@ namespace Isekai::Config {
                 return a_def;
             }
         }
+
+        // A character level, 1..1000. Garbage or an out-of-range number keeps the
+        // default rather than producing a threshold that can never be reached.
+        [[nodiscard]] std::uint16_t AsLevel(const std::string& a_val, std::uint16_t a_def) {
+            try {
+                const auto n = std::stoul(a_val, nullptr, 10);
+                return (n >= 1 && n <= 1000) ? static_cast<std::uint16_t>(n) : a_def;
+            } catch (...) {
+                return a_def;
+            }
+        }
     }
 
     void Load() {
@@ -50,6 +63,8 @@ namespace Isekai::Config {
         g_hideSealedNodes = false;
         g_systemMenuKey = 0x1F;       // DIK_S
         g_systemMenuModifier = 0x36;  // DIK_RSHIFT
+        g_dormantHeroLevel = 25;
+        g_dormantAscendedLevel = 80;
 
         std::ifstream in(kIniPath);
         if (!in) {
@@ -77,11 +92,26 @@ namespace Isekai::Config {
                 g_systemMenuKey = AsScanCode(val, g_systemMenuKey);
             } else if (key == "systemmenumodifier") {
                 g_systemMenuModifier = AsScanCode(val, g_systemMenuModifier);
+            } else if (key == "dormantherolevel") {
+                g_dormantHeroLevel = AsLevel(val, g_dormantHeroLevel);
+            } else if (key == "dormantascendedlevel") {
+                g_dormantAscendedLevel = AsLevel(val, g_dormantAscendedLevel);
             }
         }
 
-        logger::info("Config: HideSealedNodes={}, SystemMenuKey={:#x}, SystemMenuModifier={:#x}",
-                     g_hideSealedNodes, g_systemMenuKey, g_systemMenuModifier);
+        // The ladder only makes sense upwards. Swapped thresholds would otherwise
+        // hand out ASCENDED first and then never fire HERO at all.
+        if (g_dormantAscendedLevel <= g_dormantHeroLevel) {
+            logger::warn("Config: DormantAscendedLevel ({}) must be above DormantHeroLevel ({}) — "
+                         "raising it to {}",
+                         g_dormantAscendedLevel, g_dormantHeroLevel, g_dormantHeroLevel + 1);
+            g_dormantAscendedLevel = static_cast<std::uint16_t>(g_dormantHeroLevel + 1);
+        }
+
+        logger::info("Config: HideSealedNodes={}, SystemMenuKey={:#x}, SystemMenuModifier={:#x}, "
+                     "DormantHeroLevel={}, DormantAscendedLevel={}",
+                     g_hideSealedNodes, g_systemMenuKey, g_systemMenuModifier, g_dormantHeroLevel,
+                     g_dormantAscendedLevel);
     }
 
     bool HideSealedNodes() {
@@ -94,5 +124,13 @@ namespace Isekai::Config {
 
     std::uint32_t SystemMenuModifier() {
         return g_systemMenuModifier;
+    }
+
+    std::uint16_t DormantHeroLevel() {
+        return g_dormantHeroLevel;
+    }
+
+    std::uint16_t DormantAscendedLevel() {
+        return g_dormantAscendedLevel;
     }
 }

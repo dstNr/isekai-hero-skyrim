@@ -463,7 +463,12 @@ function statusOf(n) {
   const tag = n.repeatable ? " · Rank " + n.rank + (n.maxRank > 0 ? "/" + n.maxRank : "") : "";
   if (n.repeatable && n.maxRank > 0 && n.rank >= n.maxRank) return { t: "Maxed" + tag, c: "var(--accent)" };
   if (n.owned) return { t: "Unlocked", c: "var(--accent)" };
-  if (!n.tierMet) return { t: "Sealed — needs " + n.reqPower + " rebirth", c: "var(--amber)" };
+  if (!n.tierMet) return {
+    // A dormant blessing seals by level, not by the rebirth you chose.
+    t: n.reqLevel ? "Sealed — awakens at level " + n.reqLevel
+                  : "Sealed — needs " + n.reqPower + " rebirth",
+    c: "var(--amber)"
+  };
   if (!n.prereqMet) return { t: "Locked — needs a connected node", c: "var(--dim)" };
   const ok = TREE.points >= n.cost;
   return { t: n.cost + " system point(s)" + tag, c: ok ? "var(--accent)" : "var(--danger)" };

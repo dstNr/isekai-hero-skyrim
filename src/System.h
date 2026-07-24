@@ -49,6 +49,15 @@ namespace Isekai {
         // without the handed-out floor earns every step at the blessing's pace.
         bool shattered = false;
 
+        // "Dormant" awakening: the tier itself is not chosen up front but grows with
+        // the character. `power` above stays the tier held RIGHT NOW — everything that
+        // reads it (RewardScale, MilestonePerkPoints, how deep the skill tree opens)
+        // therefore needs no special case — and CheckDormantAwakening() raises it as
+        // the character levels: NORMAL, then HERO, then ASCENDED at the thresholds in
+        // the ini. Orthogonal to `shattered`, which still decides whether each
+        // awakening also hands over its flat grant.
+        bool dormant = false;
+
         // Milestones already paid out, by their stable key. Guards against paying
         // twice — quest stage events fire more than once, and the retroactive
         // catch-up runs on every load.
@@ -77,6 +86,21 @@ namespace Isekai {
 
     // "NORMAL" / "HERO" / "ASCENDED" — for panels and logs.
     [[nodiscard]] std::string PowerName(PowerLevel a_power);
+
+    // Raise a DORMANT blessing to whatever tier the character's level has earned.
+    // Cheap and idempotent: a no-op unless the player is dormant AND has crossed a
+    // threshold they have not been paid for. Called wherever the level may have
+    // changed — every menu close, and on load.
+    void CheckDormantAwakening();
+
+    // The character level at which a DORMANT blessing next rises, or 0 when the
+    // player is not dormant / already ASCENDED. For the status panel.
+    [[nodiscard]] std::uint16_t NextAwakeningLevel();
+
+    // The level at which a DORMANT blessing reaches a_tier, or 0 for a player who is
+    // not dormant. Lets the skill tree say "awakens at level 25" instead of "requires
+    // a HERO rebirth" — for these players the seal is a timer, not a closed door.
+    [[nodiscard]] std::uint16_t AwakeningLevelFor(PowerLevel a_tier);
 
     // Multiplier on every milestone reward — passives, dragon souls, the lot.
     // The blessing taken at the start is not a one-off head start: it decides how

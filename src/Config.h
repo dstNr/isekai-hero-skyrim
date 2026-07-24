@@ -22,4 +22,10 @@ namespace Isekai::Config {
     // Scan code that must be held with the key above. Default 0x36 (Right Shift);
     // 0 = no modifier (the key alone opens the menu).
     [[nodiscard]] std::uint32_t SystemMenuModifier();
+
+    // Character levels at which a DORMANT blessing rises to HERO / ASCENDED.
+    // Defaults 25 and 80 — 80 is where the Ebony Warrior comes knocking, i.e. the
+    // point vanilla itself treats as "you are done being mortal".
+    [[nodiscard]] std::uint16_t DormantHeroLevel();
+    [[nodiscard]] std::uint16_t DormantAscendedLevel();
 }

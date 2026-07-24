@@ -11,6 +11,7 @@
 #include "UI/LevelUpEffect.h"
 #include "UI/Overlay.h"
 #include "UI/Prisma.h"
+#include "UI/SkillTreeWindow.h"
 #include "UI/SystemWindow.h"
 
 #include <algorithm>
@@ -28,7 +29,8 @@ namespace Isekai {
         // --- Co-save serialization IDs ---
         constexpr std::uint32_t kSerID = 'ISKA';    // unique plugin id
         constexpr std::uint32_t kRecState = 'STAT';  // record tag
-        constexpr std::uint32_t kVersion = 8;        // 7: shattered flag; 8: repeatable node ranks
+        // 7: shattered flag; 8: repeatable node ranks; 9: dormant flag
+        constexpr std::uint32_t kVersion = 9;
 
         void SystemMsg(const char* a_text) {
             RE::DebugNotification(a_text);
@@ -77,20 +79,18 @@ namespace Isekai {
             return std::round(static_cast<float>(a_toLevel - a_fromLevel) * 10.0f / 3.0f);
         }
 
-        void ApplyReincarnation() {
+        // Hand over one blessing's flat grant, and report the per-stat attribute bonus
+        // that came with it (for the log line). Split out of ApplyReincarnation because
+        // a DORMANT awakening pays out the very same grant, just years of play later.
+        //
+        // Blessings only ever RAISE — on an existing save the character may already be
+        // past parts of the blessing, and neither a rebirth nor an awakening may demote.
+        float ApplyBlessing(const Blessing& b) {
             auto* player = RE::PlayerCharacter::GetSingleton();
             if (!player) {
-                return;
+                return 0.0f;
             }
-
-            // A SHATTERED awakening keeps the tier (RewardScale and the deeper tree still
-            // read g_state.power) but takes no flat starting grant at all — same mortal
-            // floor as NORMAL, everything below earned rather than handed over.
-            const Blessing b = g_state.shattered ? Blessing{} : BlessingFor(g_state.power);
             auto* avOwner = player->AsActorValueOwner();
-
-            // Blessings only ever RAISE — on an existing save the character may
-            // already be past parts of the blessing, and a rebirth must not demote.
 
             // Skills: the 18 skill actor values are contiguous (kOneHanded..kEnchanting).
             if (b.skillLevel > 0 && avOwner) {
@@ -123,7 +123,6 @@ namespace Isekai {
             GrantPerkPoints(b.perkPoints);
             GrantDragonSouls(b.dragonSouls);
             GrantSystemPoints(b.systemPoints);
-            Storage::GrantStartingMaterials();  // crafting stock, HERO/ASCENDED only
 
             // Gold (Gold001 = 0x0000000F).
             if (b.gold > 0) {
@@ -132,16 +131,38 @@ namespace Isekai {
                 }
             }
 
+            return attrBonus;
+        }
+
+        void ApplyReincarnation() {
+            if (!RE::PlayerCharacter::GetSingleton()) {
+                return;
+            }
+
+            // A SHATTERED awakening keeps the tier (RewardScale and the deeper tree still
+            // read g_state.power) but takes no flat starting grant at all — same mortal
+            // floor as NORMAL, everything below earned rather than handed over. A DORMANT
+            // one starts at NORMAL by definition, so its blessing is empty here too and
+            // arrives later, through CheckDormantAwakening.
+            const Blessing b = g_state.shattered ? Blessing{} : BlessingFor(g_state.power);
+            const float attrBonus = ApplyBlessing(b);
+            Storage::GrantStartingMaterials();  // crafting stock, FULL HERO/ASCENDED only
+
             logger::info(
                 "Reincarnation applied: power={} skills={} level={} perks=+{} attr=+{} gold={} souls=+{}",
                 PowerName(g_state.power), b.skillLevel, b.playerLevel, b.perkPoints, attrBonus,
                 b.gold, b.dragonSouls);
 
-            const std::string body =
+            std::string body =
                 "REINCARNATION COMPLETE\n"
                 "\n"
                 "  Power level   " + PowerName(g_state.power) +
-                (g_state.shattered ? "  (SHATTERED)" : "") + "\n"
+                (g_state.dormant ? "  (DORMANT)" : g_state.shattered ? "  (SHATTERED)" : "") + "\n";
+            if (g_state.dormant) {
+                body += "  Awakens at    level " +
+                        std::to_string(Config::DormantHeroLevel()) + "\n";
+            }
+            body +=
                 "\n"
                 "The System is now bound to your soul.\n"
                 "Your new life begins.";
@@ -160,27 +181,44 @@ namespace Isekai {
             });
         }
 
-        // Second step for HERO/ASCENDED: take the power now, or earn it. FULL is the
-        // blessing as designed (flat skills/level/fortune); SHATTERED keeps the tier's
-        // reward pace and deep tree but starts you at the mortal floor.
+        // Second step: take the power now, or earn it. FULL is the blessing as designed
+        // (flat skills/level/fortune); SHATTERED keeps the tier's reward pace and deep
+        // tree but starts you at the mortal floor. The question is orthogonal to DORMANT
+        // — there it decides not *whether* the tiers arrive but whether each one still
+        // arrives carrying its grant.
         void ShowPathSelection() {
+            const std::string intro =
+                g_state.dormant
+                    ? "The dormant blessing stirs.\n"
+                      "How will each awakening reach you?\n"
+                      "\n"
+                      "  FULL       Every awakening arrives whole —\n"
+                      "             skills, level and fortune granted\n"
+                      "             the moment it comes.\n"
+                      "  SHATTERED  Only the System's reach grows: faster\n"
+                      "             rewards and deeper gifts unlock, but\n"
+                      "             nothing is ever handed to you.\n"
+                      "\n"
+                      "Choose how you rise:"
+                    : "The " + PowerName(g_state.power) + " blessing resonates.\n"
+                      "How will you receive it?\n"
+                      "\n"
+                      "  FULL       Awaken at once — skills, level and\n"
+                      "             fortune granted now.\n"
+                      "  SHATTERED  The System is fractured. Begin as any\n"
+                      "             mortal, but its rewards still flow faster\n"
+                      "             and its deepest gifts stay open to you.\n"
+                      "             Higher ceiling, same floor — earn it.\n"
+                      "\n"
+                      "Choose how you rise:";
+
             UI::ShowSystemWindow(
-                "[ SYSTEM ]",
-                "The " + PowerName(g_state.power) + " blessing resonates.\n"
-                "How will you receive it?\n"
-                "\n"
-                "  FULL       Awaken at once — skills, level and\n"
-                "             fortune granted now.\n"
-                "  SHATTERED  The System is fractured. Begin as any\n"
-                "             mortal, but its rewards still flow faster\n"
-                "             and its deepest gifts stay open to you.\n"
-                "             Higher ceiling, same floor — earn it.\n"
-                "\n"
-                "Choose how you rise:",
+                "[ SYSTEM ]", intro,
                 std::vector<std::string>{ "FULL AWAKENING", "SHATTERED" },
                 [](int a_idx) {
                     g_state.shattered = (a_idx == 1);
-                    logger::info("Awakening path: {}", g_state.shattered ? "SHATTERED" : "FULL");
+                    logger::info("Awakening path: {}{}", g_state.shattered ? "SHATTERED" : "FULL",
+                                 g_state.dormant ? " (DORMANT)" : "");
                     ApplyReincarnation();
                 });
         }
@@ -194,21 +232,94 @@ namespace Isekai {
                 "  NORMAL    No blessing. Pure challenge.\n"
                 "  HERO      Awakened power.\n"
                 "  ASCENDED  Transcend mortal limits.\n"
+                "  DORMANT   The blessing sleeps. Begin as a mortal;\n"
+                "            it wakes to HERO at level " +
+                    std::to_string(Config::DormantHeroLevel()) + ", then to\n"
+                "            ASCENDED at level " +
+                    std::to_string(Config::DormantAscendedLevel()) + ".\n"
                 "\n"
                 "Choose your path:",
-                { "NORMAL", "HERO", "ASCENDED" },
+                std::vector<std::string>{ "NORMAL", "HERO", "ASCENDED", "DORMANT" },
                 [](int a_idx) {
-                    g_state.power = static_cast<PowerLevel>(std::clamp(a_idx, 0, 2));
                     g_state.shattered = false;
-                    logger::info("Power level selected: {} ({})", a_idx, PowerName(g_state.power));
-                    // NORMAL has no floor to skip, so it never asks; HERO/ASCENDED choose
-                    // full-vs-shattered next.
-                    if (g_state.power == PowerLevel::Normal) {
+                    // DORMANT is not a fourth tier: it starts at NORMAL and climbs the
+                    // same ladder on its own, so g_state.power stays the tier held now.
+                    g_state.dormant = (a_idx == 3);
+                    g_state.power = g_state.dormant ? PowerLevel::Normal
+                                                    : static_cast<PowerLevel>(std::clamp(a_idx, 0, 2));
+                    logger::info("Power level selected: {} ({}{})", a_idx, PowerName(g_state.power),
+                                 g_state.dormant ? ", DORMANT" : "");
+                    // NORMAL has no floor to skip, so it never asks; HERO/ASCENDED and
+                    // DORMANT choose full-vs-shattered next.
+                    if (g_state.power == PowerLevel::Normal && !g_state.dormant) {
                         ApplyReincarnation();
                     } else {
                         ShowPathSelection();
                     }
                 });
+        }
+
+        // ---- Dormant awakening ----
+
+        // The tier a dormant character's level has earned. Read straight from the level
+        // rather than stepped one rung at a time, so an existing save that takes the
+        // dormant path at level 90 lands on ASCENDED at once instead of walking a ladder
+        // it is long past.
+        [[nodiscard]] PowerLevel EarnedTier(std::uint16_t a_level) {
+            if (a_level >= Config::DormantAscendedLevel()) {
+                return PowerLevel::Ascended;
+            }
+            if (a_level >= Config::DormantHeroLevel()) {
+                return PowerLevel::Hero;
+            }
+            return PowerLevel::Normal;
+        }
+
+        void AwakenTo(PowerLevel a_tier) {
+            const PowerLevel from = g_state.power;
+            g_state.power = a_tier;  // before the grant: the stock check reads the tier
+
+            // SHATTERED means the tier arrives bare — the faster reward pace and the
+            // deeper tree open up, nothing is handed over.
+            if (!g_state.shattered) {
+                ApplyBlessing(BlessingFor(a_tier));
+                // The starting stock is a *starting* stock: it comes with the first
+                // awakening only. The second one just gains the tiers' new material
+                // types, not another full crate of everything.
+                if (from == PowerLevel::Normal) {
+                    Storage::GrantStartingMaterials();
+                } else {
+                    Storage::TopUpStock();
+                }
+            }
+
+            const auto* player = RE::PlayerCharacter::GetSingleton();
+            logger::info("Dormant awakening: {} -> {} at level {}{}", PowerName(from),
+                         PowerName(a_tier), player ? player->GetLevel() : 0,
+                         g_state.shattered ? " (SHATTERED)" : "");
+
+            const bool  ascended = (a_tier == PowerLevel::Ascended);
+            std::string body =
+                (ascended ? "TRANSCENDENCE\n" : "AWAKENING\n") +
+                std::string("\n"
+                            "  Power level   ") + PowerName(a_tier) +
+                (g_state.shattered ? "  (SHATTERED)" : "") + "\n";
+            if (!ascended) {
+                body += "  Transcends at level " +
+                        std::to_string(Config::DormantAscendedLevel()) + "\n";
+            }
+            body +=
+                "\n" +
+                std::string(ascended ? "The last seal breaks. The System withholds\n"
+                                       "nothing from you now."
+                                     : "The blessing that slept in your soul opens\n"
+                                       "its eyes. The System reaches further.");
+
+            Sounds::Play(Sounds::Sfx::LevelUp);
+            UI::PlayLevelUpEffect(ascended ? "TRANSCENDED" : "AWAKENED", PowerName(a_tier));
+            DelayedMainThread(1600, [body]() {
+                UI::ShowSystemWindow("[ SYSTEM ]", body, { "CONTINUE" }, [](int) {});
+            });
         }
 
         void BeginReincarnation() {
@@ -294,7 +405,8 @@ namespace Isekai {
         // reincarnation runs exactly once per character.
         // ------------------------------------------------------------------
 
-        class MenuWatcher : public RE::BSTEventSink<RE::MenuOpenCloseEvent> {
+        class MenuWatcher : public RE::BSTEventSink<RE::MenuOpenCloseEvent>,
+                            public RE::BSTEventSink<RE::LevelIncrease::Event> {
         public:
             static MenuWatcher* GetSingleton() {
                 static MenuWatcher singleton;
@@ -306,7 +418,17 @@ namespace Isekai {
                 RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override {
                 if (a_event && !a_event->opening) {
                     TryTrigger();
+                    // The level-up event below is the real trigger; this is the retry
+                    // for the case where it landed while a menu still held the screen.
+                    CheckDormantAwakening();
                 }
+                return RE::BSEventNotifyControl::kContinue;
+            }
+
+            RE::BSEventNotifyControl ProcessEvent(
+                const RE::LevelIncrease::Event*,
+                RE::BSTEventSource<RE::LevelIncrease::Event>*) override {
+                CheckDormantAwakening();
                 return RE::BSEventNotifyControl::kContinue;
             }
 
@@ -355,8 +477,12 @@ namespace Isekai {
                 a_intf->WriteRecordData(rank);
             }
 
-            logger::info("State saved (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={})",
-                         g_state.reincarnated, count, nodes, g_state.systemPoints, g_state.shattered);
+            a_intf->WriteRecordData(g_state.dormant);  // v9
+
+            logger::info(
+                "State saved (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={}, dormant={})",
+                g_state.reincarnated, count, nodes, g_state.systemPoints, g_state.shattered,
+                g_state.dormant);
         }
 
         void LoadCallback(SKSE::SerializationInterface* a_intf) {
@@ -437,11 +563,18 @@ namespace Isekai {
                         g_state.nodeRanks.emplace_back(key, rank);
                     }
                 }
+
+                g_state.dormant = false;
+                if (version >= 9) {
+                    a_intf->ReadRecordData(g_state.dormant);
+                }
             }
 
-            logger::info("State loaded (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={})",
-                         g_state.reincarnated, g_state.grantedMilestones.size(),
-                         g_state.unlockedNodes.size(), g_state.systemPoints, g_state.shattered);
+            logger::info(
+                "State loaded (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={}, dormant={})",
+                g_state.reincarnated, g_state.grantedMilestones.size(),
+                g_state.unlockedNodes.size(), g_state.systemPoints, g_state.shattered,
+                g_state.dormant);
         }
 
         void RevertCallback(SKSE::SerializationInterface*) {
@@ -471,6 +604,12 @@ namespace Isekai {
                     ui->AddEventSink<RE::MenuOpenCloseEvent>(MenuWatcher::GetSingleton());
                     logger::info("Menu watcher installed — reincarnation trigger armed");
                 }
+                if (auto* levels = RE::LevelIncrease::GetEventSource()) {
+                    levels->AddEventSink(
+                        static_cast<RE::BSTEventSink<RE::LevelIncrease::Event>*>(
+                            MenuWatcher::GetSingleton()));
+                    logger::info("Level watcher installed — dormant awakening armed");
+                }
                 break;
 
             // Both fire after the co-save has been read back, so grantedMilestones is
@@ -478,6 +617,9 @@ namespace Isekai {
             case SKSE::MessagingInterface::kPostLoadGame:
             case SKSE::MessagingInterface::kNewGame:
                 Progression::CatchUpOnLoad();
+                // A dormant blessing that came due while the mod was off (or whose
+                // threshold the ini has just lowered) is settled on load.
+                CheckDormantAwakening();
                 // Knowledge unlocks and the shout-cooldown value are re-derived from
                 // the unlocked node list, same reasoning as the ability magnitudes.
                 SkillTree::ApplyOnLoad();
@@ -507,6 +649,52 @@ namespace Isekai {
             return "ASCENDED";
         default:
             return "NORMAL";
+        }
+    }
+
+    void CheckDormantAwakening() {
+        if (!g_state.dormant || !g_state.reincarnated) {
+            return;
+        }
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        if (!player) {
+            return;
+        }
+        const auto earned = EarnedTier(player->GetLevel());
+        if (static_cast<int>(earned) <= static_cast<int>(g_state.power)) {
+            return;
+        }
+        // Never awaken over a live panel — the reincarnation dialog owns a callback
+        // that a replacement would throw away, leaving the rebirth half-finished. The
+        // menu-close watcher brings us straight back here.
+        if (UI::IsSystemWindowOpen() || UI::IsSkillTreeOpen()) {
+            return;
+        }
+        AwakenTo(earned);
+    }
+
+    std::uint16_t AwakeningLevelFor(PowerLevel a_tier) {
+        if (!g_state.dormant) {
+            return 0;
+        }
+        switch (a_tier) {
+        case PowerLevel::Hero:
+            return Config::DormantHeroLevel();
+        case PowerLevel::Ascended:
+            return Config::DormantAscendedLevel();
+        default:  // NORMAL is where everyone starts — nothing to wait for
+            return 0;
+        }
+    }
+
+    std::uint16_t NextAwakeningLevel() {
+        switch (g_state.power) {
+        case PowerLevel::Normal:
+            return AwakeningLevelFor(PowerLevel::Hero);
+        case PowerLevel::Hero:
+            return AwakeningLevelFor(PowerLevel::Ascended);
+        default:  // Ascended — the ladder is done
+            return 0;
         }
     }
 

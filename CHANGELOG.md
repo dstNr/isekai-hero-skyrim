@@ -17,6 +17,22 @@ keeps its blessing, nodes and points; the new fields default cleanly on load.
   reward pace and the deeper skill tree it unlocks) but takes **no** flat starting
   grant: you begin at the same mortal floor as NORMAL and earn every step. Higher
   ceiling, same floor — for players who want the power but want to work for it.
+- **"Dormant" blessing — the System grows with you.** A fourth choice at rebirth: the
+  blessing sleeps instead of being taken. You begin as an ordinary mortal, and the
+  System wakes on its own — to **HERO at level 25**, then to **ASCENDED at level 80**,
+  each with its own awakening. Nothing is handed to you early and nothing is sealed
+  away for good: the deeper skill-tree nodes open as you grow into them, and their
+  tooltip names the level they awaken at rather than a rebirth you cannot take back.
+  Combines with the Full/Shattered question above — **Dormant + Shattered** grows only
+  the System's reach (reward pace, tree depth) and never hands over a grant at all.
+  Thresholds are configurable (`[Dormant]` in the ini).
+- **Skill-tree respec.** A **Respec** button in the tree refunds the System Points spent
+  on stat nodes (attributes, Thu'um cooldown, move speed) and reverts their effects; it
+  asks for a second click to confirm and hides itself when there is nothing to refund.
+  The four *Omniscience* unlocks and *Perk Synthesis* are deliberately **not** refunded —
+  the System cannot un-teach a shout you already know, and those perk points are long
+  since spent in your perk trees. (Vanilla perks are out of scope; dedicated respec mods
+  handle those.)
 - **Repeatable utility nodes in the skill tree.** Three new NORMAL-tier nodes you can
   buy again and again, so there is always something to spend System Points on:
   **Fleet of Foot** (+3% move speed per rank, up to +30%), **Beast of Burden**
@@ -27,6 +43,8 @@ keeps its blessing, nodes and points; the new fields default cleanly on load.
   safe to delete.
   - **`HideSealedNodes`** — hide skill-tree nodes gated above your rebirth tier instead
     of showing them greyed with a "requires HERO/ASCENDED" hint.
+  - **`[Dormant]`** — `DormantHeroLevel` (25) and `DormantAscendedLevel` (80), the levels
+    at which a dormant blessing wakes. Changing them affects a running save.
   - **Remappable System-menu hotkey** (`[Hotkey]`): `SystemMenuKey` and
     `SystemMenuModifier` take any DirectInput scan code (hex or decimal; modifier `0` =
     none). Default unchanged — Right Shift + S. The ini lists the common codes.

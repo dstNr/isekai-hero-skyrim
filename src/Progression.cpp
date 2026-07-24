@@ -362,7 +362,14 @@ namespace Isekai::Progression {
             std::string body;
 
             body += "POWER LEVEL   " + PowerName(GetState().power) +
-                    (GetState().shattered ? "  (SHATTERED)" : "") + "\n";
+                    (GetState().dormant     ? "  (DORMANT)"
+                     : GetState().shattered ? "  (SHATTERED)"
+                                            : "") + "\n";
+            // A dormant blessing's whole point is the promise of the next rung — show
+            // it, otherwise the panel just reads as a permanently weaker NORMAL.
+            if (const auto next = NextAwakeningLevel(); next > 0) {
+                body += "NEXT AWAKENING at level " + std::to_string(next) + "\n";
+            }
 
             std::size_t earned = 0;
             for (const auto& m : kMilestones) {

@@ -380,10 +380,13 @@ namespace Isekai::UI {
                         status = "UNLOCKED";
                         statusCol = Style::Col(Style::kAccent, fade);
                     } else if (!SkillTree::TierMet(node->key)) {
-                        // A gift of a deeper blessing than this life took.
-                        status = "SEALED — requires " +
-                                 Isekai::PowerName(SkillTree::RequiredPower(node->key)) +
-                                 " rebirth";
+                        // A gift of a deeper blessing than this life took — or, for a
+                        // dormant one, than it has grown into YET.
+                        const auto req = SkillTree::RequiredPower(node->key);
+                        const auto at = Isekai::AwakeningLevelFor(req);
+                        status = at > 0
+                                     ? "SEALED — awakens at level " + std::to_string(at)
+                                     : "SEALED — requires " + Isekai::PowerName(req) + " rebirth";
                         statusCol = IM_COL32(200, 150, 90, static_cast<int>(255 * fade));
                     } else if (!SkillTree::PrereqsMet(node->key)) {
                         status = "LOCKED — requires a connected node";

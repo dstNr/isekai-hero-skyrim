@@ -96,6 +96,11 @@ namespace Isekai::UI::Prisma {
                 j += "\"maxRank\":" + std::to_string(n.maxRank) + ",";
                 j += "\"reqPower\":\"" +
                      Esc(Isekai::PowerName(SkillTree::RequiredPower(n.key)).c_str()) + "\",";
+                // >0 only for a DORMANT blessing: the seal is a level away, not a
+                // rebirth away, and the tooltip should say so.
+                j += "\"reqLevel\":" +
+                     std::to_string(Isekai::AwakeningLevelFor(SkillTree::RequiredPower(n.key))) +
+                     ",";
                 j += "\"prereq\":[" + std::to_string(n.prereq[0]) + "," +
                      std::to_string(n.prereq[1]) + "]";
                 j += "}";
