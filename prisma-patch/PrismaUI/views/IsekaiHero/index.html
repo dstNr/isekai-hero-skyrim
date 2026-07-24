@@ -250,12 +250,19 @@
     background: radial-gradient(ellipse 55% 45% at 50% 50%,
                 rgba(200,245,255,0.55), rgba(90,210,255,0.16) 42%, transparent 72%); }
 
-  /* 2 — a shaft of light rising behind the text */
-  #fPillar { position: absolute; left: 50%; top: 50%; width: 460px; height: 340px;
-    margin: -170px 0 0 -230px; opacity: 0;
-    background: linear-gradient(180deg, transparent, rgba(90,210,255,0.26) 42%,
-                  rgba(160,235,255,0.34) 50%, rgba(90,210,255,0.26) 58%, transparent),
-                radial-gradient(ellipse 38% 100% at 50% 50%, rgba(90,210,255,0.20), transparent 72%); }
+  /* 2 — a shaft of light rising behind the text.
+     Radial gradients ONLY: a linear-gradient fades along one axis but stays solid to the
+     element's left and right edges, which showed up as a hard-edged rectangle early in
+     the animation. Ellipses fall off in every direction, so there is no edge to see. */
+  #fPillar { position: absolute; left: 50%; top: 50%; width: 520px; height: 380px;
+    margin: -190px 0 0 -260px; opacity: 0;
+    background: radial-gradient(ellipse 26% 62% at 50% 50%, rgba(170,238,255,0.34), transparent 70%),
+                radial-gradient(ellipse 44% 100% at 50% 50%, rgba(90,210,255,0.20), transparent 72%); }
+
+  /* 2b — a burst of light rays through the centre */
+  .ray { position: absolute; left: 50%; top: 50%; width: 3px; height: 200px;
+         margin: -100px 0 0 -1.5px; opacity: 0; transform-origin: 50% 50%;
+         background: linear-gradient(180deg, transparent, rgba(165,235,255,0.85) 50%, transparent); }
 
   /* 3 — shockwaves: two rings and a diamond, staggered */
   .ring { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px;
@@ -267,15 +274,13 @@
   .spark { position: absolute; left: 50%; top: 50%; width: 3px; height: 3px; margin: -1.5px;
            border-radius: 50%; background: #bdefff; box-shadow: 0 0 9px var(--accent); opacity: 0; }
 
-  /* 5 — title with a chromatic split that snaps back together */
+  /* 5 — the title slams in letter by letter (each glyph is its own span) */
   #fTitleWrap { position: relative; display: inline-block; }
   .fT { font-size: clamp(38px, 4.6vw, 76px); font-weight: 800; letter-spacing: 0.16em;
         white-space: nowrap; }
   #fTitle { color: #fff;
             text-shadow: 0 0 14px #fff, 0 0 44px var(--accent), 0 0 95px var(--accent-dk); }
-  #fGhostA, #fGhostB { position: absolute; left: 0; top: 0; right: 0; opacity: 0; }
-  #fGhostA { color: #5ad2ff; }
-  #fGhostB { color: #ff7ad4; }
+  .ltr { display: inline-block; opacity: 0; }
 
   #fSub { font-size: clamp(14px, 1.3vw, 22px); letter-spacing: 0.42em; color: var(--accent);
           margin-top: 16px; text-transform: uppercase; text-shadow: 0 0 22px rgba(90,210,255,0.7); }
@@ -285,15 +290,15 @@
   /* --- timeline (everything is done by ~2.2s; the plugin hides the view at 2.4s) --- */
   #screen-flourish.play #fFlash   { animation: flash 0.5s ease-out both; }
   #screen-flourish.play #fPillar  { animation: pillar 1.6s var(--ease) both; }
+  #screen-flourish.play .ray      { animation: ray 0.9s ease-out both; animation-delay: var(--rd); }
   #screen-flourish.play .ring     { animation: ring 1.5s ease-out both; }
   #screen-flourish.play .r2       { animation-delay: 0.15s !important; }
+  #screen-flourish.play .r3       { animation-delay: 0.62s !important; }
   #screen-flourish.play .dia      { animation: ringDia 1.7s ease-out 0.28s both; }
   #screen-flourish.play .spark    { animation: spark 1.1s ease-out both; animation-delay: var(--sd); }
-  #screen-flourish.play #fTitle   { animation: punch 0.55s cubic-bezier(.16,1.5,.3,1) both; }
-  #screen-flourish.play #fGhostA  { animation: chromA 0.5s var(--ease) both; }
-  #screen-flourish.play #fGhostB  { animation: chromB 0.5s var(--ease) both; }
-  #screen-flourish.play #fSub     { animation: fadeup 0.55s var(--ease) 0.24s both; }
-  #screen-flourish.play #fBar     { animation: bar 0.7s var(--ease) 0.3s both; }
+  #screen-flourish.play .ltr      { animation: ltrIn 0.5s cubic-bezier(.16,1.5,.3,1) both; }
+  #screen-flourish.play #fSub     { animation: fadeup 0.55s var(--ease) 0.34s both; }
+  #screen-flourish.play #fBar     { animation: bar 0.7s var(--ease) 0.4s both; }
   #screen-flourish.play #flourish { animation: fadeout 0.6s ease-in 1.8s both; }
 
   @keyframes flash   { 0% { opacity: 0; } 10% { opacity: 1; } 100% { opacity: 0; } }
@@ -306,12 +311,12 @@
                        100% { transform: rotate(45deg) scale(20); opacity: 0; } }
   @keyframes spark   { 0% { opacity: 1; transform: rotate(var(--a)) translateX(24px) scale(1); }
                        100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--d)) scale(0.35); } }
-  @keyframes punch   { 0% { transform: scale(2.5); opacity: 0; }
-                       60% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
-  @keyframes chromA  { 0% { opacity: 0.9; transform: translateX(-30px); }
-                       100% { opacity: 0; transform: translateX(0); } }
-  @keyframes chromB  { 0% { opacity: 0.9; transform: translateX(30px); }
-                       100% { opacity: 0; transform: translateX(0); } }
+  @keyframes ray     { 0% { opacity: 0; transform: rotate(var(--a)) scaleY(0.12); }
+                       22% { opacity: 0.95; }
+                       100% { opacity: 0; transform: rotate(var(--a)) scaleY(2.6); } }
+  @keyframes ltrIn   { 0% { opacity: 0; transform: translateY(-30px) scale(1.9) rotate(-7deg); }
+                       55% { opacity: 1; }
+                       100% { opacity: 1; transform: none; } }
   @keyframes fadeup  { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
   @keyframes bar     { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
   @keyframes fadeout { to { opacity: 0; transform: scale(1.05); } }
@@ -365,12 +370,11 @@
   <div id="screen-flourish" class="screen">
     <div id="fFlash"></div>
     <div id="fPillar"></div>
-    <div class="ring r1"></div><div class="ring r2"></div><div class="ring dia"></div>
+    <div class="ring r1"></div><div class="ring r2"></div>
+    <div class="ring r3"></div><div class="ring dia"></div>
     <div id="fSparks"></div>
     <div id="flourish">
       <div id="fTitleWrap">
-        <div id="fGhostA" class="fT mono"></div>
-        <div id="fGhostB" class="fT mono"></div>
         <div id="fTitle" class="fT mono"></div>
       </div>
       <div id="fSub" class="mono"></div>
@@ -626,30 +630,51 @@ window.isekaiShowPanel = (data) => {
 function choose(i) { callBack("isekaiChoose", String(i)); }
 
 /* ---------------- LEVEL-UP FLOURISH ---------------- */
-/* Sparks are built once and reused; each keeps its own angle, distance and delay as
-   custom properties, so the CSS keyframe can fling them outwards individually. */
-function buildSparks() {
+/* The burst layer (rays + sparks) is built once and reused. Each element carries its own
+   angle / distance / delay as custom properties, so one keyframe can fling them all out
+   individually instead of in lockstep. */
+function buildBurst() {
   const box = $("fSparks");
   if (box.childElementCount) return;
-  const N = 14;
-  for (let i = 0; i < N; i++) {
+
+  const RAYS = 10;
+  for (let i = 0; i < RAYS; i++) {
+    const r = document.createElement("div");
+    r.className = "ray";
+    r.style.setProperty("--a", (i * (180 / RAYS) + Math.random() * 8).toFixed(1) + "deg");
+    r.style.setProperty("--rd", (Math.random() * 0.07).toFixed(3) + "s");
+    box.appendChild(r);
+  }
+
+  const SPARKS = 16;
+  for (let i = 0; i < SPARKS; i++) {
     const s = document.createElement("div");
     s.className = "spark";
-    s.style.setProperty("--a", (i * (360 / N) + Math.random() * 14 - 7).toFixed(1) + "deg");
-    s.style.setProperty("--d", (170 + Math.random() * 170).toFixed(0) + "px");
-    s.style.setProperty("--sd", (Math.random() * 0.16).toFixed(2) + "s");
+    s.style.setProperty("--a", (i * (360 / SPARKS) + Math.random() * 14 - 7).toFixed(1) + "deg");
+    s.style.setProperty("--d", (170 + Math.random() * 190).toFixed(0) + "px");
+    s.style.setProperty("--sd", (Math.random() * 0.18).toFixed(2) + "s");
     box.appendChild(s);
   }
 }
 
+/* Each glyph becomes its own span so the title can land letter by letter. */
+function setFlourishTitle(a_text) {
+  const el = $("fTitle");
+  el.innerHTML = "";
+  [...a_text].forEach((ch, i) => {
+    const s = document.createElement("span");
+    s.className = "ltr";
+    s.textContent = ch === " " ? " " : ch;
+    s.style.animationDelay = (i * 0.038).toFixed(3) + "s";
+    el.appendChild(s);
+  });
+}
+
 window.isekaiFlourish = (data) => {
   let d = {}; try { d = (typeof data === "string") ? JSON.parse(data) : data; } catch (e) {}
-  const title = d.title || "";
-  $("fTitle").textContent = title;
-  $("fGhostA").textContent = title;   // chromatic copies snap back onto the title
-  $("fGhostB").textContent = title;
+  setFlourishTitle(d.title || "");
   $("fSub").textContent = d.subtitle || "";
-  buildSparks();
+  buildBurst();
   showScreen("flourish");
   const el = $("screen-flourish");
   el.classList.remove("play"); void el.offsetWidth; el.classList.add("play");
