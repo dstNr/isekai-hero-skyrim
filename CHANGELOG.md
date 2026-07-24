@@ -4,7 +4,7 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
-## [0.5.0] — 2026-07-23
+## [0.5.0] — 2026-07-24
 
 Acting on a detailed player report: more ways to play, more to spend points on, an
 optional web UI, and a couple of quality-of-life fixes. Save-safe — an existing save
