@@ -712,6 +712,17 @@ namespace Isekai {
         AwakenTo(earned);
     }
 
+    void RebootSystem() {
+        // Just re-run the blessing selection. ShowPowerSelection overwrites the blessing
+        // fields (power / shattered / dormant) from the new choice and re-applies, while
+        // leaving reincarnated, milestones, the skill tree and System Points untouched —
+        // so nothing earned is lost and the milestone catch-up cannot double-grant. No
+        // need to reset the one-shot flag: we deliberately bypass the boot trigger and
+        // open the menu directly.
+        logger::info("System reboot — re-opening blessing choice (earned progress kept)");
+        ShowPowerSelection();
+    }
+
     std::uint16_t AwakeningLevelFor(PowerLevel a_tier) {
         if (!g_state.dormant) {
             return 0;

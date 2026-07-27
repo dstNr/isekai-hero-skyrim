@@ -35,6 +35,11 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   (configurable, `[Dormant]` in the ini). Nothing arrives early, nothing stays
   sealed for good. It is orthogonal to the question above, so Dormant + Shattered
   grows only the System's reach and never hands over a grant.
+
+  Changed your mind later? The System status panel has a **Reboot** button (with a
+  confirm) that re-opens this whole blessing choice on an existing character — keeping
+  your milestones, skill tree and System Points. (Stats a previous *Full* blessing
+  already granted stay; only a new game truly starts from zero.)
 - **79 quest milestones** (main quest, Companions, College, Thieves Guild,
   Dark Brotherhood, Civil War beats, Dawnguard, Dragonborn). Completing one
   plays a level-up flourish (rings, title punch, custom sound) and pays out a

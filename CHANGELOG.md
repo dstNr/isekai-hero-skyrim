@@ -4,6 +4,28 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [Unreleased]
+
+Accumulating for the next release. Save-safe.
+
+### Added
+- **"Reboot System" button** in the status panel: re-opens the blessing choice on an
+  existing character (e.g. Hero → a Shattered Dormant run) without the fragile
+  uninstall/reinstall dance. Two-click confirm; milestones, skill tree and System Points
+  are kept. Stats a previous *Full* blessing already handed out are not clawed back.
+- **Optional SkyrimNet integration** (AI-driven NPCs): when SkyrimNet is installed, the
+  mod pushes the player's System status — reincarnation, tier, each milestone — as
+  persistent world-knowledge so AI NPCs can react to the isekai premise. One-way,
+  soft-detected, does nothing without SkyrimNet, toggle in the ini. Community-testing.
+
+### Fixed
+- **Skyrim VR no longer crashes on load.** The ImGui overlay hooked the desktop swap
+  chain, which is invalid on the VR renderer — it now skips that hook in VR. In VR all
+  UI goes through the PrismaUI patch (needs PrismaUI's 1.5.0 VR build); the reincarnation
+  prompt is held rather than stranding the character when no VR UI is available.
+- **VR form resolution.** Our spells/sounds/storage container resolved to null in VR;
+  they now resolve via the plugin's partial index, the way the form dump already did.
+
 ## [0.5.1] — 2026-07-27
 
 A small follow-up to 0.5.0, both fixes in the PrismaUI path. No save format change.

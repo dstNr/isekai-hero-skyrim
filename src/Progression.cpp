@@ -445,6 +445,32 @@ namespace Isekai::Progression {
                                     /*iconOnly=*/true });
                 actions.emplace_back([]() { Storage::Open(); });
             }
+            // Reboot: re-open the blessing choice on this character (e.g. HERO -> a
+            // Shattered Dormant run) without the fragile uninstall/reinstall dance that
+            // drops the co-save's milestone list. Guarded behind a confirm; earned
+            // progress is kept (see RebootSystem).
+            if (GetState().reincarnated) {
+                choices.push_back({ "REBOOT", {} });
+                actions.emplace_back([]() {
+                    UI::ShowSystemWindow(
+                        "[ SYSTEM ]",
+                        "REBOOT THE SYSTEM?\n"
+                        "\n"
+                        "Re-opens the blessing choice, so you can pick a different path\n"
+                        "(tier, Full/Shattered, Dormant).\n"
+                        "\n"
+                        "KEPT:  milestones, skill tree, System Points, storage.\n"
+                        "NOTE:  stats a previous FULL blessing already granted\n"
+                        "       (skills, level, gold) cannot be taken back — only a\n"
+                        "       brand-new game truly starts from zero.",
+                        std::vector<std::string>{ "CANCEL", "REBOOT" },
+                        [](int a_confirm) {
+                            if (a_confirm == 1) {
+                                RebootSystem();
+                            }
+                        });
+                });
+            }
             choices.push_back({ "CLOSE", {} });
 
             auto onSelect = [actions = std::move(actions)](int a_idx) {

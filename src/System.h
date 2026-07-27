@@ -87,6 +87,13 @@ namespace Isekai {
     // "NORMAL" / "HERO" / "ASCENDED" — for panels and logs.
     [[nodiscard]] std::string PowerName(PowerLevel a_power);
 
+    // Re-open the blessing choice on an existing, already-reincarnated character —
+    // the "reboot the System" the panel offers. Only the blessing is re-chosen; every
+    // earned thing (milestones, skill-tree nodes/ranks, System Points, the storage
+    // chest) is kept. A previous FULL blessing's flat stats are NOT clawed back — we
+    // track no deltas, so a true clean slate remains a new game. Main thread only.
+    void RebootSystem();
+
     // Raise a DORMANT blessing to whatever tier the character's level has earned.
     // Cheap and idempotent: a no-op unless the player is dormant AND has crossed a
     // threshold they have not been paid for. Called wherever the level may have
