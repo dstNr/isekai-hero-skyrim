@@ -253,6 +253,12 @@
   #statCard { width: clamp(460px, 60vw, 840px); max-height: 88vh; border-radius: 4px;
               display: flex; flex-direction: column; gap: clamp(12px, 1.4vw, 18px);
               padding: clamp(20px, 2.4vw, 34px); }
+  /* Header: the tier block on the left, the Skill Tree / Storage icon buttons stacked
+     on the right — the same iconBtn look the dialog panel uses, which reads nicely here
+     too. Flex (not absolute) so they never collide with the tier name or the brackets. */
+  #sHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+  #sHeadText { min-width: 0; }
+  #sIcons { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
   #sTierRow { display: flex; align-items: baseline; gap: 14px; margin-top: 6px; flex-wrap: wrap; }
   #sTier { font-size: clamp(26px, 3.4vw, 44px); font-weight: 700; letter-spacing: 0.1em;
            color: #fff; text-shadow: 0 0 22px rgba(90,210,255,0.5); }
@@ -445,13 +451,16 @@
       <div class="bracket tl"></div><div class="bracket tr"></div>
       <div class="bracket bl"></div><div class="bracket br"></div>
       <div id="sHead">
-        <div class="eyebrow mono">System · Status</div>
-        <div id="sTierRow">
-          <div id="sTier" class="mono">—</div>
-          <div id="sMode" class="badge mono hidden"></div>
+        <div id="sHeadText">
+          <div class="eyebrow mono">System · Status</div>
+          <div id="sTierRow">
+            <div id="sTier" class="mono">—</div>
+            <div id="sMode" class="badge mono hidden"></div>
+          </div>
+          <div id="sAwaken" class="mono hidden"></div>
+          <div id="sCustom" class="mono hidden"></div>
         </div>
-        <div id="sAwaken" class="mono hidden"></div>
-        <div id="sCustom" class="mono hidden"></div>
+        <div id="sIcons"></div>
       </div>
       <div class="rule"></div>
       <div id="sTiles">
@@ -793,16 +802,27 @@ function rebootClick(btn) {
 }
 
 function buildStatusActions() {
+  const icons = $("sIcons"); icons.innerHTML = "";
   const box = $("sActions"); box.innerHTML = ""; rebootArmed = 0;
-  const add = (label, cls, onClick) => {
+
+  // Skill Tree / Storage as the top-right icon buttons; Reboot / Close as footer text.
+  const addIcon = (label, img, onClick) => {
+    const b = document.createElement("button");
+    b.className = "iconBtn";
+    b.innerHTML = '<span class="lbl">' + esc(label) + "</span>"
+                + '<img src="icons/' + img + '" onerror="this.style.display=\'none\'">';
+    b.onclick = onClick; icons.appendChild(b);
+  };
+  const addBtn = (label, cls, onClick) => {
     const b = document.createElement("button");
     b.className = "btn mono" + (cls ? " " + cls : "");
     b.textContent = label; b.onclick = onClick; box.appendChild(b); return b;
   };
-  if (STATUS.hasTree)    add("Skill Tree", "", () => statusAction("tree"));
-  if (STATUS.hasStorage) add("Storage", "", () => statusAction("storage"));
-  if (STATUS.canReboot)  { const rb = add("Reboot", "amber", () => rebootClick(rb)); }
-  add("Close", "", () => statusAction("close"));
+
+  if (STATUS.hasTree)    addIcon("Skill Tree", "spells_38_frame.png", () => statusAction("tree"));
+  if (STATUS.hasStorage) addIcon("Storage", "spells_03_frame.png", () => statusAction("storage"));
+  if (STATUS.canReboot)  { const rb = addBtn("Reboot", "amber", () => rebootClick(rb)); }
+  addBtn("Close", "", () => statusAction("close"));
 }
 
 function renderStatus() {
