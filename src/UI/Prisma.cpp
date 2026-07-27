@@ -3,7 +3,8 @@
 #include "PrismaUI_API.h"
 #include "SkillTree.h"
 #include "Sounds.h"
-#include "System.h"  // PowerName, kMaxPerkPoints, DelayedMainThread
+#include "Storage.h"  // Storage::Open from the status screen's storage button
+#include "System.h"   // PowerName, kMaxPerkPoints, DelayedMainThread, RebootSystem
 
 #include <algorithm>
 #include <atomic>
@@ -18,7 +19,7 @@ namespace Isekai::UI::Prisma {
         constexpr const char* kViewFile = "Data\\PrismaUI\\views\\IsekaiHero\\index.html";
 
         // Which screen the single view is showing.
-        enum Screen : int { kNone = 0, kTree, kPanel, kFlourish };
+        enum Screen : int { kNone = 0, kTree, kPanel, kFlourish, kStatus };
 
         PRISMA_UI_API::IVPrismaUI1* g_api = nullptr;
         PrismaView                  g_view = 0;
@@ -215,6 +216,31 @@ namespace Isekai::UI::Prisma {
             }
         }
 
+        // The status screen's footer buttons. One listener, an action string — tree /
+        // storage / reboot / close.
+        void OnStatusAction(const char* a_arg) {
+            const std::string action = a_arg ? a_arg : "";
+            if (auto* task = SKSE::GetTaskInterface()) {
+                task->AddTask([action]() {
+                    if (action == "tree") {
+                        OpenTree();  // switches screens within the view; no game menu
+                    } else if (action == "storage") {
+                        // The container is a real game menu, so the view must let go first.
+                        HideView();
+                        Sounds::PlayDelayed(Sounds::Sfx::WindowClose, Sounds::kResumeGraceMs);
+                        Storage::Open();
+                    } else if (action == "reboot") {
+                        // Re-opens the blessing choice, which brings up its own panel
+                        // (ShowPanel takes the view over from here) — no HideView needed.
+                        Isekai::RebootSystem();
+                    } else {  // "close"
+                        HideView();
+                        Sounds::PlayDelayed(Sounds::Sfx::WindowClose, Sounds::kResumeGraceMs);
+                    }
+                });
+            }
+        }
+
         void OnChoose(const char* a_arg) {
             int idx = -1;
             try {
@@ -276,6 +302,7 @@ namespace Isekai::UI::Prisma {
         g_api->RegisterJSListener(g_view, "isekaiRespec", OnRespec);
         g_api->RegisterJSListener(g_view, "isekaiCloseTree", OnCloseTree);
         g_api->RegisterJSListener(g_view, "isekaiChoose", OnChoose);
+        g_api->RegisterJSListener(g_view, "isekaiStatusAction", OnStatusAction);
         g_api->Hide(g_view);
 
         logger::info("Prisma: web UI active (view {})", g_view);
@@ -287,7 +314,7 @@ namespace Isekai::UI::Prisma {
 
     bool IsBusy() {
         const int s = g_screen.load(std::memory_order_acquire);
-        return s == kTree || s == kPanel;
+        return s == kTree || s == kPanel || s == kStatus;
     }
 
     void OpenTree() {
@@ -318,6 +345,17 @@ namespace Isekai::UI::Prisma {
         }
         g_screen.store(kPanel, std::memory_order_release);
         Invoke("window.isekaiShowPanel(" + json + ")");
+        g_api->Show(g_view);
+        g_api->Focus(g_view, /*pauseGame=*/true);
+        Sounds::Play(Sounds::Sfx::WindowOpen);
+    }
+
+    void ShowStatus(std::string a_json) {
+        if (!Active()) {
+            return;
+        }
+        g_screen.store(kStatus, std::memory_order_release);
+        Invoke("window.isekaiShowStatus(" + a_json + ")");
         g_api->Show(g_view);
         g_api->Focus(g_view, /*pauseGame=*/true);
         Sounds::Play(Sounds::Sfx::WindowOpen);

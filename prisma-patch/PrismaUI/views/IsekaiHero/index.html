@@ -244,6 +244,63 @@
                   transition: all 0.22s var(--ease); text-shadow: 0 0 14px rgba(90,210,255,0.6); }
   .iconBtn:hover .lbl { opacity: 1; transform: translateY(-50%) translateX(0); }
 
+  /* ======================= STATUS LEDGER =======================
+     A dedicated dashboard for the System status, in place of dumping the plugin's
+     monospace body into the generic panel. All static (no running animations) so the
+     view idles like the tree does. */
+  .hidden { display: none !important; }
+
+  #statCard { width: clamp(460px, 60vw, 840px); max-height: 88vh; border-radius: 4px;
+              display: flex; flex-direction: column; gap: clamp(12px, 1.4vw, 18px);
+              padding: clamp(20px, 2.4vw, 34px); }
+  #sTierRow { display: flex; align-items: baseline; gap: 14px; margin-top: 6px; flex-wrap: wrap; }
+  #sTier { font-size: clamp(26px, 3.4vw, 44px); font-weight: 700; letter-spacing: 0.1em;
+           color: #fff; text-shadow: 0 0 22px rgba(90,210,255,0.5); }
+  .badge { padding: 3px 11px; border: 1px solid var(--line); border-radius: 20px;
+           font-size: 11px; letter-spacing: 0.2em; color: var(--accent); align-self: center; }
+  .badge.dormant { color: var(--amber); border-color: rgba(224,168,96,0.5); }
+  #sAwaken { color: var(--amber); font-size: 12px; letter-spacing: 0.1em; margin-top: 6px; }
+
+  #sTiles { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(10px, 1.2vw, 16px); }
+  .tile { background: var(--surface-2); border: 1px solid var(--line); border-radius: 3px;
+          padding: clamp(12px, 1.4vw, 18px); }
+  .tLabel { color: var(--dim); font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; }
+  .tVal { margin-top: 8px; font-size: clamp(20px, 2.4vw, 30px); color: var(--text); }
+  .tVal b { color: var(--accent); }
+  .tVal span { color: var(--dim); font-size: 0.6em; }
+  .bar { margin-top: 11px; height: 5px; background: rgba(90,210,255,0.14); border-radius: 3px;
+         overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0;
+           background: linear-gradient(90deg, var(--accent-dk), var(--accent)); }
+
+  .sect { font-size: 11px; margin-bottom: 8px; }
+  #sAtt { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .att { display: flex; justify-content: space-between; gap: 8px; padding: 7px 12px;
+         border: 1px solid var(--line); border-radius: 3px; background: rgba(90,210,255,0.05);
+         font-size: 13px; }
+  .att .aName { color: var(--dim); }
+  .att b { color: var(--accent); }
+
+  #sTitleSect { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #sTitles { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 6px; }
+  #sTitles::-webkit-scrollbar { width: 5px; }
+  #sTitles::-webkit-scrollbar-thumb { background: rgba(90,210,255,0.3); border-radius: 3px; }
+  .trow { display: grid; grid-template-columns: 1.1fr 1.2fr 1fr; gap: 10px; padding: 8px 12px;
+          border-left: 2px solid var(--line); background: rgba(9,18,33,0.4); font-size: 12.5px; }
+  .trow .tName { color: var(--accent); }
+  .trow .tEff { color: var(--text); }
+  .trow .tQuest { color: var(--dim); text-align: right; }
+  .trow.empty { grid-template-columns: 1fr; color: var(--dim); }
+
+  #sFoot { border-top: 1px solid var(--line); padding-top: clamp(12px, 1.4vw, 18px); }
+  #sActions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+  #sActions .btn { padding: 10px 22px; font-size: 13px; }
+  #sActions .btn.amber { border-color: rgba(224,168,96,0.5); color: var(--amber); }
+  #sActions .btn.amber:hover { border-color: var(--amber); color: #fff;
+                               box-shadow: 0 0 18px rgba(224,168,96,0.3); }
+  #sActions .btn.amber.armed { border-color: var(--amber); color: #fff;
+                               background: rgba(224,168,96,0.14); }
+
   /* ======================= LEVEL-UP FLOURISH =======================
      This plays over LIVE gameplay (the view is shown without focus, nothing is paused),
      so every layer animates transform/opacity ONLY — no width (forces layout) and no
@@ -375,6 +432,44 @@
     </div>
   </div>
 
+  <!-- STATUS LEDGER -->
+  <div id="screen-status" class="screen">
+    <div class="backdrop"></div>
+    <div id="statCard" class="glass">
+      <div class="bracket tl"></div><div class="bracket tr"></div>
+      <div class="bracket bl"></div><div class="bracket br"></div>
+      <div id="sHead">
+        <div class="eyebrow mono">System · Status</div>
+        <div id="sTierRow">
+          <div id="sTier" class="mono">—</div>
+          <div id="sMode" class="badge mono hidden"></div>
+        </div>
+        <div id="sAwaken" class="mono hidden"></div>
+      </div>
+      <div class="rule"></div>
+      <div id="sTiles">
+        <div class="tile">
+          <div class="tLabel mono">Milestones</div>
+          <div class="tVal mono"><b id="sMile">—</b><span id="sMileTot"></span></div>
+          <div class="bar"><i id="sBar"></i></div>
+        </div>
+        <div class="tile">
+          <div class="tLabel mono">System Points</div>
+          <div class="tVal mono"><b id="sPts">—</b></div>
+        </div>
+      </div>
+      <div id="sAttSect">
+        <div class="sect eyebrow mono">Attunements</div>
+        <div id="sAtt"></div>
+      </div>
+      <div id="sTitleSect">
+        <div class="sect eyebrow mono">Titles</div>
+        <div id="sTitles"></div>
+      </div>
+      <div id="sFoot"><div id="sActions"></div></div>
+    </div>
+  </div>
+
   <!-- LEVEL-UP FLOURISH -->
   <div id="screen-flourish" class="screen">
     <div id="fFlash"></div>
@@ -404,7 +499,7 @@ const RAIL = 130;                        // utility-rail width + gap, reserved o
 const isUtil = (n) => n.repeatable && !n.prereq[0] && !n.prereq[1];
 
 function showScreen(name) {
-  ["tree", "panel", "flourish"].forEach(s => $("screen-" + s).classList.toggle("active", s === name));
+  ["tree", "panel", "flourish", "status"].forEach(s => $("screen-" + s).classList.toggle("active", s === name));
 }
 
 /* Scale the fixed tree canvas to the viewport — shrink freely, but never blow it up
@@ -669,6 +764,93 @@ window.isekaiShowPanel = (data) => {
 };
 function choose(i) { callBack("isekaiChoose", String(i)); }
 
+/* ---------------- STATUS LEDGER ---------------- */
+let STATUS = {};
+let rebootArmed = 0;
+
+function statusAction(a) { callBack("isekaiStatusAction", a); }
+
+/* Reboot needs a deliberate second press, same idea as respec — it re-opens the whole
+   blessing choice, so a stray click shouldn't fire it. */
+function rebootClick(btn) {
+  if (rebootArmed) {
+    clearTimeout(rebootArmed); rebootArmed = 0;
+    statusAction("reboot");
+    return;
+  }
+  btn.classList.add("armed");
+  btn.textContent = "Confirm reboot?";
+  rebootArmed = setTimeout(() => {
+    rebootArmed = 0; btn.classList.remove("armed"); btn.textContent = "Reboot";
+  }, 3000);
+}
+
+function buildStatusActions() {
+  const box = $("sActions"); box.innerHTML = ""; rebootArmed = 0;
+  const add = (label, cls, onClick) => {
+    const b = document.createElement("button");
+    b.className = "btn mono" + (cls ? " " + cls : "");
+    b.textContent = label; b.onclick = onClick; box.appendChild(b); return b;
+  };
+  if (STATUS.hasTree)    add("Skill Tree", "", () => statusAction("tree"));
+  if (STATUS.hasStorage) add("Storage", "", () => statusAction("storage"));
+  if (STATUS.canReboot)  { const rb = add("Reboot", "amber", () => rebootClick(rb)); }
+  add("Close", "", () => statusAction("close"));
+}
+
+function renderStatus() {
+  const s = STATUS;
+  $("sTier").textContent = s.tier || "NORMAL";
+
+  const mode = s.mode || "";
+  const mb = $("sMode");
+  mb.textContent = mode;
+  mb.classList.toggle("hidden", !mode);
+  mb.classList.toggle("dormant", mode === "DORMANT");
+
+  const aw = $("sAwaken");
+  if (s.nextAwakening > 0) { aw.textContent = "Awakens at level " + s.nextAwakening; aw.classList.remove("hidden"); }
+  else aw.classList.add("hidden");
+
+  const earned = s.milestonesEarned || 0, total = s.milestonesTotal || 0;
+  $("sMile").textContent = earned;
+  $("sMileTot").textContent = " / " + total;
+  $("sBar").style.width = (total ? Math.round(100 * earned / total) : 0) + "%";
+  $("sPts").textContent = s.points || 0;
+
+  const at = $("sAtt"); at.innerHTML = "";
+  (s.attunements || []).forEach(a => {
+    const d = document.createElement("div"); d.className = "att mono";
+    d.innerHTML = '<span class="aName">' + esc(a.stat) + '</span><b>+' + a.amount + "</b>";
+    at.appendChild(d);
+  });
+  $("sAttSect").classList.toggle("hidden", !(s.attunements || []).length);
+
+  const tl = $("sTitles"); tl.innerHTML = "";
+  const titles = s.titles || [];
+  if (titles.length) {
+    titles.forEach(t => {
+      const d = document.createElement("div"); d.className = "trow mono";
+      d.innerHTML = '<span class="tName">' + esc(t.name) + "</span>"
+                  + '<span class="tEff">' + esc(t.effect) + "</span>"
+                  + '<span class="tQuest">' + esc(t.quest) + "</span>";
+      tl.appendChild(d);
+    });
+  } else {
+    const d = document.createElement("div"); d.className = "trow mono empty";
+    d.textContent = "No deeds recognised yet.";
+    tl.appendChild(d);
+  }
+
+  buildStatusActions();
+}
+
+window.isekaiShowStatus = (data) => {
+  try { STATUS = (typeof data === "string") ? JSON.parse(data) : data; } catch (e) { return; }
+  showScreen("status");
+  renderStatus();
+};
+
 /* ---------------- LEVEL-UP FLOURISH ---------------- */
 /* The burst layer (rays + sparks) is built once and reused. Each element carries its own
    angle / distance / delay as custom properties, so one keyframe can fling them all out
@@ -731,6 +913,7 @@ window.addEventListener("resize", () => {
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if ($("screen-tree").classList.contains("active")) { closeTree(); return; }
+  if ($("screen-status").classList.contains("active")) { statusAction("close"); return; }
   if ($("screen-panel").classList.contains("active")) {
     const tb = textButtons();
     if (tb.length === 1) choose(PANEL.buttons.indexOf(tb[0]));

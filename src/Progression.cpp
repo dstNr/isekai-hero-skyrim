@@ -351,6 +351,78 @@ namespace Isekai::Progression {
             return a_text;
         }
 
+        // JSON string escaping for the status payload — passive titles and quest names
+        // can hold quotes/backslashes.
+        [[nodiscard]] std::string JsonEsc(const std::string& a_s) {
+            std::string o;
+            o.reserve(a_s.size() + 8);
+            for (const char c : a_s) {
+                switch (c) {
+                case '"':  o += "\\\""; break;
+                case '\\': o += "\\\\"; break;
+                case '\n': o += "\\n"; break;
+                case '\r': break;
+                case '\t': o += "\\t"; break;
+                default:   o += c; break;
+                }
+            }
+            return o;
+        }
+
+        // Structured status data for the PrismaUI status screen — the same numbers the
+        // monospace ImGui ledger shows, handed over as JSON so the web view can lay them
+        // out as a proper dashboard.
+        [[nodiscard]] std::string BuildStatusJson() {
+            const auto& st = GetState();
+
+            std::size_t earned = 0;
+            for (const auto& m : kMilestones) {
+                earned += AlreadyGranted(m.key) ? 1 : 0;
+            }
+
+            std::map<RE::ActorValue, float> totals;
+            for (const auto* p : EarnedPassives()) {
+                totals[p->actorValue] += PassiveAmount(*p);
+            }
+
+            const auto boolStr = [](bool b) { return b ? "true" : "false"; };
+
+            std::string j = "{";
+            j += "\"tier\":\"" + JsonEsc(PowerName(st.power)) + "\",";
+            j += "\"mode\":\"" +
+                 std::string(st.dormant ? "DORMANT" : st.shattered ? "SHATTERED" : "") + "\",";
+            j += "\"nextAwakening\":" + std::to_string(NextAwakeningLevel()) + ",";
+            j += "\"milestonesEarned\":" + std::to_string(earned) + ",";
+            j += "\"milestonesTotal\":" + std::to_string(std::size(kMilestones)) + ",";
+            j += "\"points\":" + std::to_string(st.systemPoints) + ",";
+            j += "\"hasTree\":" + std::string(boolStr(st.reincarnated)) + ",";
+            j += "\"hasStorage\":" + std::string(boolStr(Storage::Available())) + ",";
+            j += "\"canReboot\":" + std::string(boolStr(st.reincarnated)) + ",";
+
+            j += "\"attunements\":[";
+            bool first = true;
+            for (const auto& [av, total] : totals) {
+                j += (first ? "" : ",");
+                first = false;
+                j += "{\"stat\":\"" + JsonEsc(StatName(av)) + "\",\"amount\":" +
+                     std::to_string(static_cast<int>(total)) + "}";
+            }
+            j += "],\"titles\":[";
+            first = true;
+            for (const auto& m : kMilestones) {
+                if (!AlreadyGranted(m.key)) {
+                    continue;
+                }
+                j += (first ? "" : ",");
+                first = false;
+                j += "{\"name\":\"" + JsonEsc(m.passive.name) + "\",\"effect\":\"" +
+                     JsonEsc(PassiveEffectText(m.passive)) + "\",\"quest\":\"" +
+                     JsonEsc(m.questName) + "\"}";
+            }
+            j += "]}";
+            return j;
+        }
+
         void ShowStatusPanel() {
             // Never replace a live panel: opening over the blessing selection would
             // throw away its callback, and the reincarnation would hang half-finished.
@@ -361,8 +433,16 @@ namespace Isekai::Progression {
             // Don't pop up over a game menu. The hotkey's 'S' collides with typing —
             // searching the inventory for "Salmon", entering a console command, naming an
             // enchantment — and every one of those menus pauses the game, so a paused game
-            // means "a menu already has the keyboard; leave it alone".
+            // means "a menu already has the keyboard; leave it alone". (A live PrismaUI
+            // screen also pauses, so this same guard stops a re-open over the web UI.)
             if (auto* ui = RE::UI::GetSingleton(); ui && ui->GameIsPaused()) {
+                return;
+            }
+
+            // The dedicated, richer status screen when the PrismaUI patch is present;
+            // the monospace ImGui ledger below otherwise.
+            if (UI::Prisma::Active()) {
+                UI::Prisma::ShowStatus(BuildStatusJson());
                 return;
             }
 

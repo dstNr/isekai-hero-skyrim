@@ -232,6 +232,14 @@
       global.VS_LOG && global.VS_LOG("choose " + idx);
       if (fn && idx >= 0) fn(idx);
     };
+
+    // Mirrors Prisma::OnStatusAction — tree / storage / reboot / close.
+    w.isekaiStatusAction = function (action) {
+      global.VS_LOG && global.VS_LOG("status action: " + action);
+      if (action === "tree") { pushTree(); }        // OpenTree switches screens in-view
+      else if (action === "close" || action === "storage") { hide(); }
+      // "reboot" in-game re-opens the blessing choice; here we just log it.
+    };
   }
 
   /* The view has no hide of its own beyond switching screens; in-game the
@@ -267,6 +275,14 @@
         width: opts.width || 720,
         buttons: opts.buttons || [{ label: "Continue", icon: "", iconOnly: false }]
       });
+      if (win()) win().focus();
+    },
+
+    /* Mirrors Prisma::ShowStatus — hands the structured status payload to the real
+       status screen so its layout can be seen and clicked here. */
+    showStatus: function (data) {
+      show();
+      call("isekaiShowStatus", data);
       if (win()) win().focus();
     },
 

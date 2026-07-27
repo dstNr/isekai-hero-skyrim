@@ -178,52 +178,31 @@
       });
     };
 
-    // Mirrors Progression::ShowStatusPanel — the [ SYSTEM ] STATUS ledger with its
-    // icon buttons and the REBOOT button, so the whole thing (and its confirm step) is
-    // visible here. The plugin builds this body in C++; the playground can only fake it.
-    function showRebootConfirm() {
-      window.IsekaiMock.showPanel({
-        title: "[ SYSTEM ]",
-        body: "REBOOT THE SYSTEM?\n"
-            + "\n"
-            + "Re-opens the blessing choice, so you can pick a different path\n"
-            + "(tier, Full/Shattered, Dormant).\n"
-            + "\n"
-            + "KEPT:  milestones, skill tree, System Points, storage.\n"
-            + "NOTE:  stats a previous FULL blessing already granted\n"
-            + "       (skills, level, gold) cannot be taken back.",
-        reveal: 100000, width: 720,
-        buttons: [{ label: "CANCEL" }, { label: "REBOOT" }],
-        onSelect: function (i) { window.VS_LOG(i === 1 ? "reboot confirmed" : "reboot cancelled"); }
-      });
-    }
-
+    // Drives the REAL dedicated status screen (Prisma::ShowStatus) with sample data,
+    // so its layout — tier header, tiles, attunements, titles ledger and the footer
+    // buttons incl. the two-click Reboot — is visible and clickable here.
     document.getElementById("btnStatus").onclick = function () {
-      window.IsekaiMock.showPanel({
-        title: "[ SYSTEM ] STATUS",
-        body: "POWER LEVEL   HERO\n"
-            + "MILESTONES    7 / 79\n"
-            + "SYSTEM POINTS 42\n"
-            + "\n"
-            + "ATTUNEMENTS\n"
-            + "  Health          +150\n"
-            + "  Carry Weight    +100\n"
-            + "\n"
-            + "PASSIVES\n"
-            + "  Survivor            +100 Health          Unbound\n"
-            + "  Wayfarer            +100 Carry Weight     Before the Storm",
-        reveal: 100000, width: 980,
-        // Same order/kind as the plugin: two top-right icons, then the text buttons.
-        buttons: [
-          { label: "SKILL TREE", icon: "spells_38_frame.png", iconOnly: true },
-          { label: "STORAGE",    icon: "spells_03_frame.png", iconOnly: true },
-          { label: "REBOOT" },
-          { label: "CLOSE" }
+      window.IsekaiMock.showStatus({
+        tier: "HERO",
+        mode: "SHATTERED",
+        nextAwakening: 0,
+        milestonesEarned: 7,
+        milestonesTotal: 79,
+        points: 42,
+        hasTree: true,
+        hasStorage: true,
+        canReboot: true,
+        attunements: [
+          { stat: "Health", amount: 150 },
+          { stat: "Carry Weight", amount: 100 },
+          { stat: "Magic Resist", amount: 15 },
+          { stat: "Stamina", amount: 50 }
         ],
-        onSelect: function (i) {
-          if (i === 2) { showRebootConfirm(); return; }   // REBOOT -> confirm step
-          window.VS_LOG("status button: " + i);
-        }
+        titles: [
+          { name: "Survivor",   effect: "+100 Health",       quest: "Unbound" },
+          { name: "Wayfarer",   effect: "+100 Carry Weight", quest: "Before the Storm" },
+          { name: "Dragonborn", effect: "+15% Magic Resist", quest: "The Way of the Voice" }
+        ]
       });
     };
 

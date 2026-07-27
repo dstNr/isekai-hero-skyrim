@@ -9,6 +9,11 @@ All notable changes to Isekai Hero are documented here. The format follows
 Accumulating for the next release. Save-safe.
 
 ### Added
+- **Dedicated PrismaUI status screen.** With the PrismaUI patch the System status is now
+  its own dashboard — tier header with an awakening badge, milestone/System-Point tiles,
+  an attunements grid and a titles ledger — instead of the plain monospace text the
+  generic panel showed. Its footer carries the Skill Tree / Storage / Reboot / Close
+  actions (Reboot two-click). The built-in ImGui ledger is unchanged.
 - **"Reboot System" button** in the status panel: re-opens the blessing choice on an
   existing character (e.g. Hero → a Shattered Dormant run) without the fragile
   uninstall/reinstall dance. Two-click confirm; milestones, skill tree and System Points
