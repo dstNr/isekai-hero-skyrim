@@ -1,15 +1,17 @@
 # Nexus Mods — Changelog-Einträge
 
-Was pro Version im Nexus-Changelog-Feld steht. Bewusst kürzer und spielernäher
-als `CHANGELOG.md`, das der Entwickler-Record bleibt.
+Was pro Version im Nexus-Changelog-Feld steht. **Knapp halten: eine Zeile pro
+Änderung, ein Satz — was sich für den Spieler ändert, nicht warum.** Das Warum und
+die Technik stehen in `CHANGELOG.md`, dem Entwickler-Record. (0.5.0 und 0.4.0 unten
+sind noch im alten, längeren Stil — so liegen sie bereits auf Nexus.)
 
 ---
 
 ## 0.5.1
 
-Fixed: The level-up sound is no longer missing when the PrismaUI patch is installed. Closing a System panel briefly unpauses the game, and the engine was discarding the sting that played in that same instant — so it never reached the speakers. It now plays reliably. (The built-in UI was never affected.)
+Fixed: Level-up sound no longer missing with the PrismaUI patch installed.
 
-Fixed: Higher and steadier FPS while the System menu is open with the PrismaUI patch. Two menu accents animated non-stop — a sweep under the headings and a pulsing ring on every affordable node — which forced the web UI to redraw every frame. Both are now static; the menu looks the same but lets the framerate recover.
+Fixed: Better, steadier FPS in the System menu with the PrismaUI patch.
 
 ---
 
