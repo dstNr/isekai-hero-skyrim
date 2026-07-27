@@ -77,13 +77,13 @@
   .eyebrow { color: var(--accent); letter-spacing: 0.34em; text-transform: uppercase;
              text-shadow: 0 0 18px rgba(90,210,255,0.55); }
 
-  /* Animated sweep under headers. */
-  .rule { height: 1px; background: linear-gradient(90deg, transparent, var(--line) 12%, var(--line) 88%, transparent);
-          position: relative; overflow: hidden; }
-  .rule::after { content: ""; position: absolute; inset: 0; width: 30%;
-                 background: linear-gradient(90deg, transparent, rgba(90,210,255,0.85), transparent);
-                 animation: sweep 3.4s ease-in-out infinite; }
-  @keyframes sweep { 0% { transform: translateX(-120%); } 60%,100% { transform: translateX(430%); } }
+  /* Static section rule. A shine used to sweep across this forever (animation: sweep
+     … infinite). Ultralight (PrismaUI's renderer) has no idle short-cut for such
+     animations the way a real browser's compositor does: any never-ending animation
+     keeps the whole view repainting every frame, which is the main cause of the
+     in-game FPS drop while the UI is open. The gradient line alone reads just as well
+     and lets the page go fully idle when nothing is happening. */
+  .rule { height: 1px; background: linear-gradient(90deg, transparent, var(--line) 12%, var(--line) 88%, transparent); }
 
   /* Buttons */
   .btn { position: relative; background: linear-gradient(180deg, rgba(90,210,255,0.10), rgba(90,210,255,0.03));
@@ -157,20 +157,18 @@
   .node.owned::after { content: ""; position: absolute; inset: -1px; border-radius: 10px;
     background: linear-gradient(160deg, rgba(90,210,255,0.16), transparent 60%); pointer-events: none; }
 
-  /* Buyable pulse: a bordered ring animated by TRANSFORM (scale) + opacity only — pure
-     compositing, no per-frame re-raster. The previous version animated a blurred
-     box-shadow's opacity, which Ultralight re-rasterised every frame on every buyable
-     node and was the remaining stutter. A static (un-animated) glow gives the resting
-     "this one is affordable" cue for free. The pulse lives on ::before so swapping the
+  /* Affordable cue — STATIC. This ring used to pulse forever (animation: pulse …
+     infinite), and with many buyable nodes on screen that kept Ultralight repainting
+     the whole view every frame (transform/opacity is compositor-cheap in a browser,
+     but Ultralight re-rasters regardless) — the main FPS drain while the tree is open.
+     A steady double ring plus the brighter border and box-shadow still make affordable
+     nodes pop, and now the page can idle. The cue lives on ::before so swapping the
      node's state class never restarts the entrance animation (no blink on purchase). */
-  .node.buyable { border-color: rgba(90,210,255,0.8); cursor: pointer;
-                  box-shadow: 0 0 13px rgba(90,210,255,0.26); }
+  .node.buyable { border-color: rgba(90,210,255,0.85); cursor: pointer;
+                  box-shadow: 0 0 15px rgba(90,210,255,0.32); }
   .node.buyable img { filter: grayscale(0.05) brightness(1); }
   .node.buyable::before { content: ""; position: absolute; inset: -3px; border-radius: 13px;
-    border: 1.5px solid rgba(90,210,255,0.7); pointer-events: none;
-    animation: pulse 2.1s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { transform: scale(1);    opacity: 0.35; }
-                     50%     { transform: scale(1.09); opacity: 0.9; } }
+    border: 1.5px solid rgba(90,210,255,0.75); pointer-events: none; }
 
   .node.poor   { border-color: rgba(138,168,196,0.4); }
   .node.poor   img { filter: grayscale(0.5) brightness(0.7); }
