@@ -217,6 +217,16 @@ namespace Isekai::UI {
             return;
         }
 
+        // VR note: renderWindows[0] is the desktop MIRROR swap chain, so in VR this
+        // overlay draws on the monitor, not inside the headset (in-HMD rendering is a
+        // separate, later effort). We still hook it — the mirror UI is Phase-1 usable —
+        // but this is the first thing a VR tester should confirm doesn't misbehave, as
+        // the RendererData layout is only asserted for the flat-screen editions.
+        if (REL::Module::IsVR()) {
+            logger::warn("UI: VR detected — overlay will render to the desktop mirror only "
+                         "(in-headset UI not implemented yet)");
+        }
+
         auto** vtable = *reinterpret_cast<void***>(swapChain);
         g_originalPresent = reinterpret_cast<PresentFn>(vtable[kPresentVTableIndex]);
 

@@ -90,6 +90,14 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
 - **[SKSE64](https://skse.silverlock.org/)**
 - **[Address Library for SKSE Plugins](https://www.nexusmods.com/skyrimspecialedition/mods/32444)**
 
+### Skyrim VR (experimental, untested)
+
+The plugin is built for all three runtimes at once (CommonLibSSE-NG) and should load
+under **SKSEVR** with the **VR Address Library for SKSEVR** — same archive, no separate
+VR build. It has **not been verified in-game**: the logic is runtime-neutral, but the
+UI currently draws on the desktop mirror rather than inside the headset. See
+[docs/VR.md](docs/VR.md) for the status, requirements and the test checklist.
+
 ## Installation
 
 Install `dist/IsekaiHero-v*.7z` with your mod manager (data-relative layout)
