@@ -210,3 +210,34 @@ offenen Spielmenü. Offen / auf der Roadmap:
   unterstützten Actor Values (Resistenzen, Regen-Raten). Move Speed läuft schon
   über direktes `kSpeedMult`-Setzen; Attack Speed bleibt bewusst außen vor
   (Animations-/Mod-Konflikte, vom User selbst so eingeordnet).
+
+---
+
+## SkyrimNet — Ausbau der AI-NPC-Integration
+
+**Status:** 🅿️ Geparkt — MVP steht (Push von Segen/Milestones als World-Knowledge,
+Commit `87ab76f`), erst nach Tester-Verifikation weiter. Reihenfolge unten.
+
+**Tier 1 — billig, bleibt skriptfrei (baut auf dem Push-MVP auf):**
+- **Otherworlder-Persona:** beim Reincarnate eine Spieler-Bio pushen (aus anderer Welt,
+  erinnert sich an eine moderne Welt) → Fish-out-of-water-Dialoge in beide Richtungen.
+- **Past-Life-Memories:** Erinnerungsfetzen aus dem alten Leben als Memories seeden.
+- **Awakening als Moment:** beim Level-Up-Flourish ein Short-Lived-Event → NPCs reagieren
+  sofort auf das Licht/den Machtschub. Dormant-Erwachen zusätzlich hoch-salient + evtl.
+  kurzer Voice-Effekt.
+
+**Tier 2 — braucht Decorator (kleiner Papyrus-Glue, bricht Skriptfreiheit):**
+- **Live-Aura-Decorator:** NPCs kennen den *aktuellen* Zustand in jedem Gespräch (Tier,
+  dormant/erwacht, letzte Titel), nicht nur vergangene Events.
+- **Legende skaliert:** NPC-Gerede wird ehrfürchtiger mit Milestone-Zahl/höchstem Titel.
+
+**Tier 3 — Marquee, groß/riskant:**
+- **Das „[SYSTEM]" als LLM-Stimme:** kontextbezogene System-Meldungen statt fester Strings,
+  personalisierte System-Direktiven. Kern der Isekai-Fantasie, aber Tonkontrolle +
+  LLM-Latenz/Kosten.
+
+**Bewusst nicht:** System-Actions als Ersatz für echte Quests (überschneidet sich mit
+Quest-Mods; Isekai lebt eher vom *Reagieren* der Welt).
+
+Details + offene Verifikationspunkte (DLL-Name, `SkyrimNetApi`-Signaturen) siehe
+`src/SkyrimNet.cpp` und `README`.
