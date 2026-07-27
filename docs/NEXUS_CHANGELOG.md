@@ -15,7 +15,7 @@ Added: **Reboot button** in the System menu — re-pick your blessing on an exis
 
 Added: **Reworked System status menu** (PrismaUI patch) — a proper dashboard with tier header, milestone/point tiles, attunements and a scrolling titles list that stays on screen no matter how many you have.
 
-Added: **Optional SkyrimNet integration** — if you run SkyrimNet, AI NPCs can react to your reincarnation and the deeds the System recognises. Does nothing without SkyrimNet; toggle in the ini.
+Added: **Optional SkyrimNet integration (experimental, untested)** — if you run SkyrimNet, AI NPCs can react to your reincarnation and the deeds the System recognises. Not yet verified in-game with SkyrimNet running; does nothing at all without SkyrimNet, so it is safe for everyone else. Toggle in the ini.
 
 Added: **Skyrim VR now loads** (experimental) — the mod no longer crashes on SkyrimVR, and its forms resolve there. In VR the UI needs the PrismaUI VR build. Still community-testing.
 

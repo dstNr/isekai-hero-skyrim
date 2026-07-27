@@ -30,10 +30,12 @@ from their tier.
   existing character (e.g. Hero → a Shattered Dormant run) without the fragile
   uninstall/reinstall dance. Two-click confirm; milestones, skill tree and System Points
   are kept. Stats a previous *Full* blessing already handed out are not clawed back.
-- **Optional SkyrimNet integration** (AI-driven NPCs): when SkyrimNet is installed, the
-  mod pushes the player's System status — reincarnation, tier, each milestone — as
-  persistent world-knowledge so AI NPCs can react to the isekai premise. One-way,
-  soft-detected, does nothing without SkyrimNet, toggle in the ini. Community-testing.
+- **Optional SkyrimNet integration — experimental, untested** (AI-driven NPCs): when
+  SkyrimNet is installed, the mod pushes the player's System status — reincarnation,
+  tier, each milestone — as persistent world-knowledge so AI NPCs can react to the isekai
+  premise. One-way, soft-detected, does nothing without SkyrimNet, toggle in the ini.
+  **Not yet verified in-game with SkyrimNet running** (like the VR support below); it is
+  inert for anyone without SkyrimNet, so it cannot affect other setups.
 
 ### Fixed
 - **Character level no longer drops to 1 after a load.** The blessing's level (e.g. 150
