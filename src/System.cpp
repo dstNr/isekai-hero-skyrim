@@ -83,6 +83,37 @@ namespace Isekai {
 
         // Hand over one blessing's flat grant, and report the per-stat attribute bonus
         // that came with it (for the log line). Split out of ApplyReincarnation because
+        // Raise the player's character level to a_target, never lower.
+        //
+        // For the PLAYER the level is stored in the ActorBase's actorData.level, but that
+        // does NOT survive a save/load on its own — the player's base reverts, so the
+        // level dropped back to 1 on load (reported bug). Everything else the blessing
+        // grants (skills, attributes, perks, gold) goes through channels that DO persist,
+        // so only the number was affected. We therefore re-assert the level on every load
+        // in ReapplyLevelOnLoad, the same derive-on-load approach the passives use.
+        //
+        // The before/after GetLevel is logged on purpose: if the engine does not report
+        // the new level here, actorData.level is not the field the player's level reads
+        // from and we need the XP/AdvanceLevel path instead — the log tells a tester which.
+        void SetPlayerLevelAtLeast(std::uint16_t a_target) {
+            if (a_target == 0) {
+                return;
+            }
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            if (!player) {
+                return;
+            }
+            const std::uint16_t before = player->GetLevel();
+            if (a_target <= before) {
+                return;  // already at or past it — never demote
+            }
+            if (auto* base = player->GetActorBase()) {
+                base->actorData.level = a_target;
+                logger::info("Player level: {} -> requested {} (GetLevel reads back {})", before,
+                             a_target, player->GetLevel());
+            }
+        }
+
         // a DORMANT awakening pays out the very same grant, just years of play later.
         //
         // Blessings only ever RAISE — on an existing save the character may already be
@@ -116,11 +147,7 @@ namespace Isekai {
                     avOwner->SetBaseActorValue(av, avOwner->GetBaseActorValue(av) + attrBonus);
                 }
             }
-            if (b.playerLevel > currentLevel) {
-                if (auto* base = player->GetActorBase()) {
-                    base->actorData.level = b.playerLevel;
-                }
-            }
+            SetPlayerLevelAtLeast(b.playerLevel);
 
             GrantPerkPoints(b.perkPoints);
             GrantDragonSouls(b.dragonSouls);
@@ -740,6 +767,18 @@ namespace Isekai {
             logger::info("State reverted to defaults (new game / pre-load)");
         }
 
+        // Re-assert the blessing's character level after a load. The player's level does
+        // not persist when set through actorData.level (it reverted to 1 on load), so we
+        // rebuild it from the save's memory here — the flat start's level for the tier
+        // whose grant was handed over (grantTier). NORMAL / SHATTERED / a gift-less CUSTOM
+        // build granted no level, so this is a no-op there.
+        void ReapplyLevelOnLoad() {
+            if (!g_state.reincarnated) {
+                return;
+            }
+            SetPlayerLevelAtLeast(BlessingFor(g_state.grantTier).playerLevel);
+        }
+
         // ------------------------------------------------------------------
         // SKSE lifecycle
         // ------------------------------------------------------------------
@@ -785,6 +824,9 @@ namespace Isekai {
                 // as whatever the ESP says (zero) on every load. Rebuild them from the
                 // milestones the save *does* remember.
                 Passives::Refresh();
+                // The character level doesn't persist for the player either — re-assert
+                // the blessing's level so it stops dropping to 1 on load.
+                ReapplyLevelOnLoad();
                 // Chests stocked by earlier builds still hold the Creation Club
                 // ingredients that made the crafting shuttle stutter — clean them out.
                 Storage::PruneForeignStock();

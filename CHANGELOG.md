@@ -31,6 +31,11 @@ Accumulating for the next release. Save-safe.
   soft-detected, does nothing without SkyrimNet, toggle in the ini. Community-testing.
 
 ### Fixed
+- **Character level no longer drops to 1 after a load.** The blessing's level (e.g. 150
+  for a full ASCENDED) is stored on the player's actor base, which does not persist for
+  the player — so it reverted on load. It is now re-asserted from the save's memory on
+  every load, the same way the passives are. (The rest of the blessing — skills,
+  attributes, perks, gold — always persisted; only the level number was affected.)
 - **Skyrim VR no longer crashes on load.** The ImGui overlay hooked the desktop swap
   chain, which is invalid on the VR renderer — it now skips that hook in VR. In VR all
   UI goes through the PrismaUI patch (needs PrismaUI's 1.5.0 VR build); the reincarnation
