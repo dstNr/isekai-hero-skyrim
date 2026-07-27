@@ -46,9 +46,19 @@ die man bei einem VR-Bringup prüft.
    → Echtes VR-UI ist **Phase 2** (In-HMD-Rendering via OpenVR-Overlay/Stereo-Targets
      oder — kleiner — ein Fallback auf spieleigene `MessageBox`-Menüs für die Panels,
      die die Brille selbst rendert).
-3. **PrismaUI-Patch in VR.** Ebenfalls ein 2D-Overlay; ob PrismaUI VR unterstützt, ist
-   upstream ungeklärt. Für den ersten VR-Test besser den ImGui-Pfad (Basis-Mod ohne
-   Patch) verwenden.
+3. **PrismaUI-Patch in VR — upstream geklärt (Stand Juli 2026):** VR wird **nur in der
+   PrismaUI 1.5.0 VR-Alpha / 1.5.0-rc** unterstützt, als experimentelle Alpha („full VR
+   support is coming", am besten auf Meta-Headsets, Alpha-Build via Discord/Dwemer Mods,
+   nicht die stabile Nexus-Datei 148718). Die **stabile 1.4.x, gegen die unser Patch
+   gebaut ist, kann kein VR.** Heißt für uns:
+   - Der Overlay-Crash (Bug 1) liegt in UNSEREM ImGui-Overlay, nicht bei PrismaUI —
+     der ist unabhängig davon gefixt.
+   - Ein VR-Spieler, der unser PrismaUI-UI in der Brille sehen will, braucht die
+     **PrismaUI 1.5.0 VR-Alpha**, nicht die stabile 1.4.x. Unser Patch spricht die
+     V1-API an; 1.5.0 behält V1 (V2 nur additiv), sollte also weiter funktionieren —
+     ungetestet.
+   - Für den ersten reinen Lade-/Logik-Test (Bug 2) ist PrismaUI egal; da zählt nur,
+     dass Passives/Sounds/Storage auflösen.
 4. **Crafting-Hooks.** Die VR-Offsets in `CraftHooks.cpp` stammen aus der Vorarbeit und
    sind in VR nie geprüft — an einer Werkbank in VR gegentesten (Rezept-Sichtbarkeit,
    Materialabzug).
