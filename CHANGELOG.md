@@ -9,6 +9,13 @@ All notable changes to Isekai Hero are documented here. The format follows
 Accumulating for the next release. Save-safe.
 
 ### Added
+- **"Custom" blessing.** A fifth path that unbundles the tier into three independent
+  dials — starting gift, reward pace and skill-tree depth, each NORMAL/HERO/ASCENDED —
+  chosen one at a time. Lets you build, say, "the whole skill tree open but a normal
+  start and normal rewards"; it self-balances because nodes are still bought with System
+  Points earned at your chosen pace. Presets are unchanged. Save format is now v10
+  (existing saves derive the new fields from their tier, so they behave exactly as
+  before).
 - **Dedicated PrismaUI status screen.** With the PrismaUI patch the System status is now
   its own dashboard — tier header with an awakening badge, milestone/System-Point tiles,
   an attunements grid and a titles ledger — instead of the plain monospace text the

@@ -31,12 +31,12 @@ namespace Isekai::Storage {
             return GetState().reincarnated;
         }
 
-        // Only a FULL HERO/ASCENDED receives a pre-stocked chest. NORMAL — and a
-        // SHATTERED awakening, which deliberately starts at the mortal floor — keep the
-        // empty one.
+        // The starting stock follows the flat grant, so it keys off grantTier — a
+        // pre-stocked chest for a HERO/ASCENDED starting gift, an empty one for NORMAL, a
+        // SHATTERED/DORMANT start, or a CUSTOM build that took no starting gift.
         [[nodiscard]] bool GetsStartingStock() {
             const auto& state = GetState();
-            return state.reincarnated && state.power != PowerLevel::Normal && !state.shattered;
+            return state.reincarnated && state.grantTier != PowerLevel::Normal;
         }
 
         // The official game masters. We freely stock and keep their ingredients; anything

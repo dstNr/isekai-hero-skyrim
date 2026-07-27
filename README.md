@@ -36,6 +36,12 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   sealed for good. It is orthogonal to the question above, so Dormant + Shattered
   grows only the System's reach and never hands over a grant.
 
+  And a fifth, **Custom**, unbundles the tier: you set its three pieces
+  independently — the **starting gift** (flat skills/level/gold), the **reward pace**
+  (×1/×2/×4) and the **skill-tree depth** — each NORMAL/HERO/ASCENDED. So "the whole
+  tree open, but a normal start and normal rewards" is a valid build; it self-balances,
+  because you still buy every node with System Points earned at your chosen pace.
+
   Changed your mind later? The System status panel has a **Reboot** button (with a
   confirm) that re-opens this whole blessing choice on an existing character — keeping
   your milestones, skill tree and System Points. (Stats a previous *Full* blessing

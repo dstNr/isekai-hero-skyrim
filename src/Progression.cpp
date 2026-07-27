@@ -390,7 +390,14 @@ namespace Isekai::Progression {
             std::string j = "{";
             j += "\"tier\":\"" + JsonEsc(PowerName(st.power)) + "\",";
             j += "\"mode\":\"" +
-                 std::string(st.dormant ? "DORMANT" : st.shattered ? "SHATTERED" : "") + "\",";
+                 std::string(st.custom     ? "CUSTOM"
+                             : st.dormant   ? "DORMANT"
+                             : st.shattered ? "SHATTERED"
+                                            : "") + "\",";
+            // The three axes, for a CUSTOM build's detail line (all equal on a preset).
+            j += "\"rewardTier\":\"" + JsonEsc(PowerName(st.power)) + "\",";
+            j += "\"treeTier\":\"" + JsonEsc(PowerName(st.treeTier)) + "\",";
+            j += "\"grantTier\":\"" + JsonEsc(PowerName(st.grantTier)) + "\",";
             j += "\"nextAwakening\":" + std::to_string(NextAwakeningLevel()) + ",";
             j += "\"milestonesEarned\":" + std::to_string(earned) + ",";
             j += "\"milestonesTotal\":" + std::to_string(std::size(kMilestones)) + ",";
@@ -449,9 +456,15 @@ namespace Isekai::Progression {
             std::string body;
 
             body += "POWER LEVEL   " + PowerName(GetState().power) +
-                    (GetState().dormant     ? "  (DORMANT)"
+                    (GetState().custom      ? "  (CUSTOM)"
+                     : GetState().dormant   ? "  (DORMANT)"
                      : GetState().shattered ? "  (SHATTERED)"
                                             : "") + "\n";
+            if (GetState().custom) {
+                body += "  rewards " + PowerName(GetState().power) +
+                        " / tree " + PowerName(GetState().treeTier) +
+                        " / gift " + PowerName(GetState().grantTier) + "\n";
+            }
             // A dormant blessing's whole point is the promise of the next rung — show
             // it, otherwise the panel just reads as a permanently weaker NORMAL.
             if (const auto next = NextAwakeningLevel(); next > 0) {

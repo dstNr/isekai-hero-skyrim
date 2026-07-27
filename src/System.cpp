@@ -30,8 +30,9 @@ namespace Isekai {
         // --- Co-save serialization IDs ---
         constexpr std::uint32_t kSerID = 'ISKA';    // unique plugin id
         constexpr std::uint32_t kRecState = 'STAT';  // record tag
-        // 7: shattered flag; 8: repeatable node ranks; 9: dormant flag
-        constexpr std::uint32_t kVersion = 9;
+        // 7: shattered flag; 8: repeatable node ranks; 9: dormant flag;
+        // 10: grantTier / treeTier / custom (the decoupled CUSTOM axes)
+        constexpr std::uint32_t kVersion = 10;
 
         void SystemMsg(const char* a_text) {
             RE::DebugNotification(a_text);
@@ -140,12 +141,12 @@ namespace Isekai {
                 return;
             }
 
-            // A SHATTERED awakening keeps the tier (RewardScale and the deeper tree still
-            // read g_state.power) but takes no flat starting grant at all — same mortal
-            // floor as NORMAL, everything below earned rather than handed over. A DORMANT
-            // one starts at NORMAL by definition, so its blessing is empty here too and
-            // arrives later, through CheckDormantAwakening.
-            const Blessing b = g_state.shattered ? Blessing{} : BlessingFor(g_state.power);
+            // The flat starting grant follows grantTier, the dedicated field for it —
+            // NORMAL (a SHATTERED or DORMANT start, or a CUSTOM "no floor") gives an empty
+            // blessing, HERO/ASCENDED the corresponding table. reward pace (power) and tree
+            // depth (treeTier) are separate; on a preset all three agree, on CUSTOM they may
+            // not. A DORMANT start is NORMAL here and its grant arrives later via AwakenTo.
+            const Blessing b = BlessingFor(g_state.grantTier);
             const float attrBonus = ApplyBlessing(b);
             Storage::GrantStartingMaterials();  // crafting stock, FULL HERO/ASCENDED only
 
@@ -171,10 +172,19 @@ namespace Isekai {
                 "REINCARNATION COMPLETE\n"
                 "\n"
                 "  Power level   " + PowerName(g_state.power) +
-                (g_state.dormant ? "  (DORMANT)" : g_state.shattered ? "  (SHATTERED)" : "") + "\n";
+                (g_state.custom     ? "  (CUSTOM)"
+                 : g_state.dormant  ? "  (DORMANT)"
+                 : g_state.shattered ? "  (SHATTERED)"
+                                     : "") + "\n";
             if (g_state.dormant) {
                 body += "  Awakens at    level " +
                         std::to_string(Config::DormantHeroLevel()) + "\n";
+            }
+            // A CUSTOM build's three dials rarely agree, so spell them out.
+            if (g_state.custom) {
+                body += "  Rewards       " + PowerName(g_state.power) + "\n";
+                body += "  Skill tree    " + PowerName(g_state.treeTier) + "\n";
+                body += "  Starting gift " + PowerName(g_state.grantTier) + "\n";
             }
             body +=
                 "\n"
@@ -231,9 +241,81 @@ namespace Isekai {
                 std::vector<std::string>{ "FULL AWAKENING", "SHATTERED" },
                 [](int a_idx) {
                     g_state.shattered = (a_idx == 1);
+                    // Full hands over the tier's flat grant; Shattered takes none. (For a
+                    // dormant blessing grantTier stays NORMAL now and each awakening sets
+                    // it in AwakenTo.) treeTier was already set to the tier in
+                    // ShowPowerSelection, so it is unaffected either way.
+                    g_state.grantTier = (g_state.shattered || g_state.dormant)
+                                            ? PowerLevel::Normal
+                                            : g_state.power;
                     logger::info("Awakening path: {}{}", g_state.shattered ? "SHATTERED" : "FULL",
                                  g_state.dormant ? " (DORMANT)" : "");
                     ApplyReincarnation();
+                });
+        }
+
+        // ---- CUSTOM build: the three axes, chosen one by one ----
+
+        // A single reusable tier question (NORMAL/HERO/ASCENDED) that stores the pick via
+        // a_set and then runs a_next.
+        void AskTier(std::string a_prompt, std::function<void(PowerLevel)> a_set,
+                     std::function<void()> a_next) {
+            UI::ShowSystemWindow(
+                "[ SYSTEM ]", std::move(a_prompt),
+                std::vector<std::string>{ "NORMAL", "HERO", "ASCENDED" },
+                [a_set = std::move(a_set), a_next = std::move(a_next)](int a_idx) {
+                    a_set(static_cast<PowerLevel>(std::clamp(a_idx, 0, 2)));
+                    a_next();
+                });
+        }
+
+        void ShowCustomBuilder() {
+            // Three independent dials, asked in turn: starting grant, reward pace, tree
+            // ceiling. Each is a plain tier pick; the last applies the build.
+            AskTier(
+                "CUSTOM — 1 of 3: STARTING GIFT\n"
+                "\n"
+                "The flat head start handed over at birth — skills, level,\n"
+                "gold and seed points.\n"
+                "\n"
+                "  NORMAL    Nothing. Begin as any mortal.\n"
+                "  HERO      A hero's start.\n"
+                "  ASCENDED  A transcendent's fortune.",
+                [](PowerLevel t) { g_state.grantTier = t; },
+                []() {
+                    AskTier(
+                        "CUSTOM — 2 of 3: REWARD PACE\n"
+                        "\n"
+                        "How fast the System keeps paying out — milestone\n"
+                        "passives, System Points, dragon souls, perk points.\n"
+                        "\n"
+                        "  NORMAL    x1. The honest grind.\n"
+                        "  HERO      x2.\n"
+                        "  ASCENDED  x4.",
+                        [](PowerLevel t) { g_state.power = t; },
+                        []() {
+                            AskTier(
+                                "CUSTOM — 3 of 3: SKILL TREE\n"
+                                "\n"
+                                "How deep the tree opens. You still buy each node\n"
+                                "with System Points, so a deep tree on a NORMAL\n"
+                                "pace is access, not a free ride.\n"
+                                "\n"
+                                "  NORMAL    The self-made half.\n"
+                                "  HERO      + the Omniscience gifts.\n"
+                                "  ASCENDED  + the World Tree capstone.",
+                                [](PowerLevel t) { g_state.treeTier = t; },
+                                []() {
+                                    g_state.custom = true;
+                                    g_state.dormant = false;
+                                    g_state.shattered = false;
+                                    logger::info("Custom build: reward={} tree={} grant={}",
+                                                 PowerName(g_state.power),
+                                                 PowerName(g_state.treeTier),
+                                                 PowerName(g_state.grantTier));
+                                    ApplyReincarnation();
+                                });
+                        });
                 });
         }
 
@@ -251,16 +333,30 @@ namespace Isekai {
                     std::to_string(Config::DormantHeroLevel()) + ", then to\n"
                 "            ASCENDED at level " +
                     std::to_string(Config::DormantAscendedLevel()) + ".\n"
+                "  CUSTOM    Set the pieces yourself — starting gift,\n"
+                "            reward pace and skill-tree depth, each on\n"
+                "            its own.\n"
                 "\n"
                 "Choose your path:",
-                std::vector<std::string>{ "NORMAL", "HERO", "ASCENDED", "DORMANT" },
+                std::vector<std::string>{ "NORMAL", "HERO", "ASCENDED", "DORMANT", "CUSTOM" },
                 [](int a_idx) {
+                    // CUSTOM sets the three axes apart in its own builder.
+                    if (a_idx == 4) {
+                        ShowCustomBuilder();
+                        return;
+                    }
                     g_state.shattered = false;
+                    g_state.custom = false;
                     // DORMANT is not a fourth tier: it starts at NORMAL and climbs the
                     // same ladder on its own, so g_state.power stays the tier held now.
                     g_state.dormant = (a_idx == 3);
                     g_state.power = g_state.dormant ? PowerLevel::Normal
                                                     : static_cast<PowerLevel>(std::clamp(a_idx, 0, 2));
+                    // For a preset the reward tier, the tree ceiling and (via Full) the
+                    // grant all agree: tree opens to the tier now; for DORMANT the tree
+                    // grows with each awakening (AwakenTo raises treeTier too).
+                    g_state.treeTier = g_state.power;
+                    g_state.grantTier = PowerLevel::Normal;  // set for real in ShowPathSelection
                     logger::info("Power level selected: {} ({}{})", a_idx, PowerName(g_state.power),
                                  g_state.dormant ? ", DORMANT" : "");
                     // NORMAL has no floor to skip, so it never asks; HERO/ASCENDED and
@@ -291,11 +387,13 @@ namespace Isekai {
 
         void AwakenTo(PowerLevel a_tier) {
             const PowerLevel from = g_state.power;
-            g_state.power = a_tier;  // before the grant: the stock check reads the tier
+            g_state.power = a_tier;      // reward tier catches up to the awakening
+            g_state.treeTier = a_tier;   // and the tree opens to it
 
             // SHATTERED means the tier arrives bare — the faster reward pace and the
             // deeper tree open up, nothing is handed over.
             if (!g_state.shattered) {
+                g_state.grantTier = a_tier;  // this awakening did hand over its grant
                 ApplyBlessing(BlessingFor(a_tier));
                 // The starting stock is a *starting* stock: it comes with the first
                 // awakening only. The second one just gains the tiers' new material
@@ -517,10 +615,16 @@ namespace Isekai {
 
             a_intf->WriteRecordData(g_state.dormant);  // v9
 
+            a_intf->WriteRecordData(g_state.grantTier);  // v10
+            a_intf->WriteRecordData(g_state.treeTier);
+            a_intf->WriteRecordData(g_state.custom);
+
             logger::info(
-                "State saved (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={}, dormant={})",
+                "State saved (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={}, "
+                "dormant={}, custom={}, grant={}, tree={})",
                 g_state.reincarnated, count, nodes, g_state.systemPoints, g_state.shattered,
-                g_state.dormant);
+                g_state.dormant, g_state.custom, PowerName(g_state.grantTier),
+                PowerName(g_state.treeTier));
         }
 
         void LoadCallback(SKSE::SerializationInterface* a_intf) {
@@ -606,13 +710,28 @@ namespace Isekai {
                 if (version >= 9) {
                     a_intf->ReadRecordData(g_state.dormant);
                 }
+
+                g_state.custom = false;
+                if (version >= 10) {
+                    a_intf->ReadRecordData(g_state.grantTier);
+                    a_intf->ReadRecordData(g_state.treeTier);
+                    a_intf->ReadRecordData(g_state.custom);
+                } else {
+                    // Before the axes were split, the tier drove all three: the tree
+                    // opened to `power`, and the flat grant was `power` unless shattered.
+                    // Reproduce that so an existing save behaves exactly as before.
+                    g_state.treeTier = g_state.power;
+                    g_state.grantTier = g_state.shattered ? PowerLevel::Normal : g_state.power;
+                }
             }
 
             logger::info(
-                "State loaded (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={}, dormant={})",
+                "State loaded (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={}, "
+                "dormant={}, custom={}, grant={}, tree={})",
                 g_state.reincarnated, g_state.grantedMilestones.size(),
                 g_state.unlockedNodes.size(), g_state.systemPoints, g_state.shattered,
-                g_state.dormant);
+                g_state.dormant, g_state.custom, PowerName(g_state.grantTier),
+                PowerName(g_state.treeTier));
         }
 
         void RevertCallback(SKSE::SerializationInterface*) {

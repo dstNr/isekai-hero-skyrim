@@ -429,9 +429,11 @@ namespace Isekai::SkillTree {
         if (!node) {
             return false;
         }
-        // PowerLevel is ordered Normal < Hero < Ascended, so a numeric compare is the
-        // whole gate: a higher rebirth tier unlocks everything a lower one could.
-        return static_cast<int>(GetState().power) >= static_cast<int>(node->minPower);
+        // Gated by treeTier, the dedicated "how deep the tree opens" axis — the same as
+        // the reward tier (power) for every preset, but separable on a CUSTOM build (a
+        // deep tree on a modest reward pace). PowerLevel is ordered Normal < Hero <
+        // Ascended, so a numeric compare is the whole gate.
+        return static_cast<int>(GetState().treeTier) >= static_cast<int>(node->minPower);
     }
 
     std::int32_t Points() {

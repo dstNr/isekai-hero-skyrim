@@ -58,6 +58,21 @@ namespace Isekai {
         // awakening also hands over its flat grant.
         bool dormant = false;
 
+        // The three blessing axes, normally locked together by the tier but separable on
+        // the CUSTOM path. `power` above stays the REWARD tier (reward scale + milestone
+        // perk points); these two split off the other two things a tier used to bundle:
+        //   grantTier — which flat starting grant is handed over (NORMAL = none, i.e. the
+        //               same "no floor" a SHATTERED start gives).
+        //   treeTier  — how deep the skill tree opens (which node tiers are unlockable).
+        // For every preset (and each dormant awakening) these are set to match power (or
+        // NORMAL for a shattered start), so nothing about the presets changes. Only CUSTOM
+        // sets them apart — e.g. the whole tree open (treeTier ASCENDED) on a NORMAL reward
+        // pace, which self-balances because System Points are still earned at ×1. `custom`
+        // just tags such a build so the panels can label it.
+        PowerLevel grantTier = PowerLevel::Normal;
+        PowerLevel treeTier = PowerLevel::Normal;
+        bool       custom = false;
+
         // Milestones already paid out, by their stable key. Guards against paying
         // twice — quest stage events fire more than once, and the retroactive
         // catch-up runs on every load.
