@@ -53,6 +53,16 @@ die man bei einem VR-Bringup prüft.
    sind in VR nie geprüft — an einer Werkbank in VR gegentesten (Rezept-Sichtbarkeit,
    Materialabzug).
 
+5. **Form-Auflösung (BESTÄTIGT kaputt in 0.5.0/0.5.1, jetzt gefixt).** Im VR-Log lösten
+   `TESDataHandler::LookupForm(localID, kFileName)` für ALLE unsere Forms auf null auf
+   (Passives 0/8, Sounds 0/4, Storage-Container fehlt), obwohl `DumpForms` dieselben
+   Forms fand. Fix: `Plugin::LookupOurForm<T>()` rekonstruiert die FormID über
+   `GetPartialIndex()` (dieselbe Rechnung wie DumpForms) und ruft `LookupByID` — das
+   fand die Forms im VR-Log nachweislich. Auf SE/AE identisches Ergebnis wie zuvor.
+   **Noch nicht in VR verifiziert**, aber empirisch begründet (DumpForms fand die Forms
+   im selben Log). Beim VR-Test auf `Passives: 8 of 8` und `Sounds: 4 of 4` im Log
+   achten.
+
 ## Phasen
 
 - **Phase 1 (erledigt):** VR-ladefähiger Build, Runtime-Logging, Doku, Requirements.

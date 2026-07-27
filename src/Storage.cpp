@@ -635,9 +635,7 @@ namespace Isekai::Storage {
             return;
         }
 
-        auto* data = RE::TESDataHandler::GetSingleton();
-        g_base = data ? data->LookupForm<RE::TESObjectCONT>(kContainerBase, Plugin::kFileName)
-                      : nullptr;
+        g_base = Plugin::LookupOurForm<RE::TESObjectCONT>(kContainerBase);
         if (!g_base) {
             logger::error("Storage: no container {:#08x} in {}", kContainerBase,
                           Plugin::kFileName);

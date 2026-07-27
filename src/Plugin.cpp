@@ -12,6 +12,23 @@ namespace Isekai::Plugin {
         return g_loaded.load(std::memory_order_acquire);
     }
 
+    RE::FormID ResolveLocalID(RE::FormID a_localID) {
+        auto* data = RE::TESDataHandler::GetSingleton();
+        if (!data) {
+            return 0;
+        }
+        const auto* file = data->LookupModByName(kFileName);
+        if (!file) {
+            return 0;
+        }
+        // Same reconstruction DumpForms filters by, in reverse: partial index over the
+        // local bits. Light = 12 local bits (0xFExxx already sits in the partial), a
+        // regular plugin = 24.
+        const std::uint32_t partial = file->GetPartialIndex();
+        return file->IsLight() ? (partial << 12) | (a_localID & 0x00000FFF)
+                               : (partial << 24) | (a_localID & 0x00FFFFFF);
+    }
+
     void DumpForms() {
         auto* data = RE::TESDataHandler::GetSingleton();
         if (!data) {

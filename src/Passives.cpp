@@ -115,13 +115,8 @@ namespace Isekai::Passives {
             return;
         }
 
-        auto* data = RE::TESDataHandler::GetSingleton();
-        if (!data) {
-            return;
-        }
-
         for (const auto id : kAbilityFormIDs) {
-            auto* spell = data->LookupForm<RE::SpellItem>(id, Plugin::kFileName);
+            auto* spell = Plugin::LookupOurForm<RE::SpellItem>(id);
             if (!spell) {
                 logger::error("Passives: no spell {:#08x} in {}", id, Plugin::kFileName);
                 continue;

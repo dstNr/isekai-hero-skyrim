@@ -34,18 +34,12 @@ namespace Isekai::Sounds {
         if (!Plugin::IsLoaded()) {
             return;
         }
-        auto* data = RE::TESDataHandler::GetSingleton();
-        if (!data) {
-            return;
-        }
-
         std::size_t resolved = 0;
         for (std::size_t i = 0; i < kFormIDs.size(); ++i) {
             if (kFormIDs[i] == 0) {
                 continue;  // not wired up yet
             }
-            g_descriptors[i] =
-                data->LookupForm<RE::BGSSoundDescriptorForm>(kFormIDs[i], Plugin::kFileName);
+            g_descriptors[i] = Plugin::LookupOurForm<RE::BGSSoundDescriptorForm>(kFormIDs[i]);
             if (g_descriptors[i]) {
                 ++resolved;
             } else {
