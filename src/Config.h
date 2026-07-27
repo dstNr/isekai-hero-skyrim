@@ -28,4 +28,10 @@ namespace Isekai::Config {
     // point vanilla itself treats as "you are done being mortal".
     [[nodiscard]] std::uint16_t DormantHeroLevel();
     [[nodiscard]] std::uint16_t DormantAscendedLevel();
+
+    // Feed the player's System status (blessing, milestones) to SkyrimNet, if it is
+    // installed, so AI-driven NPCs can react to the reincarnated hero. Default true, but
+    // it only ever does anything when SkyrimNet is actually present — off is for players
+    // who run SkyrimNet yet want no System context in it. See src/SkyrimNet.cpp.
+    [[nodiscard]] bool SkyrimNetIntegration();
 }

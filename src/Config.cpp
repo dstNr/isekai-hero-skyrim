@@ -17,6 +17,7 @@ namespace Isekai::Config {
         std::uint32_t g_systemMenuModifier = 0x36;  // DIK_RSHIFT
         std::uint16_t g_dormantHeroLevel = 25;
         std::uint16_t g_dormantAscendedLevel = 80;
+        bool          g_skyrimNetIntegration = true;
 
         [[nodiscard]] std::string Trim(std::string a_s) {
             const auto notSpace = [](unsigned char c) { return !std::isspace(c); };
@@ -65,6 +66,7 @@ namespace Isekai::Config {
         g_systemMenuModifier = 0x36;  // DIK_RSHIFT
         g_dormantHeroLevel = 25;
         g_dormantAscendedLevel = 80;
+        g_skyrimNetIntegration = true;
 
         std::ifstream in(kIniPath);
         if (!in) {
@@ -96,6 +98,8 @@ namespace Isekai::Config {
                 g_dormantHeroLevel = AsLevel(val, g_dormantHeroLevel);
             } else if (key == "dormantascendedlevel") {
                 g_dormantAscendedLevel = AsLevel(val, g_dormantAscendedLevel);
+            } else if (key == "skyrimnetintegration") {
+                g_skyrimNetIntegration = AsBool(val);
             }
         }
 
@@ -109,9 +113,9 @@ namespace Isekai::Config {
         }
 
         logger::info("Config: HideSealedNodes={}, SystemMenuKey={:#x}, SystemMenuModifier={:#x}, "
-                     "DormantHeroLevel={}, DormantAscendedLevel={}",
+                     "DormantHeroLevel={}, DormantAscendedLevel={}, SkyrimNetIntegration={}",
                      g_hideSealedNodes, g_systemMenuKey, g_systemMenuModifier, g_dormantHeroLevel,
-                     g_dormantAscendedLevel);
+                     g_dormantAscendedLevel, g_skyrimNetIntegration);
     }
 
     bool HideSealedNodes() {
@@ -132,5 +136,9 @@ namespace Isekai::Config {
 
     std::uint16_t DormantAscendedLevel() {
         return g_dormantAscendedLevel;
+    }
+
+    bool SkyrimNetIntegration() {
+        return g_skyrimNetIntegration;
     }
 }

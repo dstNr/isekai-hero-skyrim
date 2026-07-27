@@ -83,6 +83,12 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
 - **Custom UI & sound.** Solo-Leveling-inspired panels (glow frames, corner
   brackets, typewriter reveal, monospace terminal font), custom SFX routed
   through the game's audio system, icon buttons, ESC handled properly.
+- **Optional [SkyrimNet](https://github.com/MinLL/SkyrimNet-GamePlugin) integration.**
+  When SkyrimNet (AI-driven NPCs) is installed, the mod pushes the player's System
+  status to it — the reincarnation and tier, and each milestone earned — as persistent
+  world-knowledge, so AI NPCs can react to the isekai premise. One-way and
+  soft-detected: no build- or load-time dependency, does nothing without SkyrimNet, and
+  can be switched off in `IsekaiHero.ini`. Still community-testing (see `src/SkyrimNet.cpp`).
 
 ## Requirements
 

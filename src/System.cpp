@@ -6,6 +6,7 @@
 #include "Plugin.h"
 #include "Progression.h"
 #include "SkillTree.h"
+#include "SkyrimNet.h"
 #include "Sounds.h"
 #include "Storage.h"
 #include "UI/LevelUpEffect.h"
@@ -153,6 +154,19 @@ namespace Isekai {
                 PowerName(g_state.power), b.skillLevel, b.playerLevel, b.perkPoints, attrBonus,
                 b.gold, b.dragonSouls);
 
+            // Tell SkyrimNet (if present) who the player now is, so AI NPCs can react to
+            // the reincarnation. Persistent world-knowledge, third person. No-op without
+            // SkyrimNet.
+            SkyrimNet::PushEvent(
+                "isekai_awakening",
+                "This person has been reincarnated into this world as a hero bound to a "
+                "mysterious progression System" +
+                    std::string(g_state.dormant ? ", though its power still lies dormant and "
+                                                  "will awaken as they grow stronger. "
+                                                : ". ") +
+                    "An otherworldly power (System tier: " + PowerName(g_state.power) +
+                    ") clings to them, sensed faintly by those around them.");
+
             std::string body =
                 "REINCARNATION COMPLETE\n"
                 "\n"
@@ -297,6 +311,11 @@ namespace Isekai {
             logger::info("Dormant awakening: {} -> {} at level {}{}", PowerName(from),
                          PowerName(a_tier), player ? player->GetLevel() : 0,
                          g_state.shattered ? " (SHATTERED)" : "");
+
+            SkyrimNet::PushEvent(
+                "isekai_awakening",
+                "The dormant System within this hero has awakened further, rising to tier " +
+                    PowerName(a_tier) + ". Their otherworldly power grows more palpable.");
 
             const bool  ascended = (a_tier == PowerLevel::Ascended);
             std::string body =
@@ -617,6 +636,7 @@ namespace Isekai {
                 CraftHooks::Install();  // zero-transfer crafting (validation build for now)
                 UI::Install();
                 UI::Prisma::Install();  // optional web UI; no-op without the patch
+                SkyrimNet::Install();   // optional AI-NPC context; no-op without SkyrimNet
                 Progression::Install();
 
                 if (auto* ui = RE::UI::GetSingleton()) {

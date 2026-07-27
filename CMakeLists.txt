@@ -27,6 +27,8 @@ add_commonlibsse_plugin(
         src/Progression.h
         src/SkillTree.cpp
         src/SkillTree.h
+        src/SkyrimNet.cpp
+        src/SkyrimNet.h
         src/Sounds.cpp
         src/Sounds.h
         src/Storage.cpp

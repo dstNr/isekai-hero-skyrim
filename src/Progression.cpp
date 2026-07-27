@@ -2,6 +2,7 @@
 
 #include "Config.h"
 #include "Passives.h"
+#include "SkyrimNet.h"
 #include "Storage.h"
 #include "System.h"
 #include "UI/Input.h"
@@ -223,6 +224,14 @@ namespace Isekai::Progression {
             logger::info("Milestone granted: {} — passive '{}' ({}), perks +{}, souls +{} (scale x{})",
                          a_milestone.questName, a_milestone.passive.name,
                          PassiveEffectText(a_milestone.passive), perks, souls, RewardScale());
+
+            // Let SkyrimNet's AI NPCs know the System just recognised this deed, so they
+            // can reference the hero's growing legend. No-op without SkyrimNet.
+            SkyrimNet::PushEvent(
+                "isekai_milestone",
+                "The System recognised this hero's deed (" + std::string(a_milestone.questName) +
+                    ") and granted them the title \"" + std::string(a_milestone.passive.name) +
+                    "\".");
             return true;
         }
 
