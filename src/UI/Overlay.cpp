@@ -205,6 +205,21 @@ namespace Isekai::UI {
     }
 
     void Install() {
+        // VR crashes here, so we do NOT hook in VR. RE::BSGraphics::Renderer's layout
+        // is only valid for the flat-screen editions; under Skyrim VR the same struct
+        // read yields a bogus (non-null) renderWindows[0].swapChain, and dereferencing
+        // its vtable to grab Present is an access violation on load (reported CTD at
+        // Overlay.cpp, EXCEPTION_ACCESS_VIOLATION). The ImGui overlay would only have
+        // drawn on the desktop mirror in VR anyway, never in the headset — a proper
+        // in-HMD path is future work (see docs/VR.md). Until then VR simply gets no
+        // ImGui overlay; the rest of the mod loads and runs.
+        if (REL::Module::IsVR()) {
+            logger::warn("UI: Skyrim VR detected — skipping the ImGui overlay hook "
+                         "(in-headset UI not implemented; would otherwise crash on the "
+                         "VR renderer layout). See docs/VR.md.");
+            return;
+        }
+
         auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
         if (!renderer) {
             logger::error("UI: no renderer — overlay not installed");
@@ -215,16 +230,6 @@ namespace Isekai::UI {
         if (!swapChain) {
             logger::error("UI: no swap chain — overlay not installed");
             return;
-        }
-
-        // VR note: renderWindows[0] is the desktop MIRROR swap chain, so in VR this
-        // overlay draws on the monitor, not inside the headset (in-HMD rendering is a
-        // separate, later effort). We still hook it — the mirror UI is Phase-1 usable —
-        // but this is the first thing a VR tester should confirm doesn't misbehave, as
-        // the RendererData layout is only asserted for the flat-screen editions.
-        if (REL::Module::IsVR()) {
-            logger::warn("UI: VR detected — overlay will render to the desktop mirror only "
-                         "(in-headset UI not implemented yet)");
         }
 
         auto** vtable = *reinterpret_cast<void***>(swapChain);

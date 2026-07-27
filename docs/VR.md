@@ -34,17 +34,18 @@ die man bei einem VR-Bringup prüft.
 
 1. **Lädt das Plugin überhaupt?** Log auf `Runtime edition: Skyrim VR` prüfen. Wenn
    die Zeile fehlt oder SKSEVR das Plugin ablehnt → VR Address Library / SKSEVR-Version.
-2. **Overlay/UI (der große Punkt).** Das ImGui-Overlay hookt `IDXGISwapChain::Present`
-   der Desktop-**Mirror**-Swap-Chain (`renderWindows[0]`, `src/UI/Overlay.cpp`). Das
-   heißt bestenfalls: UI erscheint **auf dem Monitor, nicht in der Brille**. Zwei
-   Dinge zu klären:
-   - Crasht der Zugriff `renderer->data.renderWindows[0].swapChain` in VR? Das
-     `RendererData`-Layout ist nur für die Flat-Editionen per `static_assert` fixiert.
-   - Ist die Mirror-UI überhaupt bedienbar (Maus/Tastatur), oder braucht es die
-     In-HMD-Lösung sofort?
-   → Das ist der Inhalt von **Phase 2** (In-HMD-Rendering via OpenVR-Overlay oder
-     Kompositing in die Stereo-Targets). Ohne die ist die Segenswahl in VR ggf. nur
-     über den Monitor bedienbar.
+2. **Overlay/UI (der große Punkt) — BESTÄTIGT: crasht in VR, jetzt deaktiviert.**
+   Das ImGui-Overlay hookte `IDXGISwapChain::Present` der Desktop-**Mirror**-Swap-Chain
+   (`renderWindows[0]`, `src/UI/Overlay.cpp`). In VR liefert derselbe Struct-Zugriff
+   einen **ungültigen, aber nicht-null** `swapChain` (das `RendererData`-Layout ist nur
+   für die Flat-Editionen per `static_assert` fixiert) — das Dereferenzieren seiner
+   vtable war ein sofortiger `EXCEPTION_ACCESS_VIOLATION` beim Laden (von einem Tester
+   mit 0.5.0 gemeldet, `Overlay.cpp:221`). **Seit dem Fix wird der Overlay-Hook in VR
+   per `REL::Module::IsVR()` übersprungen** — kein Crash mehr, aber in VR gibt es
+   dadurch **kein ImGui-UI** (die Segenswahl über den ImGui-Pfad erscheint nicht).
+   → Echtes VR-UI ist **Phase 2** (In-HMD-Rendering via OpenVR-Overlay/Stereo-Targets
+     oder — kleiner — ein Fallback auf spieleigene `MessageBox`-Menüs für die Panels,
+     die die Brille selbst rendert).
 3. **PrismaUI-Patch in VR.** Ebenfalls ein 2D-Overlay; ob PrismaUI VR unterstützt, ist
    upstream ungeklärt. Für den ersten VR-Test besser den ImGui-Pfad (Basis-Mod ohne
    Patch) verwenden.
@@ -54,7 +55,10 @@ die man bei einem VR-Bringup prüft.
 
 ## Phasen
 
-- **Phase 1 (erledigt, ungetestet):** VR-ladefähiger Build, Runtime-Logging, Doku,
-  Requirements. UI vorerst nur auf dem Mirror.
-- **Phase 2 (offen):** UI in die Brille bringen. Erst sinnvoll, wenn eine
-  VR-Testumgebung existiert — sonst blind.
+- **Phase 1 (erledigt):** VR-ladefähiger Build, Runtime-Logging, Doku, Requirements.
+  Der Overlay-Crash ist behoben (Hook wird in VR übersprungen) — die Mod lädt und die
+  Logik läuft, aber in VR gibt es vorerst kein UI.
+- **Phase 2 (offen):** UI in die Brille bringen. Zwei Wege: (a) In-HMD-Rendering via
+  OpenVR-Overlay/Stereo-Targets (aufwändig), oder (b) für die Panels ein Fallback auf
+  spieleigene `MessageBox`-Menüs (rendert die Brille nativ; der Skill-Tree bleibt der
+  schwierige Fall). Sinnvoll erst mit VR-Testumgebung.
