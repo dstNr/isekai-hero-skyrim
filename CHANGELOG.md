@@ -4,9 +4,13 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
-## [Unreleased]
+## [0.6.0] — 2026-07-27
 
-Accumulating for the next release. Save-safe.
+A big content-and-polish release on top of 0.5.x: a fully configurable blessing, a
+proper status dashboard, a way to re-choose your path mid-run, optional AI-NPC
+integration, and the groundwork for Skyrim VR — plus a fix for the character level
+resetting on load. Save-safe: existing saves keep everything and derive the new fields
+from their tier.
 
 ### Added
 - **"Custom" blessing.** A fifth path that unbundles the tier into three independent
@@ -17,10 +21,11 @@ Accumulating for the next release. Save-safe.
   (existing saves derive the new fields from their tier, so they behave exactly as
   before).
 - **Dedicated PrismaUI status screen.** With the PrismaUI patch the System status is now
-  its own dashboard — tier header with an awakening badge, milestone/System-Point tiles,
-  an attunements grid and a titles ledger — instead of the plain monospace text the
-  generic panel showed. Its footer carries the Skill Tree / Storage / Reboot / Close
-  actions (Reboot two-click). The built-in ImGui ledger is unchanged.
+  its own dashboard — tier header with an awakening badge and the Skill Tree / Storage
+  icon buttons, milestone/System-Point tiles, an attunements grid and a scrolling titles
+  ledger (bounded, so it stays on screen even with every milestone earned) — instead of
+  the plain monospace text the generic panel showed. Reboot and Close sit in the footer
+  (Reboot two-click). The built-in ImGui ledger is unchanged.
 - **"Reboot System" button** in the status panel: re-opens the blessing choice on an
   existing character (e.g. Hero → a Shattered Dormant run) without the fragile
   uninstall/reinstall dance. Two-click confirm; milestones, skill tree and System Points
@@ -43,7 +48,7 @@ Accumulating for the next release. Save-safe.
 - **VR form resolution.** Our spells/sounds/storage container resolved to null in VR;
   they now resolve via the plugin's partial index, the way the form dump already did.
 
-## [0.5.1] — 2026-07-27
+## [0.5.1] — 2026-07-26
 
 A small follow-up to 0.5.0, both fixes in the PrismaUI path. No save format change.
 
@@ -294,6 +299,7 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[0.6.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.6.0
 [0.5.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.5.1
 [0.5.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.5.0
 [0.4.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.4.0

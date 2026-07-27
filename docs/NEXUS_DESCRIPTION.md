@@ -26,9 +26,12 @@ The first time you gain control of your character — regardless of how you star
 [*][b]HERO[/b] — the classic isekai protagonist: skills at 50, level 25, a head start in gold, souls and perk points. All future rewards ×2.
 [*][b]ASCENDED[/b] — the overpowered rebirth: all skills 100, level 150 with matching attributes, maximum perk points, a fortune. All future rewards ×4.
 [*][b]DORMANT[/b] — the blessing sleeps instead of being taken. You begin as an ordinary mortal and the System wakes on its own: [b]HERO at level 25[/b], [b]ASCENDED at level 80[/b]. Nothing is handed to you early, and nothing stays sealed for good.
+[*][b]CUSTOM[/b] — set the pieces yourself. The [b]starting gift[/b], the [b]reward pace[/b] and the [b]skill-tree depth[/b] are each chosen on their own (NORMAL/HERO/ASCENDED), so a build like "the whole tree open, but a normal start and normal rewards" is entirely valid. It self-balances — you still buy every node with System Points earned at your chosen pace.
 [/list]
 
 Taking HERO or ASCENDED — or letting them come to you as DORMANT — then asks a second question: [b]how[/b] the power reaches you. [b]Full[/b] grants the flat start above. [b]Shattered[/b] keeps only what the tier is worth over time — the reward multiplier and the deeper skill tree — and drops you at the same mortal floor as NORMAL. The higher ceiling, earned rather than handed over.
+
+Changed your mind later? The System status menu has a [b]Reboot[/b] button that re-opens this whole choice on an existing character — keeping your milestones, skill tree and System Points.
 
 [size=4][b]The System watches your deeds[/b][/size]
 [b]79 quest milestones[/b] across the main quest, the Companions, the College of Winterhold, the Thieves Guild, the Dark Brotherhood, the Civil War, Dawnguard and Dragonborn. Completing one triggers a level-up flourish — expanding rings, a title, custom sound — and pays out:

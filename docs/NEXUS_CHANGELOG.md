@@ -7,6 +7,22 @@ sind noch im alten, längeren Stil — so liegen sie bereits auf Nexus.)
 
 ---
 
+## 0.6.0
+
+Added: **Custom blessing** — a fifth path that lets you set the three pieces separately: starting gift, reward pace and skill-tree depth, each NORMAL/HERO/ASCENDED. So "the whole tree open but a normal start and rewards" is a valid build.
+
+Added: **Reboot button** in the System menu — re-pick your blessing on an existing character (e.g. switch to a Shattered Dormant run) without uninstalling; your milestones, skill tree and points are kept.
+
+Added: **Reworked System status menu** (PrismaUI patch) — a proper dashboard with tier header, milestone/point tiles, attunements and a scrolling titles list that stays on screen no matter how many you have.
+
+Added: **Optional SkyrimNet integration** — if you run SkyrimNet, AI NPCs can react to your reincarnation and the deeds the System recognises. Does nothing without SkyrimNet; toggle in the ini.
+
+Added: **Skyrim VR now loads** (experimental) — the mod no longer crashes on SkyrimVR, and its forms resolve there. In VR the UI needs the PrismaUI VR build. Still community-testing.
+
+Fixed: **Character level no longer resets to 1 after loading a save.** (Skills, attributes, perks and gold were never affected — only the level number.)
+
+---
+
 ## 0.5.1
 
 Fixed: Level-up sound no longer missing with the PrismaUI patch installed.
