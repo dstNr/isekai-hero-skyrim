@@ -5,6 +5,14 @@ als `CHANGELOG.md`, das der Entwickler-Record bleibt.
 
 ---
 
+## 0.5.1
+
+Fixed: The level-up sound is no longer missing when the PrismaUI patch is installed. Closing a System panel briefly unpauses the game, and the engine was discarding the sting that played in that same instant — so it never reached the speakers. It now plays reliably. (The built-in UI was never affected.)
+
+Fixed: Higher and steadier FPS while the System menu is open with the PrismaUI patch. Two menu accents animated non-stop — a sweep under the headings and a pulsing ring on every affordable node — which forced the web UI to redraw every frame. Both are now static; the menu looks the same but lets the framerate recover.
+
+---
+
 ## 0.5.0
 
 Added: **Two new ways to receive the blessing.** After picking HERO or ASCENDED you now choose *how* it reaches you — **Full** grants the flat start as before, **Shattered** keeps only what the tier is worth over time (the reward multiplier and the deeper skill tree) and starts you at the same mortal floor as NORMAL. On top of that a fourth blessing, **DORMANT**, takes no tier at all: you begin as an ordinary mortal and the System wakes on its own, to HERO at level 25 and ASCENDED at level 80. Nothing arrives early, nothing stays sealed for good — sealed skill-tree nodes even tell you the level they awaken at. Thresholds are configurable.

@@ -1,6 +1,6 @@
 {
   "name": "isekai-hero-skse-poc",
-  "version-string": "0.5.0",
+  "version-string": "0.5.1",
   "dependencies": [
     "commonlibsse-ng",
     {

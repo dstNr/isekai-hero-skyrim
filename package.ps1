@@ -3,9 +3,9 @@
 # the ESL-flagged, FormID-compacted build — see the git history for how it was made.
 
 # -Version overrides the archive name only (nothing inside the mod carries it).
-# Use it for test builds — "0.5.0-soundfix" — so a released archive is never
+# Use it for test builds — "0.5.1-soundfix" — so a released archive is never
 # overwritten by a work-in-progress one of the same name.
-param([string]$Version = "0.5.0")
+param([string]$Version = "0.5.1")
 
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot

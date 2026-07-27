@@ -4,6 +4,27 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [0.5.1] — 2026-07-27
+
+A small follow-up to 0.5.0, both fixes in the PrismaUI path. No save format change.
+
+### Fixed
+- **The level-up sting is no longer swallowed under PrismaUI.** Closing a System
+  panel takes the game out of menu-pause, and the engine's resume pass discards any
+  sound started in that same frame — so the reincarnation/milestone sting never
+  reached the speakers. Sounds that follow a panel closing now play just past the
+  unpause frame. (The built-in ImGui UI never paused, so it was never affected.)
+- **Higher, steadier FPS while the System menu is open (PrismaUI).** Two UI accents
+  animated continuously — a sweep under the section headers and a pulsing ring on
+  every affordable node — which kept the web renderer repainting the whole view every
+  frame. Both are now static; the menu looks the same at rest but lets the renderer
+  idle, so the framerate holds.
+
+### Internal
+- The developer's real name is no longer embedded in the shipped DLL (SKSE author
+  field, PDB path, source-path strings) and the debug `.pdb` is no longer packaged.
+  No player-facing effect.
+
 ## [0.5.0] — 2026-07-24
 
 Acting on a detailed player report: more ways to play, more to spend points on, an
@@ -234,6 +255,7 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[0.5.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.5.1
 [0.5.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.5.0
 [0.4.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.4.0
 [0.3.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.3.1

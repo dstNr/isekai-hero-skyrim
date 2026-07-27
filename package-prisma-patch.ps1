@@ -10,7 +10,7 @@
 
 # -Version overrides the archive name only, same as package.ps1 — for test builds
 # that must not overwrite a released archive.
-param([string]$Version = "0.5.0")
+param([string]$Version = "0.5.1")
 
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
