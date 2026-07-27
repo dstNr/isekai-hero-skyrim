@@ -284,7 +284,11 @@
   .att b { color: var(--accent); }
 
   #sTitleSect { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-  #sTitles { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 6px; }
+  /* flex:1 + min-height:0 are BOTH needed: without min-height:0 a flex item keeps its
+     full content height (min-height:auto), so with all ~79 titles the list would grow
+     past the card instead of scrolling inside it. This is what keeps the menu bounded. */
+  #sTitles { flex: 1; min-height: 0; overflow-y: auto;
+             display: flex; flex-direction: column; gap: 4px; padding-right: 6px; }
   #sTitles::-webkit-scrollbar { width: 5px; }
   #sTitles::-webkit-scrollbar-thumb { background: rgba(90,210,255,0.3); border-radius: 3px; }
   .trow { display: grid; grid-template-columns: 1.1fr 1.2fr 1fr; gap: 10px; padding: 8px 12px;

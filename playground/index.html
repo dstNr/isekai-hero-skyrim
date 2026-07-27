@@ -90,7 +90,7 @@
   <div id="dock">
     <strong>Screens</strong>
     <button id="btnTree">Skill Tree</button>
-    <button id="btnStatus">Status</button>
+    <button id="btnStatus" title="Shift-click for the full 79-title stress test">Status</button>
     <button id="btnPanel">Dialog</button>
     <button id="btnChoice">Choice</button>
     <button id="btnFlourish">Level&nbsp;Up</button>
@@ -181,32 +181,41 @@
     // Drives the REAL dedicated status screen (Prisma::ShowStatus) with sample data,
     // so its layout — tier header, tiles, attunements, titles ledger and the footer
     // buttons incl. the two-click Reboot — is visible and clickable here.
-    document.getElementById("btnStatus").onclick = function () {
-      window.IsekaiMock.showStatus({
-        tier: "HERO",
-        mode: "CUSTOM",
-        rewardTier: "HERO",
-        treeTier: "ASCENDED",
-        grantTier: "NORMAL",
+    // Stress the layout with the FULL set (all 79 milestones granted) so the scaling
+    // can be checked — the card must stay on screen and the titles list scroll inside.
+    // The Reset ("×3") button shows the light case instead.
+    function statusData(full) {
+      var titles = [
+        { name: "Survivor",   effect: "+100 Health",       quest: "Unbound" },
+        { name: "Wayfarer",   effect: "+100 Carry Weight", quest: "Before the Storm" },
+        { name: "Dragonborn", effect: "+15% Magic Resist", quest: "The Way of the Voice" }
+      ];
+      if (full) {
+        titles = [];
+        for (var i = 1; i <= 79; i++) {
+          titles.push({ name: "Title " + i, effect: "+" + (i * 2) + " Health",
+                        quest: "Quest milestone number " + i });
+        }
+      }
+      return {
+        tier: "ASCENDED", mode: "CUSTOM",
+        rewardTier: "ASCENDED", treeTier: "ASCENDED", grantTier: "ASCENDED",
         nextAwakening: 0,
-        milestonesEarned: 7,
-        milestonesTotal: 79,
-        points: 42,
-        hasTree: true,
-        hasStorage: true,
-        canReboot: true,
+        milestonesEarned: full ? 79 : 7, milestonesTotal: 79,
+        points: 512, hasTree: true, hasStorage: true, canReboot: true,
         attunements: [
-          { stat: "Health", amount: 150 },
-          { stat: "Carry Weight", amount: 100 },
-          { stat: "Magic Resist", amount: 15 },
-          { stat: "Stamina", amount: 50 }
+          { stat: "Health", amount: 250 }, { stat: "Magicka", amount: 150 },
+          { stat: "Stamina", amount: 150 }, { stat: "Carry Weight", amount: 200 },
+          { stat: "Magic Resist", amount: 15 }, { stat: "Fire Resist", amount: 25 },
+          { stat: "Frost Resist", amount: 25 }, { stat: "Disease Resist", amount: 25 }
         ],
-        titles: [
-          { name: "Survivor",   effect: "+100 Health",       quest: "Unbound" },
-          { name: "Wayfarer",   effect: "+100 Carry Weight", quest: "Before the Storm" },
-          { name: "Dragonborn", effect: "+15% Magic Resist", quest: "The Way of the Voice" }
-        ]
-      });
+        titles: titles
+      };
+    }
+
+    // Shift-click the Status button for the full 79-title stress test.
+    document.getElementById("btnStatus").onclick = function (e) {
+      window.IsekaiMock.showStatus(statusData(!!e.shiftKey));
     };
 
     document.getElementById("btnFlourish").onclick = function () {
