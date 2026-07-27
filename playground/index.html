@@ -90,6 +90,7 @@
   <div id="dock">
     <strong>Screens</strong>
     <button id="btnTree">Skill Tree</button>
+    <button id="btnStatus">Status</button>
     <button id="btnPanel">Dialog</button>
     <button id="btnChoice">Choice</button>
     <button id="btnFlourish">Level&nbsp;Up</button>
@@ -174,6 +175,55 @@
           { label: "Shadow", icon: "spells_32_frame.png", iconOnly: false }
         ],
         onSelect: function (i) { window.VS_LOG("gift chosen: " + i); }
+      });
+    };
+
+    // Mirrors Progression::ShowStatusPanel — the [ SYSTEM ] STATUS ledger with its
+    // icon buttons and the REBOOT button, so the whole thing (and its confirm step) is
+    // visible here. The plugin builds this body in C++; the playground can only fake it.
+    function showRebootConfirm() {
+      window.IsekaiMock.showPanel({
+        title: "[ SYSTEM ]",
+        body: "REBOOT THE SYSTEM?\n"
+            + "\n"
+            + "Re-opens the blessing choice, so you can pick a different path\n"
+            + "(tier, Full/Shattered, Dormant).\n"
+            + "\n"
+            + "KEPT:  milestones, skill tree, System Points, storage.\n"
+            + "NOTE:  stats a previous FULL blessing already granted\n"
+            + "       (skills, level, gold) cannot be taken back.",
+        reveal: 100000, width: 720,
+        buttons: [{ label: "CANCEL" }, { label: "REBOOT" }],
+        onSelect: function (i) { window.VS_LOG(i === 1 ? "reboot confirmed" : "reboot cancelled"); }
+      });
+    }
+
+    document.getElementById("btnStatus").onclick = function () {
+      window.IsekaiMock.showPanel({
+        title: "[ SYSTEM ] STATUS",
+        body: "POWER LEVEL   HERO\n"
+            + "MILESTONES    7 / 79\n"
+            + "SYSTEM POINTS 42\n"
+            + "\n"
+            + "ATTUNEMENTS\n"
+            + "  Health          +150\n"
+            + "  Carry Weight    +100\n"
+            + "\n"
+            + "PASSIVES\n"
+            + "  Survivor            +100 Health          Unbound\n"
+            + "  Wayfarer            +100 Carry Weight     Before the Storm",
+        reveal: 100000, width: 980,
+        // Same order/kind as the plugin: two top-right icons, then the text buttons.
+        buttons: [
+          { label: "SKILL TREE", icon: "spells_38_frame.png", iconOnly: true },
+          { label: "STORAGE",    icon: "spells_03_frame.png", iconOnly: true },
+          { label: "REBOOT" },
+          { label: "CLOSE" }
+        ],
+        onSelect: function (i) {
+          if (i === 2) { showRebootConfirm(); return; }   // REBOOT -> confirm step
+          window.VS_LOG("status button: " + i);
+        }
       });
     };
 
