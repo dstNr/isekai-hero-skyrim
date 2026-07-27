@@ -80,4 +80,11 @@ if (MSVC)
         /permissive-
         /Zc:preprocessor
     )
+    # Privacy: by default the linker writes the PDB's FULL build path into the DLL's
+    # debug directory — here that path starts with the developer's user folder
+    # (C:\Users\<real name>\...), which then ships inside every released DLL.
+    # %_PDB% expands to the bare filename, so the DLL references "IsekaiHeroSKSE.pdb"
+    # and no absolute path (nor the name in it) is embedded. The .pdb file itself
+    # still holds full source paths, so it is deliberately NOT shipped (see package.ps1).
+    target_link_options(${PROJECT_NAME} PRIVATE /PDBALTPATH:%_PDB%)
 endif()

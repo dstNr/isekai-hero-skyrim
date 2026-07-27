@@ -12,7 +12,9 @@ REM VS-bundled CMake + Ninja onto PATH, plus the VS Installer (for vswhere).
 set "VS_CMAKE=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake"
 set "PATH=%VS_CMAKE%\CMake\bin;%VS_CMAKE%\Ninja;%PATH%;C:\Program Files (x86)\Microsoft Visual Studio\Installer"
 
-set "VCPKG_ROOT=C:\Users\dstNr\vcpkg"
+REM Respect an existing VCPKG_ROOT (set it in your environment); the fallback below
+REM is a generic default so this committed file carries no personal path.
+if not defined VCPKG_ROOT set "VCPKG_ROOT=%USERPROFILE%\vcpkg"
 
 REM Static triplet: bake spdlog/fmt/CommonLibSSE into a single self-contained
 REM plugin DLL (dynamic CRT via -md), so no extra .dll files need shipping.

@@ -22,12 +22,58 @@ New-Item -ItemType Directory -Force $dist | Out-Null
 # --- plugin (ESL-flagged .esp) ---
 Copy-Item (Join-Path $root "plugin\IsekaiHero.esp") $stage
 
-# --- SKSE plugin + symbols (symbols stay in during the testing phase: without
-# them, Crash Logger prints raw addresses for our frames) ---
+# --- SKSE plugin ---
+# The .pdb is intentionally NOT shipped: it embeds the full source build paths
+# (C:\Users\<real name>\...) in hundreds of records, which would make the author's
+# real name public. Crash Logger then prints raw offsets for our frames instead of
+# symbols — an acceptable trade for not leaking the name. The .pdb is still built
+# and kept locally (build.bat deploys it to the game folder) for the author's own
+# crash analysis.
 $plugins = Join-Path $stage "SKSE\Plugins"
 New-Item -ItemType Directory -Force $plugins | Out-Null
-Copy-Item (Join-Path $root "build\IsekaiHeroSKSE.dll") $plugins
-Copy-Item (Join-Path $root "build\IsekaiHeroSKSE.pdb") $plugins
+$stagedDll = Join-Path $plugins "IsekaiHeroSKSE.dll"
+Copy-Item (Join-Path $root "build\IsekaiHeroSKSE.dll") $stagedDll
+
+# --- privacy: scrub the developer's real name from the DLL ---
+# The compiler bakes absolute source paths (__FILE__ / std::source_location, used by
+# the logger and asserts) into the binary. Some come from our own sources, others
+# from the CommonLibSSE static lib vcpkg built under the user folder — the latter are
+# already compiled in, so no build flag can reach them. Both spell out
+# C:\Users\<real name>\... . We overwrite the name in place with an equal-length
+# neutral token, so byte offsets are untouched and the PE stays valid (Windows does
+# not verify a DLL's PE checksum). Run on the STAGED copy only; the local build keeps
+# its real paths for the author's own debugging.
+$secret = "dstNr"       # exactly as it appears inside C:\Users\...
+$cover  = "isekai-hero-dev"       # MUST match $secret's length (15) — byte-for-byte
+if ($secret.Length -ne $cover.Length) { throw "Name scrub tokens must be equal length." }
+$bytes = [System.IO.File]::ReadAllBytes($stagedDll)
+$find  = [System.Text.Encoding]::ASCII.GetBytes($secret)
+$repl  = [System.Text.Encoding]::ASCII.GetBytes($cover)
+$hits = 0
+for ($i = 0; $i -le $bytes.Length - $find.Length; $i++) {
+    $match = $true
+    for ($j = 0; $j -lt $find.Length; $j++) {
+        if ($bytes[$i + $j] -ne $find[$j]) { $match = $false; break }
+    }
+    if ($match) {
+        [System.Array]::Copy($repl, 0, $bytes, $i, $repl.Length)
+        $hits++
+        $i += $find.Length - 1
+    }
+}
+[System.IO.File]::WriteAllBytes($stagedDll, $bytes)
+# Fail loudly if the name still survives anywhere — never ship on a silent miss.
+$after = [System.IO.File]::ReadAllBytes($stagedDll)
+$leak = 0
+for ($i = 0; $i -le $after.Length - $find.Length; $i++) {
+    $match = $true
+    for ($j = 0; $j -lt $find.Length; $j++) {
+        if ($after[$i + $j] -ne $find[$j]) { $match = $false; break }
+    }
+    if ($match) { $leak++ }
+}
+if ($leak -gt 0) { throw "Name scrub failed: '$secret' still present $leak time(s) in the DLL." }
+Write-Host "Name scrub: replaced $hits occurrence(s); DLL is clean."
 
 # --- optional settings ini (ships with defaults; safe to delete in-game) ---
 Copy-Item (Join-Path $root "IsekaiHero.ini") $plugins
