@@ -325,6 +325,26 @@ namespace Isekai {
             if (g_state.reincarnated) {
                 return;
             }
+
+            // In VR the ImGui overlay is disabled (it crashes on the VR renderer), so the
+            // blessing menu can ONLY come from PrismaUI. If it is not active yet, do not
+            // consume the one-shot flag below — otherwise the character would be marked
+            // reincarnated with no way ever to pick a blessing (a soft-brick of the core
+            // feature). Bail instead; the menu-close watcher calls back in, and once the
+            // player has the PrismaUI VR build the flow starts normally. A single note
+            // (native notification — those DO render in the headset) says what is needed.
+            if (REL::Module::IsVR() && !UI::Prisma::Active()) {
+                static bool warned = false;
+                if (!warned) {
+                    warned = true;
+                    logger::warn("Reincarnation held: VR without an active PrismaUI view — the "
+                                 "ImGui UI is disabled in VR, so the menu needs PrismaUI.");
+                    SystemMsg("[ SYSTEM ] Isekai Hero needs PrismaUI (1.5.0 VR build) to show "
+                              "its menu in VR.");
+                }
+                return;
+            }
+
             g_state.reincarnated = true;  // fire exactly once per character
 
             logger::info("Reincarnation triggered — System boot sequence");

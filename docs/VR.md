@@ -23,10 +23,26 @@ Die Logik-Ebene ist runtime-neutral:
 `src/main.cpp` loggt beim Laden die erkannte Edition (SE/AE/VR) — die erste Zeile,
 die man bei einem VR-Bringup prüft.
 
+## Strategie: VR-UI läuft komplett über PrismaUI
+
+Entscheidung (Juli 2026): In VR gibt es **kein eigenes UI von uns**. Der ImGui-Overlay
+ist in VR aus (crasht auf dem VR-Renderer, s. u.), also läuft in VR **jedes** Panel über
+den PrismaUI-Patch. Schnell umgesetzt, community-testbar; ein natives In-HMD-UI (Phase 2,
+`MessageBox`-Fallback) bleibt als Rückfalloption, falls PrismaUI-VR sich als zu wackelig
+erweist.
+
+Damit das kein Charakter zerschießt: `BeginReincarnation()` prüft in VR
+`UI::Prisma::Active()`. Ist PrismaUI **nicht** aktiv, wird das One-Shot-Flag
+`reincarnated` **nicht** gesetzt — sonst wäre der Charakter „reincarnated ohne je einen
+Segen wählen zu können". Stattdessen eine einmalige native Notification (die rendert die
+Brille) und Warten, bis PrismaUI da ist.
+
 ## Spieler-Requirements für VR (abweichend von SE/AE)
 
 - **SKSEVR** statt SKSE64
 - **VR Address Library for SKSEVR** statt „Address Library for SKSE Plugins"
+- **PrismaUI 1.5.0 VR-Build** + unser **PrismaUI-Patch** — in VR zwingend, weil das
+  eingebaute UI aus ist. Die stabile PrismaUI 1.4.x reicht **nicht** (kein VR).
 - Dasselbe Mod-Archiv wie für SE/AE — die DLL ist multi-runtime, ein eigener VR-Build
   ist nicht nötig.
 

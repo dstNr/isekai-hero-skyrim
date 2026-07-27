@@ -90,13 +90,20 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
 - **[SKSE64](https://skse.silverlock.org/)**
 - **[Address Library for SKSE Plugins](https://www.nexusmods.com/skyrimspecialedition/mods/32444)**
 
-### Skyrim VR (experimental, untested)
+### Skyrim VR (experimental)
 
-The plugin is built for all three runtimes at once (CommonLibSSE-NG) and should load
-under **SKSEVR** with the **VR Address Library for SKSEVR** — same archive, no separate
-VR build. It has **not been verified in-game**: the logic is runtime-neutral, but the
-UI currently draws on the desktop mirror rather than inside the headset. See
-[docs/VR.md](docs/VR.md) for the status, requirements and the test checklist.
+The plugin is built for all three runtimes at once (CommonLibSSE-NG) and loads under
+**SKSEVR** with the **VR Address Library for SKSEVR** — same archive, no separate VR
+build. The mod's logic (blessings, milestones, passives, storage, crafting) is
+runtime-neutral.
+
+The built-in **ImGui overlay is disabled in VR** (it hooks the desktop swap chain,
+which crashes on the VR renderer and would never appear in the headset anyway), so in
+VR **all UI goes through the PrismaUI patch** — which needs PrismaUI's **1.5.0 VR
+build** (the stable 1.4.x has no VR). Without it, the System menu cannot be shown in
+VR and the mod holds off the reincarnation prompt rather than stranding the character.
+Still community-testing; see [docs/VR.md](docs/VR.md) for status, requirements and the
+test checklist.
 
 ## Installation
 
