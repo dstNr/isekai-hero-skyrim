@@ -59,9 +59,17 @@ Brille) und Warten, bis PrismaUI da ist.
    mit 0.5.0 gemeldet, `Overlay.cpp:221`). **Seit dem Fix wird der Overlay-Hook in VR
    per `REL::Module::IsVR()` übersprungen** — kein Crash mehr, aber in VR gibt es
    dadurch **kein ImGui-UI** (die Segenswahl über den ImGui-Pfad erscheint nicht).
-   → Echtes VR-UI ist **Phase 2** (In-HMD-Rendering via OpenVR-Overlay/Stereo-Targets
-     oder — kleiner — ein Fallback auf spieleigene `MessageBox`-Menüs für die Panels,
-     die die Brille selbst rendert).
+   → **Nachtrag (Tester-Report):** der VR-Return übersprang auch `InstallInput()`, das
+     ganz am Ende derselben Funktion stand — dadurch war in VR **gar kein Input
+     registriert** und der System-Hotkey tat nichts („menu not displaying on the
+     keybind"). Fix: `InstallInput()` läuft jetzt VOR dem VR-Return (nur Event-Sinks,
+     renderer-frei, VR-sicher); nur der Swap-Chain-Hook bleibt gesperrt. Im Log jetzt
+     `System hotkey fired — opening status (...)` zur Bestätigung.
+   → Echtes VR-UI ist **Phase 2** (In-HMD-Rendering via OpenVR-Overlay/Stereo-Targets;
+     ein Tester nannte den Mod **„ImGui VR Helper"**, der ImGui in VR rendern kann —
+     ggf. der Weg, den ImGui-Overlay doch in die Brille zu bringen. Oder — kleiner — ein
+     Fallback auf spieleigene `MessageBox`-Menüs für die Panels, die die Brille selbst
+     rendert).
 3. **PrismaUI-Patch in VR — upstream geklärt (Stand Juli 2026):** VR wird **nur in der
    PrismaUI 1.5.0 VR-Alpha / 1.5.0-rc** unterstützt, als experimentelle Alpha („full VR
    support is coming", am besten auf Meta-Headsets, Alpha-Build via Discord/Dwemer Mods,

@@ -205,18 +205,25 @@ namespace Isekai::UI {
     }
 
     void Install() {
-        // VR crashes here, so we do NOT hook in VR. RE::BSGraphics::Renderer's layout
-        // is only valid for the flat-screen editions; under Skyrim VR the same struct
-        // read yields a bogus (non-null) renderWindows[0].swapChain, and dereferencing
-        // its vtable to grab Present is an access violation on load (reported CTD at
-        // Overlay.cpp, EXCEPTION_ACCESS_VIOLATION). The ImGui overlay would only have
-        // drawn on the desktop mirror in VR anyway, never in the headset — a proper
-        // in-HMD path is future work (see docs/VR.md). Until then VR simply gets no
-        // ImGui overlay; the rest of the mod loads and runs.
+        // Input first, and on EVERY runtime. InstallInput only registers event sinks
+        // (keyboard/mouse, menu guard) — nothing touches the renderer, so it is safe in
+        // VR, and it is what makes the System hotkey fire. It used to sit after the VR
+        // early-return below, which meant VR registered no input at all and the hotkey
+        // did nothing (reported: "menu not displaying on the keybind" in VR).
+        InstallInput();
+
+        // The swap-chain Present hook, on the other hand, crashes in VR. RE::BSGraphics::
+        // Renderer's layout is only valid for the flat-screen editions; under Skyrim VR
+        // the same struct read yields a bogus (non-null) renderWindows[0].swapChain, and
+        // dereferencing its vtable to grab Present is an access violation on load (reported
+        // CTD, EXCEPTION_ACCESS_VIOLATION). The ImGui overlay would only have drawn on the
+        // desktop mirror in VR anyway, never in the headset — a proper in-HMD path is
+        // future work (see docs/VR.md). So in VR we skip only the hook; the mod's UI goes
+        // through the PrismaUI patch instead.
         if (REL::Module::IsVR()) {
             logger::warn("UI: Skyrim VR detected — skipping the ImGui overlay hook "
                          "(in-headset UI not implemented; would otherwise crash on the "
-                         "VR renderer layout). See docs/VR.md.");
+                         "VR renderer layout). UI runs through PrismaUI. See docs/VR.md.");
             return;
         }
 

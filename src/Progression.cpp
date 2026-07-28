@@ -431,6 +431,14 @@ namespace Isekai::Progression {
         }
 
         void ShowStatusPanel() {
+            // Diagnostic: confirms the hotkey actually reached the handler (it did not in
+            // VR before the input fix). If this logs but nothing appears, the panel was
+            // handed to the renderer and the problem is downstream (e.g. PrismaUI not
+            // painting in VR without its VR build).
+            logger::info("System hotkey fired — opening status (prisma={}, paused={})",
+                         UI::Prisma::Active(),
+                         RE::UI::GetSingleton() ? RE::UI::GetSingleton()->GameIsPaused() : false);
+
             // Never replace a live panel: opening over the blessing selection would
             // throw away its callback, and the reincarnation would hang half-finished.
             if (UI::IsSystemWindowOpen() || UI::IsSkillTreeOpen()) {
