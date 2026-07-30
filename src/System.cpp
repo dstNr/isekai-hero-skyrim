@@ -833,6 +833,8 @@ namespace Isekai {
                 // And bring older chests up to the current material set — add-on/DLC
                 // materials, missing ingredients, the full soul gem set (black included).
                 Storage::TopUpStock();
+                // Sweep out orphaned chest husks earlier rebuilds left behind (save bloat).
+                Storage::PruneOrphanChests();
                 break;
 
             default:

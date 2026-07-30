@@ -32,6 +32,13 @@ namespace Isekai::Storage {
     // load without a fresh reincarnation. Called on every load.
     void TopUpStock();
 
+    // Delete leftover storage-chest references from earlier rebuilds. RebuildChest used
+    // to only disable the old chest, so a long save can hold several orphaned husks; this
+    // finds every reference of our chest base except the current one and removes it.
+    // Cleans up save bloat (and "unattached" entries a save cleaner would flag). Called
+    // on every load.
+    void PruneOrphanChests();
+
     // --- Zero-transfer crafting support (used by CraftHooks) ---
 
     // How many of a_obj the storage chest holds (0 if no chest / not found). Read by

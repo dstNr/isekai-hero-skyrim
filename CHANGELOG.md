@@ -4,6 +4,15 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [Unreleased]
+
+### Fixed
+- **Dimensional Storage no longer leaves orphaned chest references behind.** When the
+  storage's hidden container was rebuilt after a cell reset, the old reference was only
+  disabled, so a long save could accumulate several dormant husks (save bloat, and the
+  kind of "unattached" entries a save cleaner like ReSaver flags). Rebuilds now delete
+  the old reference, and any husks left by earlier builds are swept on load.
+
 ## [0.6.0] — 2026-07-27
 
 A big content-and-polish release on top of 0.5.x: a fully configurable blessing, a

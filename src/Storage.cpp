@@ -117,6 +117,12 @@ namespace Isekai::Storage {
         // back to the game"). CommonLibSSE exposes no Enable(), so instead of resurrecting
         // the husk we move its inventory — which lives in the reference data, not the 3D,
         // so it survives — into a fresh reference and repoint the co-save at it.
+        //
+        // The old reference is then disabled AND marked for deletion. Earlier builds only
+        // disabled it, so every rebuild left a dormant husk behind; over a long save these
+        // pile up as orphaned created references (save bloat, and the kind of "unattached"
+        // entries a save cleaner like ReSaver flags). Disable() + SetDelete() is the proper
+        // removal, the same as Papyrus Disable()/Delete().
         [[nodiscard]] RE::TESObjectREFR* RebuildChest(RE::PlayerCharacter* a_player,
                                                       RE::TESObjectREFR* a_old) {
             if (!g_base) {
@@ -139,7 +145,8 @@ namespace Isekai::Storage {
                         ++moved;
                     }
                 }
-                a_old->Disable();  // no Enable() to undo this; the husk just goes dormant
+                a_old->Disable();
+                a_old->SetDelete(true);  // actually remove it — don't leave a dormant husk
             }
 
             const auto pos = a_player->GetPosition();
@@ -345,6 +352,39 @@ namespace Isekai::Storage {
 
         if (pruned > 0) {
             logger::info("Storage: pruned {} foreign material stack(s) from the chest", pruned);
+        }
+    }
+
+    void PruneOrphanChests() {
+        if (!g_base) {
+            return;
+        }
+        const RE::FormID keep = GetState().storageChest;  // the one still in use
+
+        // Collect first, delete after: Disable()/SetDelete() mutate reference state, which
+        // must not happen while the global form list is read-locked.
+        std::vector<RE::TESObjectREFR*> orphans;
+        {
+            const auto& [all, lock] = RE::TESForm::GetAllForms();
+            const RE::BSReadLockGuard guard{ lock };
+            for (const auto& [id, form] : *all) {
+                if (!form || id == keep) {
+                    continue;
+                }
+                auto* ref = form->As<RE::TESObjectREFR>();
+                if (ref && ref->GetBaseObject() == g_base) {
+                    orphans.push_back(ref);
+                }
+            }
+        }
+
+        for (auto* ref : orphans) {
+            ref->Disable();
+            ref->SetDelete(true);
+        }
+        if (!orphans.empty()) {
+            logger::info("Storage: removed {} orphaned chest husk(s) left by earlier rebuilds",
+                         orphans.size());
         }
     }
 
