@@ -241,3 +241,48 @@ Quest-Mods; Isekai lebt eher vom *Reagieren* der Welt).
 
 Details + offene Verifikationspunkte (DLL-Name, `SkyrimNetApi`-Signaturen) siehe
 `src/SkyrimNet.cpp` und `README`.
+
+---
+
+## Skill-tree expansion — "more to spend points on" (user feedback)
+
+**Status:** 🅿️ Roadmap — evaluated, feasibility confirmed against actual actor values,
+not yet built (deferred until the VR / perf / storage fixes are tested & released).
+**Origin:** player feedback — loves the concept and the UI, wants many more nodes so you
+can get "really, really OP"; noted there's fire/frost resist but no shock resist.
+(Expands the earlier "Noch mehr Knoten-Varietät" note above with concrete effects.)
+
+### Tier 1 — easy wins (mirror the existing repeatable utility nodes: new node + AV)
+
+All backed by real actor values, applied exactly like Fleet of Foot / Enduring Vigor:
+- **Shock Resistance** — `kResistShock` (42). Fills the obvious gap next to Emberskin /
+  Frostskin.
+- **General Magic Resistance** — `kResistMagic` (44). Currently only the Warding milestone
+  passive; add a buyable node.
+- **Magic Absorption** — `kAbsorbChance` (83). Percent; cap it (e.g. 50–80%).
+- **Physical Resistance / Armor** — `kDamageResist` (39). Armor-rating points.
+- **Health / Magicka / Stamina Regen** — `kHealRateMult` / `kMagickaRateMult` /
+  `kStaminaRateMult` (155–157), base 100 like move speed.
+
+Design: repeatable, NORMAL tier, small per-rank amounts with sane caps so "OP" is earned
+over many System Points, not handed over. Same respec handling as the other stat nodes.
+
+### Tier 2 — harder, no clean global actor value
+
+- **Spell Damage** — Skyrim has no global spell-damage multiplier AV; needs a perk or a
+  magic-effect route. Meaningful effort.
+- **Melee Damage** — same problem; weapon-type-specific (sword / mace / dagger / **bound**)
+  is much harder (perks per type). The reporter plays a bound-weapon build (Biggie Traits).
+- **Carry multiple standing-stone bonuses at once** — managing ability spells; complex.
+
+### Separate, larger features
+
+- **Gamepad support for the UI.** PrismaUI 1.5 added gamepad input; the built-in ImGui path
+  would need its own controller mapping. Its own effort; ties into the VR work.
+- **Modularity / configurable values.** Expose node magnitudes and costs via the ini so
+  players can tune them. Medium effort; pairs naturally with Tier 1.
+
+### Recommended order
+
+Tier 1 batch first (biggest value per effort, low risk, exactly the request), then
+modularity, then the damage nodes / gamepad as their own tracks.
