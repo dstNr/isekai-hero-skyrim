@@ -103,7 +103,9 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   gem?" — see the stored gems too. Stock is drawn from what recipes require, so
   DLC materials come along (chitin plate, netch leather, corkbulb root).
   HERO/ASCENDED find it pre-stocked (blessing-scaled); NORMAL gets the same
-  dimension empty, as a stash.
+  dimension empty, as a stash. A **storage codex** (granted on reincarnation) is a
+  table-free physical shortcut: use it from the inventory and the chest opens
+  directly, no System panel needed — and it never runs out.
 - **System Shop** — a third button beside Skill Tree and Storage in the status panel:
   spend System Points on filled soul gems or gold, delivered straight into the
   Dimensional Storage. Once the tree is bought out, points still have somewhere to go.

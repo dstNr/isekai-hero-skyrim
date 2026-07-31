@@ -16,6 +16,11 @@ namespace Isekai::Storage {
     // it is reached through the System status panel, which closes itself first.
     void Open();
 
+    // Grant the storage codex token (the physical fallback access item) if the player
+    // does not already carry one. Called once from the reincarnation, and again on every
+    // load as a backfill for saves from before this existed — harmless no-op otherwise.
+    void GrantCodexIfMissing();
+
     // Stock the storage with crafting materials and gold, scaled by the blessing
     // (HERO x2, ASCENDED x4 on a NORMAL-sized base that nobody ever receives,
     // since NORMAL has no storage). Called once, from the reincarnation.

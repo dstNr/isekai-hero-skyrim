@@ -9,7 +9,8 @@ resistance/regen batch — Storm Ward, Warded Mind, Arcane Absorption, Iron Skin
 Recovery), Shattered/Dormant/Custom blessings, skill-tree respec, the Reboot button,
 remappable hotkey + `HideSealedNodes` ini, the PrismaUI status dashboard, orphaned-chest
 cleanup, System Rank (E–S) in the status panel, System Analysis (the Analyze hotkey),
-System Shop (soul gems/gold for System Points). See `CHANGELOG.md` for versions.
+System Shop (soul gems/gold for System Points), the storage codex (physical fallback
+access to Dimensional Storage). See `CHANGELOG.md` for versions.
 
 ---
 
@@ -107,14 +108,6 @@ Verification checklist and API details: `src/SkyrimNet.cpp`, `README.md`.
 ---
 
 ## D · Access, platforms & QoL
-
-### Storage codex (physical fallback access)
-
-**Status:** 🅿️ Roadmap — half-built already
-A book/item that opens the Dimensional Storage without the System panel, as a belt-and-
-braces backup and a table-free access point. **The item form already exists in the ESP**
-(`IsekaiStorageToken`, local ID `0x000D7F`, "Dimensional Storage") but the code never
-wires it up — only an activation hook calling `Storage::Open()` is missing. Small.
 
 ### Gamepad support for the UI
 

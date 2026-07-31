@@ -28,6 +28,11 @@ All notable changes to Isekai Hero are documented here. The format follows
   Storage: spend System Points on filled soul gems (Grand ×1, Common ×5) or gold ×1000,
   delivered straight into the Dimensional Storage. Gives points a second place to go once
   the tree is bought out, so they never stop mattering.
+- **Storage codex** — a physical fallback to open the Dimensional Storage: the
+  `IsekaiStorageToken` item already sat unused in the ESP; using it from the inventory now
+  opens the chest directly, table-free, no System panel needed. It never runs out (the
+  same token is handed straight back) and every reincarnated soul is granted one — on
+  reincarnation, and backfilled on load for saves from before this existed.
 
 ### Changed
 - `Storage::Available()`'s doc comment corrected — it has never required a HERO/ASCENDED

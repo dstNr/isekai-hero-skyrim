@@ -178,6 +178,7 @@ namespace Isekai {
             const Blessing b = BlessingFor(g_state.grantTier);
             const float attrBonus = ApplyBlessing(b);
             Storage::GrantStartingMaterials();  // crafting stock, FULL HERO/ASCENDED only
+            Storage::GrantCodexIfMissing();     // physical fallback access — every blessing
 
             logger::info(
                 "Reincarnation applied: power={} skills={} level={} perks=+{} attr=+{} gold={} souls=+{}",
@@ -839,6 +840,8 @@ namespace Isekai {
                 Storage::TopUpStock();
                 // Sweep out orphaned chest husks earlier rebuilds left behind (save bloat).
                 Storage::PruneOrphanChests();
+                // Backfill the codex token for saves reincarnated before it existed.
+                Storage::GrantCodexIfMissing();
                 break;
 
             default:

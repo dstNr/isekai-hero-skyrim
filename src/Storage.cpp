@@ -17,7 +17,14 @@ namespace Isekai::Storage {
         // read out of the plugin file itself).
         constexpr RE::FormID kContainerBase = 0x000D7A;
 
+        // The storage codex — "IsekaiStorageToken", an ALCH item that already sat unused
+        // in the ESP (docs/CREATION_KIT_ESP.md Part G was written, the C++ side of it
+        // never was). A physical fallback: "drink" it like a potion and the chest opens,
+        // no System panel needed.
+        constexpr RE::FormID kCodexToken = 0x000D7F;
+
         RE::TESObjectCONT* g_base = nullptr;
+        RE::TESBoundObject* g_codexToken = nullptr;
 
         // What the crafting menu borrowed from storage, per base object. Never
         // persisted: the crafting menu pauses the game and cannot outlive a session.
@@ -300,6 +307,53 @@ namespace Isekai::Storage {
         private:
             CraftWatcher() = default;
         };
+
+        // Ingestibles have no "activate" of their own — "using" one from the inventory
+        // menu is, in the engine's own model, momentarily equipping it, so this is the
+        // native equivalent of the well-known Papyrus OnObjectEquipped quirk (it fires
+        // for potions too, and by the time it does the item is already consumed). We
+        // undo that consumption immediately: hand back the same token, so from the
+        // player's side it reads as "drink it, the chest opens, the token never runs
+        // out" rather than a one-time-use item.
+        class CodexWatcher : public RE::BSTEventSink<RE::TESEquipEvent> {
+        public:
+            static CodexWatcher* GetSingleton() {
+                static CodexWatcher singleton;
+                return std::addressof(singleton);
+            }
+
+            RE::BSEventNotifyControl ProcessEvent(
+                const RE::TESEquipEvent* a_event,
+                RE::BSTEventSource<RE::TESEquipEvent>*) override {
+                if (a_event && a_event->equipped && g_codexToken &&
+                    a_event->baseObject == g_codexToken->GetFormID()) {
+                    if (auto* player = RE::PlayerCharacter::GetSingleton()) {
+                        player->AddObjectToContainer(g_codexToken, nullptr, 1, nullptr);
+                    }
+                    Open();
+                }
+                return RE::BSEventNotifyControl::kContinue;
+            }
+
+        private:
+            CodexWatcher() = default;
+        };
+    }
+
+    void GrantCodexIfMissing() {
+        if (!g_codexToken || !GetState().reincarnated) {
+            return;
+        }
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        if (!player) {
+            return;
+        }
+        const auto counts = player->GetInventoryCounts();
+        if (counts.contains(g_codexToken)) {
+            return;  // already carries one — nothing to do
+        }
+        player->AddObjectToContainer(g_codexToken, nullptr, 1, nullptr);
+        logger::info("Storage: granted the storage codex token");
     }
 
     bool Available() {
@@ -670,9 +724,17 @@ namespace Isekai::Storage {
                           Plugin::kFileName);
             return;
         }
+        g_codexToken = Plugin::LookupOurForm<RE::TESBoundObject>(kCodexToken);
+        if (!g_codexToken) {
+            logger::error("Storage: no codex token {:#08x} in {}", kCodexToken,
+                          Plugin::kFileName);
+        }
 
         if (auto* ui = RE::UI::GetSingleton()) {
             ui->AddEventSink<RE::MenuOpenCloseEvent>(CraftWatcher::GetSingleton());
+        }
+        if (auto* holder = RE::ScriptEventSourceHolder::GetSingleton()) {
+            holder->AddEventSink<RE::TESEquipEvent>(CodexWatcher::GetSingleton());
         }
         logger::info("Storage: reachable via the System panel; crafting borrows its inventory");
     }
