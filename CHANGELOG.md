@@ -24,6 +24,15 @@ All notable changes to Isekai Hero are documented here. The format follows
   "Observation"/"Appraisal" isekai move. Experimental in Skyrim VR — `CrosshairPickData`
   resolves through an address-library ID not verified to exist in VR's database, so the
   hotkey stays inert there (with a notification) until that can be tested for real.
+- **System Shop** — a third icon button in the status panel, next to Skill Tree and
+  Storage: spend System Points on filled soul gems (Grand ×1, Common ×5) or gold ×1000,
+  delivered straight into the Dimensional Storage. Gives points a second place to go once
+  the tree is bought out, so they never stop mattering.
+
+### Changed
+- `Storage::Available()`'s doc comment corrected — it has never required a HERO/ASCENDED
+  blessing (NORMAL gets the same empty storage as a stash); the comment just said so.
+  Noticed while giving the Shop the same gate. No behaviour change.
 
 ## [0.6.1] — 2026-07-28
 

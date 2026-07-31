@@ -104,6 +104,9 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   DLC materials come along (chitin plate, netch leather, corkbulb root).
   HERO/ASCENDED find it pre-stocked (blessing-scaled); NORMAL gets the same
   dimension empty, as a stash.
+- **System Shop** — a third button beside Skill Tree and Storage in the status panel:
+  spend System Points on filled soul gems or gold, delivered straight into the
+  Dimensional Storage. Once the tree is bought out, points still have somewhere to go.
 - **Custom UI & sound.** Solo-Leveling-inspired panels (glow frames, corner
   brackets, typewriter reveal, monospace terminal font), custom SFX routed
   through the game's audio system, icon buttons, ESC handled properly.

@@ -39,25 +39,14 @@ namespace Isekai::Storage {
             return state.reincarnated && state.grantTier != PowerLevel::Normal;
         }
 
-        // The official game masters. We freely stock and keep their ingredients; anything
-        // else (Creation Club, mods) is held at arm's length for ingredients specifically,
-        // because CC ingredients ship tracker scripts that flood the VM when handled in
-        // bulk — the very stutter this feature was rebuilt to avoid. Misc materials carry
-        // no such scripts, so those we take from any plugin (see GrantStartingMaterials).
-        [[nodiscard]] bool IsOfficialMaster(const RE::TESForm* a_form) {
-            if (!a_form) {
-                return false;
-            }
-            const auto* file = a_form->GetFile(0);
-            if (!file) {
-                return false;
-            }
-            using namespace std::string_view_literals;
-            const auto name = file->GetFilename();
-            return name == "Skyrim.esm"sv || name == "Update.esm"sv ||
-                   name == "Dawnguard.esm"sv || name == "HearthFires.esm"sv ||
-                   name == "Dragonborn.esm"sv;
-        }
+        // The official game masters check moved to Plugin::IsOfficialMaster (shared with
+        // CraftHooks/Shop — used to be duplicated identically). We freely stock and keep
+        // their ingredients; anything else (Creation Club, mods) is held at arm's length
+        // for ingredients specifically, because CC ingredients ship tracker scripts that
+        // flood the VM when handled in bulk — the very stutter this feature was rebuilt to
+        // avoid. Misc materials carry no such scripts, so those we take from any plugin
+        // (see GrantStartingMaterials).
+        using Plugin::IsOfficialMaster;
 
         // The one chest reference, created on first use.
         //

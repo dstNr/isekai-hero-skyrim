@@ -80,4 +80,19 @@ namespace Isekai::Plugin {
         }
         logger::info("=== {} forms from {} ===", mine.size(), kFileName);
     }
+
+    bool IsOfficialMaster(const RE::TESForm* a_form) {
+        if (!a_form) {
+            return false;
+        }
+        const auto* file = a_form->GetFile(0);
+        if (!file) {
+            return false;
+        }
+        using namespace std::string_view_literals;
+        const auto name = file->GetFilename();
+        return name == "Skyrim.esm"sv || name == "Update.esm"sv ||
+               name == "Dawnguard.esm"sv || name == "HearthFires.esm"sv ||
+               name == "Dragonborn.esm"sv;
+    }
 }

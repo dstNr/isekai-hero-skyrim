@@ -1,5 +1,6 @@
 #include "CraftHooks.h"
 
+#include "Plugin.h"
 #include "Storage.h"
 
 #include <MinHook.h>
@@ -164,21 +165,9 @@ namespace Isekai::CraftHooks {
         // themselves, flooding the VM into an endless-item stutter. Vanilla + DLC materials
         // carry no such scripts, so those are safe to shuffle. (DLC IS official, so the
         // add-on materials the player asked for — chitin plate, netch leather, corkbulb
-        // root — still get tokens.)
-        [[nodiscard]] bool IsOfficialMaster(const RE::TESForm* a_form) {
-            if (!a_form) {
-                return false;
-            }
-            const auto* file = a_form->GetFile(0);
-            if (!file) {
-                return false;
-            }
-            using namespace std::string_view_literals;
-            const auto name = file->GetFilename();
-            return name == "Skyrim.esm"sv || name == "Update.esm"sv ||
-                   name == "Dawnguard.esm"sv || name == "HearthFires.esm"sv ||
-                   name == "Dragonborn.esm"sv;
-        }
+        // root — still get tokens.) Check itself lives in Plugin::IsOfficialMaster,
+        // shared with Storage/Shop — used to be duplicated identically.
+        using Plugin::IsOfficialMaster;
 
         // Exactly the materials some crafting recipe requires — the components of every
         // BGSConstructibleObject, Misc or Ingredient, restricted to official masters (see

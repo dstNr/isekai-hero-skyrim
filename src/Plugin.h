@@ -37,4 +37,10 @@ namespace Isekai::Plugin {
         const RE::FormID full = ResolveLocalID(a_localID);
         return full != 0 ? RE::TESForm::LookupByID<T>(full) : nullptr;
     }
+
+    // The official game masters (base game + all four DLCs). Anything else (Creation
+    // Club, mods) is held at arm's length wherever this is used — CC ingredients in
+    // particular ship tracker scripts that flood the VM when handled in bulk. Shared by
+    // Storage/CraftHooks/Shop; was duplicated identically in the first two until this.
+    [[nodiscard]] bool IsOfficialMaster(const RE::TESForm* a_form);
 }

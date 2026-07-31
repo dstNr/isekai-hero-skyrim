@@ -241,12 +241,12 @@
       if (fn && idx >= 0) fn(idx);
     };
 
-    // Mirrors Prisma::OnStatusAction — tree / storage / reboot / close.
+    // Mirrors Prisma::OnStatusAction — tree / storage / shop / reboot / close.
     w.isekaiStatusAction = function (action) {
       global.VS_LOG && global.VS_LOG("status action: " + action);
       if (action === "tree") { pushTree(); }        // OpenTree switches screens in-view
       else if (action === "close" || action === "storage") { hide(); }
-      // "reboot" in-game re-opens the blessing choice; here we just log it.
+      // "shop" in-game opens its own panel (like "reboot"); here we just log it.
     };
   }
 

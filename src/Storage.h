@@ -7,8 +7,9 @@ namespace Isekai::Storage {
     // Call at kDataLoaded.
     void Install();
 
-    // True when the player may use the storage: blessed (HERO/ASCENDED) and the
-    // container form resolved. Drives whether the System panel shows the button.
+    // True when the player may use the storage: reincarnated (any blessing — NORMAL
+    // gets the same dimension, just empty, as a stash) and the container form resolved.
+    // Drives whether the System panel shows the button.
     [[nodiscard]] bool Available();
 
     // Open the dimensional storage. Main thread only, and not while any menu is up —

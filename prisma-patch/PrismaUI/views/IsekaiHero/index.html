@@ -806,7 +806,7 @@ function buildStatusActions() {
   const icons = $("sIcons"); icons.innerHTML = "";
   const box = $("sActions"); box.innerHTML = ""; rebootArmed = 0;
 
-  // Skill Tree / Storage as the top-right icon buttons; Reboot / Close as footer text.
+  // Skill Tree / Storage / Shop as the top-right icon buttons; Reboot / Close as footer text.
   const addIcon = (label, img, onClick) => {
     const b = document.createElement("button");
     b.className = "iconBtn";
@@ -822,6 +822,7 @@ function buildStatusActions() {
 
   if (STATUS.hasTree)    addIcon("Skill Tree", "spells_38_frame.png", () => statusAction("tree"));
   if (STATUS.hasStorage) addIcon("Storage", "spells_03_frame.png", () => statusAction("storage"));
+  if (STATUS.hasShop)    addIcon("Shop", "spells_04_frame.png", () => statusAction("shop"));
   if (STATUS.canReboot)  { const rb = addBtn("Reboot", "amber", () => rebootClick(rb)); }
   addBtn("Close", "", () => statusAction("close"));
 }

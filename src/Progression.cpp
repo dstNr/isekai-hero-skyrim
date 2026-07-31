@@ -3,6 +3,7 @@
 #include "Config.h"
 #include "Passives.h"
 #include "SkillTree.h"
+#include "Shop.h"
 #include "SkyrimNet.h"
 #include "Storage.h"
 #include "System.h"
@@ -414,6 +415,7 @@ namespace Isekai::Progression {
             j += "\"points\":" + std::to_string(st.systemPoints) + ",";
             j += "\"hasTree\":" + std::string(boolStr(st.reincarnated)) + ",";
             j += "\"hasStorage\":" + std::string(boolStr(Storage::Available())) + ",";
+            j += "\"hasShop\":" + std::string(boolStr(Shop::Available())) + ",";
             j += "\"canReboot\":" + std::string(boolStr(st.reincarnated)) + ",";
 
             j += "\"attunements\":[";
@@ -553,6 +555,12 @@ namespace Isekai::Progression {
                                     "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\spells_03_frame.png",
                                     /*iconOnly=*/true });
                 actions.emplace_back([]() { Storage::Open(); });
+            }
+            if (Shop::Available()) {
+                choices.push_back({ "SHOP",
+                                    "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\spells_04_frame.png",
+                                    /*iconOnly=*/true });
+                actions.emplace_back([]() { Shop::Open(); });
             }
             // Reboot: re-open the blessing choice on this character (e.g. HERO -> a
             // Shattered Dormant run) without the fragile uninstall/reinstall dance that

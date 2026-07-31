@@ -8,8 +8,8 @@ the one-liner list below — the reasoning behind them lives in git history and
 resistance/regen batch — Storm Ward, Warded Mind, Arcane Absorption, Iron Skin, Rapid
 Recovery), Shattered/Dormant/Custom blessings, skill-tree respec, the Reboot button,
 remappable hotkey + `HideSealedNodes` ini, the PrismaUI status dashboard, orphaned-chest
-cleanup, System Rank (E–S) in the status panel, System Analysis (the Analyze hotkey).
-See `CHANGELOG.md` for versions.
+cleanup, System Rank (E–S) in the status panel, System Analysis (the Analyze hotkey),
+System Shop (soul gems/gold for System Points). See `CHANGELOG.md` for versions.
 
 ---
 
@@ -54,25 +54,22 @@ The tree's economy — where points come from and where they go.
   much harder (perks per type — a reporter plays a bound-weapon build via Biggie Traits).
 - **Multiple standing-stone bonuses at once** — managing ability spells; complex.
 
-### System Quests + System Shop
+### System Quests
 
-**Status:** 🧠 New idea (this session), expands on the "System Shop" note from the old
-Papyrus backlog (`papyrus/FEATURES.md`) — never built there either.
-**Why these two belong together:** System Points currently have exactly one source
-(milestones) and one sink (the tree). Once the tree is bought out, points stop mattering.
-Quests give a second *source* (points from moment-to-moment play, not just quest
-completions); the Shop gives a second *sink* (points still worth earning after the tree is
-full) — together they close the loop instead of leaving it dead-ended.
+**Status:** 🅿️ Roadmap — the other half of "System Quests + System Shop"; the Shop half
+shipped (see the one-liner list up top), split off because it was the self-contained,
+low-risk piece — Quests needs its own design pass on event-tracking specifics (which kill/
+event hooks, how objectives rotate and expire, new persistent timer state, a co-save bump)
+that the Shop didn't.
+**Why it still matters:** System Points had exactly one source (milestones) before the
+Shop gave them a second sink; Quests would give them a second *source* — points from
+moment-to-moment play, not just quest completions — closing the loop the other way.
+**Origin:** expands the "System Shop" note from the old Papyrus backlog
+(`papyrus/FEATURES.md`) — neither half was ever built there.
 
-- **System Quests:** the System hands out lightweight objectives ("Slay 12 Draugr") via
-  a kill/event tracker + a short timer, paying System Points on completion — read as
-  System narration (fits the "[SYSTEM] as a voice" territory SkyrimNet Tier 3 explores).
-  Medium effort (kill-tracking + timer state).
-- **System Shop:** a dedicated screen (own entry point next to Skill Tree / Storage in
-  the status header), a fixed catalog of crafting materials/consumables priced in System
-  Points, delivered straight into the Dimensional Storage via the same
-  `AddObjectToContainer` path `GrantStartingMaterials` already uses — no new delivery
-  mechanism needed. A rotating catalog is a later stretch, not v1.
+The System hands out lightweight objectives ("Slay 12 Draugr") via a kill/event tracker +
+a short timer, paying System Points on completion — read as System narration (fits the
+"[SYSTEM] as a voice" territory SkyrimNet Tier 3 explores). Medium effort.
 
 ### Modularity / configurable node values
 

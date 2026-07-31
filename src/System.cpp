@@ -7,6 +7,7 @@
 #include "Plugin.h"
 #include "Progression.h"
 #include "SkillTree.h"
+#include "Shop.h"
 #include "SkyrimNet.h"
 #include "Sounds.h"
 #include "Storage.h"
@@ -792,6 +793,7 @@ namespace Isekai {
                 Passives::Install();
                 Sounds::Install();
                 Storage::Install();
+                Shop::Install();         // resolves the System Shop's soul-gem catalog
                 CraftHooks::Install();  // zero-transfer crafting (validation build for now)
                 UI::Install();
                 UI::Prisma::Install();  // optional web UI; no-op without the patch

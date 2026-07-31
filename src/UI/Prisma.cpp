@@ -1,6 +1,7 @@
 #include "UI/Prisma.h"
 
 #include "PrismaUI_API.h"
+#include "Shop.h"  // Shop::Open from the status screen's shop button
 #include "SkillTree.h"
 #include "Sounds.h"
 #include "Storage.h"  // Storage::Open from the status screen's storage button
@@ -217,7 +218,7 @@ namespace Isekai::UI::Prisma {
         }
 
         // The status screen's footer buttons. One listener, an action string — tree /
-        // storage / reboot / close.
+        // storage / shop / reboot / close.
         void OnStatusAction(const char* a_arg) {
             const std::string action = a_arg ? a_arg : "";
             if (auto* task = SKSE::GetTaskInterface()) {
@@ -229,6 +230,11 @@ namespace Isekai::UI::Prisma {
                         HideView();
                         Sounds::PlayDelayed(Sounds::Sfx::WindowClose, Sounds::kResumeGraceMs);
                         Storage::Open();
+                    } else if (action == "shop") {
+                        // Shop::Open() calls ShowSystemWindow, which we forward to our own
+                        // kPanel screen — takes the view over directly, no HideView needed,
+                        // same as "reboot" below.
+                        Isekai::Shop::Open();
                     } else if (action == "reboot") {
                         // Re-opens the blessing choice, which brings up its own panel
                         // (ShowPanel takes the view over from here) — no HideView needed.
