@@ -1,215 +1,220 @@
-# Isekai Hero - Creation Kit Guide (v2.0)
+> ⚠️ **Legacy / archived.** This documents the old Papyrus implementation of the mod
+> (tag `papyrus-v1.0`), which has been superseded by the native SKSE C++ version. Kept
+> for reference only.
 
-**Für Skyrim Special Edition 1.6.x / Anniversary Edition & Creation Kit v1.6+**
+# Isekai Hero - Creation Kit guide (v2.0)
 
-Dieses Guide führt dich Schritt für Schritt durch die Erstellung des Isekai Hero Mods im Creation Kit.
+**For Skyrim Special Edition 1.6.x / Anniversary Edition & Creation Kit v1.6+**
 
-⚠️ **WICHTIG:** Das Creation Kit hat einige Bugs. Wenn etwas nicht funktioniert, schaue in den Troubleshooting-Abschnitt!
+This guide walks you step by step through building the Isekai Hero mod in the Creation Kit.
+
+⚠️ **IMPORTANT:** the Creation Kit has some bugs. If something doesn't work, check the
+troubleshooting section!
 
 ---
 
-## 📋 Vorbereitung
+## 📋 Preparation
 
-### Benötigte Tools
-1. **Skyrim Special Edition** (Steam) - muss installiert sein
-2. **Creation Kit** (Steam → Bibliothek → Tools → Creation Kit)
-3. **Scripts aus diesem Repository** - Kopiere den `Scripts/Source` Ordner in dein Skyrim Data-Verzeichnis
+### Required tools
+1. **Skyrim Special Edition** (Steam) — must be installed
+2. **Creation Kit** (Steam → Library → Tools → Creation Kit)
+3. **Scripts from this repository** — copy the `Scripts/Source` folder into your Skyrim
+   Data directory
 
-### Erstmaliges CK Setup
-1. Starte das Creation Kit **als Administrator** (Rechtsklick → Als Administrator ausführen)
-2. Beim ersten Start: **File → Select Paths...**
-3. Stelle sicher, dass die Pfade korrekt sind:
+### First-time CK setup
+1. Start the Creation Kit **as administrator** (right-click → Run as administrator)
+2. On first start: **File → Select Paths...**
+3. Make sure the paths are correct:
    - **Skyrim:** `C:\Program Files (x86)\Steam\steamapps\common\Skyrim Special Edition`
-   - **Scripts:** `Data\Scripts` (wichtig für Kompilierung!)
+   - **Scripts:** `Data\Scripts` (important for compilation!)
 
 ---
 
-## 🚀 Schritt 1: Das Plugin Erstellen
+## 🚀 Step 1: Create the plugin
 
-### 1.1 CK Starten & Masters Laden
+### 1.1 Start the CK & load masters
 
-1. Öffne das Creation Kit (warte bis es geladen ist - kann 1-2 Minuten dauern)
-2. **File → Data...** (oben links im Menü)
-3. Es öffnet sich das "Data" Fenster
-4. Setze einen Haken bei **Skyrim.esm**
-5. Optional: Setze einen Haken bei **Update.esm** (falls vorhanden)
-6. Klicke **OK** (nicht "Set as Active File!" noch nicht)
-7. **Warte**, bis das CK fertig geladen hat (Statusleiste unten)
-   - Du siehst "Loading..." in der unteren Leiste
-   - Warte bis "Done" oder ähnlich erscheint
+1. Open the Creation Kit (wait until it has loaded — can take 1-2 minutes)
+2. **File → Data...** (top left in the menu)
+3. The "Data" window opens
+4. Tick **Skyrim.esm**
+5. Optional: tick **Update.esm** (if present)
+6. Click **OK** (not "Set as Active File!" yet)
+7. **Wait** until the CK has finished loading (status bar at the bottom)
+   - You see "Loading..." in the bottom bar
+   - Wait until "Done" or similar appears
 
-### 1.2 Neues Plugin Anlegen
+### 1.2 Create a new plugin
 
-1. **File → Save** (oder Strg+S)
-2. Es öffnet sich der "Save Plugin" Dialog
-3. **WICHTIG:** Wähle den richtigen Ordner!
-   - Navigiere zu: `Steam\steamapps\common\Skyrim Special Edition\Data`
-4. Gib als Dateiname ein: `IsekaiHero`
-5. Stelle sicher, dass als Typ **.esp** ausgewählt ist
-6. Klicke **Save**
+1. **File → Save** (or Ctrl+S)
+2. The "Save Plugin" dialog opens
+3. **IMPORTANT:** pick the right folder!
+   - Navigate to: `Steam\steamapps\common\Skyrim Special Edition\Data`
+4. Enter the filename: `IsekaiHero`
+5. Make sure the type is **.esp**
+6. Click **Save**
 
-✅ **Erfolg:** Du siehst jetzt oben im Fenster "IsekaiHero.esp" als aktive Datei
+✅ **Success:** you now see "IsekaiHero.esp" as the active file at the top of the window
 
 ---
 
-## 🏷️ Schritt 2: ESL Flag (Empfohlen)
+## 🏷️ Step 2: ESL flag (recommended)
 
-Damit der Mod nicht zum 255-Plugin-Limit zählt:
+So the mod doesn't count towards the 255-plugin limit:
 
-### 2.1 Form IDs Kompaktifizieren
+### 2.1 Compact the form IDs
 
 1. **File → Compact Active File Form IDs**
-2. Es erscheint eine Warnung: "This will change all Form IDs..."
-3. Klicke **YES** (Ja)
-4. Warte kurz
+2. A warning appears: "This will change all Form IDs..."
+3. Click **YES**
+4. Wait a moment
 
-### 2.2 Zu ESL Konvertieren
+### 2.2 Convert to ESL
 
 1. **File → Convert Active File to Light Master**
-2. Klicke **YES** im Dialog
+2. Click **YES** in the dialog
 
-### 2.3 Speichern
+### 2.3 Save
 
 1. **File → Save**
-2. Klicke **YES** zum Überschreiben
+2. Click **YES** to overwrite
 
-✅ **Kontrolle:** Die Datei sollte jetzt nur noch ~100-200 KB groß sein
+✅ **Check:** the file should now be only ~100-200 KB
 
 ---
 
-## 🎯 Schritt 3: Die Hauptquest Erstellen
+## 🎯 Step 3: Create the main quest
 
-### 3.1 Quest Anlegen
+### 3.1 Create the quest
 
-1. Im **Object Window** (das große Fenster mit vielen Kategorien):
-   - Klicke auf das **+** neben "Character"
-   - Klicke auf das **+** neben "Quest"
-   - Oder: Gib oben im Filter-Feld "Quest" ein
+1. In the **Object Window** (the big window with many categories):
+   - Click the **+** next to "Character"
+   - Click the **+** next to "Quest"
+   - Or: type "Quest" in the filter field at the top
 
-2. **Rechtsklick** in die leere Liste rechts
-3. Wähle **New** (oder drücke Insert)
-4. Es öffnet sich das "Quest" Fenster
+2. **Right-click** in the empty list on the right
+3. Choose **New** (or press Insert)
+4. The "Quest" window opens
 
-### 3.2 Quest Einstellungen
+### 3.2 Quest settings
 
-Fülle diese Felder aus (von oben nach unten):
+Fill in these fields (top to bottom):
 
-| Feld | Wert | Beschreibung |
+| Field | Value | Description |
 |------|------|--------------|
-| **ID** | `IsekaiIntroQuest` | Eindeutige Identifikation |
-| **Name** | `Isekai Hero - System Awakening` | Anzeigename |
-| **Type** | `None` | Quest-Typ |
-| **Priority** | `50` | Wichtigkeit (höher = wichtiger) |
-| ☑ **Start Game Enabled** | AN | Startet automatisch |
-| ☑ **Run Once** | AN | Läuft nur einmal |
+| **ID** | `IsekaiIntroQuest` | Unique identifier |
+| **Name** | `Isekai Hero - System Awakening` | Display name |
+| **Type** | `None` | Quest type |
+| **Priority** | `50` | Importance (higher = more important) |
+| ☑ **Start Game Enabled** | ON | Starts automatically |
+| ☑ **Run Once** | ON | Runs only once |
 
-**WICHTIG:** Klicke noch NICHT auf OK!
+**IMPORTANT:** do NOT click OK yet!
 
-### 3.3 Script Hinzufügen
+### 3.3 Add the script
 
-1. Im Quest-Fenster: Klicke auf den Tab **Scripts** (oben)
-2. Klicke auf den Button **Add** (rechts)
-3. Es öffnet sich "Add Script"
-4. Wähle aus der Liste: `IsekaiIntroQuest`
-   - Falls nicht in der Liste: Scripts müssen zuerst kompiliert werden (siehe Schritt 9)
-5. Klicke **OK**
+1. In the quest window: click the **Scripts** tab (top)
+2. Click the **Add** button (right)
+3. "Add Script" opens
+4. Choose from the list: `IsekaiIntroQuest`
+   - If it's not in the list: scripts must be compiled first (see step 9)
+5. Click **OK**
 
-### 3.4 Properties Verknüpfen (KRITISCH!)
+### 3.4 Link properties (CRITICAL!)
 
-Dieser Schritt ist oft fehlerhaft in Anleitungen - hier detailliert:
+This step is often wrong in guides — here in detail:
 
-1. Das Script `IsekaiIntroQuest` erscheint jetzt in der Liste
-2. **Klicke auf das Script** (einmal anklicken, damit es blau markiert ist)
-3. Klicke auf den Button **Properties** (rechts neben der Liste)
-4. Es öffnet sich das "Properties" Fenster
+1. The script `IsekaiIntroQuest` now appears in the list
+2. **Click the script** (click once so it's highlighted blue)
+3. Click the **Properties** button (next to the list)
+4. The "Properties" window opens
 
-Die Properties sind bereits im Skript als **Auto-Properties** deklariert – du musst
-sie **nicht** manuell mit „Add Property" anlegen. Sie erscheinen automatisch, sobald
-das Skript angehängt ist. Du setzt nur ihre **Werte** (Edit Value → Select Form):
+The properties are already declared in the script as **auto-properties** — you do **not**
+have to create them manually with "Add Property". They appear automatically once the
+script is attached. You only set their **values** (Edit Value → Select Form):
 
-| Property | Typ (automatisch) | Wert setzen auf |
+| Property | Type (automatic) | Set value to |
 |----------|-------------------|-----------------|
-| `DialogScript` | `IsekaiDialogScript` | Quest mit `IsekaiDialogScript` |
-| `PowerScript` | `IsekaiPowerScript` | Quest mit `IsekaiPowerScript` |
-| `ProgressionScript` | `IsekaiProgressionScript` | Quest mit `IsekaiProgressionScript` |
-| `PerkDefs` | `IsekaiPerkDefinitions` | Quest mit `IsekaiPerkDefinitions` |
-| `MCM` | `IsekaiMCMScript` | Quest mit `IsekaiMCMScript` |
+| `DialogScript` | `IsekaiDialogScript` | Quest with `IsekaiDialogScript` |
+| `PowerScript` | `IsekaiPowerScript` | Quest with `IsekaiPowerScript` |
+| `ProgressionScript` | `IsekaiProgressionScript` | Quest with `IsekaiProgressionScript` |
+| `PerkDefs` | `IsekaiPerkDefinitions` | Quest with `IsekaiPerkDefinitions` |
+| `MCM` | `IsekaiMCMScript` | Quest with `IsekaiMCMScript` |
 
-> ⚠️ Der Property-**Typ** ist der jeweilige Skript-Name (NICHT `Quest`). Er wird
-> automatisch aus der Skript-Deklaration übernommen.
+> ⚠️ The property **type** is the respective script name (NOT `Quest`). It is taken
+> automatically from the script declaration.
 
-**WICHTIG:** Die Ziel-Quests werden erst in Schritt 8 erstellt. Lass die Werte
-also zunächst auf **None** und verknüpfe sie später (am einfachsten per **Auto-Fill**,
-sobald alle Quests existieren).
+**IMPORTANT:** the target quests are only created in step 8. So leave the values on
+**None** for now and link them later (easiest via **Auto-Fill** once all quests exist).
 
-Danach: **OK** im Properties-Fenster, **OK** im Quest-Fenster.
+Then: **OK** in the Properties window, **OK** in the quest window.
 
-✅ **Kontrolle:** Die Quest erscheint jetzt in der Object Window Liste
+✅ **Check:** the quest now appears in the Object Window list
 
 ---
 
-## 📊 Schritt 4: Quest Stages (Phasen)
+## 📊 Step 4: Quest stages
 
-### 4.1 Quest Öffnen
+### 4.1 Open the quest
 
-1. Doppelklicke auf `IsekaiIntroQuest` in der Liste
-2. Klicke auf den Tab **Quest Stages**
+1. Double-click `IsekaiIntroQuest` in the list
+2. Click the **Quest Stages** tab
 
-### 4.2 Stages Hinzufügen
+### 4.2 Add stages
 
-Für jede Stage:
-1. Klicke **New** (rechts)
-2. Gib die **Stage Nummer** ein
-3. Optional: Füge einen **Log Entry** hinzu
+For each stage:
+1. Click **New** (right)
+2. Enter the **stage number**
+3. Optional: add a **Log Entry**
 
-Erstelle diese Stages:
+Create these stages:
 
-| Stage | Log Entry | Beschreibung |
+| Stage | Log Entry | Description |
 |-------|-----------|--------------|
-| 10 | *(leer lassen)* | Warten auf Spawn |
-| 20 | `[SYSTEM] Boot sequence initiated` | System startet |
-| 25 | `[SYSTEM] Dimensional origin confirmed` | Welt gewählt |
-| 30 | `[SYSTEM] Power level selected` | Power-Level gewählt |
-| 40 | `[SYSTEM] Skill focus assigned` | Skills gewählt |
-| 50 | `[SYSTEM] Equipment summoned` | Ausrüstung gewählt |
-| 55 | `[SYSTEM] Wealth allocated` | Gold gewählt |
-| 60 | `[SYSTEM] Applying changes...` | Werte werden gesetzt |
-| 100 | `[SYSTEM] Reincarnation complete` | Abgeschlossen |
+| 10 | *(leave empty)* | Waiting for spawn |
+| 20 | `[SYSTEM] Boot sequence initiated` | System starts |
+| 25 | `[SYSTEM] Dimensional origin confirmed` | World chosen |
+| 30 | `[SYSTEM] Power level selected` | Power level chosen |
+| 40 | `[SYSTEM] Skill focus assigned` | Skills chosen |
+| 50 | `[SYSTEM] Equipment summoned` | Equipment chosen |
+| 55 | `[SYSTEM] Wealth allocated` | Gold chosen |
+| 60 | `[SYSTEM] Applying changes...` | Values are set |
+| 100 | `[SYSTEM] Reincarnation complete` | Done |
 
-**So fügst du eine Stage hinzu:**
-1. Klicke **New**
-2. Gib die Nummer ein (z.B. 10)
-3. Klicke auf die Stage (sie wird blau)
-4. Unten im "Log Entry" Bereich:
-   - Klicke **New**
-   - Gib den Text ein
-   - Klicke **OK**
+**How to add a stage:**
+1. Click **New**
+2. Enter the number (e.g. 10)
+3. Click the stage (it turns blue)
+4. In the "Log Entry" area at the bottom:
+   - Click **New**
+   - Enter the text
+   - Click **OK**
 
-5. Klicke **OK** im Quest-Fenster
+5. Click **OK** in the quest window
 
 ---
 
-## 💬 Schritt 5: Message Forms (Dialoge)
+## 💬 Step 5: Message forms (dialogs)
 
-Message Forms sind die Dialogboxen, die im Spiel erscheinen.
+Message forms are the dialog boxes that appear in-game.
 
-### 5.1 Message Form Erstellen
+### 5.1 Create a message form
 
-1. Im Object Window:
-   - Öffne "Character"
-   - Wähle "Message"
-2. **Rechtsklick** in die Liste → **New**
+1. In the Object Window:
+   - Open "Character"
+   - Choose "Message"
+2. **Right-click** in the list → **New**
 
 ### 5.2 IsekaiMsg_WorldSelect
 
-Fülle aus:
+Fill in:
 
-| Feld | Wert |
+| Field | Value |
 |------|------|
 | **ID** | `IsekaiMsg_WorldSelect` |
 | **Name** | `SYSTEM: Dimensional Origin` |
 
-**Message Text** (kopiere das komplett):
+**Message Text** (copy it completely):
 ```
 From which world do you hail, Reincarnated One?
 
@@ -221,10 +226,10 @@ From which world do you hail, Reincarnated One?
 [6] APOCALYPTIC - Survival and mutations
 ```
 
-**Buttons** (sehr wichtig!):
-1. Im "Buttons" Bereich (unten):
-2. Klicke **New** für jeden Button
-3. Gib den Text ein (einer pro Button):
+**Buttons** (very important!):
+1. In the "Buttons" area (bottom):
+2. Click **New** for each button
+3. Enter the text (one per button):
    - Button 1: `Earth`
    - Button 2: `Japan`
    - Button 3: `Korea`
@@ -232,13 +237,13 @@ From which world do you hail, Reincarnated One?
    - Button 5: `Sci-Fi Future`
    - Button 6: `Apocalyptic`
 
-⚠️ **WICHTIG:** Die Reihenfolge ist kritisch! Button 0 = Earth, Button 1 = Japan, etc.
+⚠️ **IMPORTANT:** the order is critical! Button 0 = Earth, Button 1 = Japan, etc.
 
-4. Klicke **OK**
+4. Click **OK**
 
 ### 5.3 IsekaiMsg_PowerChoice
 
-| Feld | Wert |
+| Field | Value |
 |------|------|
 | **ID** | `IsekaiMsg_PowerChoice` |
 | **Name** | `SYSTEM: Status Allocation` |
@@ -261,7 +266,7 @@ Choose your reincarnation blessing:
 
 ### 5.4 IsekaiMsg_SkillFocus
 
-| Feld | Wert |
+| Field | Value |
 |------|------|
 | **ID** | `IsekaiMsg_SkillFocus` |
 | **Name** | `SYSTEM: Skill Allocation` |
@@ -288,7 +293,7 @@ Select your past life's expertise:
 
 ### 5.5 IsekaiMsg_EquipmentChoice
 
-| Feld | Wert |
+| Field | Value |
 |------|------|
 | **ID** | `IsekaiMsg_EquipmentChoice` |
 | **Name** | `SYSTEM: Equipment Summoning` |
@@ -313,7 +318,7 @@ Choose your starting gear:
 
 ### 5.6 IsekaiMsg_WealthChoice
 
-| Feld | Wert |
+| Field | Value |
 |------|------|
 | **ID** | `IsekaiMsg_WealthChoice` |
 | **Name** | `SYSTEM: Wealth Allocation` |
@@ -338,7 +343,7 @@ Choose your starting fortune:
 
 ### 5.7 IsekaiMsg_SystemComplete
 
-| Feld | Wert |
+| Field | Value |
 |------|------|
 | **ID** | `IsekaiMsg_SystemComplete` |
 | **Name** | `SYSTEM: Reincarnation Complete` |
@@ -362,28 +367,28 @@ May your legend be written in the stars.
 
 ---
 
-## 📦 Schritt 6: FormLists Erstellen
+## 📦 Step 6: Create FormLists
 
-FormLists sind Container für mehrere Items.
+FormLists are containers for multiple items.
 
-### 6.1 FormList Anlegen
+### 6.1 Create a FormList
 
-1. Object Window → öffne "Items"
-2. Wähle "FormList"
-3. **Rechtsklick** → **New**
+1. Object Window → open "Items"
+2. Choose "FormList"
+3. **Right-click** → **New**
 
-### 6.2 FormLists für Isekai Hero
+### 6.2 FormLists for Isekai Hero
 
-Erstelle diese FormLists (eine nach der anderen):
+Create these FormLists (one after another):
 
 #### Isekai_Weapons_Humble
 - **ID:** `Isekai_Weapons_Humble`
-- **FormID hinzufügen:**
-  1. Klicke **Add** (rechts)
-  2. Es öffnet sich "Select Form"
-  3. Gib ein: `IronSword` (oder Form ID: `00012E4E`)
-  4. Klicke **OK**
-  5. Das Item erscheint in der Liste
+- **Add a FormID:**
+  1. Click **Add** (right)
+  2. "Select Form" opens
+  3. Enter: `IronSword` (or form ID: `00012E4E`)
+  4. Click **OK**
+  5. The item appears in the list
 
 #### Isekai_Weapons_Adventurer
 - **ID:** `Isekai_Weapons_Adventurer`
@@ -427,21 +432,21 @@ Erstelle diese FormLists (eine nach der anderen):
 
 ---
 
-## 🌟 Schritt 7: Perks Erstellen
+## 🌟 Step 7: Create perks
 
-Perks sind passive Boni für den Spieler.
+Perks are passive bonuses for the player.
 
-### 7.1 Perk Anlegen
+### 7.1 Create a perk
 
-1. Object Window → öffne "Character"
-2. Wähle "Perk"
-3. **Rechtsklick** → **New**
+1. Object Window → open "Character"
+2. Choose "Perk"
+3. **Right-click** → **New**
 
-### 7.2 Perks für Isekai Hero
+### 7.2 Perks for Isekai Hero
 
-Erstelle diese 13 Perks:
+Create these 13 perks:
 
-#### Reincarnated Soul Branch
+#### Reincarnated Soul branch
 
 **Isekai_PastLifeMemories**
 - **ID:** `Isekai_PastLifeMemories`
@@ -463,7 +468,7 @@ Erstelle diese 13 Perks:
 - **Name:** `Transcendent Being`
 - **Description:** `You have transcended mortal limits. +100% XP gain, can make skills legendary.`
 
-#### Dimensional Knowledge Branch
+#### Dimensional Knowledge branch
 
 **Isekai_OtherworldlyInsight**
 - **ID:** `Isekai_OtherworldlyInsight`
@@ -485,7 +490,7 @@ Erstelle diese 13 Perks:
 - **Name:** `Reality Manipulation`
 - **Description:** `You can bend reality itself. +150 Magicka, spells cost 25% less.`
 
-#### System Protection Branch
+#### System Protection branch
 
 **Isekai_SystemShield**
 - **ID:** `Isekai_SystemShield`
@@ -507,7 +512,7 @@ Erstelle diese 13 Perks:
 - **Name:** `Immortal Vessel`
 - **Description:** `Your vessel is nearly immortal. +200 Health, 25% damage resistance.`
 
-#### Ascended Exclusive
+#### Ascended exclusive
 
 **Isekai_SystemAdmin**
 - **ID:** `Isekai_SystemAdmin`
@@ -516,62 +521,61 @@ Erstelle diese 13 Perks:
 
 ---
 
-## 🎮 Schritt 8: Zusätzliche Quests (v2.0)
+## 🎮 Step 8: Additional quests (v2.0)
 
-Für Progression, Perks und MCM brauchen wir separate Quests.
+For progression, perks and the MCM we need separate quests.
 
-### 8.1 IsekaiProgression Quest
+### 8.1 IsekaiProgression quest
 
 1. Object Window → Quest → **New**
-2. Einstellungen:
+2. Settings:
    - **ID:** `IsekaiProgression`
    - **Name:** `Isekai Progression System`
    - ☑ **Start Game Enabled**
    - **Priority:** `45`
-3. Tab **Scripts** → **Add** → `IsekaiProgressionScript`
+3. **Scripts** tab → **Add** → `IsekaiProgressionScript`
 4. **OK**
 
-### 8.2 IsekaiPerks Quest
+### 8.2 IsekaiPerks quest
 
 1. Quest → **New**
-2. Einstellungen:
+2. Settings:
    - **ID:** `IsekaiPerks`
    - **Name:** `Isekai Perk System`
    - ☑ **Start Game Enabled**
    - **Priority:** `45`
-3. Tab **Scripts** → **Add** → `IsekaiPerkDefinitions`
+3. **Scripts** tab → **Add** → `IsekaiPerkDefinitions`
 4. **OK**
 
-### 8.3 IsekaiMCM Quest
+### 8.3 IsekaiMCM quest
 
 1. Quest → **New**
-2. Einstellungen:
+2. Settings:
    - **ID:** `IsekaiMCM`
    - **Name:** `Isekai MCM Menu`
    - ☑ **Start Game Enabled**
    - **Priority:** `40`
-3. Tab **Scripts** → **Add** → `IsekaiMCMScript`
-4. Properties setzen (Auto-Fill oder manuell):
+3. **Scripts** tab → **Add** → `IsekaiMCMScript`
+4. Set properties (Auto-Fill or manually):
    `MainQuest`, `DialogScript`, `PowerScript`, `Progression`, `QuestTracker`
-   → jeweils auf die Quest mit dem entsprechenden Skript
+   → each to the quest with the corresponding script
 5. **OK**
 
-### 8.4 IsekaiQuestTracker Quest
+### 8.4 IsekaiQuestTracker quest
 
-Der Hauptquest-Belohnungs-Tracker → siehe eigener Abschnitt
-**„🏆 Main Quest Tracker einrichten"** weiter unten (Quest anlegen,
-`MainQuests`-Array füllen). Danach im MCM-Quest die `QuestTracker`-Property
-darauf verweisen lassen.
+The main-quest reward tracker → see the dedicated section
+**"🏆 Setting up the Main Quest Tracker"** further below (create the quest, fill the
+`MainQuests` array). Then point the `QuestTracker` property in the MCM quest at it.
 
 ---
 
-## 🔧 Schritt 9: Scripts Kompilieren
+## 🔧 Step 9: Compile scripts
 
-Dieser Schritt ist oft problematisch - hier detailliert:
+This step is often tricky — here in detail:
 
-### 9.1 Vorbereitung
+### 9.1 Preparation
 
-1. Stelle sicher, dass alle `.psc` Dateien im Ordner sind:
+1. Make sure all `.psc` files are in the folder:
    ```
    Skyrim Special Edition\Data\Source\Scripts\
    ├── IsekaiIntroQuest.psc
@@ -582,60 +586,60 @@ Dieser Schritt ist oft problematisch - hier detailliert:
    ├── IsekaiQuestTracker.psc
    └── IsekaiMCMScript.psc
    ```
-   > Hinweis: Skyrim SE nutzt `Data\Source\Scripts` (ältere Anleitungen sagen
-   > `Data\Scripts\Source`). Nutze das Verzeichnis, in dem deine `Game.psc` liegt.
+   > Note: Skyrim SE uses `Data\Source\Scripts` (older guides say `Data\Scripts\Source`).
+   > Use the directory where your `Game.psc` lives.
 
-2. **WICHTIG:** SKSE, **SkyUI** (für MCM) und **UIExtensions** (für die Menüs)
-   müssen installiert sein – ihre Skript-Quellen müssen zum Kompilieren auffindbar
-   sein. Alternativ nutzt du das Repo-Skript `compile.ps1` (siehe `Scripts/SourceDeps/`).
+2. **IMPORTANT:** SKSE, **SkyUI** (for the MCM) and **UIExtensions** (for the menus) must
+   be installed — their script sources must be findable to compile. Alternatively use the
+   repo script `compile.ps1` (see `Scripts/SourceDeps/`).
 
-### 9.2 Kompilierung
+### 9.2 Compilation
 
-1. Im Creation Kit: **Gameplay → Compile Scripts** (oder drücke F6)
-2. Es öffnet sich das "Compile Scripts" Fenster
-3. **WICHTIG:** Setze einen Haken bei **"All"** (oben links)
-4. Oder: Wähle nur die Isekai-Scripts aus
-5. Klicke **Compile**
+1. In the Creation Kit: **Gameplay → Compile Scripts** (or press F6)
+2. The "Compile Scripts" window opens
+3. **IMPORTANT:** tick **"All"** (top left)
+4. Or: select only the Isekai scripts
+5. Click **Compile**
 
-### 9.3 Fehler Beheben
+### 9.3 Fixing errors
 
-Wenn Fehler auftreten:
+If errors occur:
 
 **"Script not found"**
-- Script-Datei fehlt im `Scripts\Source` Ordner
-- Dateiname stimmt nicht überein (Groß-/Kleinschreibung!)
+- The script file is missing in the `Scripts\Source` folder
+- The filename doesn't match (case-sensitive!)
 
 **"Unknown type"**
-- SKSE ist nicht installiert
-- Falsche Skyrim-Version (Oldrim vs SE)
+- SKSE is not installed
+- Wrong Skyrim version (Oldrim vs SE)
 
 **"Missing master"**
-- Skyrim.esm nicht geladen
-- Andere Dependencies fehlen
+- Skyrim.esm not loaded
+- Other dependencies missing
 
-**"Failed to compile" ohne Details**
-- CK Bug! Versuche:
-  1. Schließe CK
-  2. Lösche `Data\Scripts\Source\temp`
-  3. Starte CK neu
-  4. Versuche erneut
+**"Failed to compile" without details**
+- CK bug! Try:
+  1. Close the CK
+  2. Delete `Data\Scripts\Source\temp`
+  3. Restart the CK
+  4. Try again
 
 ---
 
-## 💾 Schritt 10: Speichern & Testen
+## 💾 Step 10: Save & test
 
-### 10.1 Speichern
+### 10.1 Save
 
 1. **File → Save**
-2. Klicke **YES** zum Überschreiben
-3. Warte bis gespeichert ist
+2. Click **YES** to overwrite
+3. Wait until it's saved
 
-### 10.2 Dateien Kopieren
+### 10.2 Copy files
 
-Kopiere diese Dateien in deinen Mod-Ordner:
+Copy these files into your mod folder:
 
 ```
-Aus: Skyrim Special Edition\Data\
+From: Skyrim Special Edition\Data\
 ├── IsekaiHero.esp
 └── Scripts\
     ├── IsekaiIntroQuest.pex
@@ -646,171 +650,170 @@ Aus: Skyrim Special Edition\Data\
     ├── IsekaiQuestTracker.pex
     └── IsekaiMCMScript.pex
 ```
-> Hinweis: Das MCM läuft über das `IsekaiMCMScript` (SKI_ConfigBase) – es wird
-> **keine** `IsekaiMCMConfig.json` mehr benötigt (wurde entfernt).
+> Note: the MCM runs via the `IsekaiMCMScript` (SKI_ConfigBase) — no `IsekaiMCMConfig.json`
+> is needed anymore (it was removed).
 
-### 10.3 In-Game Test
+### 10.3 In-game test
 
-1. Starte Skyrim SE über SKSE
-2. Lade einen bestehenden Save oder starte neu
-3. Nach der Charakter-Erstellung sollte das System starten:
-   - Du siehst: "[SYSTEM] Initializing..."
-   - Dann: "[SYSTEM] Detecting soul signature..."
-   - Dann die Dialoge
+1. Start Skyrim SE via SKSE
+2. Load an existing save or start a new one
+3. After character creation the System should start:
+   - You see: "[SYSTEM] Initializing..."
+   - Then: "[SYSTEM] Detecting soul signature..."
+   - Then the dialogs
 
 ---
 
 ## 🐛 Troubleshooting
 
-### "Script not found" im Spiel
+### "Script not found" in-game
 
-**Ursache:** Script wurde nicht kompiliert oder ist am falschen Ort
+**Cause:** the script wasn't compiled or is in the wrong place
 
-**Lösung:**
-1. Prüfe: Existiert `Scripts\IsekaiIntroQuest.pex`?
-2. Wenn nein: Kompiliere erneut (`compile.ps1`)
-3. Wenn ja: Stelle sicher, dass die .pex Dateien im Data-Ordner sind
+**Fix:**
+1. Check: does `Scripts\IsekaiIntroQuest.pex` exist?
+2. If no: compile again (`compile.ps1`)
+3. If yes: make sure the .pex files are in the Data folder
 
-### "Cannot open store for class ..." beim Skript-Anhängen
+### "Cannot open store for class ..." when attaching a script
 
-**Beispiel:** `SCRIPTS: Cannot open store for class "uilistmenu", missing file?`
+**Example:** `SCRIPTS: Cannot open store for class "uilistmenu", missing file?`
 
-**Ursache:** Beim Anhängen lädt das CK den kompletten Referenz-Graphen des Skripts.
-`IsekaiDialogScript` referenziert `UIListMenu` (UIExtensions), `IsekaiMCMScript`
-erbt von `SKI_ConfigBase` (SkyUI). Deren **kompilierte `.pex`** müssen für das CK
-auffindbar sein – entweder in `Data\Scripts` (lose) oder in einem geladenen BSA.
-Da wir SkyUI/UIExtensions **nicht** als Master laden, müssen die `.pex` lose vorliegen.
+**Cause:** when attaching, the CK loads the complete reference graph of the script.
+`IsekaiDialogScript` references `UIListMenu` (UIExtensions), `IsekaiMCMScript` inherits from
+`SKI_ConfigBase` (SkyUI). Their **compiled `.pex`** must be findable to the CK — either in
+`Data\Scripts` (loose) or in a loaded BSA. Since we do **not** load SkyUI/UIExtensions as
+masters, the `.pex` must be present loose.
 
-**Lösung (einmalig):** Extrahiere die `.pex` der Abhängigkeiten nach `Data\Scripts`:
-- **UIExtensions:** aus `Data\UIExtensions.bsa` → `uiextensions.pex`, `uilistmenu.pex`,
-  `uimenubase.pex` (das reicht für unsere Menüs)
-- **SkyUI:** aus `SkyUI_SE.bsa` → alle `SKI_*.pex`
+**Fix (one-time):** extract the dependencies' `.pex` into `Data\Scripts`:
+- **UIExtensions:** from `Data\UIExtensions.bsa` → `uiextensions.pex`, `uilistmenu.pex`,
+  `uimenubase.pex` (that's enough for our menus)
+- **SkyUI:** from `SkyUI_SE.bsa` → all `SKI_*.pex`
 
-> ⚠️ **NICHT** `cosmeticmenu.pex` / `uicosmeticmenu.pex` / `uidyemenu.pex`
-> mitkopieren – die erben von **RaceMenu** (separater Mod) und lösen sonst die
-> Warnung `Cannot open store for class "RaceMenu"` aus. Wir nutzen sie nicht.
+> ⚠️ Do **NOT** copy `cosmeticmenu.pex` / `uicosmeticmenu.pex` / `uidyemenu.pex` — they
+> inherit from **RaceMenu** (a separate mod) and otherwise trigger the warning
+> `Cannot open store for class "RaceMenu"`. We don't use them.
 
-Zum Entpacken eignet sich **BSArch** oder **BSA Browser**. Danach **CK neu starten**
-(der Script-Store wird nur beim Start eingelesen). Diese `.pex` ändern sich nie –
-also nur ein einziges Mal nötig.
+**BSArch** or **BSA Browser** work for extracting. Then **restart the CK** (the script store
+is only read at startup). These `.pex` never change — so this is only needed once.
 
-### Quest startet nicht
+### Quest doesn't start
 
-**Ursache:** "Start Game Enabled" nicht gesetzt oder falsche Priority
+**Cause:** "Start Game Enabled" not set or wrong priority
 
-**Lösung:**
-1. Öffne die Quest im CK
-2. Prüfe: ☑ **Start Game Enabled** ist angehakt
-3. Prüfe: **Priority** ist mindestens 50
-4. Speichere neu
+**Fix:**
+1. Open the quest in the CK
+2. Check: ☑ **Start Game Enabled** is ticked
+3. Check: **Priority** is at least 50
+4. Save again
 
-### Message-Boxen erscheinen nicht
+### Message boxes don't appear
 
-**Ursache:** Falsche Button-Indizes oder Message Forms nicht verknüpft
+**Cause:** wrong button indices or message forms not linked
 
-**Lösung:**
-1. Prüfe: Message Form IDs stimmen mit Script-Properties überein
-2. Prüfe: Buttons sind in richtiger Reihenfolge (0, 1, 2...)
-3. Im Script: `IsekaiMsg_WorldSelect.Show()` gibt den Button-Index zurück
+**Fix:**
+1. Check: the message-form IDs match the script properties
+2. Check: buttons are in the right order (0, 1, 2...)
+3. In the script: `IsekaiMsg_WorldSelect.Show()` returns the button index
 
-### CTD (Crash to Desktop)
+### CTD (crash to desktop)
 
-**Ursachen & Lösungen:**
+**Causes & fixes:**
 
-| Symptom | Ursache | Lösung |
+| Symptom | Cause | Fix |
 |---------|---------|--------|
-| Beim Start | ESL nicht korrekt | Form IDs kompaktifizieren |
-| Beim Dialog | Falsche Message Form | Button-Indizes prüfen |
-| Bei Equipment | Falsche Form ID | FormLists prüfen |
-| Zufällig | Script-Loop | OnUpdate-Interval erhöhen |
+| On start | ESL not correct | Compact the form IDs |
+| On dialog | Wrong message form | Check button indices |
+| On equipment | Wrong form ID | Check the FormLists |
+| Random | Script loop | Increase the OnUpdate interval |
 
-### CK stürzt ab
+### CK crashes
 
-**Häufige CK Bugs:**
+**Common CK bugs:**
 
 1. **"Out of memory"**
-   - CK ist 32-bit und hat Speicherlimit
-   - Lösung: Speichere oft, starte CK neu
+   - The CK is 32-bit and has a memory limit
+   - Fix: save often, restart the CK
 
 2. **"Failed to open file"**
-   - CK läuft nicht als Administrator
-   - Lösung: Rechtsklick → Als Administrator ausführen
+   - The CK is not running as administrator
+   - Fix: right-click → Run as administrator
 
-3. **Scripts werden nicht kompiliert**
-   - Lösche `Data\Scripts\Source\temp` Ordner
-   - Starte CK neu
+3. **Scripts don't compile**
+   - Delete the `Data\Scripts\Source\temp` folder
+   - Restart the CK
 
 ---
 
-## 🏆 Main Quest Tracker einrichten (Solo-Leveling-Belohnungen)
+## 🏆 Setting up the Main Quest Tracker (Solo-Leveling rewards)
 
-Das Skript [`IsekaiQuestTracker.psc`](Scripts/Source/IsekaiQuestTracker.psc) belohnt
-Hauptquest-Abschlüsse mit Perk-Punkten + Titeln. So verdrahtest du es:
+The script [`IsekaiQuestTracker.psc`](Scripts/Source/IsekaiQuestTracker.psc) rewards main-quest
+completions with perk points + titles. Wire it up like this:
 
-### 1. Quest anlegen
-1. **Object Window → Character → Quest → Rechtsklick → New**
+### 1. Create the quest
+1. **Object Window → Character → Quest → right-click → New**
 2. **ID:** `IsekaiQuestTracker`
-3. Reiter **Quest Data:** Haken bei **Start Game Enabled** und **Run Once**
-4. Reiter **Scripts → Add → `IsekaiQuestTracker`**
+3. **Quest Data** tab: tick **Start Game Enabled** and **Run Once**
+4. **Scripts** tab **→ Add → `IsekaiQuestTracker`**
 
-### 2. MainQuests-Array füllen (WICHTIG: exakte Reihenfolge!)
-Im Script-Properties-Fenster `MainQuests` markieren → **Edit Value** → Größe **12**,
-dann jeden Index mit der passenden Vanilla-Quest belegen:
+### 2. Fill the MainQuests array (IMPORTANT: exact order!)
+In the script properties window select `MainQuests` → **Edit Value** → size **12**, then
+assign each index the matching vanilla quest:
 
-| Index | Quest Editor ID | Quest-Name | Belohnung |
+| Index | Quest editor ID | Quest name | Reward |
 |------:|-----------------|------------|-----------|
-| 0 | `MQ101` | Unbound | +10 Perks, „Survivor" |
-| 1 | `MQ102` | Before the Storm | +5 Perks |
-| 2 | `MQ103` | Bleak Falls Barrow | +15 Perks, „Tomb Raider" |
-| 3 | `MQ104` | Dragon Rising | +50 Perks, „Dragon Slayer" |
-| 4 | `MQ105` | The Way of the Voice | +25 Perks, „Voice Wielder" |
-| 5 | `MQ106` | The Horn of Jurgen Windcaller | +30 Perks |
-| 6 | `MQ201` | A Blade in the Dark | +20 Perks |
-| 7 | `MQ202` | Diplomatic Immunity | +40 Perks, „Spy" |
-| 8 | `MQ203` | A Cornered Rat | +25 Perks |
-| 9 | `MQ204` | Alduin's Wall | +30 Perks, „Time Reader" |
-| 10 | `MQ205` | The Fallen | +50 Perks, „Dragon Tamer" |
-| 11 | `MQ206` | Dragonslayer | +500 Perks, „World Savior" |
+| 0 | `MQ101` | Unbound | +10 perks, "Survivor" |
+| 1 | `MQ102` | Before the Storm | +5 perks |
+| 2 | `MQ103` | Bleak Falls Barrow | +15 perks, "Tomb Raider" |
+| 3 | `MQ104` | Dragon Rising | +50 perks, "Dragon Slayer" |
+| 4 | `MQ105` | The Way of the Voice | +25 perks, "Voice Wielder" |
+| 5 | `MQ106` | The Horn of Jurgen Windcaller | +30 perks |
+| 6 | `MQ201` | A Blade in the Dark | +20 perks |
+| 7 | `MQ202` | Diplomatic Immunity | +40 perks, "Spy" |
+| 8 | `MQ203` | A Cornered Rat | +25 perks |
+| 9 | `MQ204` | Alduin's Wall | +30 perks, "Time Reader" |
+| 10 | `MQ205` | The Fallen | +50 perks, "Dragon Tamer" |
+| 11 | `MQ206` | Dragonslayer | +500 perks, "World Savior" |
 
-> ⚠️ Reihenfolge muss stimmen — die Belohnungen sind im Skript fest an den Index
-> gekoppelt. Suche die Quests im Object Window per ID (Filter `MQ1`/`MQ2`).
+> ⚠️ The order must be right — the rewards are hard-coupled to the index in the script.
+> Find the quests in the Object Window by ID (filter `MQ1`/`MQ2`).
 
-### 3. Optionen (Properties)
-- `EnableQuestRewards` = `True` (Standard)
-- `RetroactiveRewards` = `False` → bereits abgeschlossene Quests bei Installation
-  werden **nicht** nachträglich belohnt (für Bestands-Saves empfohlen)
+### 3. Options (properties)
+- `EnableQuestRewards` = `True` (default)
+- `RetroactiveRewards` = `False` → already-completed quests at install are **not** rewarded
+  retroactively (recommended for existing saves)
 
-### 4. Im MCM-Quest verknüpfen
-In der Quest mit `IsekaiMCMScript` die neue Property `QuestTracker` auf
-`IsekaiQuestTracker` setzen (für Status-Anzeige + Toggle im MCM).
+### 4. Link it in the MCM quest
+In the quest with `IsekaiMCMScript`, set the new `QuestTracker` property to
+`IsekaiQuestTracker` (for the status display + toggle in the MCM).
 
 ---
 
 ## 📤 Distribution
 
-Für die Veröffentlichung benötigst du:
+For release you need:
 
-### Erforderlich:
+### Required:
 - `IsekaiHero.esp` (ESL-flagged)
-- `Scripts\*.pex` (kompilierte Scripts)
-- SKSE64, SkyUI, UIExtensions (als Mod-Abhängigkeiten im Mod-Beschreibungstext)
+- `Scripts\*.pex` (compiled scripts)
+- SKSE64, SkyUI, UIExtensions (as mod dependencies in the mod description text)
 
-### Optional (empfohlen):
-- `Scripts\Source\*.psc` (Quellcode)
+### Optional (recommended):
+- `Scripts\Source\*.psc` (source code)
 - `README.md`
 - `CREATION_KIT_GUIDE.md`
 
-### Nicht mitliefern:
-- `*.bsa` (wenn du keine Assets hast)
-- `*.esp.bak` oder `*.esp.save`
-- `temp` Ordner
+### Don't ship:
+- `*.bsa` (if you have no assets)
+- `*.esp.bak` or `*.esp.save`
+- The `temp` folder
 
 ---
 
-**Bei Problemen:** Erstelle ein Issue im GitHub Repository mit:
-1. CK Version
-2. Skyrim Version
-3. Exakte Fehlermeldung
-4. Was du gerade versucht hast
+**If you run into problems:** open an issue on the GitHub repository with:
+1. CK version
+2. Skyrim version
+3. The exact error message
+4. What you were trying to do
 
 _Good luck, modder!_ 🐉

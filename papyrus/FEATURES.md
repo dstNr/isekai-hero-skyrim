@@ -1,26 +1,32 @@
-# 🚀 Geplante Features & Ideen
+> ⚠️ **Legacy / archived.** This documents the old Papyrus implementation of the mod
+> (tag `papyrus-v1.0`), which has been superseded by the native SKSE C++ version. Kept
+> for reference only.
 
-Diese Datei dokumentiert geplante Features und Ideen für zukünftige Versionen des Isekai Hero Mods.
+# 🚀 Planned features & ideas
+
+This file documents planned features and ideas for future versions of the Isekai Hero mod.
 
 ---
 
-## 🎯 Feature: Main Quest Integration mit System-Benachrichtigungen
+## 🎯 Feature: Main-quest integration with System notifications
 
-**Status:** ✅ Kern implementiert (`IsekaiQuestTracker.psc`, kompiliert) — CK-Verdrahtung nötig
-**Priorität:** Hoch
-**Zielversion:** v2.1
+**Status:** ✅ Core implemented (`IsekaiQuestTracker.psc`, compiles) — CK wiring needed
+**Priority:** High
+**Target version:** v2.1
 
-> **Umgesetzt:** [IsekaiQuestTracker.psc](Scripts/Source/IsekaiQuestTracker.psc) überwacht die
-> 12 Hauptquests (MQ101–MQ206), zeigt bei Abschluss eine System-Box und vergibt
-> Perk-Punkte + Flavor-Titel. MCM zeigt Fortschritt + Toggle. **CK-Setup siehe
+> **Implemented:** [IsekaiQuestTracker.psc](Scripts/Source/IsekaiQuestTracker.psc) watches the
+> 12 main quests (MQ101–MQ206), shows a System box on completion and grants perk points +
+> flavor titles. The MCM shows progress + a toggle. **CK setup see
 > [CREATION_KIT_GUIDE.md](CREATION_KIT_GUIDE.md).**
-> Noch offen aus dem Konzept unten: Fraktions-/DLC-Quests, schaltbares Titel-System mit Boni, Daily Quests.
+> Still open from the concept below: faction/DLC quests, a switchable title system with
+> bonuses, daily quests.
 
-### Konzept
+### Concept
 
-Wie in Isekai-Anime (Solo Leveling, Re:Monster, etc.) zeigt das System Fortschritts-Benachrichtigungen bei wichtigen Quest-Meilensteinen mit passenden Belohnungen.
+As in isekai anime (Solo Leveling, Re:Monster, etc.), the System shows progress
+notifications at important quest milestones with matching rewards.
 
-**Beispiel aus Solo Leveling:**
+**Example from Solo Leveling:**
 ```
 ╔══════════════════════════════════════╗
 ║     QUEST COMPLETED!                 ║
@@ -38,11 +44,11 @@ Wie in Isekai-Anime (Solo Leveling, Re:Monster, etc.) zeigt das System Fortschri
 ╚══════════════════════════════════════╝
 ```
 
-### Implementierungsideen
+### Implementation ideas
 
-#### 1. Quest-Tracking System
+#### 1. Quest-tracking system
 
-**Neues Script:** `IsekaiQuestTracker.psc`
+**New script:** `IsekaiQuestTracker.psc`
 
 ```papyrus
 Scriptname IsekaiQuestTracker extends Quest
@@ -135,9 +141,9 @@ Quest Property DLC2MQ06 Auto ; Dragonborn - The Gardener of Men
 Quest Property DLC2MQ07 Auto ; Dragonborn - At the Summit of Apocrypha
 ```
 
-#### 2. Quest-Rewards System
+#### 2. Quest-rewards system
 
-**Struktur für Belohnungen:**
+**Structure for rewards:**
 
 ```papyrus
 Struct QuestReward
@@ -153,35 +159,35 @@ Struct QuestReward
 EndStruct
 ```
 
-**Beispiel-Belohnungen:**
+**Example rewards:**
 
-| Quest | Belohnung | Wert |
+| Quest | Reward | Value |
 |-------|-----------|------|
-| **Unbound** (Helgen entkommen) | "Survivor" Titel, +10 Perks | Überleben der Hinrichtung |
-| **Before the Storm** (Riverwood) | +5 Perks, +20 Traglast | Erste Schritte in Skyrim |
-| **Bleak Falls Barrow** | "Tomb Raider" Titel, +15 Perks, -5% Shout Cooldown | Erster Draugr besiegt |
-| **Dragon Rising** (erster Drache) | "Dragon Slayer" Titel, +50 Perks, -10% Shout Cooldown | Erster Drachenseelen-Absorbtion |
-| **The Way of the Voice** | "Voice Wielder" Titel, +25 Perks, -15% Shout Cooldown | Greybeards getroffen |
-| **Horn of Jurgen Windcaller** | +30 Perks, -20% Shout Cooldown, +10% Magicka | Komplettes Way of the Voice |
-| **Diplomatic Immunity** | "Spy" Titel, +40 Perks | Thalmor-Embassy überlebt |
-| **Alduin's Bane** | "Time Walker" Titel, +100 Perks, -25% Shout Cooldown | Zeitsprung überlebt |
-| **Dragonslayer** (finale Quest) | "World Savior" Titel, +500 Perks, -50% Shout Cooldown, +25% Magic Resist | Alduin besiegt |
+| **Unbound** (escape Helgen) | "Survivor" title, +10 perks | Surviving the execution |
+| **Before the Storm** (Riverwood) | +5 perks, +20 carry weight | First steps in Skyrim |
+| **Bleak Falls Barrow** | "Tomb Raider" title, +15 perks, -5% shout cooldown | First draugr defeated |
+| **Dragon Rising** (first dragon) | "Dragon Slayer" title, +50 perks, -10% shout cooldown | First dragon-soul absorption |
+| **The Way of the Voice** | "Voice Wielder" title, +25 perks, -15% shout cooldown | Met the Greybeards |
+| **Horn of Jurgen Windcaller** | +30 perks, -20% shout cooldown, +10% Magicka | Full Way of the Voice |
+| **Diplomatic Immunity** | "Spy" title, +40 perks | Survived the Thalmor embassy |
+| **Alduin's Bane** | "Time Walker" title, +100 perks, -25% shout cooldown | Survived the time jump |
+| **Dragonslayer** (final quest) | "World Savior" title, +500 perks, -50% shout cooldown, +25% magic resist | Alduin defeated |
 
-**Fraktions-Belohnungen:**
+**Faction rewards:**
 
-| Fraktion | Meisterwerk-Belohnung |
+| Faction | Masterwork reward |
 |----------|----------------------|
-| **Companions** (Glory of the Dead) | "Harbingers Heir" Titel, +100 Perks, +20% Zweihand-Schaden |
-| **College of Winterhold** (Eye of Magnus) | "Arch-Mage" Titel, +100 Perks, -20% Spell Cost, +100 Magicka |
-| **Thieves Guild** (Darkness Returns) | "Nightengale" Titel, +100 Perks, +20% Pickpocket/Lockpick, Unsichtbarkeit-Perk |
-| **Dark Brotherhood** (Hail Sithis!) | "Listener" Titel, +100 Perks, +20% Schleich-Angriff-Schaden |
-| **Civil War** (Siege) | "War Hero" Titel, +150 Perks, +20% Einhand/Block |
-| **Dawnguard** (Kindred Judgment) | "Vampire Hunter" / "Vampire Lord" Titel, +200 Perks |
-| **Dragonborn** (Summit of Apocrypha) | "Miraaks Bane" Titel, +300 Perks, Alle Schreie kosten 50% weniger |
+| **Companions** (Glory of the Dead) | "Harbinger's Heir" title, +100 perks, +20% two-handed damage |
+| **College of Winterhold** (Eye of Magnus) | "Arch-Mage" title, +100 perks, -20% spell cost, +100 Magicka |
+| **Thieves Guild** (Darkness Returns) | "Nightingale" title, +100 perks, +20% pickpocket/lockpick, invisibility perk |
+| **Dark Brotherhood** (Hail Sithis!) | "Listener" title, +100 perks, +20% sneak-attack damage |
+| **Civil War** (Siege) | "War Hero" title, +150 perks, +20% one-handed/block |
+| **Dawnguard** (Kindred Judgment) | "Vampire Hunter" / "Vampire Lord" title, +200 perks |
+| **Dragonborn** (Summit of Apocrypha) | "Miraak's Bane" title, +300 perks, all shouts cost 50% less |
 
-#### 3. System-Benachrichtigungen
+#### 3. System notifications
 
-**Visuelles Design:**
+**Visual design:**
 
 ```
 ╔══════════════════════════════════════════════════╗
@@ -205,14 +211,14 @@ EndStruct
 ╚══════════════════════════════════════════════════╝
 ```
 
-**Sound-Design:**
-- Level-Up Sound für kleine Quests
-- Dragon Soul Absorb Sound für große Quests
-- Unique Sound für finale Quests
+**Sound design:**
+- Level-up sound for small quests
+- Dragon-soul-absorb sound for large quests
+- Unique sound for the final quests
 
-#### 4. Optional: System-Quests (Daily/Weekly)
+#### 4. Optional: System quests (daily/weekly)
 
-Wie in Solo Leveling "Daily Quests":
+As in Solo Leveling's "Daily Quests":
 
 ```
 ╔══════════════════════════════════════╗
@@ -227,89 +233,89 @@ Wie in Solo Leveling "Daily Quests":
 ╚══════════════════════════════════════╝
 ```
 
-**Mögliche Daily Quests:**
-- "Slay 10 Creatures" → +5 Perks
-- "Clear 1 Dungeon" → +10 Perks
-- "Craft 5 Items" → +5 Perks, +10 Smithing
-- "Read 3 Skill Books" → +5 Perks, +20% XP für 1 Stunde
-- "Travel 10,000 Steps" → +5 Perks, +20 Stamina
+**Possible daily quests:**
+- "Slay 10 Creatures" → +5 perks
+- "Clear 1 Dungeon" → +10 perks
+- "Craft 5 Items" → +5 perks, +10 Smithing
+- "Read 3 Skill Books" → +5 perks, +20% XP for 1 hour
+- "Travel 10,000 Steps" → +5 perks, +20 Stamina
 
-#### 5. Titel-System
+#### 5. Title system
 
-**Freischaltbare Titel mit Boni:**
+**Unlockable titles with bonuses:**
 
-| Titel | Anforderung | Bonus |
+| Title | Requirement | Bonus |
 |-------|-------------|-------|
-| "Survivor" | Helgen entkommen | +10 Health |
-| "Dragon Slayer" | Ersten Drachen besiegt | +5% Drachen-Schaden |
-| "Tomb Raider" | 5 Draugr-Gräber geleert | +10% Schatz-Fundrate |
-| "Dragonborn" | Way of the Voice komplett | -10% Shout Cooldown |
-| "Arch-Mage" | College Questline | -10% Spell Cost |
-| "Listener" | Dark Brotherhood | +10% Schleich-Schaden |
-| "Nightengale" | Thieves Guild | +20 Traglast |
-| "Harbinger" | Companions | +10% Zweihand |
-| "War Hero" | Civil War | +10% Einhand/Block |
-| "Vampire Hunter" | Dawnguard (Hunter) | +25% Vampir-Schaden |
-| "Vampire Lord" | Dawnguard (Vampire) | Vampir-Powers stärker |
-| "Miraaks Bane" | Dragonborn DLC | Alle Schreie +20% Effekt |
-| "World Savior" | Hauptquest komplett | +50 alle Attribute |
+| "Survivor" | Escape Helgen | +10 Health |
+| "Dragon Slayer" | Defeat the first dragon | +5% dragon damage |
+| "Tomb Raider" | Clear 5 draugr barrows | +10% treasure find rate |
+| "Dragonborn" | Complete Way of the Voice | -10% shout cooldown |
+| "Arch-Mage" | College questline | -10% spell cost |
+| "Listener" | Dark Brotherhood | +10% sneak damage |
+| "Nightingale" | Thieves Guild | +20 carry weight |
+| "Harbinger" | Companions | +10% two-handed |
+| "War Hero" | Civil War | +10% one-handed/block |
+| "Vampire Hunter" | Dawnguard (Hunter) | +25% vampire damage |
+| "Vampire Lord" | Dawnguard (Vampire) | Vampire powers stronger |
+| "Miraak's Bane" | Dragonborn DLC | All shouts +20% effect |
+| "World Savior" | Main quest complete | +50 all attributes |
 
-**Titel können gewechselt werden (nur einer aktiv):**
-- MCM-Menü für Titel-Auswahl
-- Aktiver Titel gibt seinen Bonus
-- Inaktive Titel sind gesammelt aber nicht aktiv
+**Titles can be switched (only one active):**
+- MCM menu for title selection
+- The active title grants its bonus
+- Inactive titles are collected but not active
 
-### Technische Umsetzung
+### Technical implementation
 
-#### Phase 1: Grundsystem
-1. `IsekaiQuestTracker.psc` erstellen
-2. Quest-Stages überwachen (RegisterForUpdate oder Events)
-3. Message Boxen für Quest-Abschlüsse
-4. Belohnungen verteilen
+#### Phase 1: Base system
+1. Create `IsekaiQuestTracker.psc`
+2. Watch quest stages (RegisterForUpdate or events)
+3. Message boxes for quest completions
+4. Distribute rewards
 
-#### Phase 2: Titel-System
-1. `IsekaiTitleManager.psc` erstellen
-2. Titel als global variables oder FormList
-3. MCM-Integration für Titel-Wechsel
-4. Bonus-Anwendung beim Wechsel
+#### Phase 2: Title system
+1. Create `IsekaiTitleManager.psc`
+2. Titles as global variables or a FormList
+3. MCM integration for switching titles
+4. Bonus application on switch
 
-#### Phase 3: Daily Quests
-1. `IsekaiDailyQuests.psc` erstellen
-2. StorageUtil für Fortschritt
-3. Timer-System für Reset
-4. Zufällige Quest-Auswahl
+#### Phase 3: Daily quests
+1. Create `IsekaiDailyQuests.psc`
+2. StorageUtil for progress
+3. Timer system for reset
+4. Random quest selection
 
-### Abhängigkeiten
+### Dependencies
 
-- SKSE64 (für StorageUtil, Zeit-Tracking)
-- SkyUI (für MCM, Titel-Auswahl)
-- Optional: UIExtensions (bessere Menüs)
+- SKSE64 (for StorageUtil, time tracking)
+- SkyUI (for MCM, title selection)
+- Optional: UIExtensions (better menus)
 
-### Speicher-Kompatibilität
+### Save compatibility
 
-- Sollte mit bestehenden Saves kompatibel sein
-- Quest-Fortschritt wird erkannt
-- Bereits abgeschlossene Quests → Retroaktive Belohnung optional
-
----
-
-## 📝 Weitere Ideen
-
-### High Priority
-- [ ] **Dimensional Storage** - Inventar-Zugriff überall (wie Ender Chest)
-- [ ] **System Shop** - Perk Points gegen Items eintauschen
-- [ ] **Skill Respec** - MCM-Menü für komplette Neuskillung
-
-### Medium Priority
-- [ ] **Isekai Companions** - Begleiter aus anderen Welten
-- [ ] **Unique Equipment** - Skaliert mit Spieler-Level
-- [ ] **Boss Scaling** - Gegner skalieren mit Power-Level (optional)
-
-### Low Priority / Nice to Have
-- [ ] **Achievements** - Steam-style Achievements im Spiel
-- [ ] **Statistics** - Spielzeit, Kills, etc. im MCM
-- [ ] **New Game+** - Mit vollem Power-Level neu starten
+- Should be compatible with existing saves
+- Quest progress is detected
+- Already-completed quests → retroactive reward optional
 
 ---
 
-**Hast du eine Idee?** Erstelle ein Issue oder schlage sie hier vor!
+## 📝 More ideas
+
+### High priority
+- [ ] **Dimensional Storage** — inventory access anywhere (like an Ender Chest)
+- [ ] **System Shop** — trade perk points for items
+- [ ] **Skill Respec** — MCM menu for a full re-skill
+
+### Medium priority
+- [ ] **Isekai Companions** — followers from other worlds
+- [ ] **Unique Equipment** — scales with player level
+- [ ] **Boss Scaling** — enemies scale with power level (optional)
+
+### Low priority / nice to have
+- [ ] **Achievements** — Steam-style achievements in-game
+- [ ] **Statistics** — playtime, kills, etc. in the MCM
+- [ ] **New Game+** — restart with full power level
+
+---
+
+**Got an idea?** Open an issue or suggest it here!

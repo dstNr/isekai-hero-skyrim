@@ -1,80 +1,84 @@
+> ⚠️ **Legacy / archived.** This documents the old Papyrus implementation of the mod
+> (tag `papyrus-v1.0`), which has been superseded by the native SKSE C++ version. Kept
+> for reference only.
+
 # Development Workflow — Isekai Hero
 
-**Wichtig:** Diese Regeln gelten für ALLE Entwicklungssessions.
+**Important:** these rules apply to ALL development sessions.
 
 ---
 
-## 🔄 Git Workflow (Pflicht!)
+## 🔄 Git workflow (mandatory!)
 
-### Vor dem Entwickeln (immer!)
+### Before developing (always!)
 
 ```bash
-# 1. Aktuellen Stand holen
+# 1. Get the current state
 git pull origin main
 
-# 2. Prüfen ob alles passt
+# 2. Check that everything is fine
 git status
 ```
 
-**Warum:** Vermeidet Merge-Konflikte und stellt sicher, dass wir auf dem aktuellen Stand arbeiten.
+**Why:** avoids merge conflicts and makes sure we work on the current state.
 
 ---
 
-### Nach Änderungen (immer!)
+### After changes (always!)
 
 ```bash
-# 1. Alle Änderungen stagen
+# 1. Stage all changes
 git add -A
 
-# 2. Mit beschreibendem Commit-Message committen
-git commit -m "type: Kurzbeschreibung
+# 2. Commit with a descriptive commit message
+git commit -m "type: short description
 
-- Detaillierte Änderung 1
-- Detaillierte Änderung 2
-- Detaillierte Änderung 3"
+- Detailed change 1
+- Detailed change 2
+- Detailed change 3"
 
-# 3. Auf GitHub pushen
+# 3. Push to GitHub
 git push origin main
 ```
 
-**Commit-Message Format:**
-- `feat:` Neue Features
-- `fix:` Bugfixes
-- `docs:` Dokumentation
-- `refactor:` Code-Verbesserungen ohne Funktionsänderung
-- `chore:` Wartung, Setup, etc.
+**Commit-message format:**
+- `feat:` new features
+- `fix:` bugfixes
+- `docs:` documentation
+- `refactor:` code improvements without a behavior change
+- `chore:` maintenance, setup, etc.
 
 ---
 
-## 📋 Checkliste vor jedem Commit
+## 📋 Checklist before every commit
 
-- [ ] `git pull` ausgeführt?
-- [ ] Alle Dateien gespeichert?
-- [ ] Scripts syntaktisch korrekt?
-- [ ] Commit-Message beschreibt die Änderungen?
-- [ ] Getestet (wenn möglich)?
+- [ ] Ran `git pull`?
+- [ ] All files saved?
+- [ ] Scripts syntactically correct?
+- [ ] Commit message describes the changes?
+- [ ] Tested (if possible)?
 
 ---
 
-## 🚫 Nie vergessen!
+## 🚫 Never forget!
 
-**Immer committen und pushen nach:**
-- Jeder signifikanten Änderung
+**Always commit and push after:**
+- Every significant change
 - Bugfixes
-- Neuen Features
-- Dokumentations-Updates
+- New features
+- Documentation updates
 
-**Nie vergessen vor dem Entwickeln:**
+**Never forget before developing:**
 - `git pull origin main`
 
 ---
 
-## 📝 Für Alfred (KI-Assistent)
+## 📝 For the assistant
 
-**Bei jeder Session:**
-1. Erst `git pull origin main` ausführen
-2. Dann Änderungen vornehmen
-3. Am Ende committen und pushen
-4. Zusammenfassung der Änderungen geben
+**Every session:**
+1. Run `git pull origin main` first
+2. Then make changes
+3. Commit and push at the end
+4. Give a summary of the changes
 
-**Diese Datei liegt unter:** `WORKFLOW.md`
+**This file lives at:** `WORKFLOW.md`
