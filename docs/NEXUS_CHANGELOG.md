@@ -7,6 +7,16 @@ are still in the older, longer style — that is how they already sit on Nexus.)
 
 ---
 
+## 0.6.1
+
+Fixed: the System hotkey did nothing in Skyrim VR (a bug introduced by 0.6.0's own VR crash fix) — it now opens the menu as expected.
+
+Fixed: the Dimensional Storage no longer leaves disabled "husk" chest references behind after a cell reset rebuilds it.
+
+Changed: reduced heavy CSS effects in the PrismaUI menu for steadier framerates; looks the same, costs less to redraw.
+
+---
+
 ## 0.6.0
 
 Added: **Custom blessing** — a fifth path that lets you set the three pieces separately: starting gift, reward pace and skill-tree depth, each NORMAL/HERO/ASCENDED. So "the whole tree open but a normal start and rewards" is a valid build.

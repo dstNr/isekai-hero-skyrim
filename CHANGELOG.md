@@ -4,14 +4,28 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
-## [Unreleased]
+## [0.6.1] — 2026-07-28
+
+A small follow-up to 0.6.0: a VR bug introduced by 0.6.0's own VR fix, a performance pass
+on the PrismaUI menu, and save hygiene for the storage chest. No save format change.
 
 ### Fixed
+- **The System hotkey did nothing in Skyrim VR.** 0.6.0's fix for the VR overlay crash
+  skipped the whole `Overlay::Install` function in VR — including the input registration
+  that makes the hotkey fire at all, which happened to sit after the early return. So VR
+  loaded and ran, but the System menu never opened on keypress. Input registration now
+  runs before the VR check; only the crash-prone swap-chain hook is still skipped in VR.
 - **Dimensional Storage no longer leaves orphaned chest references behind.** When the
   storage's hidden container was rebuilt after a cell reset, the old reference was only
   disabled, so a long save could accumulate several dormant husks (save bloat, and the
   kind of "unattached" entries a save cleaner like ReSaver flags). Rebuilds now delete
   the old reference, and any husks left by earlier builds are swept on load.
+
+### Changed
+- **Reduced heavy CSS effects in the PrismaUI menu** (masks, stacked shadows, gradients)
+  that PrismaUI's own performance notes flag as costly on its CPU renderer. The menu
+  looks the same at a glance but repaints (opening a panel, hovering, the flourish) cost
+  noticeably less, for steadier framerates.
 
 ## [0.6.0] — 2026-07-27
 
@@ -310,6 +324,7 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[0.6.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.6.1
 [0.6.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.6.0
 [0.5.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.5.1
 [0.5.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.5.0
