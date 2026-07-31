@@ -64,7 +64,10 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
 
   Plus **repeatable** nodes with no lock-out: **Perk Synthesis** (1 System Point
   → 5 perk points) and utility ranks — **Fleet of Foot** (move speed), **Beast of
-  Burden** (carry weight), **Enduring Vigor** (Health/Magicka/Stamina). The tree is
+  Burden** (carry weight), **Enduring Vigor** (Health/Magicka/Stamina), **Storm Ward**
+  (Shock Resist), **Warded Mind** (Magic Resist), **Arcane Absorption** (Spell
+  Absorption), **Iron Skin** (Armor Rating) and **Rapid Recovery** (H/M/S regen). The
+  tree is
   **gated by rebirth tier** (`Node::minPower`): NORMAL walks the self-made
   stat/utility half, HERO additionally unlocks the four Omniscience gifts, ASCENDED
   additionally unlocks the World Tree capstone. Sealed nodes render greyed with a

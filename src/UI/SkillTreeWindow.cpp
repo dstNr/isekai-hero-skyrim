@@ -259,7 +259,7 @@ namespace Isekai::UI {
             }
 
             // --- Utility rail: a label and a divider framing the always-open repeatable
-            // column, so the three nodes read as a deliberate group rather than floaters.
+            // column, so its nodes read as a deliberate group rather than floaters.
             // Drawn before the nodes so they sit on top.
             {
                 ImVec2 uMin{ FLT_MAX, FLT_MAX }, uMax{ -FLT_MAX, -FLT_MAX };

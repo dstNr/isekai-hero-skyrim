@@ -4,6 +4,17 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [Unreleased]
+
+### Added
+- **Five new repeatable skill-tree nodes**, closing the resistance/regen gaps a player
+  pointed out (fire and frost resist existed, shock resist didn't): **Storm Ward**
+  (Shock Resist), **Warded Mind** (Magic Resist), **Arcane Absorption** (Spell
+  Absorption), **Iron Skin** (Armor Rating) and **Rapid Recovery** (Health/Magicka/
+  Stamina regeneration). Same utility-rail rules as Fleet of Foot and friends — NORMAL
+  tier, no prerequisites, deliberately uncapped: the System Points economy is the actual
+  brake on getting "really, really OP", not an arbitrary rank limit.
+
 ## [0.6.1] — 2026-07-28
 
 A small follow-up to 0.6.0: a VR bug introduced by 0.6.0's own VR fix, a performance pass

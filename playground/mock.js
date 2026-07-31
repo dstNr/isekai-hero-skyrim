@@ -52,9 +52,16 @@
     // capstone
     { key: 13, name: "World Tree",          icon: "spells_09_frame.png", x: 550, y: 600, cost: 50, req: TIER.Ascended, prereq: [11, 12], desc: "The System blossoms through your soul.\n+100 Health, Magicka and Stamina." },
     // utility (left margin, repeatable)
-    { key: 16, name: "Beast of Burden",     icon: "spells_22_frame.png", x: 95,  y: 190, cost: 2,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System shoulders your load.\n+25 Carry Weight per rank." },
-    { key: 15, name: "Fleet of Foot",       icon: "spells_28_frame.png", x: 95,  y: 330, cost: 3,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System quickens your stride.\n+3% movement speed per rank." },
-    { key: 17, name: "Enduring Vigor",      icon: "spells_06_frame.png", x: 95,  y: 470, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System deepens your reserves.\n+25 Health, Magicka and Stamina per rank." },
+    { key: 16, name: "Beast of Burden",     icon: "spells_22_frame.png", x: 95,  y: 150, cost: 2,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System shoulders your load.\n+25 Carry Weight per rank." },
+    { key: 15, name: "Fleet of Foot",       icon: "spells_28_frame.png", x: 95,  y: 221, cost: 3,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System quickens your stride.\n+3% movement speed per rank." },
+    { key: 17, name: "Enduring Vigor",      icon: "spells_06_frame.png", x: 95,  y: 292, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System deepens your reserves.\n+25 Health, Magicka and Stamina per rank." },
+    // utility, continued: Tier-1 resistance/regen batch (see SkillTree.cpp for the
+    // AV/baseline rationale — all uncapped, same philosophy as the two nodes above).
+    { key: 18, name: "Storm Ward",          icon: "spells_18_frame.png", x: 95,  y: 363, cost: 3,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System turns aside the lightning.\n+5% Shock Resist per rank." },
+    { key: 19, name: "Warded Mind",         icon: "spells_19_frame.png", x: 95,  y: 434, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System shields your soul from magic.\n+5% Magic Resist per rank." },
+    { key: 20, name: "Arcane Absorption",   icon: "spells_20_frame.png", x: 95,  y: 505, cost: 5,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System drinks the spells cast against you.\n+4% Spell Absorption per rank." },
+    { key: 21, name: "Iron Skin",           icon: "spells_23_frame.png", x: 95,  y: 576, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System hardens your hide.\n+10 Armor Rating per rank." },
+    { key: 22, name: "Rapid Recovery",      icon: "spells_24_frame.png", x: 95,  y: 647, cost: 5,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System accelerates your body's grace.\n+10% Health, Magicka and Stamina regeneration per rank." },
   ];
 
   var PERK_MAX = 255; // Isekai::kMaxPerkPoints (see System.h)

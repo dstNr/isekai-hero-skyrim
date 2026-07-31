@@ -89,14 +89,39 @@ namespace Isekai::SkillTree {
             // every rebirth can grind them. Deliberately NOT attack speed (a well-known
             // source of animation/mod conflicts).
             { 16, "Beast of Burden", "The System shoulders your load.\n+25 Carry Weight per rank.",
-              "spells_22_frame.png", 95.0f, 190.0f, 2, kN, { 0, 0 }, Effect::kAttributes,
+              "spells_22_frame.png", 95.0f, 150.0f, 2, kN, { 0, 0 }, Effect::kAttributes,
               { { AV::kCarryWeight, 25.0f } }, true, 0 },
             { 15, "Fleet of Foot", "The System quickens your stride.\n+3% movement speed per rank.",
-              "spells_28_frame.png", 95.0f, 330.0f, 3, kN, { 0, 0 }, Effect::kMoveSpeed,
-              { { AV::kSpeedMult, 3.0f } }, true, 10 },
+              "spells_28_frame.png", 95.0f, 221.0f, 3, kN, { 0, 0 }, Effect::kDirectStat,
+              { { AV::kSpeedMult, 3.0f } }, true, 10, 100.0f },
             { 17, "Enduring Vigor", "The System deepens your reserves.\n+25 Health, Magicka and Stamina per rank.",
-              "spells_06_frame.png", 95.0f, 470.0f, 4, kN, { 0, 0 }, Effect::kAttributes,
+              "spells_06_frame.png", 95.0f, 292.0f, 4, kN, { 0, 0 }, Effect::kAttributes,
               { { AV::kHealth, 25.0f }, { AV::kMagicka, 25.0f }, { AV::kStamina, 25.0f } }, true, 0 },
+
+            // --- Utility, continued: Tier-1 resistance/regen batch (user feedback —
+            // "more skills to spend points on"; noted fire/frost resist exist but shock
+            // doesn't). All kDirectStat: none of these actor values have an ESP ability
+            // spell to fortify (unlike Health/Magicka/Fire/Frost/Disease resist above),
+            // so they are set directly, exactly like Fleet of Foot's move speed.
+            // Deliberately uncapped, matching Beast of Burden/Enduring Vigor above: the
+            // player explicitly asked to be able to get "really, really OP", and the
+            // System Points economy is the actual brake on that, not an arbitrary rank cap.
+            { 18, "Storm Ward", "The System turns aside the lightning.\n+5% Shock Resist per rank.",
+              "spells_18_frame.png", 95.0f, 363.0f, 3, kN, { 0, 0 }, Effect::kDirectStat,
+              { { AV::kResistShock, 5.0f } }, true, 0, 0.0f },
+            { 19, "Warded Mind", "The System shields your soul from magic.\n+5% Magic Resist per rank.",
+              "spells_19_frame.png", 95.0f, 434.0f, 4, kN, { 0, 0 }, Effect::kDirectStat,
+              { { AV::kResistMagic, 5.0f } }, true, 0, 0.0f },
+            { 20, "Arcane Absorption", "The System drinks the spells cast against you.\n+4% Spell Absorption per rank.",
+              "spells_20_frame.png", 95.0f, 505.0f, 5, kN, { 0, 0 }, Effect::kDirectStat,
+              { { AV::kAbsorbChance, 4.0f } }, true, 0, 0.0f },
+            { 21, "Iron Skin", "The System hardens your hide.\n+10 Armor Rating per rank.",
+              "spells_23_frame.png", 95.0f, 576.0f, 4, kN, { 0, 0 }, Effect::kDirectStat,
+              { { AV::kDamageResist, 10.0f } }, true, 0, 0.0f },
+            { 22, "Rapid Recovery", "The System accelerates your body's grace.\n+10% Health, Magicka and Stamina regeneration per rank.",
+              "spells_24_frame.png", 95.0f, 647.0f, 5, kN, { 0, 0 }, Effect::kDirectStat,
+              { { AV::kHealRateMult, 10.0f }, { AV::kMagickaRateMult, 10.0f }, { AV::kStaminaRateMult, 10.0f } },
+              true, 0, 100.0f },
         };
 
         // Unlock state lives in State::unlockedNodes (co-save). The tree window reads
@@ -149,9 +174,9 @@ namespace Isekai::SkillTree {
         // RespecRefund in the header for why knowledge and Perk Synthesis are excluded.
         [[nodiscard]] bool IsRefundable(Effect a_effect) {
             switch (a_effect) {
-            case Effect::kAttributes:     // flows through Passives::Refresh
+            case Effect::kAttributes:   // flows through Passives::Refresh
             case Effect::kShoutCooldown:  // a single actor value we can set back
-            case Effect::kMoveSpeed:      // recomputed from the rank, so rank 0 = vanilla
+            case Effect::kDirectStat:   // recomputed from the rank, so rank 0 = baseline
                 return true;
             default:
                 return false;
@@ -377,18 +402,23 @@ namespace Isekai::SkillTree {
             case Effect::kAllSpells:
                 UnlockAllSpells(player);
                 break;
-            case Effect::kMoveSpeed:
-                // No fortify ability exists for kSpeedMult, so set the base value directly
-                // to 100 (vanilla) + step*rank. Absolute and recomputed from the rank, so
-                // re-applying on load or after another purchase is idempotent — never
-                // stacks or drifts.
+            case Effect::kDirectStat: {
+                // No fortify ability exists for these actor values, so set each one's
+                // base directly to baseline + step*rank. Absolute and recomputed from
+                // the rank, so re-applying on load or after another purchase is
+                // idempotent — never stacks or drifts. Loops every non-empty bonus slot,
+                // so one node (Rapid Recovery) can drive several actor values at once.
                 if (auto* avOwner = player->AsActorValueOwner()) {
-                    const float step = a_node.bonus[0].amount;
-                    avOwner->SetBaseActorValue(
-                        AV::kSpeedMult,
-                        100.0f + step * static_cast<float>(Rank(a_node.key)));
+                    const float rank = static_cast<float>(Rank(a_node.key));
+                    for (const auto& b : a_node.bonus) {
+                        if (b.av == AV::kNone) {
+                            continue;
+                        }
+                        avOwner->SetBaseActorValue(b.av, a_node.baseline + b.amount * rank);
+                    }
                 }
                 break;
+            }
             default:
                 break;
             }
@@ -613,8 +643,8 @@ namespace Isekai::SkillTree {
                 for (const auto* node : cleared) {
                     if (node->effect == Effect::kShoutCooldown) {
                         avOwner->SetBaseActorValue(AV::kShoutRecoveryMult, 1.0f);
-                    } else if (node->effect == Effect::kMoveSpeed) {
-                        ApplyEffect(*node);  // rank is 0 now → back to the vanilla 100
+                    } else if (node->effect == Effect::kDirectStat) {
+                        ApplyEffect(*node);  // rank is 0 now → back to each AV's baseline
                     }
                 }
             }

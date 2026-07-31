@@ -4,10 +4,11 @@ Open ideas for the native-SKSE version, clustered by theme. Shipped ideas are fo
 the one-liner list below — the reasoning behind them lives in git history and
 `CHANGELOG.md`, not here.
 
-**Shipped, not detailed here:** repeatable utility nodes, Shattered/Dormant/Custom
-blessings, skill-tree respec, the Reboot button, remappable hotkey + `HideSealedNodes`
-ini, the PrismaUI status dashboard, orphaned-chest cleanup. See `CHANGELOG.md` for
-versions.
+**Shipped, not detailed here:** repeatable utility nodes (including the Tier 1
+resistance/regen batch — Storm Ward, Warded Mind, Arcane Absorption, Iron Skin, Rapid
+Recovery), Shattered/Dormant/Custom blessings, skill-tree respec, the Reboot button,
+remappable hotkey + `HideSealedNodes` ini, the PrismaUI status dashboard, orphaned-chest
+cleanup. See `CHANGELOG.md` for versions.
 
 ---
 
@@ -56,25 +57,7 @@ next to the tier badge. Feeds directly into the SkyrimNet "legend scales" idea b
 
 The tree's economy — where points come from and where they go.
 
-### Tier 1 — more resistance/regen nodes (easy)
-
-**Status:** 🅿️ Roadmap, feasibility confirmed against real actor values
-**Origin:** player feedback — loves the concept, wants to get "really, really OP"; noted
-fire/frost resist exist but shock resist doesn't.
-
-All backed by real actor values, applied exactly like Fleet of Foot / Enduring Vigor,
-repeatable, NORMAL tier, small per-rank amounts with caps:
-- **Shock Resistance** — `kResistShock` (42)
-- **General Magic Resistance** — `kResistMagic` (44)
-- **Magic Absorption** — `kAbsorbChance` (83), capped (e.g. 50–80%)
-- **Physical Resistance / Armor** — `kDamageResist` (39)
-- **Health / Magicka / Stamina Regen** — `kHealRateMult`/`kMagickaRateMult`/
-  `kStaminaRateMult` (155–157), base 100 like move speed
-
-Recommended first build out of this whole roadmap: biggest value per effort, lowest risk,
-directly requested.
-
-### Tier 2 — damage nodes (harder, no clean global actor value)
+### Damage nodes (harder, no clean global actor value)
 
 - **Spell Damage** — no global spell-damage multiplier AV; needs a perk or magic-effect
   route.

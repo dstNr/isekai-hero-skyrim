@@ -16,8 +16,11 @@ namespace Isekai::SkillTree {
         kAllIngredients,   // all four effects of every ingredient known
         kAllSpells,        // every spell that has a tome
         kPerkPoint,        // +5 perk points — REPEATABLE, never enters unlockedNodes
-        kMoveSpeed,        // +N% movement speed per rank (kSpeedMult, set directly —
-                           // no fortify ability exists for it) — REPEATABLE
+        kDirectStat,       // one or more actor values set directly to
+                           // baseline + amount*rank — REPEATABLE. For actor values with
+                           // no ESP ability spell to fortify (move speed, resistances,
+                           // regen rates): idempotent, so re-applying on load or after
+                           // another purchase never stacks or drifts.
     };
 
     struct Bonus {
@@ -47,6 +50,12 @@ namespace Isekai::SkillTree {
         // uncapped). One-shot nodes leave both at their defaults.
         bool         repeatable = false;
         std::int32_t maxRank = 0;
+
+        // Only used by kDirectStat: the vanilla value each of its actor values sits at
+        // before any rank is bought (100 for a *Mult AV like move speed or a regen rate,
+        // 0 for a resistance/absorption/armor-rating AV). Added at struct end so
+        // existing initializers are unaffected.
+        float baseline = 0.0f;
     };
 
     // The whole tree, for the window to draw.
