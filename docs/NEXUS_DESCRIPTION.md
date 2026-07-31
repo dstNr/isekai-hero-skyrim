@@ -1,9 +1,9 @@
-# Nexus Mods — Beschreibung
+# Nexus Mods — Description
 
-Zum direkten Einfügen in das Nexus-Beschreibungsfeld (BBCode). Kurzbeschreibung
-("Brief overview") darunter separat.
+For pasting directly into the Nexus description field (BBCode). The short "Brief
+overview" is separate, below.
 
-## Brief overview (Kurzfeld)
+## Brief overview (short field)
 
 ```
 You died. The System chose you. Begin your new life in Skyrim as a reincarnated hero — blessing choice, quest milestone rewards, a skill tree with game-wide knowledge unlocks, and dimensional storage. Pure SKSE, custom UI, ESL-flagged.

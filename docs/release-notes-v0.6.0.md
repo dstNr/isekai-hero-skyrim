@@ -1,22 +1,22 @@
-Was als **0.6.0** auf Nexus hochgeladen wurde.
+What was uploaded to Nexus as **0.6.0**.
 
-Großes Feature-Release auf 0.5.x. Save-safe: bestehende Spielstände behalten alles und
-leiten die neuen Felder aus ihrem Tier ab (Co-Save v10).
+A big feature release on top of 0.5.x. Save-safe: existing saves keep everything and
+derive the new fields from their tier (co-save v10).
 
-Archive: `IsekaiHero-v0.6.0.7z` (Hauptmod) und `IsekaiHero-PrismaUI-Patch-v0.6.0.7z` (optionaler UI-Patch).
+Archives: `IsekaiHero-v0.6.0.7z` (main mod) and `IsekaiHero-PrismaUI-Patch-v0.6.0.7z` (optional UI patch).
 
 ### Added
 
-- **Custom blessing** — ein fünfter Weg: Starting Gift, Reward Pace und Skill-Tree-Tiefe einzeln wählbar (NORMAL/HERO/ASCENDED). „Ganzer Baum offen, aber Normal-Start und -Rewards" ist damit ein gültiger Build; balanciert sich selbst über die Punkt-Ökonomie.
-- **Reboot-Button** im System-Menü — Segen auf bestehendem Charakter neu wählen, ohne Neuinstallation; Milestones, Skill-Tree und Punkte bleiben.
-- **Überarbeitetes Status-Menü** (PrismaUI-Patch) — echtes Dashboard: Tier-Header mit Skill-Tree-/Storage-Icons, Milestone-/Punkte-Tiles, Attunements und eine scrollende Titelliste, die bei allen Milestones auf dem Screen bleibt.
-- **Optionale SkyrimNet-Integration (experimentell, ungetestet)** — mit SkyrimNet reagieren AI-NPCs auf die Wiedergeburt und die vom System anerkannten Taten. Noch nicht im laufenden Spiel mit SkyrimNet verifiziert; ohne SkyrimNet komplett wirkungslos, für alle anderen also unbedenklich. Per INI abschaltbar.
-- **Skyrim VR lädt jetzt** (experimentell) — kein Crash mehr auf SkyrimVR, Forms lösen dort auf. UI in VR braucht den PrismaUI-VR-Build. Noch im Community-Test.
+- **Custom blessing** — a fifth path: choose the starting gift, reward pace and skill-tree depth independently (NORMAL/HERO/ASCENDED). "The whole tree open, but a normal start and normal rewards" is a valid build; it self-balances through the System-Point economy.
+- **Reboot button** in the System menu — re-pick your blessing on an existing character, no reinstall; milestones, skill tree and points are kept.
+- **Reworked status menu** (PrismaUI patch) — a proper dashboard: tier header with Skill Tree / Storage icons, milestone/point tiles, attunements, and a scrolling titles list that stays on screen no matter how many you have.
+- **Optional SkyrimNet integration (experimental, untested)** — with SkyrimNet installed, AI NPCs can react to your reincarnation and the deeds the System recognises. Not yet verified in a running game with SkyrimNet; completely inert without SkyrimNet, so safe for everyone else. Can be switched off in the ini.
+- **Skyrim VR now loads** (experimental) — no more crash on SkyrimVR, and its forms resolve there. UI in VR needs the PrismaUI VR build. Still community-testing.
 
 ### Fixed
 
-- **Charakter-Level fällt nach dem Laden nicht mehr auf 1.** (Skills, Attribute, Perks und Gold waren nie betroffen — nur die Level-Zahl.)
+- **Character level no longer drops to 1 after loading.** (Skills, attributes, perks and gold were never affected — only the level number.)
 
-### Intern
+### Internal
 
-- Kein Entwickler-Klarname in der ausgelieferten DLL; Debug-`.pdb` wird nicht mitgeliefert.
+- No developer real name in the shipped DLL; the debug `.pdb` is not shipped.

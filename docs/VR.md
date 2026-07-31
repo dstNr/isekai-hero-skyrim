@@ -1,108 +1,104 @@
-# Skyrim VR — Status & Plan
+# Skyrim VR — status & plan
 
-**Status: EXPERIMENTAL / UNGETESTET.** Die Mod wird VR-kompatibel gebaut, konnte aber
-mangels SkyrimVR-Installation von niemandem im echten Spiel verifiziert werden. Bis
-das passiert ist, gilt VR ausdrücklich als „läuft vielleicht", nicht als „unterstützt".
+**Status: EXPERIMENTAL / UNTESTED.** The mod is built VR-compatible, but with no SkyrimVR
+install available nobody has verified it in a running game. Until that happens VR is
+explicitly "might work", not "supported".
 
-## Warum das meiste schon steht
+## Why most of it is already in place
 
-CommonLibSSE-NG baut **eine** DLL für SE, AE und VR; die Runtime wird beim Laden
-erkannt. Der vcpkg-Port (v3.7.0) ist mit `ENABLE_SKYRIM_VR=1` gebaut, diese Defines
-propagieren an unser Plugin (`HAS_SKYRIM_MULTI_TARGETING=1`). Die Plugin-Deklaration
-nutzt `VersionIndependence::AddressLibrary` ohne Runtime-Einschränkung — das schließt
-VR über die VR Address Library ein.
+CommonLibSSE-NG builds **one** DLL for SE, AE and VR; the runtime is detected at load.
+The vcpkg port (v3.7.0) is built with `ENABLE_SKYRIM_VR=1`, and these defines propagate to
+our plugin (`HAS_SKYRIM_MULTI_TARGETING=1`). The plugin declaration uses
+`VersionIndependence::AddressLibrary` with no runtime restriction — which includes VR via
+the VR Address Library.
 
-Die Logik-Ebene ist runtime-neutral:
-- Reincarnation, Milestones, Passives, Storage, Skill-Tree-Daten, Serialisierung —
-  reine Spielobjekt-Logik.
-- Crafting-Hooks nutzen bereits `REL::VariantID(se, ae, vr)` mit echten VR-Offsets
+The logic layer is runtime-neutral:
+- Reincarnation, milestones, passives, storage, skill-tree data, serialization — pure
+  game-object logic.
+- Crafting hooks already use `REL::VariantID(se, ae, vr)` with real VR offsets
   (`src/CraftHooks.cpp`).
-- VTables, Event-Sources (`LevelIncrease`), `BSGraphics::Renderer` löst NG pro Runtime
-  auf. Keine nackten `REL::ID`/2-arg-`RelocationID`, die in VR brechen würden.
+- VTables, event sources (`LevelIncrease`), `BSGraphics::Renderer` — NG resolves these per
+  runtime. No bare `REL::ID` / 2-arg `RelocationID` that would break in VR.
 
-`src/main.cpp` loggt beim Laden die erkannte Edition (SE/AE/VR) — die erste Zeile,
-die man bei einem VR-Bringup prüft.
+`src/main.cpp` logs the detected edition (SE/AE/VR) at load — the first line to check on a
+VR bring-up.
 
-## Strategie: VR-UI läuft komplett über PrismaUI
+## Strategy: the VR UI goes entirely through PrismaUI
 
-Entscheidung (Juli 2026): In VR gibt es **kein eigenes UI von uns**. Der ImGui-Overlay
-ist in VR aus (crasht auf dem VR-Renderer, s. u.), also läuft in VR **jedes** Panel über
-den PrismaUI-Patch. Schnell umgesetzt, community-testbar; ein natives In-HMD-UI (Phase 2,
-`MessageBox`-Fallback) bleibt als Rückfalloption, falls PrismaUI-VR sich als zu wackelig
-erweist.
+Decision (July 2026): in VR there is **no UI of our own**. The ImGui overlay is off in VR
+(it crashes on the VR renderer, see below), so in VR **every** panel goes through the
+PrismaUI patch. Quick to do, community-testable; a native in-HMD UI (Phase 2, `MessageBox`
+fallback) stays as a fallback option in case PrismaUI VR proves too shaky.
 
-Damit das kein Charakter zerschießt: `BeginReincarnation()` prüft in VR
-`UI::Prisma::Active()`. Ist PrismaUI **nicht** aktiv, wird das One-Shot-Flag
-`reincarnated` **nicht** gesetzt — sonst wäre der Charakter „reincarnated ohne je einen
-Segen wählen zu können". Stattdessen eine einmalige native Notification (die rendert die
-Brille) und Warten, bis PrismaUI da ist.
+So it doesn't wreck a character: `BeginReincarnation()` checks `UI::Prisma::Active()` in
+VR. If PrismaUI is **not** active, the one-shot flag `reincarnated` is **not** set —
+otherwise the character would be "reincarnated with no way to ever pick a blessing".
+Instead a single native notification (the headset renders it) and it waits until PrismaUI
+is there.
 
-## Spieler-Requirements für VR (abweichend von SE/AE)
+## Player requirements for VR (differing from SE/AE)
 
-- **SKSEVR** statt SKSE64
-- **VR Address Library for SKSEVR** statt „Address Library for SKSE Plugins"
-- **PrismaUI 1.5.0 VR-Build** + unser **PrismaUI-Patch** — in VR zwingend, weil das
-  eingebaute UI aus ist. Die stabile PrismaUI 1.4.x reicht **nicht** (kein VR).
-- Dasselbe Mod-Archiv wie für SE/AE — die DLL ist multi-runtime, ein eigener VR-Build
-  ist nicht nötig.
+- **SKSEVR** instead of SKSE64
+- **VR Address Library for SKSEVR** instead of "Address Library for SKSE Plugins"
+- **PrismaUI 1.5.0 VR build** + our **PrismaUI patch** — mandatory in VR, because the
+  built-in UI is off. The stable PrismaUI 1.4.x is **not** enough (no VR).
+- The same mod archive as for SE/AE — the DLL is multi-runtime, no separate VR build
+  needed.
 
-## Die offenen Risiken (was ein VR-Test zuerst prüfen muss)
+## Open risks (what a VR test must check first)
 
-1. **Lädt das Plugin überhaupt?** Log auf `Runtime edition: Skyrim VR` prüfen. Wenn
-   die Zeile fehlt oder SKSEVR das Plugin ablehnt → VR Address Library / SKSEVR-Version.
-2. **Overlay/UI (der große Punkt) — BESTÄTIGT: crasht in VR, jetzt deaktiviert.**
-   Das ImGui-Overlay hookte `IDXGISwapChain::Present` der Desktop-**Mirror**-Swap-Chain
-   (`renderWindows[0]`, `src/UI/Overlay.cpp`). In VR liefert derselbe Struct-Zugriff
-   einen **ungültigen, aber nicht-null** `swapChain` (das `RendererData`-Layout ist nur
-   für die Flat-Editionen per `static_assert` fixiert) — das Dereferenzieren seiner
-   vtable war ein sofortiger `EXCEPTION_ACCESS_VIOLATION` beim Laden (von einem Tester
-   mit 0.5.0 gemeldet, `Overlay.cpp:221`). **Seit dem Fix wird der Overlay-Hook in VR
-   per `REL::Module::IsVR()` übersprungen** — kein Crash mehr, aber in VR gibt es
-   dadurch **kein ImGui-UI** (die Segenswahl über den ImGui-Pfad erscheint nicht).
-   → **Nachtrag (Tester-Report):** der VR-Return übersprang auch `InstallInput()`, das
-     ganz am Ende derselben Funktion stand — dadurch war in VR **gar kein Input
-     registriert** und der System-Hotkey tat nichts („menu not displaying on the
-     keybind"). Fix: `InstallInput()` läuft jetzt VOR dem VR-Return (nur Event-Sinks,
-     renderer-frei, VR-sicher); nur der Swap-Chain-Hook bleibt gesperrt. Im Log jetzt
-     `System hotkey fired — opening status (...)` zur Bestätigung.
-   → Echtes VR-UI ist **Phase 2** (In-HMD-Rendering via OpenVR-Overlay/Stereo-Targets;
-     ein Tester nannte den Mod **„ImGui VR Helper"**, der ImGui in VR rendern kann —
-     ggf. der Weg, den ImGui-Overlay doch in die Brille zu bringen. Oder — kleiner — ein
-     Fallback auf spieleigene `MessageBox`-Menüs für die Panels, die die Brille selbst
-     rendert).
-3. **PrismaUI-Patch in VR — upstream geklärt (Stand Juli 2026):** VR wird **nur in der
-   PrismaUI 1.5.0 VR-Alpha / 1.5.0-rc** unterstützt, als experimentelle Alpha („full VR
-   support is coming", am besten auf Meta-Headsets, Alpha-Build via Discord/Dwemer Mods,
-   nicht die stabile Nexus-Datei 148718). Die **stabile 1.4.x, gegen die unser Patch
-   gebaut ist, kann kein VR.** Heißt für uns:
-   - Der Overlay-Crash (Bug 1) liegt in UNSEREM ImGui-Overlay, nicht bei PrismaUI —
-     der ist unabhängig davon gefixt.
-   - Ein VR-Spieler, der unser PrismaUI-UI in der Brille sehen will, braucht die
-     **PrismaUI 1.5.0 VR-Alpha**, nicht die stabile 1.4.x. Unser Patch spricht die
-     V1-API an; 1.5.0 behält V1 (V2 nur additiv), sollte also weiter funktionieren —
-     ungetestet.
-   - Für den ersten reinen Lade-/Logik-Test (Bug 2) ist PrismaUI egal; da zählt nur,
-     dass Passives/Sounds/Storage auflösen.
-4. **Crafting-Hooks.** Die VR-Offsets in `CraftHooks.cpp` stammen aus der Vorarbeit und
-   sind in VR nie geprüft — an einer Werkbank in VR gegentesten (Rezept-Sichtbarkeit,
-   Materialabzug).
+1. **Does the plugin load at all?** Check the log for `Runtime edition: Skyrim VR`. If the
+   line is missing or SKSEVR rejects the plugin → VR Address Library / SKSEVR version.
+2. **Overlay/UI (the big one) — CONFIRMED: crashes in VR, now disabled.**
+   The ImGui overlay hooked `IDXGISwapChain::Present` of the desktop **mirror** swap chain
+   (`renderWindows[0]`, `src/UI/Overlay.cpp`). In VR the same struct read yields an
+   **invalid but non-null** `swapChain` (the `RendererData` layout is only fixed for the
+   flat-screen editions via `static_assert`) — dereferencing its vtable was an immediate
+   `EXCEPTION_ACCESS_VIOLATION` on load (reported by a tester on 0.5.0, `Overlay.cpp:221`).
+   **Since the fix the overlay hook is skipped in VR** via `REL::Module::IsVR()` — no more
+   crash, but VR therefore has **no ImGui UI** (the blessing choice via the ImGui path does
+   not appear).
+   → **Addendum (tester report):** the VR return also skipped `InstallInput()`, which sat
+     at the very end of the same function — so VR registered **no input at all** and the
+     System hotkey did nothing ("menu not displaying on the keybind"). Fix: `InstallInput()`
+     now runs BEFORE the VR return (event sinks only, renderer-free, VR-safe); only the
+     swap-chain hook stays skipped. The log now shows
+     `System hotkey fired — opening status (...)` for confirmation.
+   → A real VR UI is **Phase 2** (in-HMD rendering via OpenVR overlay / stereo targets; a
+     tester named the mod **"ImGui VR Helper"**, which can render ImGui in VR — possibly
+     the way to get the ImGui overlay into the headset after all. Or — smaller — a fallback
+     to the game's own `MessageBox` menus for the panels, which the headset renders itself).
+3. **PrismaUI patch in VR — clarified upstream (as of July 2026):** VR is supported **only
+   in the PrismaUI 1.5.0 VR alpha / 1.5.0-rc**, as an experimental alpha ("full VR support
+   is coming", best on Meta headsets, alpha build via Discord/Dwemer Mods, not the stable
+   Nexus file 148718). The **stable 1.4.x our patch is built against cannot do VR.** That
+   means for us:
+   - The overlay crash (bug 1) is in OUR ImGui overlay, not PrismaUI — it is fixed
+     independently.
+   - A VR player who wants to see our PrismaUI UI in the headset needs the **PrismaUI 1.5.0
+     VR alpha**, not the stable 1.4.x. Our patch talks to the V1 API; 1.5.0 keeps V1 (V2 is
+     additive only), so it should keep working — untested.
+   - For the first pure load/logic test (bug 2) PrismaUI doesn't matter; all that counts is
+     that passives/sounds/storage resolve.
+4. **Crafting hooks.** The VR offsets in `CraftHooks.cpp` come from earlier work and were
+   never checked in VR — test them at a workbench in VR (recipe visibility, material
+   consumption).
 
-5. **Form-Auflösung (BESTÄTIGT kaputt in 0.5.0/0.5.1, jetzt gefixt).** Im VR-Log lösten
-   `TESDataHandler::LookupForm(localID, kFileName)` für ALLE unsere Forms auf null auf
-   (Passives 0/8, Sounds 0/4, Storage-Container fehlt), obwohl `DumpForms` dieselben
-   Forms fand. Fix: `Plugin::LookupOurForm<T>()` rekonstruiert die FormID über
-   `GetPartialIndex()` (dieselbe Rechnung wie DumpForms) und ruft `LookupByID` — das
-   fand die Forms im VR-Log nachweislich. Auf SE/AE identisches Ergebnis wie zuvor.
-   **Noch nicht in VR verifiziert**, aber empirisch begründet (DumpForms fand die Forms
-   im selben Log). Beim VR-Test auf `Passives: 8 of 8` und `Sounds: 4 of 4` im Log
-   achten.
+5. **Form resolution (CONFIRMED broken in 0.5.0/0.5.1, now fixed).** In the VR log,
+   `TESDataHandler::LookupForm(localID, kFileName)` resolved to null for ALL of our forms
+   (passives 0/8, sounds 0/4, storage container missing), even though `DumpForms` found the
+   same forms. Fix: `Plugin::LookupOurForm<T>()` reconstructs the FormID via
+   `GetPartialIndex()` (the same math as DumpForms) and calls `LookupByID` — which
+   demonstrably found the forms in the VR log. Identical result on SE/AE as before. **Not
+   yet verified in VR**, but empirically grounded (DumpForms found the forms in the same
+   log). On a VR test, watch for `Passives: 8 of 8` and `Sounds: 4 of 4` in the log.
 
-## Phasen
+## Phases
 
-- **Phase 1 (erledigt):** VR-ladefähiger Build, Runtime-Logging, Doku, Requirements.
-  Der Overlay-Crash ist behoben (Hook wird in VR übersprungen) — die Mod lädt und die
-  Logik läuft, aber in VR gibt es vorerst kein UI.
-- **Phase 2 (offen):** UI in die Brille bringen. Zwei Wege: (a) In-HMD-Rendering via
-  OpenVR-Overlay/Stereo-Targets (aufwändig), oder (b) für die Panels ein Fallback auf
-  spieleigene `MessageBox`-Menüs (rendert die Brille nativ; der Skill-Tree bleibt der
-  schwierige Fall). Sinnvoll erst mit VR-Testumgebung.
+- **Phase 1 (done):** VR-loadable build, runtime logging, docs, requirements. The overlay
+  crash is fixed (the hook is skipped in VR) — the mod loads and the logic runs, but VR has
+  no UI for now.
+- **Phase 2 (open):** get the UI into the headset. Two routes: (a) in-HMD rendering via
+  OpenVR overlay / stereo targets (heavy), or (b) a fallback to the game's own `MessageBox`
+  menus for the panels (the headset renders them natively; the skill tree stays the hard
+  case). Only worthwhile with a VR test environment.

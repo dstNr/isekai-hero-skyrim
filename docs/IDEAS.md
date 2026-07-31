@@ -1,246 +1,224 @@
-# 💡 Feature-Ideen (C++ Version)
+# 💡 Feature ideas (C++ version)
 
-Sammelstelle für Ideen zur aktuellen native-SKSE-Version, bevor sie zu echten
-Tasks werden. Unsortiert nach Priorität — einfach chronologisch angehängt.
-
----
-
-## Cross-Save Legacy / "New Game+"
-
-**Status:** 🧠 Idee, noch nicht spezifiziert
-**Ursprung:** Der eigentliche Auslöser für den ganzen Isekai-Mod: Beim x-ten
-Neustart eines Spielstands hat man keine Lust, wieder alles von null
-freizuschalten — und cheatet es sich am Ende ohnehin rein. Die
-Isekai-Prämisse ("du wirst mit Boni reinkarniert") soll genau das ersetzen,
-aber ehrlich verdient über vorherige Playthroughs statt per Konsolenbefehl.
-
-### Kernidee
-
-Fortschritt soll nicht nur *innerhalb* eines Spielstands zählen (wie
-aktuell: Milestones, Blessing, Perk-Punkte über `SKSE::SerializationInterface`
-im Co-Save), sondern auch **zwischen** verschiedenen Playthroughs vererbbar
-sein. Wer Run 1 durchspielt, soll in Run 2 spürbar schneller wieder auf
-Touren kommen — nicht durch rohes Cheaten, sondern durch das
-Isekai-Reincarnation-Menü, das es eh schon gibt.
-
-### Warum "Spielstand wählen → Items rüberkopieren" so nicht funktioniert
-
-- Der aktuelle Fortschritt lebt im Co-Save der jeweiligen `.ess`-Datei
-  (`System.cpp`: `SaveCallback` / `LoadCallback`). Das ist pro Playthrough
-  isoliert; `RevertCallback` setzt `g_state` bei jedem New Game sogar hart
-  zurück.
-- Zwei Saves können sich nicht gegenseitig lesen — komplett getrennte
-  Spielwelten, getrennte Objekt-Referenzen.
-- Physische Items (insbesondere individuell verzauberte/benannte) sind an
-  Referenzen *in genau diesem Save* gebunden. Es gibt kein "Item aus Save A
-  exportieren, in Save B importieren" im Skyrim-Save-Format — der Code müsste
-  das Item in Save B komplett neu erzeugen.
-
-### Technischer Ansatz, der funktioniert
-
-Ein **globaler Fortschritts-Speicher außerhalb jedes Savegames** — eine
-einfache Datei (z. B. JSON) unter
-`Documents/My Games/Skyrim Special Edition/SKSE/`, gebunden an die
-Mod-Installation, nicht an ein einzelnes Savegame. In C++ trivial per
-`fstream`, kein StorageUtil/Papyrus-Umweg wie in der alten Version nötig.
-
-**Vorgeschlagener Flow:**
-1. Am Ende eines Playthroughs (oder laufend) wird Fortschritt in diese
-   globale "Legacy"-Datei eingezahlt: erreichte Milestones, höchste je
-   gewählte Blessing, Dragon-Soul-Guthaben, ggf. freigeschaltete Titel.
-2. Bei `kNewGame` (Hook existiert bereits in `System.cpp`) liest der Code
-   die Legacy-Datei und bietet im bestehenden Reincarnation-Menü
-   (`ShowPowerSelection()`) einen zusätzlichen Punkt an: *"Inherit from
-   previous life"*.
-3. Das Einlösen nutzt exakt den Mechanismus, den `ApplyReincarnation()`
-   heute schon für die Blessings hat (Skills/Level/Gold/Perks setzen) — nur
-   gefüttert aus echtem Vorfortschritt statt festen Blessing-Tabellenwerten.
-
-**Was leicht geht (Zahlen-Progression):**
-- Skills, Charakterlevel, Gold, Perk-Punkte, Dragon Souls — alles bereits
-  simple Werte im State, banking/vererben ist unkompliziert.
-
-**Was schwerer ist (Item-Vererbung) — bewusster Split:**
-- *Leicht:* Eine kuratierte Liste fester "Legacy Items" (Forms aus der ESP,
-  analog zu den 8 Passive-Abilities). Wird beim ersten Erhalt global
-  freigeschaltet und im neuen Leben z. B. aus einer Art Dimensional-Storage-
-  Truhe (siehe altes Backlog) abholbar.
-- *Schwer/später:* Beliebige selbst verzauberte/gecraftete Gegenstände 1:1
-  mitnehmen — für den ersten Wurf bewusst außen vor lassen.
-
-### Offene Fragen (noch zu klären, bevor das zur Task wird)
-- Was genau vererbt sich: nur Zahlen, oder auch die Legacy-Item-Liste von
-  Anfang an?
-- Vererbt sich pro Charakter-Save oder global über alle Saves hinweg (auch
-  unterschiedliche Charaktere)?
-- Soll das Einzahlen automatisch passieren (z. B. bei Enderfolg des
-  Hauptquests) oder ein bewusster Menü-Trigger sein?
-- Balance: Wie stark darf Run 2 dadurch beschleunigt werden, ohne dass die
-  Isekai-Prämisse selbst trivial wird?
+A collection point for ideas about the current native-SKSE version before they become
+real tasks. Not sorted by priority — simply appended chronologically.
 
 ---
 
-## System-Skilltree im Interface
+## Cross-save legacy / "New Game+"
 
-**Status:** 🧠 Idee, noch nicht spezifiziert
-**Ursprung:** Zwei Dinge liegen im Code bereits halb fertig herum und wollen
-zusammengeführt werden: `System.h` definiert ein `SkillFocus`-Enum
-(`Balanced/Warrior/Mage/Thief/Custom`), das aktuell **nirgendwo verwendet**
-wird — reiner Platzhalter. Und `Passives.cpp`/`Progression.cpp` haben schon
-einen sauberen Mechanismus, um Actor-Value-Boni aus einer Liste "verdienter"
-Passives *abzuleiten* (nie zu akkumulieren). Ein Skilltree im System-Interface
-würde beides tatsächlich benutzen, statt es brachliegen zu lassen.
+**Status:** 🧠 Idea, not yet specified
+**Origin:** The actual trigger for the whole Isekai mod: on the umpteenth restart of a
+save you don't feel like unlocking everything from zero again — and end up cheating it in
+anyway. The isekai premise ("you are reincarnated with bonuses") is meant to replace
+exactly that, but honestly earned across previous playthroughs instead of via a console
+command.
 
-### Kernidee
+### Core idea
 
-Ein eigenes Menü ("System: Skill Tree"), erreichbar aus dem bestehenden
-System-Interface, in dem der Spieler eine neue Währung — **System-Punkte** —
-in frei wählbare Knoten investiert. Jeder Knoten gewährt einen passiven
-Stat-Bonus (genau wie die bestehenden 8 Passives), aber der Spieler
-entscheidet *welchen*, statt dass er automatisch aus einem Milestone fällt.
+Progress should count not only *within* a save (as now: milestones, blessing, perk points
+via `SKSE::SerializationInterface` in the co-save) but also be inheritable **between**
+different playthroughs. Whoever finishes run 1 should get back up to speed noticeably
+faster in run 2 — not by raw cheating, but through the isekai reincarnation menu that
+already exists.
 
-**Struktur:** kein linearer Pfad, sondern ein verzweigtes Netz mit
-Voraussetzungen — ähnlich Skyrims eigenem Perk-Baum. Organisiert in drei
-Regionen, die endlich `SkillFocus` einen Zweck geben:
+### Why "pick a save → copy items over" does not work that way
 
-- **Warrior** — Health/Stamina-lastige Knoten, Rüstungs-/Nahkampf-Resistenzen
-- **Mage** — Magicka-lastige Knoten, Elementarresistenzen
-- **Thief** — Carry Weight/Stamina, Ausweich-/Diebstahl-nahe Stats
+- The current progress lives in the co-save of the respective `.ess` file (`System.cpp`:
+  `SaveCallback` / `LoadCallback`). That is isolated per playthrough; `RevertCallback` even
+  hard-resets `g_state` on every New Game.
+- Two saves cannot read each other — completely separate game worlds, separate object
+  references.
+- Physical items (especially individually enchanted/named ones) are bound to references
+  *in exactly that save*. There is no "export item from save A, import into save B" in the
+  Skyrim save format — the code would have to recreate the item from scratch in save B.
 
-Dazu ein kleiner neutraler **Hub** in der Mitte, von dem aus alle drei
-Branches abzweigen — Voraussetzungsketten können auch branch-übergreifend
-verlaufen (ein Warrior-Knoten kann einen Mage-Knoten als Vorbedingung
-verlangen), das Netz ist nicht strikt in drei Silos getrennt.
+### Technical approach that works
 
-Die bei der Reincarnation gewählte `SkillFocus`-Richtung könnte den Hub-Knoten
-der eigenen Branch vergünstigen oder direkt freischalten — ohne die anderen
-beiden Branches zu sperren. Das gibt der bisher folgenlosen Wahl im
-Reincarnation-Menü endlich eine spürbare Konsequenz.
+A **global progress store outside any savegame** — a simple file (e.g. JSON) under
+`Documents/My Games/Skyrim Special Edition/SKSE/`, bound to the mod installation, not to a
+single savegame. Trivial in C++ via `fstream`, no StorageUtil/Papyrus detour as in the old
+version.
 
-### Währung: System-Punkte
+**Proposed flow:**
+1. At the end of a playthrough (or continuously), progress is paid into this global
+   "legacy" file: milestones reached, highest blessing ever chosen, dragon-soul balance,
+   possibly unlocked titles.
+2. On `kNewGame` (the hook already exists in `System.cpp`) the code reads the legacy file
+   and offers an extra entry in the existing reincarnation menu (`ShowPowerSelection()`):
+   *"Inherit from previous life"*.
+3. Redeeming it uses exactly the mechanism `ApplyReincarnation()` already has for the
+   blessings today (setting skills/level/gold/perks) — just fed from real prior progress
+   instead of fixed blessing-table values.
 
-Bewusst **nicht** dieselben Perk Points, die in Skyrims eigenes Perk-System
-fließen (`GrantPerkPoints`, gedeckelt bei 127 durch die Engine) — eine
-getrennte, ungedeckelte Zählgröße, analog zu Dragon Souls.
+**What is easy (numeric progression):**
+- Skills, character level, gold, perk points, dragon souls — all already simple values in
+  the state, banking/inheriting is straightforward.
 
-**Quelle, zwei Ideen, die sich kombinieren lassen:**
-1. Jeder Milestone zahlt zusätzlich zu Passive/Souls/Perk-Points einen
-   kleinen Batzen System-Punkte aus (Endpoints entsprechend mehr) —
-   skaliert mit `RewardScale()` wie alles andere, damit die
-   Blessing-Wahl auch hier weiter mitzählt.
-2. Dragon Souls sind nach der Hauptquest ziemlich nutzlos, sobald alle
-   Word Walls leer sind. Ein Umtausch-Kurs (z. B. 1 Dragon Soul → X
-   System-Punkte) gäbe der Währung einen Sinn über Shouts hinaus — genau
-   die Art Dragon-Soul-Sink, die in `papyrus/FEATURES.md` schon als
-   offene Idee ("System Shop") herumsteht.
+**What is harder (item inheritance) — a deliberate split:**
+- *Easy:* a curated list of fixed "legacy items" (forms from the ESP, analogous to the 8
+  passive abilities). Unlocked globally on first receipt and collectable in the new life,
+  e.g. from a kind of Dimensional Storage chest (see old backlog).
+- *Hard/later:* carrying arbitrary self-enchanted/crafted items over 1:1 — deliberately
+  left out of the first pass.
 
-### Technischer Ansatz
-
-**Datenmodell:** ein `SkillTree`-Modul analog zu `Progression`/`Passives` —
-eine statische Knoten-Tabelle (`key`, Voraussetzungen als Liste von Keys,
-`Passive`-Payload, Kosten in System-Punkten, Branch-Zugehörigkeit). Freigeschaltete
-Knoten landen in `State` (neues Feld neben `grantedMilestones`) und werden im
-Co-Save mitgespeichert.
-
-**Passives-Integration:** `Progression::EarnedPassives()` liefert aktuell nur
-Milestone-Passives. Naheliegend, das auf eine gemeinsame Quelle zu erweitern
-(Milestones **+** freigeschaltete Baum-Knoten), damit `Passives::Refresh()`
-unverändert weiter alles aus einer Liste ableitet, statt einen zweiten,
-parallelen Anwendungspfad zu bauen.
-
-**Grenze, die früh geklärt werden muss:** `Passives::Refresh()` treibt aktuell
-nur 8 feste Ability-Spells (`kAbilityFormIDs`), eine pro Actor Value. Ein
-Skilltree mit mehr Knoten als Actor Values bräuchte entweder mehrere Knoten
-pro Actor Value (mehrere Knoten addieren sich auf denselben Bonus — passt zum
-bestehenden "Summe aller Passives pro AV"-Modell) oder zusätzliche
-Ability-Spells in der ESP für neue Actor Values. Ersteres ist ohne
-ESP-Änderung machbar, zweites braucht Creation-Kit-Arbeit.
-
-**UI:** Das bestehende `SystemWindow` ist ein reiner Text+Button-Dialog
-(Titel, Body, Choices) — kein Graph-Layout. Ein Skilltree mit Knoten,
-Verbindungslinien und Voraussetzungs-Highlighting ist eine neue
-ImGui-Komponente (z. B. `UI/SkillTreeWindow.cpp`), die den visuellen Stil aus
-`Style.h` (Glow-Border, Corner-Brackets, Akzentfarbe) übernimmt, aber ein
-eigenes Layout braucht — vermutlich mit festen Node-Koordinaten pro Branch
-statt automatischem Graph-Layout, um die Renderlast und Komplexität klein zu
-halten.
-
-**Anknüpfung an Cross-Save Legacy:** Ein Pool aus System-Punkten +
-freigeschalteten Knoten ist genau die Art einfacher, banking-fähiger
-Zahlen-Progression, die die Legacy-Idee weiter oben als "leicht vererbbar"
-einstuft — ein Knotenpunkt für später, falls beide Features kommen.
-
-### Offene Fragen (noch zu klären, bevor das zur Task wird)
-- Exakter Umtausch-Kurs Dragon Souls → System-Punkte, falls Idee 2 kommt —
-  und ob er überhaupt nötig ist oder Milestones allein genug Fluss liefern.
-- Wie groß wird das Netz (grobe Knotenzahl pro Branch), bevor es umsetzbar
-  entworfen werden kann?
-- Respec: Sind einmal gesetzte Knoten permanent, oder gibt es (wie in
-  `papyrus/FEATURES.md` als Idee vermerkt) einen Respec-Mechanismus, der dann
-  auch System-Punkte zurückzahlen müsste?
-- Verändert die bei der Reincarnation gewählte `SkillFocus`-Richtung nur den
-  Hub-Knoten der eigenen Branch, oder auch die Kosten/Verfügbarkeit in den
-  beiden anderen Branches?
+### Open questions (to clarify before this becomes a task)
+- What exactly is inherited: only numbers, or the legacy-item list from the start too?
+- Does it inherit per character-save or globally across all saves (including different
+  characters)?
+- Should paying in happen automatically (e.g. on completing the main quest) or be a
+  deliberate menu trigger?
+- Balance: how much may run 2 be sped up without making the isekai premise itself trivial?
 
 ---
 
-## User-Feedback-Backlog (Nexus, v0.4.x)
+## System skill tree in the interface
 
-Sammlung aus einem ausführlichen User-Report. Umgesetzt in v0.5.0: das
-"Shattered"-Erwachen (Segens-Tier ohne flachen Start-Grant), repeatable
-Utility-Knoten (Fleet of Foot / Beast of Burden / Enduring Vigor) und die
-optionale INI `HideSealedNodes`. Der Hotkey öffnet nicht mehr über einem
-offenen Spielmenü. Offen / auf der Roadmap:
+**Status:** 🧠 Idea, not yet specified
+**Origin:** Two things already sit half-finished in the code and want to be brought
+together: `System.h` defines a `SkillFocus` enum (`Balanced/Warrior/Mage/Thief/Custom`)
+that is currently **used nowhere** — a pure placeholder. And `Passives.cpp`/`Progression.cpp`
+already have a clean mechanism to *derive* actor-value bonuses from a list of "earned"
+passives (never to accumulate). A skill tree in the System interface would actually use
+both instead of leaving them idle.
 
-- **Storage-Codex als physischer Fallback (Item 4).** Ein Buch/Item im Inventar
-  (per Default vorhanden, nicht wegwerfbar), das die Dimensional Storage öffnet
-  — als Backup, falls das ImGui-Overlay mal klemmt, und als Zugang ohne
-  Crafting-Station. Umsetzung: kleines MISC/BOOK in der ESP + Aktivierungs-Hook
-  (oder Papyrus-Fragment), das `Storage::Open()` ruft. Klein–mittel.
-  *Hinweis:* Storage ist bereits jederzeit über das RShift+S-Panel erreichbar
-  (nicht nur am Tisch); der Cell-Reset-Reparatur-Fix (v0.4.0) entschärft den
-  "Menü klemmt"-Fall schon deutlich — der Codex ist der Gürtel zur Hosenträger.
+### Core idea
 
-- **Keybind voll remapbar + Modifier wählbar (Ctrl statt RShift).** Braucht die
-  Config (INI existiert seit v0.5.0 — dort ein `[Hotkey]`-Abschnitt mit
-  Scancode + Modifier ergänzen und `Progression.cpp`/`Input.cpp` daraus
-  speisen). Mittel.
+A dedicated menu ("System: Skill Tree"), reachable from the existing System interface, in
+which the player invests a new currency — **System Points** — into freely chosen nodes.
+Each node grants a passive stat bonus (exactly like the existing 8 passives), but the
+player decides *which*, instead of it falling automatically out of a milestone.
 
-- **Noch mehr Knoten-Varietät.** Weitere repeatable Stats über die bereits
-  unterstützten Actor Values (Resistenzen, Regen-Raten). Move Speed läuft schon
-  über direktes `kSpeedMult`-Setzen; Attack Speed bleibt bewusst außen vor
-  (Animations-/Mod-Konflikte, vom User selbst so eingeordnet).
+**Structure:** not a linear path but a branching web with prerequisites — similar to
+Skyrim's own perk tree. Organised into three regions that finally give `SkillFocus` a
+purpose:
+
+- **Warrior** — Health/Stamina-heavy nodes, armor/melee resistances
+- **Mage** — Magicka-heavy nodes, elemental resistances
+- **Thief** — Carry Weight/Stamina, evasion/theft-adjacent stats
+
+Plus a small neutral **hub** in the middle from which all three branches diverge —
+prerequisite chains can also run across branches (a Warrior node can require a Mage node as
+a prerequisite), the web is not strictly split into three silos.
+
+The `SkillFocus` direction chosen at reincarnation could discount or directly unlock the
+hub node of its own branch — without locking the other two branches. That finally gives the
+so-far consequence-free choice in the reincarnation menu a noticeable effect.
+
+### Currency: System Points
+
+Deliberately **not** the same perk points that flow into Skyrim's own perk system
+(`GrantPerkPoints`, capped at 127 by the engine) — a separate, uncapped counter, analogous
+to dragon souls.
+
+**Source, two ideas that combine:**
+1. Every milestone pays out a small chunk of System Points on top of passive/souls/perk
+   points (endpoints more accordingly) — scaled with `RewardScale()` like everything else,
+   so the blessing choice keeps counting here too.
+2. Dragon souls are fairly useless after the main quest once all word walls are empty. An
+   exchange rate (e.g. 1 dragon soul → X System Points) would give the currency a purpose
+   beyond shouts — exactly the kind of dragon-soul sink already noted as an open idea
+   ("System Shop") in `papyrus/FEATURES.md`.
+
+### Technical approach
+
+**Data model:** a `SkillTree` module analogous to `Progression`/`Passives` — a static node
+table (`key`, prerequisites as a list of keys, `Passive` payload, cost in System Points,
+branch membership). Unlocked nodes land in `State` (a new field next to
+`grantedMilestones`) and are saved in the co-save.
+
+**Passives integration:** `Progression::EarnedPassives()` currently returns only milestone
+passives. It's natural to extend that to a shared source (milestones **+** unlocked tree
+nodes), so `Passives::Refresh()` keeps deriving everything from one list unchanged, instead
+of building a second, parallel application path.
+
+**A limit to clarify early:** `Passives::Refresh()` currently drives only 8 fixed ability
+spells (`kAbilityFormIDs`), one per actor value. A skill tree with more nodes than actor
+values would need either several nodes per actor value (multiple nodes add to the same
+bonus — fits the existing "sum of all passives per AV" model) or additional ability spells
+in the ESP for new actor values. The former is doable without an ESP change, the latter
+needs Creation Kit work.
+
+**UI:** The existing `SystemWindow` is a pure text+button dialog (title, body, choices) —
+no graph layout. A skill tree with nodes, connection lines and prerequisite highlighting is
+a new ImGui component (e.g. `UI/SkillTreeWindow.cpp`) that takes the visual style from
+`Style.h` (glow border, corner brackets, accent colour) but needs its own layout —
+probably with fixed node coordinates per branch rather than automatic graph layout, to keep
+render load and complexity small.
+
+**Tie-in with cross-save legacy:** A pool of System Points + unlocked nodes is exactly the
+kind of simple, bankable numeric progression the legacy idea above classifies as "easily
+inheritable" — a junction point for later if both features happen.
+
+### Open questions (to clarify before this becomes a task)
+- Exact exchange rate dragon souls → System Points, if idea 2 happens — and whether it's
+  needed at all or milestones alone provide enough flow.
+- How big does the web get (rough node count per branch) before it can be designed for
+  implementation?
+- Respec: are set nodes permanent, or is there (as noted as an idea in
+  `papyrus/FEATURES.md`) a respec mechanism that would then also have to refund System
+  Points?
+- Does the `SkillFocus` direction chosen at reincarnation change only the hub node of its
+  own branch, or the cost/availability in the other two branches too?
 
 ---
 
-## SkyrimNet — Ausbau der AI-NPC-Integration
+## User feedback backlog (Nexus, v0.4.x)
 
-**Status:** 🅿️ Geparkt — MVP steht (Push von Segen/Milestones als World-Knowledge,
-Commit `87ab76f`), erst nach Tester-Verifikation weiter. Reihenfolge unten.
+A collection from a detailed user report. Implemented in v0.5.0: the "Shattered" awakening
+(blessing tier without the flat starting grant), repeatable utility nodes (Fleet of Foot /
+Beast of Burden / Enduring Vigor) and the optional ini `HideSealedNodes`. The hotkey no
+longer fires over an open game menu. Open / on the roadmap:
 
-**Tier 1 — billig, bleibt skriptfrei (baut auf dem Push-MVP auf):**
-- **Otherworlder-Persona:** beim Reincarnate eine Spieler-Bio pushen (aus anderer Welt,
-  erinnert sich an eine moderne Welt) → Fish-out-of-water-Dialoge in beide Richtungen.
-- **Past-Life-Memories:** Erinnerungsfetzen aus dem alten Leben als Memories seeden.
-- **Awakening als Moment:** beim Level-Up-Flourish ein Short-Lived-Event → NPCs reagieren
-  sofort auf das Licht/den Machtschub. Dormant-Erwachen zusätzlich hoch-salient + evtl.
-  kurzer Voice-Effekt.
+- **Storage codex as a physical fallback (item 4).** A book/item in the inventory (present
+  by default, non-droppable) that opens the Dimensional Storage — as a backup in case the
+  ImGui overlay ever sticks, and as access without a crafting station. Implementation: a
+  small MISC/BOOK in the ESP + an activation hook (or Papyrus fragment) that calls
+  `Storage::Open()`. Small–medium.
+  *Note:* Storage is already reachable at any time via the RShift+S panel (not just at a
+  table); the cell-reset repair fix (v0.4.0) already softens the "menu sticks" case
+  considerably — the codex is belt-and-braces.
 
-**Tier 2 — braucht Decorator (kleiner Papyrus-Glue, bricht Skriptfreiheit):**
-- **Live-Aura-Decorator:** NPCs kennen den *aktuellen* Zustand in jedem Gespräch (Tier,
-  dormant/erwacht, letzte Titel), nicht nur vergangene Events.
-- **Legende skaliert:** NPC-Gerede wird ehrfürchtiger mit Milestone-Zahl/höchstem Titel.
+- **Fully remappable keybind + choosable modifier (Ctrl instead of RShift).** Needs the
+  config (the ini has existed since v0.5.0 — add a `[Hotkey]` section there with scan code
+  + modifier and feed `Progression.cpp`/`Input.cpp` from it). Medium.
 
-**Tier 3 — Marquee, groß/riskant:**
-- **Das „[SYSTEM]" als LLM-Stimme:** kontextbezogene System-Meldungen statt fester Strings,
-  personalisierte System-Direktiven. Kern der Isekai-Fantasie, aber Tonkontrolle +
-  LLM-Latenz/Kosten.
+- **Even more node variety.** Further repeatable stats over the already-supported actor
+  values (resistances, regen rates). Move speed already runs via setting `kSpeedMult`
+  directly; attack speed is deliberately left out (animation/mod conflicts, classified that
+  way by the user themselves).
 
-**Bewusst nicht:** System-Actions als Ersatz für echte Quests (überschneidet sich mit
-Quest-Mods; Isekai lebt eher vom *Reagieren* der Welt).
+---
 
-Details + offene Verifikationspunkte (DLL-Name, `SkyrimNetApi`-Signaturen) siehe
-`src/SkyrimNet.cpp` und `README`.
+## SkyrimNet — expanding the AI-NPC integration
+
+**Status:** 🅿️ Parked — the MVP is in (pushing blessing/milestones as world-knowledge,
+commit `87ab76f`), continue only after tester verification. Order below.
+
+**Tier 1 — cheap, stays script-free (builds on the push MVP):**
+- **Otherworlder persona:** on reincarnation, push a player bio (from another world,
+  remembers a modern world) → fish-out-of-water dialogue in both directions.
+- **Past-life memories:** seed fragments of memory from the old life as memories.
+- **Awakening as a moment:** on the level-up flourish, a short-lived event → NPCs react
+  immediately to the light/power surge. Dormant awakening additionally high-salience +
+  possibly a short voice effect.
+
+**Tier 2 — needs a decorator (small Papyrus glue, breaks the script-freeness):**
+- **Live aura decorator:** NPCs know the *current* state in every conversation (tier,
+  dormant/awakened, latest titles), not just past events.
+- **Legend scales:** NPC chatter grows more reverent with the milestone count / highest
+  title.
+
+**Tier 3 — marquee, big/risky:**
+- **The "[SYSTEM]" as an LLM voice:** context-aware System messages instead of fixed
+  strings, personalised System directives. The core of the isekai fantasy, but tone control
+  + LLM latency/cost.
+
+**Deliberately not:** System actions as a replacement for real quests (overlaps with quest
+mods; isekai lives more from the world *reacting*).
+
+Details + open verification points (DLL name, `SkyrimNetApi` signatures) see
+`src/SkyrimNet.cpp` and `README`.
 
 ---
 
@@ -250,7 +228,7 @@ Details + offene Verifikationspunkte (DLL-Name, `SkyrimNetApi`-Signaturen) siehe
 not yet built (deferred until the VR / perf / storage fixes are tested & released).
 **Origin:** player feedback — loves the concept and the UI, wants many more nodes so you
 can get "really, really OP"; noted there's fire/frost resist but no shock resist.
-(Expands the earlier "Noch mehr Knoten-Varietät" note above with concrete effects.)
+(Expands the earlier "even more node variety" note above with concrete effects.)
 
 ### Tier 1 — easy wins (mirror the existing repeatable utility nodes: new node + AV)
 

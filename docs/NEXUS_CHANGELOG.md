@@ -1,9 +1,9 @@
-# Nexus Mods — Changelog-Einträge
+# Nexus Mods — Changelog entries
 
-Was pro Version im Nexus-Changelog-Feld steht. **Knapp halten: eine Zeile pro
-Änderung, ein Satz — was sich für den Spieler ändert, nicht warum.** Das Warum und
-die Technik stehen in `CHANGELOG.md`, dem Entwickler-Record. (0.5.0 und 0.4.0 unten
-sind noch im alten, längeren Stil — so liegen sie bereits auf Nexus.)
+What goes in the Nexus changelog field per version. **Keep it short: one line per
+change, one sentence — what changes for the player, not why.** The why and the
+technical detail live in `CHANGELOG.md`, the developer record. (0.5.0 and 0.4.0 below
+are still in the older, longer style — that is how they already sit on Nexus.)
 
 ---
 

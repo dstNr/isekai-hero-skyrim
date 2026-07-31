@@ -1,15 +1,15 @@
-Was als **0.5.1** auf Nexus hochgeladen wurde.
+What was uploaded to Nexus as **0.5.1**.
 
-Kleiner Nachzügler zu 0.5.0 — beide Fixes betreffen den optionalen PrismaUI-Patch.
-Kein Save-Format-Wechsel; ein 0.5.0-Spielstand laeuft unveraendert weiter.
+A small follow-up to 0.5.0 — both fixes are in the optional PrismaUI patch.
+No save-format change; a 0.5.0 save runs unchanged.
 
-Archive: `IsekaiHero-v0.5.1.7z` (Hauptmod) und `IsekaiHero-PrismaUI-Patch-v0.5.1.7z` (optionaler UI-Patch).
+Archives: `IsekaiHero-v0.5.1.7z` (main mod) and `IsekaiHero-PrismaUI-Patch-v0.5.1.7z` (optional UI patch).
 
 ### Fixed
 
-- **Der Level-Up-Sound fehlt unter PrismaUI nicht mehr.** Beim Schliessen eines System-Panels verlaesst das Spiel kurz die Menue-Pause, und die Engine verwarf den im selben Frame gestarteten Sting — er erreichte nie die Lautsprecher. Sounds nach einem Panel-Schluss spielen jetzt knapp nach dem Unpause. (Das eingebaute ImGui-UI pausiert nie und war nie betroffen.)
-- **Hoehere, stabilere FPS im System-Menue (PrismaUI).** Zwei Akzente animierten dauerhaft — ein Glanz-Sweep unter den Ueberschriften und ein pulsierender Ring auf jedem leistbaren Node — was den Web-Renderer jeden Frame die ganze Ansicht neu zeichnen liess. Beide sind jetzt statisch; das Menue sieht in Ruhe gleich aus, laesst den Renderer aber idlen, sodass die Framerate haelt.
+- **The level-up sound is no longer missing under PrismaUI.** Closing a System panel briefly takes the game out of menu-pause, and the engine discarded the sting started in that same frame — it never reached the speakers. Sounds that follow a panel closing now play just past the unpause. (The built-in ImGui UI never pauses and was never affected.)
+- **Higher, steadier FPS in the System menu (PrismaUI).** Two accents animated continuously — a sheen sweep under the headings and a pulsing ring on every affordable node — which made the web renderer repaint the whole view every frame. Both are now static; the menu looks the same at rest but lets the renderer idle, so the framerate holds.
 
-### Intern (kein Spieler-Effekt)
+### Internal (no player-facing effect)
 
-- Der Klarname des Entwicklers ist nicht mehr in der ausgelieferten DLL eingebettet, und die Debug-`.pdb` wird nicht mehr mitgepackt.
+- The developer's real name is no longer embedded in the shipped DLL, and the debug `.pdb` is no longer packaged.

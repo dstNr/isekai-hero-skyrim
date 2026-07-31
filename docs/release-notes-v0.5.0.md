@@ -1,7 +1,7 @@
-Was als **0.5.0** auf Nexus hochgeladen wurde.
+What was uploaded to Nexus as **0.5.0**.
 
-Archive: `IsekaiHero-v0.5.0.7z` (Hauptmod) und `IsekaiHero-PrismaUI-Patch-v0.5.0.7z` (optionaler UI-Patch).
-Save-safe: ein bestehender Spielstand behält Segen, Nodes und Punkte; die neuen Co-Save-Felder (v9) defaulten sauber.
+Archives: `IsekaiHero-v0.5.0.7z` (main mod) and `IsekaiHero-PrismaUI-Patch-v0.5.0.7z` (optional UI patch).
+Save-safe: an existing save keeps its blessing, nodes and points; the new co-save fields (v9) default cleanly.
 
 ### Added
 

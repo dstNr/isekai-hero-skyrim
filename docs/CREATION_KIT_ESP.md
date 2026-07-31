@@ -1,74 +1,74 @@
-# Creation-Kit-Anleitung: `IsekaiHero.esp`
+# Creation Kit guide: `IsekaiHero.esp`
 
-Einmalige CK-Sitzung, ca. 20–30 Minuten. Danach macht wieder ausschließlich C++ die
-Arbeit — du musst das Creation Kit nie wieder anfassen.
+A one-time CK session, ~20–30 minutes. After that C++ does all the work again — you
+never have to touch the Creation Kit again.
 
-## Warum überhaupt eine ESP?
+## Why an ESP at all?
 
-Zwei Dinge gehen ESP-los technisch nicht:
+Two things are technically impossible without an ESP:
 
-1. **Passives im Magie-Menü.** Ein Eintrag unter *Aktive Effekte* ist zwingend ein
-   Ability-Spell mit MagicEffect — beides Forms, und Forms kommen nur aus einer
-   Plugin-Datei. (Zur Laufzeit erzeugte Forms speichert Skyrim nicht zuverlässig; beim
-   nächsten Laden zeigt der Spielstand ins Leere.)
-2. **Interdimensional Storage.** Eine Truhe ist eine Form plus eine platzierte
-   Referenz. Gleiches Problem — nur wären hier deine *Items* weg.
+1. **Passives in the magic menu.** An entry under *Active Effects* must be an ability
+   spell with a MagicEffect — both are forms, and forms only come from a plugin file.
+   (Skyrim does not reliably persist forms created at runtime; on the next load the save
+   points at nothing.)
+2. **Interdimensional Storage.** A chest is a form plus a placed reference. Same problem —
+   except here your *items* would be gone.
 
-## Warum nur 8 Passives und nicht 61?
+## Why only 8 passives and not 61?
 
-Die Stärke eines Ability-Effekts ist in der Plugin-Datei **fest einbetoniert**.
-„+25 Health" ist ein anderer Spell als „+100 Health". Ein Passive pro Quest, mal drei
-Blessing-Stufen, wären **183 Spells** von Hand.
+The magnitude of an ability effect is **set in stone** in the plugin file. "+25 Health"
+is a different spell from "+100 Health". One passive per quest, times three blessing
+tiers, would be **183 spells** by hand.
 
-Stattdessen: **ein Passive pro Statwert**, dessen Stärke der Code zur Laufzeit setzt.
-Die Werte summieren sich sichtbar hoch, während du Quests abschließt — und dein
-Effektmenü wird nicht von 61 Einzeleinträgen zugemüllt.
+Instead: **one passive per stat value**, whose magnitude the code sets at runtime. The
+values visibly add up as you complete quests — and your effects menu is not cluttered
+with 61 separate entries.
 
 ---
 
-## Vorbereitung
+## Preparation
 
-1. Creation Kit starten.
+1. Start the Creation Kit.
 2. **File → Data**
-3. Häkchen bei **`Skyrim.esm`** und **`Update.esm`**. Sonst nichts.
-   *(Keine DLC-Master: wir referenzieren keine DLC-Inhalte. Das hält die ESP
-   abhängigkeitsfrei — sie läuft auch bei Leuten ohne DLCs.)*
-4. **KEIN** "Set as Active File" antippen — es gibt noch keine ESP.
-5. **OK**, warten bis geladen (dauert, und wirft Warnungen — alle mit *Yes to All* wegklicken).
-6. **File → Save**, Dateiname: **`IsekaiHero.esp`**
+3. Tick **`Skyrim.esm`** and **`Update.esm`**. Nothing else.
+   *(No DLC masters: we reference no DLC content. That keeps the ESP dependency-free —
+   it also runs for people without the DLCs.)*
+4. Do **NOT** click "Set as Active File" — there is no ESP yet.
+5. **OK**, wait for it to load (takes a while, and throws warnings — dismiss them all with
+   *Yes to All*).
+6. **File → Save**, filename: **`IsekaiHero.esp`**
 
-Ab jetzt ist `IsekaiHero.esp` die aktive Datei; alles, was du anlegst, landet darin.
+From now on `IsekaiHero.esp` is the active file; everything you create lands in it.
 
 ---
 
-## Teil A — Magic Effects (8 Stück)
+## Part A — Magic Effects (8 of them)
 
-**Object Window** → Baum links: **Magic → Magic Effect**
-→ Rechtsklick in die Liste → **New**
+**Object Window** → tree on the left: **Magic → Magic Effect**
+→ right-click in the list → **New**
 
-Für **jeden** der acht Einträge unten identisch ausfüllen:
+Fill in identically for **each** of the eight entries below:
 
-| Feld | Wert |
+| Field | Value |
 |---|---|
-| **ID** | siehe Tabelle |
-| **Name** | siehe Tabelle *(das ist der Text, den du später im Effektmenü siehst)* |
+| **ID** | see table |
+| **Name** | see table *(this is the text you later see in the effects menu)* |
 | **Effect Archetype** | **`Peak Value Modifier`** |
 | **Casting Type** | `Constant Effect` |
 | **Delivery** | `Self` |
-| **Assoc. Item 1** | der Actor Value — siehe Tabelle |
-| **Flags** | **`Recover`** ✅ und `No Duration` ✅ |
-| | ❌ **NICHT** `Detrimental` |
-| | ❌ **NICHT** `Hide in UI` — genau das wollen wir ja sehen |
-| Magnitude/Duration/Area | leer lassen (0) |
+| **Assoc. Item 1** | the actor value — see table |
+| **Flags** | **`Recover`** ✅ and `No Duration` ✅ |
+| | ❌ **NOT** `Detrimental` |
+| | ❌ **NOT** `Hide in UI` — that is exactly what we want to see |
+| Magnitude/Duration/Area | leave empty (0) |
 
-> ### ⚠️ `Recover` ist der Haken, an dem alles hängt
+> ### ⚠️ `Recover` is the hook everything hangs on
 >
-> Ohne `Recover` behandelt Skyrim einen Werte-Modifikator **nicht als Fortify**, sondern
-> als einmaligen Heil-/Schadenseffekt: Er ändert deinen *aktuellen* Wert einmal und dein
-> *Maximum* nie. Der Effekt steht dann sauber im Menü, hat eine Magnitude — und wirkt
-> trotzdem nicht.
+> Without `Recover`, Skyrim treats a value modifier **not as a Fortify** but as a one-off
+> heal/damage effect: it changes your *current* value once and your *maximum* never. The
+> effect then sits cleanly in the menu, has a magnitude — and still does nothing.
 >
-> Ausgelesen aus den echten Spieldaten, alle mit `Recover` und Archetype `34`
+> Read out of the real game data, all with `Recover` and archetype `34`
 > (= `Peak Value Modifier`):
 >
 > ```
@@ -79,13 +79,13 @@ Für **jeden** der acht Einträge unten identisch ausfüllen:
 > Resist Magic           archetype=34  Recover | NoDuration
 > ```
 
-> **Es gibt kein Feld namens „Actor Value".** Der Actor Value steckt in
-> **`Assoc. Item 1`** (links, unter *Minimum Skill Level*). Das Feld ist generisch
-> benannt, weil sein Inhalt vom Archetype abhängt — bei `Value Modifier` listet es
-> Actor Values. Wenn dort Objekte statt Actor Values auftauchen, `Effect Archetype`
-> einmal weg- und wieder zurückstellen; das lädt die Liste neu.
+> **There is no field called "Actor Value".** The actor value sits in
+> **`Assoc. Item 1`** (on the left, under *Minimum Skill Level*). The field is generically
+> named because its contents depend on the archetype — for `Value Modifier` it lists
+> actor values. If objects show up there instead of actor values, toggle
+> `Effect Archetype` away and back once; that reloads the list.
 
-Die acht:
+The eight:
 
 | ID | Name | Assoc. Item 1 |
 |---|---|---|
@@ -98,39 +98,39 @@ Die acht:
 | `IsekaiME_ResistFrost` | `System: Frost Resist` | `ResistFrost` |
 | `IsekaiME_ResistDisease` | `System: Disease Resist` | `ResistDisease` |
 
-> **Warum die nüchternen Namen?** Skyrim zeigt unter *Aktive Effekte* den Namen des
-> Magic Effects plus die Magnitude. Mit Fantasienamen stand da `+100 System: Burden` —
-> hübsch, aber unlesbar. Jetzt steht dort `+100 System: Carry Weight`. Ein Statuseffekt,
-> den man nachschlagen muss, ist ein schlechter Statuseffekt.
+> **Why the plain names?** Under *Active Effects* Skyrim shows the name of the magic
+> effect plus the magnitude. With fantasy names it read `+100 System: Burden` — pretty,
+> but unreadable. Now it reads `+100 System: Carry Weight`. A status effect you have to
+> look up is a bad status effect.
 
-> **Tipp:** Den ersten anlegen, dann in der Liste **rechtsklicken → Duplicate** und nur
-> ID, Name und Actor Value ändern. Spart viel Klickerei.
+> **Tip:** Create the first one, then **right-click → Duplicate** in the list and only
+> change the ID, name and actor value. Saves a lot of clicking.
 
 ---
 
-## Teil B — Abilities (8 Stück)
+## Part B — Abilities (8 of them)
 
-**Object Window** → **Magic → Spell** → Rechtsklick → **New**
+**Object Window** → **Magic → Spell** → right-click → **New**
 
-Für jeden:
+For each:
 
-| Feld | Wert |
+| Field | Value |
 |---|---|
-| **ID** | siehe Tabelle |
-| **Name** | derselbe wie beim zugehörigen Magic Effect |
+| **ID** | see table |
+| **Name** | the same as its matching magic effect |
 | **Type** | `Ability` |
 | **Casting** | `Constant Effect` |
 | **Delivery** | `Self` |
 | **Cost / Charge Time** | 0 |
 
-Dann unten im Kasten **Effects** → Rechtsklick → **New**:
-- Den passenden Magic Effect aus Teil A auswählen
+Then in the **Effects** box at the bottom → right-click → **New**:
+- Select the matching magic effect from Part A
 - **Magnitude: `0`**, **Duration: `0`**, **Area: `0`**
 
-> **Die Magnitude `0` ist Absicht.** Der Code setzt sie beim Laden auf deinen echten,
-> aufsummierten Wert. Stünde hier eine Zahl, wäre das nur eine Lüge, die überschrieben wird.
+> **The magnitude `0` is deliberate.** The code sets it to your real, accumulated value
+> on load. A number here would just be a lie that gets overwritten.
 
-| Ability-ID | Magic Effect aus Teil A |
+| Ability ID | Magic effect from Part A |
 |---|---|
 | `IsekaiAB_Health` | `IsekaiME_Health` |
 | `IsekaiAB_Magicka` | `IsekaiME_Magicka` |
@@ -143,142 +143,139 @@ Dann unten im Kasten **Effects** → Rechtsklick → **New**:
 
 ---
 
-## Teil C — Die Truhe
+## Part C — The chest
 
 **Object Window** → **World Objects → Container**
 
-Suche in der Liste eine vorhandene Truhe, z. B. **`TreasChestSmall01`**.
-→ Rechtsklick → **Duplicate** *(nicht "New" — so erbst du Modell und Sound gratis)*
+Find an existing chest in the list, e.g. **`TreasChestSmall01`**.
+→ right-click → **Duplicate** *(not "New" — that way you inherit the model and sound for
+free)*
 
-Am Duplikat ändern:
+Change on the duplicate:
 
-| Feld | Wert |
+| Field | Value |
 |---|---|
 | **ID** | `IsekaiStorageContainer` |
 | **Name** | `Dimensional Storage` |
-| **Respawns** | ❌ **UNBEDINGT ABWÄHLEN** |
-| Inhalt (Item-Liste) | alles löschen — die Truhe startet leer |
+| **Respawns** | ❌ **ABSOLUTELY UNTICK** |
+| Contents (item list) | delete everything — the chest starts empty |
 
-> ⚠️ **`Respawns` ist der kritische Haken.** Bleibt er gesetzt, **leert Skyrim deine
-> Truhe alle paar Spieltage automatisch aus.** Deine Items wären weg.
-
----
-
-## Teil D — entfällt
-
-> **Frühere Fassungen dieser Anleitung sagten hier, du sollst eine Zelle anlegen, die
-> Truhe hineinstellen und sie als *Persistent Reference* markieren. Das war falsch:
-> Skyrims Creation Kit hat diesen Haken gar nicht** (er stammt aus Oblivion/Fallout).
->
-> Nötig ist er trotzdem — eine nicht-persistente Referenz existiert nur, solange ihre
-> Zelle geladen ist, und wäre für den Code unauffindbar.
->
-> **Lösung:** Der Code erzeugt die Referenz selbst, mit
-> `PlaceObjectAtMe(base, forcePersist = true)`. Skyrim persistiert sie sauber im
-> Savegame. Wir brauchen aus dem CK also **nur das Basis-Objekt aus Teil C** — keine
-> Zelle, keine platzierte Truhe.
->
-> Falls du die Zelle und die Truhe darin schon angelegt hast: einfach drinlassen, der
-> Code ignoriert sie. Löschen geht auch, ist aber nicht nötig.
+> ⚠️ **`Respawns` is the critical checkbox.** If it stays set, **Skyrim empties your chest
+> automatically every few in-game days.** Your items would be gone.
 
 ---
 
-## Teil E — Sound Descriptors (4 Stück, per SSEEdit)
+## Part D — omitted
 
-Die WAV-Dateien liegen bereits in `Data\Sound\fx\isekai\` (macht der Build-Workflow).
+> **Earlier versions of this guide said here to create a cell, put the chest in it and
+> mark it as a *Persistent Reference*. That was wrong: Skyrim's Creation Kit does not have
+> that checkbox** (it comes from Oblivion/Fallout).
+>
+> It is needed anyway — a non-persistent reference only exists while its cell is loaded,
+> and would be unfindable for the code.
+>
+> **Solution:** The code creates the reference itself, with
+> `PlaceObjectAtMe(base, forcePersist = true)`. Skyrim persists it cleanly in the save.
+> So from the CK we only need **the base object from Part C** — no cell, no placed chest.
+>
+> If you already created the cell and the chest in it: just leave them, the code ignores
+> them. Deleting works too, but is not necessary.
 
-> **Warum SSEEdit statt Creation Kit?** Das CK hat einen bekannten Bug: der
-> Sound-Descriptor-Dialog stürzt beim Schließen/OK ab. SSEEdit ist hier ohnehin der
-> bessere Weg — beim Kopieren eines Vanilla-Descriptors kommen Category und Output
-> Model (also die richtige Lautstärkeregler-Anbindung) automatisch mit, statt sie
-> abtippen zu müssen.
+---
 
-1. **`SSEEdit.exe` direkt starten** (z. B. `E:\Modlists\NYA\tools\SSEEdit 4.1.5\`) —
-   ⚠️ **nicht über MO2!** Direkt gestartet sieht es die Load-Order des Basis-Spiels,
-   also genau unser Test-Setup.
-2. Im Modul-Dialog: Rechtsklick → *Select None*, dann nur **`IsekaiHero.esp`** anhaken
-   (die Master lädt es selbst) → OK. Warten bis unten rechts
-   „Background Loader: finished" steht.
-3. Links im Baum: **`Skyrim.esm` → `Sound Descriptor`** aufklappen.
-4. In das Suchfeld **oben links** `UIMenuOKSD` eintippen + Enter → der Vanilla-Descriptor
-   für Skyrims Menü-OK-Klick wird ausgewählt.
-5. **Rechtsklick auf `UIMenuOKSD` → „Copy as new record into..."** → Häkchen bei
-   `IsekaiHero.esp` → als neue Editor-ID `IsekaiSND_LevelUp` eingeben.
-6. Den neuen Record auswählen (jetzt unter `IsekaiHero.esp → Sound Descriptor`).
-   Rechts im Datenblatt den Eintrag **`ANAM - Sound File`** suchen → Doppelklick auf den
-   Pfad → ersetzen durch `fx\isekai\Cinematic_6_1.wav`.
-   *(Falls der kopierte Record mehrere Sound-Dateien listet: die überzähligen Zeilen
-   per Rechtsklick → Remove löschen, genau eine bleibt.)*
-7. Schritte 5–6 **in exakt dieser Reihenfolge** für die übrigen drei wiederholen:
+## Part E — Sound Descriptors (4 of them, via SSEEdit)
 
-| Nr. | Editor-ID | Sound File |
+The WAV files are already in `Data\Sound\fx\isekai\` (the build workflow does that).
+
+> **Why SSEEdit instead of the Creation Kit?** The CK has a known bug: the sound
+> descriptor dialog crashes on close/OK. SSEEdit is the better route here anyway — copying
+> a vanilla descriptor brings the Category and Output Model (i.e. the correct
+> volume-slider binding) along automatically, instead of having to type them out.
+
+1. **Start `SSEEdit.exe` directly** (e.g. `E:\Modlists\NYA\tools\SSEEdit 4.1.5\`) —
+   ⚠️ **not through MO2!** Started directly it sees the base game's load order, i.e.
+   exactly our test setup.
+2. In the module dialog: right-click → *Select None*, then tick only **`IsekaiHero.esp`**
+   (it loads its masters itself) → OK. Wait until the bottom-right says
+   "Background Loader: finished".
+3. In the tree on the left: expand **`Skyrim.esm` → `Sound Descriptor`**.
+4. In the search box **top-left** type `UIMenuOKSD` + Enter → the vanilla descriptor for
+   Skyrim's menu-OK click is selected.
+5. **Right-click `UIMenuOKSD` → "Copy as new record into..."** → tick `IsekaiHero.esp` →
+   enter the new editor ID `IsekaiSND_LevelUp`.
+6. Select the new record (now under `IsekaiHero.esp → Sound Descriptor`). On the right, in
+   the data pane, find the entry **`ANAM - Sound File`** → double-click the path →
+   replace with `fx\isekai\Cinematic_6_1.wav`.
+   *(If the copied record lists several sound files: delete the extra rows via
+   right-click → Remove, exactly one stays.)*
+7. Repeat steps 5–6 **in exactly this order** for the other three:
+
+| No. | Editor ID | Sound File |
 |---|---|---|
 | 1 | `IsekaiSND_LevelUp` | `fx\isekai\Cinematic_6_1.wav` |
 | 2 | `IsekaiSND_WindowOpen` | `fx\isekai\Cinematic_7_2.wav` |
 | 3 | `IsekaiSND_ButtonClick` | `fx\isekai\Modern_2_2.wav` |
 | 4 | `IsekaiSND_WindowClose` | `fx\isekai\Modern_5_2.wav` |
 
-8. SSEEdit schließen → der Speichern-Dialog erscheint → Häkchen bei `IsekaiHero.esp`
-   lassen → OK. (Ein Backup legt SSEEdit automatisch an.)
+8. Close SSEEdit → the save dialog appears → leave `IsekaiHero.esp` ticked → OK. (SSEEdit
+   makes a backup automatically.)
 
-> ⚠️ **Die Reihenfolge ist wichtig.** Sound Descriptors tragen zur Laufzeit weder Namen
-> noch Editor-ID, und ihre Dateipfade sind nur als Hash gespeichert — der Code ordnet
-> sie über die FormID-Reihenfolge zu, und neue Records bekommen aufsteigende IDs in
-> Erstellungsreihenfolge. Falls doch etwas vertauscht ist: sofort hörbar, leicht
-> korrigierbar.
+> ⚠️ **The order matters.** Sound descriptors carry neither a name nor an editor ID at
+> runtime, and their file paths are only stored as a hash — the code maps them by FormID
+> order, and new records get ascending IDs in creation order. If something is swapped:
+> immediately audible, easy to fix.
 
 ---
 
-## Teil G — Das Storage-Token (per SSEEdit)
+## Part G — The Storage token (via SSEEdit)
 
-Der Zugang zum Dimensional Storage läuft über ein Inventar-Item: „benutzen" wie einen
-Trank → Truhe öffnet sich, das Item bleibt erhalten (der Code fängt den Konsum ab).
+Access to the Dimensional Storage goes through an inventory item: "use" it like a potion
+→ the chest opens, the item stays (the code intercepts the consumption).
 
-> **Warum ein ALCH-Item und kein Ring?** Ein Ring müsste ausgerüstet werden, und
-> Ausrüstungs-Slots sind zwischen Mods hart umkämpft (Cloaks, Bandoliers, …).
-> Konsumieren berührt keinen einzigen Slot — null Konfliktfläche. Aussehen (Modell)
-> und Name des Items sind trotzdem frei wählbar; nur die Inventar-Kategorie bleibt
-> „Tränke".
+> **Why an ALCH item and not a ring?** A ring would have to be equipped, and equipment
+> slots are hotly contested between mods (cloaks, bandoliers, …). Consuming touches not a
+> single slot — zero conflict surface. The item's look (model) and name are still free to
+> choose; only the inventory category stays "Potions".
 
-In SSEEdit (wie in Teil E):
+In SSEEdit (as in Part E):
 
-1. `Skyrim.esm` → Kategorie **`Ingestible`** → einen simplen Trank auswählen
-   (z. B. eine *Potion of Minor Healing*)
-   *(xEdit nennt den Record-Typ ALCH „Ingestible" — eine Kategorie „Potion" gibt es
-   nur im Creation Kit.)*
-2. Rechtsklick → **Copy as new record into…** → `IsekaiHero.esp`
-   → Editor-ID: **`IsekaiStorageToken`**
-3. Am neuen Record:
+1. `Skyrim.esm` → category **`Ingestible`** → select a simple potion
+   (e.g. a *Potion of Minor Healing*)
+   *(xEdit calls the ALCH record type "Ingestible" — a "Potion" category exists only in
+   the Creation Kit.)*
+2. Right-click → **Copy as new record into…** → `IsekaiHero.esp`
+   → editor ID: **`IsekaiStorageToken`**
+3. On the new record:
    - **`FULL - Name`** → `Dimensional Storage`
-   - **`Effects`**-Block → Rechtsklick → **Remove** (komplett — keine Heilwirkung)
+   - **`Effects`** block → right-click → **Remove** (entirely — no healing effect)
    - **`DATA - Weight`** → `0`
-   - **`ENIT`**: `Value` → `0`, **`Sound - Consume` leeren** (sonst gluckert es beim Öffnen)
-4. Speichern beim Schließen.
+   - **`ENIT`**: `Value` → `0`, **clear `Sound - Consume`** (otherwise it glugs when opened)
+4. Save on close.
 
 ---
 
-## Teil F — Speichern & einmal starten
+## Part F — Save and start once
 
-1. **File → Save** (überschreibt `IsekaiHero.esp`).
-2. Sicherstellen, dass die ESP im Spiel **aktiviert** ist (Steam-Launcher, MO2, oder
-   `plugins.txt` — je nachdem, wie du das Basis-Setup startest).
-3. Skyrim starten, bis ins Spiel (`coc riverwood` reicht).
-4. **Bescheid sagen.**
+1. **File → Save** (overwrites `IsekaiHero.esp`).
+2. Make sure the ESP is **enabled** in the game (Steam launcher, MO2, or `plugins.txt` —
+   depending on how you start the base setup).
+3. Start Skyrim, get into the game (`coc riverwood` is enough).
+4. **Let me know.**
 
-Das Plugin schreibt dann **alle Forms aus `IsekaiHero.esp` samt FormID ins Log**. Ich lese
-sie aus und verdrahte sie im Code — dieselbe Methode, mit der wir schon die Quest-IDs
-verifiziert haben. So gibt es keine geratene Zahl im Code.
+The plugin then writes **every form from `IsekaiHero.esp` with its FormID to the log**. I
+read them out and wire them into the code — the same method we already used to verify the
+quest IDs. So there is no guessed number in the code.
 
 ---
 
-## Häufige Stolpersteine
+## Common pitfalls
 
-| Symptom | Ursache |
+| Symptom | Cause |
 |---|---|
-| Kein Feld „Actor Value" zu finden | Heißt **`Assoc. Item 1`** (Teil A) |
-| Kein Haken „Persistent Reference" | Gibt es in Skyrims CK nicht — Teil D entfällt |
-| `Detrimental` / `Hide in UI` nicht zu sehen | Der Flags-Kasten hat drei Spalten; beide sollen ohnehin **leer** bleiben |
-| CK stürzt beim Laden ab | `Skyrim.esm` **und** `Update.esm` müssen beide angehakt sein |
-| Truhe leert sich von selbst | `Respawns`-Haken vergessen (Teil C) |
-| Passives greifen nicht | Ability-Typ ist `Spell` statt `Ability` (Teil B) |
-| Effekt taucht nicht im Menü auf | `Hide in UI` versehentlich angehakt (Teil A) |
+| Can't find a field "Actor Value" | It's called **`Assoc. Item 1`** (Part A) |
+| No "Persistent Reference" checkbox | It doesn't exist in Skyrim's CK — Part D is omitted |
+| `Detrimental` / `Hide in UI` not visible | The flags box has three columns; both should stay **empty** anyway |
+| CK crashes on load | `Skyrim.esm` **and** `Update.esm` must both be ticked |
+| Chest empties itself | Forgot the `Respawns` checkbox (Part C) |
+| Passives don't take effect | Ability type is `Spell` instead of `Ability` (Part B) |
+| Effect doesn't show in the menu | `Hide in UI` accidentally ticked (Part A) |
