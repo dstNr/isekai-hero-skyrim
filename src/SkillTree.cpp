@@ -588,6 +588,16 @@ namespace Isekai::SkillTree {
         return RankNoLock(a_key);
     }
 
+    std::int32_t TotalInvested() {
+        std::scoped_lock lock(g_mutex);
+        std::int32_t total = 0;
+        for (const auto& node : kNodes) {
+            total += node.repeatable ? node.cost * RankNoLock(node.key)
+                                     : (IsUnlockedNoLock(node.key) ? node.cost : 0);
+        }
+        return total;
+    }
+
     std::int32_t RespecRefund() {
         std::scoped_lock lock(g_mutex);
         std::int32_t total = 0;

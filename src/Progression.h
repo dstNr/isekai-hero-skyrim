@@ -38,4 +38,13 @@ namespace Isekai::Progression {
 
     // Passives the player currently holds — for the status panel.
     [[nodiscard]] std::vector<const Passive*> EarnedPassives();
+
+    // A derived "System Rank" (E through S) — no state of its own, just a label read off
+    // milestones earned, character level and System Points ever invested in the tree.
+    // Every isekai/tower-climbing story ranks its protagonist; we already track
+    // everything needed to compute one, so this surfaces it as a single number instead
+    // of three separate stats the player has to eyeball themselves. Feeds the status
+    // panel now, and is meant to be the hook a future SkyrimNet "legend scales" decorator
+    // reads instead of the coarser blessing tier (see docs/IDEAS.md).
+    [[nodiscard]] std::string SystemRank();
 }

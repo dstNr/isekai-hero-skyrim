@@ -96,6 +96,11 @@ namespace Isekai::SkillTree {
     //   * Perk Synthesis — its points already became perk points, most likely spent.
     [[nodiscard]] std::int32_t RespecRefund();
 
+    // System Points ever spent on the tree — every node, refundable or not (unlike
+    // RespecRefund, which only counts what a respec would give back). A rough measure of
+    // investment for things like System Rank, not a currency figure.
+    [[nodiscard]] std::int32_t TotalInvested();
+
     // Refund those nodes and clear them, reverting their effects. Main thread only.
     // False if there was nothing to give back.
     bool Respec();

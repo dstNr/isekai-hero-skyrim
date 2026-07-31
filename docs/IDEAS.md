@@ -8,7 +8,7 @@ the one-liner list below — the reasoning behind them lives in git history and
 resistance/regen batch — Storm Ward, Warded Mind, Arcane Absorption, Iron Skin, Rapid
 Recovery), Shattered/Dormant/Custom blessings, skill-tree respec, the Reboot button,
 remappable hotkey + `HideSealedNodes` ini, the PrismaUI status dashboard, orphaned-chest
-cleanup. See `CHANGELOG.md` for versions.
+cleanup, System Rank (E–S) in the status panel. See `CHANGELOG.md` for versions.
 
 ---
 
@@ -38,18 +38,6 @@ deliberately out of scope for a first pass).
 **Open questions:** numbers only or legacy items too; per-character or global across
 saves; automatic payout (e.g. on main-quest completion) or a deliberate menu trigger;
 how much may run 2 be sped up without trivialising the premise.
-
-### System Rank (E → S)
-
-**Status:** 🧠 New idea (this session)
-**Why:** the cheapest flavor win on the list — no new state, a derived label the status
-header and SkyrimNet can both use. Every isekai/tower-climbing story ranks its
-protagonist (E/D/C/B/A/S); we track everything needed to compute one (milestones earned,
-character level, skill-tree depth/points spent) but never surface it as a single number.
-
-Pure function over existing `State` fields → a rank string, shown in the status header
-next to the tier badge. Feeds directly into the SkyrimNet "legend scales" idea below
-(NPC chatter reacts to rank, not just tier).
 
 ---
 
@@ -116,8 +104,8 @@ verification.
   react to the moment; Dormant awakenings additionally high-salience.
 - **Tier 2 (needs a decorator, breaks script-freeness):** a live-aura decorator so NPCs
   know the *current* tier/rank/latest title in every conversation, not just past events —
-  this is where **System Rank** (cluster A) pays off, letting NPC chatter scale with rank
-  rather than only the coarse blessing tier.
+  now that **System Rank** is shipped (`Progression::SystemRank()`), this is where it pays
+  off: NPC chatter can scale with rank rather than only the coarser blessing tier.
 - **Tier 3 (marquee, big/risky):** the "[SYSTEM]" itself as an LLM voice generating
   context-aware messages instead of fixed strings — the core of the isekai fantasy, but
   real tone-control and LLM latency/cost risk.

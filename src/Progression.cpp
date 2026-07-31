@@ -2,6 +2,7 @@
 
 #include "Config.h"
 #include "Passives.h"
+#include "SkillTree.h"
 #include "SkyrimNet.h"
 #include "Storage.h"
 #include "System.h"
@@ -176,6 +177,17 @@ namespace Isekai::Progression {
         [[nodiscard]] bool AlreadyGranted(std::uint32_t a_key) {
             const auto& granted = GetState().grantedMilestones;
             return std::find(granted.begin(), granted.end(), a_key) != granted.end();
+        }
+
+        // How many of the 79 milestones are already granted. Shared by the status panel,
+        // the PrismaUI status JSON, and SystemRank below — previously computed inline in
+        // the first two, drifting into three near-identical loops otherwise.
+        [[nodiscard]] std::size_t MilestonesEarned() {
+            std::size_t earned = 0;
+            for (const auto& m : kMilestones) {
+                earned += AlreadyGranted(m.key) ? 1 : 0;
+            }
+            return earned;
         }
 
         [[nodiscard]] const Milestone* FindByQuest(const RE::TESQuest* a_quest) {
@@ -375,10 +387,7 @@ namespace Isekai::Progression {
         [[nodiscard]] std::string BuildStatusJson() {
             const auto& st = GetState();
 
-            std::size_t earned = 0;
-            for (const auto& m : kMilestones) {
-                earned += AlreadyGranted(m.key) ? 1 : 0;
-            }
+            const std::size_t earned = MilestonesEarned();
 
             std::map<RE::ActorValue, float> totals;
             for (const auto* p : EarnedPassives()) {
@@ -389,6 +398,7 @@ namespace Isekai::Progression {
 
             std::string j = "{";
             j += "\"tier\":\"" + JsonEsc(PowerName(st.power)) + "\",";
+            j += "\"rank\":\"" + JsonEsc(SystemRank()) + "\",";
             j += "\"mode\":\"" +
                  std::string(st.custom     ? "CUSTOM"
                              : st.dormant   ? "DORMANT"
@@ -468,6 +478,7 @@ namespace Isekai::Progression {
                      : GetState().dormant   ? "  (DORMANT)"
                      : GetState().shattered ? "  (SHATTERED)"
                                             : "") + "\n";
+            body += "SYSTEM RANK   " + SystemRank() + "\n";
             if (GetState().custom) {
                 body += "  rewards " + PowerName(GetState().power) +
                         " / tree " + PowerName(GetState().treeTier) +
@@ -479,10 +490,7 @@ namespace Isekai::Progression {
                 body += "NEXT AWAKENING at level " + std::to_string(next) + "\n";
             }
 
-            std::size_t earned = 0;
-            for (const auto& m : kMilestones) {
-                earned += AlreadyGranted(m.key) ? 1 : 0;
-            }
+            const std::size_t earned = MilestonesEarned();
             body += "MILESTONES    " + std::to_string(earned) + " / " +
                     std::to_string(std::size(kMilestones)) + "\n";
             body += "SYSTEM POINTS " + std::to_string(GetState().systemPoints) + "\n";
@@ -772,5 +780,27 @@ namespace Isekai::Progression {
             }
         }
         return earned;
+    }
+
+    std::string SystemRank() {
+        // A deliberately simple, transparent formula rather than a tuned curve — milestones
+        // are capped at 79, so rank growth past "finished the available content" has to come
+        // from levelling and tree investment, which is exactly the isekai "still grinding for
+        // rank" trope. Thresholds are a first pass (see docs/IDEAS.md); they are pure
+        // constants, free to retune once a real playthrough's numbers are seen.
+        std::uint16_t level = 1;
+        if (auto* player = RE::PlayerCharacter::GetSingleton()) {
+            level = player->GetLevel();
+        }
+        const std::int32_t score = static_cast<std::int32_t>(MilestonesEarned()) +
+                                   static_cast<std::int32_t>(level) / 5 +
+                                   SkillTree::TotalInvested() / 10;
+
+        if (score < 10) return "E";
+        if (score < 25) return "D";
+        if (score < 50) return "C";
+        if (score < 90) return "B";
+        if (score < 150) return "A";
+        return "S";
     }
 }

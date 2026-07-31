@@ -261,6 +261,10 @@
   .badge { padding: 3px 11px; border: 1px solid var(--line); border-radius: 20px;
            font-size: 11px; letter-spacing: 0.2em; color: var(--accent); align-self: center; }
   .badge.dormant { color: var(--amber); border-color: rgba(224,168,96,0.5); }
+  /* Filled, bold — a rank insignia rather than an outline chip, so it reads as
+     distinct from the mode badge (SHATTERED/CUSTOM/DORMANT) next to it. */
+  .badge.rank { background: rgba(90,210,255,0.14); border-color: rgba(90,210,255,0.55);
+                color: #fff; font-weight: 700; }
   #sAwaken { color: var(--amber); font-size: 12px; letter-spacing: 0.1em; margin-top: 6px; }
   #sCustom { color: var(--dim); font-size: 12px; letter-spacing: 0.06em; margin-top: 6px; }
   #sCustom b { color: var(--accent); font-weight: 600; }
@@ -451,6 +455,7 @@
           <div class="eyebrow mono">System · Status</div>
           <div id="sTierRow">
             <div id="sTier" class="mono">—</div>
+            <div id="sRank" class="badge mono rank"></div>
             <div id="sMode" class="badge mono hidden"></div>
           </div>
           <div id="sAwaken" class="mono hidden"></div>
@@ -824,6 +829,7 @@ function buildStatusActions() {
 function renderStatus() {
   const s = STATUS;
   $("sTier").textContent = s.tier || "NORMAL";
+  $("sRank").textContent = "RANK " + (s.rank || "E");
 
   const mode = s.mode || "";
   const mb = $("sMode");

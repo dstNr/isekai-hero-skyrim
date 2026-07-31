@@ -46,6 +46,10 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   confirm) that re-opens this whole blessing choice on an existing character — keeping
   your milestones, skill tree and System Points. (Stats a previous *Full* blessing
   already granted stay; only a new game truly starts from zero.)
+
+  The status panel also shows a derived **System Rank** (E through S) next to your
+  tier — a single readout of milestones earned, character level and System Points
+  invested in the tree, the "how far along am I" number every isekai protagonist gets.
 - **79 quest milestones** (main quest, Companions, College, Thieves Guild,
   Dark Brotherhood, Civil War beats, Dawnguard, Dragonborn). Completing one
   plays a level-up flourish (rings, title punch, custom sound) and pays out a

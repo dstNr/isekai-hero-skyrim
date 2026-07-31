@@ -14,6 +14,10 @@ All notable changes to Isekai Hero are documented here. The format follows
   Stamina regeneration). Same utility-rail rules as Fleet of Foot and friends — NORMAL
   tier, no prerequisites, deliberately uncapped: the System Points economy is the actual
   brake on getting "really, really OP", not an arbitrary rank limit.
+- **System Rank** in the status panel (both renderers): a derived E through S label next
+  to the tier, computed from milestones earned, character level and System Points ever
+  invested in the tree. No new state — a pure readout, the same isekai/tower-climbing
+  "what rank am I" every save already has the numbers for.
 
 ## [0.6.1] — 2026-07-28
 
