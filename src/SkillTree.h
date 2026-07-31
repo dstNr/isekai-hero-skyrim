@@ -58,6 +58,12 @@ namespace Isekai::SkillTree {
         float baseline = 0.0f;
     };
 
+    // The node that gates the Analyze hotkey (src/Analyze.cpp) — a named constant rather
+    // than a magic number duplicated in both files. A plain Effect::kAttributes node with
+    // an empty bonus array: it grants no stat, IsUnlocked(kAnalyzeNodeKey) is itself the
+    // capability gate.
+    inline constexpr std::uint32_t kAnalyzeNodeKey = 23;
+
     // The whole tree, for the window to draw.
     [[nodiscard]] const Node* Nodes(std::size_t& a_count);
 

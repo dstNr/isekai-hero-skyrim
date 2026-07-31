@@ -8,7 +8,8 @@ the one-liner list below — the reasoning behind them lives in git history and
 resistance/regen batch — Storm Ward, Warded Mind, Arcane Absorption, Iron Skin, Rapid
 Recovery), Shattered/Dormant/Custom blessings, skill-tree respec, the Reboot button,
 remappable hotkey + `HideSealedNodes` ini, the PrismaUI status dashboard, orphaned-chest
-cleanup, System Rank (E–S) in the status panel. See `CHANGELOG.md` for versions.
+cleanup, System Rank (E–S) in the status panel, System Analysis (the Analyze hotkey).
+See `CHANGELOG.md` for versions.
 
 ---
 
@@ -52,15 +53,6 @@ The tree's economy — where points come from and where they go.
 - **Melee Damage** — same problem; weapon-type-specific (sword/mace/dagger/**bound**) is
   much harder (perks per type — a reporter plays a bound-weapon build via Biggie Traits).
 - **Multiple standing-stone bonuses at once** — managing ability spells; complex.
-
-### Analyze / Appraisal
-
-**Status:** 🧠 New idea (this session)
-**Why:** the strongest missing isekai signature move. Solo Leveling's "Observation" /
-Overlord's "Appraisal" — target something, get a System readout. Low effort: read the
-crosshair target, render level/health/resistances/a threat tag through the panel UI we
-already have. A natural skill-tree node to gate it behind (System Points well spent), and
-a strong SkyrimNet hook ("the System recognises a genuine threat").
 
 ### System Quests + System Shop
 

@@ -81,6 +81,12 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   on stat nodes and reverts their effects; the knowledge unlocks and Perk Synthesis
   are excluded, since neither can honestly be taken back.
 
+  One node, **System Analysis**, unlocks a standalone hotkey (`V` by default,
+  remappable) rather than a stat: point it at anything and the System reports back
+  its level, health, hostility and a threat verdict (TRIVIAL/MANAGEABLE/DANGEROUS/
+  LETHAL) — the "Observation"/"Appraisal" move every isekai protagonist gets.
+  *(Experimental in Skyrim VR — see the ini/VR notes.)*
+
   An **optional [PrismaUI](https://www.nexusmods.com/skyrimspecialedition/mods/148718)
   patch** renders the **whole UI**
   — this tree plus the System dialog panels and the level-up flourish — as an HTML/CSS

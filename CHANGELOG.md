@@ -18,6 +18,12 @@ All notable changes to Isekai Hero are documented here. The format follows
   to the tier, computed from milestones earned, character level and System Points ever
   invested in the tree. No new state — a pure readout, the same isekai/tower-climbing
   "what rank am I" every save already has the numbers for.
+- **System Analysis** — a new skill-tree node unlocking a standalone hotkey (`AnalyzeKey`
+  in the ini, default `V`) that reads whatever is under the crosshair: name, level,
+  health, hostility, and a threat verdict from TRIVIAL to LETHAL. The signature
+  "Observation"/"Appraisal" isekai move. Experimental in Skyrim VR — `CrosshairPickData`
+  resolves through an address-library ID not verified to exist in VR's database, so the
+  hotkey stays inert there (with a notification) until that can be tested for real.
 
 ## [0.6.1] — 2026-07-28
 

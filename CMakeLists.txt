@@ -15,6 +15,8 @@ add_commonlibsse_plugin(
     AUTHOR "dstNr"
     SOURCES
         src/main.cpp
+        src/Analyze.cpp
+        src/Analyze.h
         src/Config.cpp
         src/Config.h
         src/System.cpp

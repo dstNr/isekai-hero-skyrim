@@ -37,6 +37,14 @@ namespace Isekai::SkillTree {
             { 14, "Perk Synthesis",
               "Condense a System Point into raw potential.\n+5 perk points per purchase. REPEATABLE.",
               "spells_21_frame.png", 320.0f, 110.0f, 1, kN, { 1, 0 }, Effect::kPerkPoint, {} },
+            // A pure capability gate — no stat bonus (empty bonus array), so nothing
+            // needs to change in ApplyEffect/AccumulateBonuses. IsUnlocked(kAnalyzeNodeKey)
+            // is read directly by src/Analyze.cpp to decide whether the hotkey does
+            // anything (see the kAnalyzeNodeKey comment in the header for why the key is
+            // a named constant rather than duplicated as a magic number in both files).
+            { kAnalyzeNodeKey, "System Analysis",
+              "Unlocks the System's analytical eye.\nPress the Analyze hotkey to appraise whatever you are looking at.",
+              "spells_02_frame.png", 420.0f, 200.0f, 10, kN, { 1, 0 }, Effect::kAttributes, {} },
 
             // --- Kraft (left) ---
             { 3, "Vital Surge", "+100 Health.",

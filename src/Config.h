@@ -34,4 +34,9 @@ namespace Isekai::Config {
     // it only ever does anything when SkyrimNet is actually present — off is for players
     // who run SkyrimNet yet want no System context in it. See src/SkyrimNet.cpp.
     [[nodiscard]] bool SkyrimNetIntegration();
+
+    // The key that runs a System Analysis scan (once the matching skill-tree node is
+    // bought), as a DirectInput scan code. Default 0x2F (V) — no modifier; distinct from
+    // the System-menu key so it can fire without opening a menu. See src/Analyze.cpp.
+    [[nodiscard]] std::uint32_t AnalyzeKey();
 }

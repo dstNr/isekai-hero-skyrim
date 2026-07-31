@@ -1,5 +1,6 @@
 #include "System.h"
 
+#include "Analyze.h"
 #include "Config.h"
 #include "CraftHooks.h"
 #include "Passives.h"
@@ -796,6 +797,7 @@ namespace Isekai {
                 UI::Prisma::Install();  // optional web UI; no-op without the patch
                 SkyrimNet::Install();   // optional AI-NPC context; no-op without SkyrimNet
                 Progression::Install();
+                Analyze::Install();     // "System Analysis" hotkey (skill-tree gated)
 
                 if (auto* ui = RE::UI::GetSingleton()) {
                     ui->AddEventSink<RE::MenuOpenCloseEvent>(MenuWatcher::GetSingleton());
