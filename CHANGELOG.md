@@ -80,12 +80,19 @@ All notable changes to Isekai Hero are documented here. The format follows
   **Existing saves keep whatever their chest already holds**; they simply stop gaining
   new material types on load.
 - **Shop catalog rebuilt around material packs**: Smithing / Alchemy / Soul Gems, each in
-  a small and a large size (the large one is five times the materials for roughly three
-  times the price), plus gold in two sizes — eight cards, and both renderers now wrap
-  them into rows. Quantities are *per material type*, and the packs are the same three
-  sweeps the chest used to be stocked from, so there is still only one definition of what
-  counts as a smithing material. The individual Grand/Common soul gem entries are gone,
-  replaced by the soul gem packs.
+  a small and a large size (the large one is five times the materials for three times the
+  price), plus gold in two sizes — eight cards, and both renderers now wrap them into
+  rows. Quantities are *per material type*, and the packs are the same three sweeps the
+  chest used to be stocked from, so there is still only one definition of what counts as a
+  smithing material. The individual Grand/Common soul gem entries are gone, replaced by
+  the soul gem packs.
+  Prices are deliberately low — 5 System Points for a pack, 15 for a crate, so kitting out
+  all three categories costs 45 and fits inside a starting blessing. Two things set that:
+  the chest used to hold 500 x the reward scale of every material for free (2000 of each
+  at ASCENDED), so a paid pack has to land in the same league or the change reads as a
+  nerf; and points are genuinely scarce — a full ASCENDED run earns roughly 550 on top of
+  its 500 starting points while the skill tree alone can absorb ~1170. The shop must not
+  compete with the tree for them.
   Icon art for the eight cards is not included — see `docs/SHOP_ICON_PROMPTS.md`; cards
   render without an image until the files exist.
 - `UI::IsSystemScreenOpen()` replaces the hand-written

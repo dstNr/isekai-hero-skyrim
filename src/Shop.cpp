@@ -38,25 +38,39 @@ namespace Isekai::Shop {
 
         using Cat = Storage::MaterialCategory;
 
-        // First-pass pricing, deliberately round: the whole point-economy is still a
-        // testing configuration (see README), and these are the numbers most likely to
-        // need tuning once the empty-chest start has actually been played.
+        // Pricing is calibrated against two things, not guessed:
+        //
+        //  * What the chest USED to hold for free. It was stocked with 500 x the reward
+        //    scale of every material — 2000 of each at ASCENDED — plus millions in gold.
+        //    A pack has to land in that league or moving materials behind a paywall reads
+        //    as a nerf rather than as a choice. A crate is 500 of each, so four of them
+        //    match what ASCENDED was simply given.
+        //  * What System Points are actually worth. Milestones pay 1 (5 at an endpoint)
+        //    times the reward scale, so a full ASCENDED run earns roughly 550 on top of
+        //    its 500 starting points — while the skill tree alone can absorb ~1170. Points
+        //    are the scarce thing; the shop must not compete with the tree for them.
+        //
+        // Hence: single-digit entry prices, and a crate at 5x the contents for 3x the
+        // price. Kitting out all three categories costs 45 points, well inside a starting
+        // blessing, which is the "the System just hands you the world" feeling this is
+        // supposed to produce. Still a testing configuration (see README).
         constexpr Entry kCatalog[] = {
-            { "Smithing Materials", "20 of each", 15, "shop_smithing_small.png",
-              Kind::kPack, Cat::kSmithing, 20 },
-            { "Smithing Crate", "100 of each", 50, "shop_smithing_large.png",
+            { "Smithing Materials", "100 of each", 5, "shop_smithing_small.png",
               Kind::kPack, Cat::kSmithing, 100 },
-            { "Alchemy Ingredients", "20 of each", 15, "shop_alchemy_small.png",
-              Kind::kPack, Cat::kAlchemy, 20 },
-            { "Alchemy Crate", "100 of each", 50, "shop_alchemy_large.png",
+            { "Smithing Crate", "500 of each", 15, "shop_smithing_large.png",
+              Kind::kPack, Cat::kSmithing, 500 },
+            { "Alchemy Ingredients", "100 of each", 5, "shop_alchemy_small.png",
               Kind::kPack, Cat::kAlchemy, 100 },
-            { "Soul Gems", "10 of each", 20, "shop_souls_small.png",
-              Kind::kPack, Cat::kEnchanting, 10 },
-            { "Soul Gem Crate", "50 of each", 65, "shop_souls_large.png",
+            { "Alchemy Crate", "500 of each", 15, "shop_alchemy_large.png",
+              Kind::kPack, Cat::kAlchemy, 500 },
+            { "Soul Gems", "50 of each", 5, "shop_souls_small.png",
               Kind::kPack, Cat::kEnchanting, 50 },
-            { "Gold", "x1000", 10, "shop_gold_small.png", Kind::kGold, Cat::kSmithing, 1000 },
-            { "Gold Hoard", "x10000", 75, "shop_gold_large.png", Kind::kGold, Cat::kSmithing,
-              10000 },
+            { "Soul Gem Crate", "250 of each", 15, "shop_souls_large.png",
+              Kind::kPack, Cat::kEnchanting, 250 },
+            { "Gold", "x100,000", 5, "shop_gold_small.png", Kind::kGold, Cat::kSmithing,
+              100'000 },
+            { "Gold Hoard", "x1,000,000", 20, "shop_gold_large.png", Kind::kGold,
+              Cat::kSmithing, 1'000'000 },
         };
 
         // Gold is the only entry with a form that can be missing; the material packs are

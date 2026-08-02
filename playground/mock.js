@@ -247,14 +247,14 @@
      sends back mean the same thing here as in the plugin. Quantities are per material
      TYPE — one alchemy pack covers every official ingredient in the load order. */
   var SHOP_ITEMS = [
-    { name: "Smithing Materials",  qty: "20 of each",  cost: 15, icon: "shop_smithing_small.png" },
-    { name: "Smithing Crate",      qty: "100 of each", cost: 50, icon: "shop_smithing_large.png" },
-    { name: "Alchemy Ingredients", qty: "20 of each",  cost: 15, icon: "shop_alchemy_small.png" },
-    { name: "Alchemy Crate",       qty: "100 of each", cost: 50, icon: "shop_alchemy_large.png" },
-    { name: "Soul Gems",           qty: "10 of each",  cost: 20, icon: "shop_souls_small.png" },
-    { name: "Soul Gem Crate",      qty: "50 of each",  cost: 65, icon: "shop_souls_large.png" },
-    { name: "Gold",                qty: "x1000",       cost: 10, icon: "shop_gold_small.png" },
-    { name: "Gold Hoard",          qty: "x10000",      cost: 75, icon: "shop_gold_large.png" }
+    { name: "Smithing Materials",  qty: "100 of each", cost:  5, icon: "shop_smithing_small.png" },
+    { name: "Smithing Crate",      qty: "500 of each", cost: 15, icon: "shop_smithing_large.png" },
+    { name: "Alchemy Ingredients", qty: "100 of each", cost:  5, icon: "shop_alchemy_small.png" },
+    { name: "Alchemy Crate",       qty: "500 of each", cost: 15, icon: "shop_alchemy_large.png" },
+    { name: "Soul Gems",           qty: "50 of each",  cost:  5, icon: "shop_souls_small.png" },
+    { name: "Soul Gem Crate",      qty: "250 of each", cost: 15, icon: "shop_souls_large.png" },
+    { name: "Gold",                qty: "x100,000",    cost:  5, icon: "shop_gold_small.png" },
+    { name: "Gold Hoard",          qty: "x1,000,000",  cost: 20, icon: "shop_gold_large.png" }
   ];
 
   function buildShop() { return { points: G.points, items: SHOP_ITEMS }; }
