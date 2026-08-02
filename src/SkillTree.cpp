@@ -33,7 +33,16 @@ namespace Isekai::SkillTree {
         // (Zone::kMight / kShadow / kArcana). Keeping a node inside its band's x-range is
         // what makes the zone framing line up — moving one across bands without changing
         // its Zone will draw it outside its own header.
-        //   MIGHT  x 240..430    SHADOW  x 520..700    ARCANA  x 800..990
+        //   MIGHT  x 210..390    SHADOW  x 530..700    ARCANA  x 845..1015
+        //
+        // The gaps BETWEEN bands (and between the CORE row and the branch rows) are not
+        // cosmetic: a zone frame is its nodes' bounding box grown by a padding, so two
+        // bands whose frames would collide have to be pulled apart in the data. The
+        // renderers pad in design units scaled by the same fit factor as the positions,
+        // so these clearances hold at every window size:
+        //   horizontal, band to band : > 100  (have 140 / 145)
+        //   vertical, CORE to branches: > 124  (have 160)
+        // Shrink either below that and the frames start overlapping again.
         constexpr Node kNodes[] = {
             // --- Hub (Zone::kCore) ---
             // The hub sits centred above all three bands; its two satellites flank it.
@@ -42,10 +51,10 @@ namespace Isekai::SkillTree {
               { { AV::kHealth, 25.0f }, { AV::kMagicka, 25.0f }, { AV::kStamina, 25.0f } },
               false, 0, 0.0f, 1.4f },
             { 2, Zone::kCore, "Dragon's Voice", "Your Thu'um recovers faster.\n-20% shout cooldown.",
-              "spells_10_frame.png", 850.0f, 96.0f, 15, kN, { 1, 0 }, Effect::kShoutCooldown, {} },
+              "spells_10_frame.png", 880.0f, 96.0f, 15, kN, { 1, 0 }, Effect::kShoutCooldown, {} },
             { 14, Zone::kCore, "Perk Synthesis",
               "Condense a System Point into raw potential.\n+5 perk points per purchase. REPEATABLE.",
-              "spells_21_frame.png", 380.0f, 96.0f, 1, kN, { 1, 0 }, Effect::kPerkPoint, {} },
+              "spells_21_frame.png", 350.0f, 96.0f, 1, kN, { 1, 0 }, Effect::kPerkPoint, {} },
             // A pure capability gate — no stat bonus (empty bonus array), so nothing
             // needs to change in ApplyEffect/AccumulateBonuses. IsUnlocked(kAnalyzeNodeKey)
             // is read directly by src/Analyze.cpp to decide whether the hotkey does
@@ -57,42 +66,42 @@ namespace Isekai::SkillTree {
 
             // --- Might (left band) ---
             { 3, Zone::kMight, "Vital Surge", "+100 Health.",
-              "spells_25_frame.png", 335.0f, 330.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
+              "spells_25_frame.png", 300.0f, 360.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
               { { AV::kHealth, 100.0f } } },
             { 4, Zone::kMight, "Thu'um Omniscience",
               "The System pours every dragon's voice into you.\nAll shouts and words of power unlocked.",
-              "spells_39_frame.png", 250.0f, 470.0f, 25, kH, { 3, 0 }, Effect::kAllShouts, {},
+              "spells_39_frame.png", 210.0f, 500.0f, 25, kH, { 3, 0 }, Effect::kAllShouts, {},
               false, 0, 0.0f, 1.2f },
             { 5, Zone::kMight, "Emberguard", "+25% Fire Resist.",
-              "spells_12_frame.png", 420.0f, 470.0f, 15, kN, { 3, 0 }, Effect::kAttributes,
+              "spells_12_frame.png", 390.0f, 500.0f, 15, kN, { 3, 0 }, Effect::kAttributes,
               { { AV::kResistFire, 25.0f } } },
 
             // --- Arcana (right band) ---
             { 6, Zone::kArcana, "Mana Well", "+100 Magicka.",
-              "spells_15_frame.png", 895.0f, 330.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
+              "spells_15_frame.png", 930.0f, 360.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
               { { AV::kMagicka, 100.0f } } },
             { 7, Zone::kArcana, "Arcane Omniscience",
               "Every enchantment laid bare.\nAll enchantments known without disenchanting.",
-              "spells_36_frame.png", 810.0f, 470.0f, 25, kH, { 6, 0 }, Effect::kAllEnchantments, {},
+              "spells_36_frame.png", 845.0f, 500.0f, 25, kH, { 6, 0 }, Effect::kAllEnchantments, {},
               false, 0, 0.0f, 1.2f },
             { 8, Zone::kArcana, "Frostguard", "+25% Frost Resist.",
-              "spells_16_frame.png", 980.0f, 470.0f, 15, kN, { 6, 0 }, Effect::kAttributes,
+              "spells_16_frame.png", 1015.0f, 500.0f, 15, kN, { 6, 0 }, Effect::kAttributes,
               { { AV::kResistFrost, 25.0f } } },
             { 9, Zone::kArcana, "Spell Omniscience",
               "The System reads every tome ever written.\nAll spells with a spell tome learned.",
-              "spells_37_frame.png", 810.0f, 610.0f, 40, kH, { 7, 0 }, Effect::kAllSpells, {},
+              "spells_37_frame.png", 845.0f, 640.0f, 40, kH, { 7, 0 }, Effect::kAllSpells, {},
               false, 0, 0.0f, 1.2f },
 
             // --- Shadow (centre band) ---
             { 10, Zone::kShadow, "Swift Blood", "+100 Stamina.",
-              "spells_32_frame.png", 615.0f, 330.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
+              "spells_32_frame.png", 615.0f, 360.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
               { { AV::kStamina, 100.0f } } },
             { 11, Zone::kShadow, "Alchemical Insight",
               "Every ingredient gives up its secrets.\nAll ingredient effects known.",
-              "spells_31_frame.png", 535.0f, 470.0f, 25, kH, { 10, 0 }, Effect::kAllIngredients, {},
+              "spells_31_frame.png", 530.0f, 500.0f, 25, kH, { 10, 0 }, Effect::kAllIngredients, {},
               false, 0, 0.0f, 1.2f },
             { 12, Zone::kShadow, "Plagueward", "+25% Disease Resist.",
-              "spells_34_frame.png", 700.0f, 470.0f, 15, kN, { 10, 0 }, Effect::kAttributes,
+              "spells_34_frame.png", 700.0f, 500.0f, 15, kN, { 10, 0 }, Effect::kAttributes,
               { { AV::kResistDisease, 25.0f } } },
 
             // --- Capstone (bottom of the Shadow band) ---
@@ -101,7 +110,7 @@ namespace Isekai::SkillTree {
             // grazed every node on the way. Short V-lines, zero crossings — and a
             // deeper gate for the capstone as a side effect. ASCENDED-only.
             { 13, Zone::kShadow, "World Tree", "The System blossoms through your soul.\n+100 Health, Magicka and Stamina.",
-              "spells_09_frame.png", 615.0f, 620.0f, 50, kA, { 11, 12 }, Effect::kAttributes,
+              "spells_09_frame.png", 615.0f, 650.0f, 50, kA, { 11, 12 }, Effect::kAttributes,
               { { AV::kHealth, 100.0f }, { AV::kMagicka, 100.0f }, { AV::kStamina, 100.0f } },
               false, 0, 0.0f, 1.45f },
 

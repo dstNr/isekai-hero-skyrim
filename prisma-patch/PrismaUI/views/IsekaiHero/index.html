@@ -714,9 +714,18 @@ const posOf = (L, n) => ({ x: L.ox + n.x * L.k, y: L.oy + n.y * L.k });
 const radOf = (L, n) => NODE_R * (n.scale || 1) * L.k;
 
 /* One padded box per zone, derived from that zone's own node positions rather than
-   hardcoded — a node moving inside its band keeps the frame correct automatically. */
+   hardcoded — a node moving inside its band keeps the frame correct automatically.
+
+   The padding is in DESIGN units and scaled by L.k, exactly like the positions and the
+   node radii. Unscaled padding was the bug behind the overlapping frames: the gaps
+   between bands shrink with k while a fixed pad does not, so below k ~0.9 the frames
+   grew into each other. Scaled, the clearances declared in SkillTree.cpp's layout note
+   hold at every window size. */
+const ZPAD_X = 16, ZPAD_TOP = 18, ZPAD_BOT = 44;  // design units; BOT clears a 2-line name
+
 function zoneBoxes(L) {
-  const out = [];
+  const px = ZPAD_X * L.k, pt = ZPAD_TOP * L.k, pb = ZPAD_BOT * L.k;
+  const raw = [];
   ZONE_ORDER.forEach(z => {
     const members = TREE.nodes.filter(n => n.zone === z && !isUtil(n));
     if (!members.length) return;
@@ -726,14 +735,22 @@ function zoneBoxes(L) {
       x0 = Math.min(x0, p.x - r); x1 = Math.max(x1, p.x + r);
       y0 = Math.min(y0, p.y - r); y1 = Math.max(y1, p.y + r);
     });
-    // padBot has to clear a TWO-line name ("Thu'um Omniscience", "Spell Omniscience"
-    // both wrap at .nlabel's width): 6px offset + 2 lines at 10px/1.25 + slack.
-    const padX = 22, padTop = 20, padBot = 46;
-    out.push({ zone: z, cls: ZONE_CLASS[z] || "",
-               x: x0 - padX, y: y0 - padTop,
-               w: (x1 - x0) + padX * 2, h: (y1 - y0) + padTop + padBot });
+    raw.push({ zone: z, cls: ZONE_CLASS[z] || "", x0, x1, y0, y1, branch: z !== "CORE" });
   });
-  return out;
+
+  /* The three branches are siblings, so they get a shared top and bottom. Hugging their
+     own content made them ragged — MIGHT holds one row fewer than SHADOW, so its frame
+     ended ~130px higher and read as a glitch rather than as a group. */
+  const branches = raw.filter(b => b.branch);
+  if (branches.length > 1) {
+    const top = Math.min(...branches.map(b => b.y0));
+    const bot = Math.max(...branches.map(b => b.y1));
+    branches.forEach(b => { b.y0 = top; b.y1 = bot; });
+  }
+
+  return raw.map(b => ({ zone: b.zone, cls: b.cls,
+                         x: b.x0 - px, y: b.y0 - pt,
+                         w: (b.x1 - b.x0) + px * 2, h: (b.y1 - b.y0) + pt + pb }));
 }
 
 /* Pull point a toward b so lines stop at the tile edge instead of running underneath. */

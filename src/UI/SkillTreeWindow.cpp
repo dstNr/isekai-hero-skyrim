@@ -279,12 +279,26 @@ namespace Isekai::UI {
                     { SkillTree::Zone::kShadow, ImVec4{ 0.47f, 0.78f, 0.71f, 1.0f } },
                     { SkillTree::Zone::kArcana, ImVec4{ 0.59f, 0.51f, 1.00f, 1.0f } },
                 };
-                for (const auto& zs : kZoneStyles) {
+                // Padding in DESIGN units, scaled by the same `fit` as the positions and
+                // the node radii. Unscaled padding was the bug behind overlapping frames:
+                // the gaps between bands shrink with the fit while a fixed pad does not,
+                // so below fit ~0.9 the frames grew into each other. See the layout note
+                // in SkillTree.cpp for the clearances this relies on.
+                const float zpX = 16.0f * fit;
+                const float zpT = 18.0f * fit;
+                const float zpB = 44.0f * fit;  // clears a two-line node name
+
+                struct Box {
+                    ImVec2 mn, mx;
+                    bool   used;
+                };
+                Box boxes[std::size(kZoneStyles)]{};
+                for (std::size_t z = 0; z < std::size(kZoneStyles); ++z) {
                     ImVec2 zMin{ FLT_MAX, FLT_MAX }, zMax{ -FLT_MAX, -FLT_MAX };
                     int    members = 0;
                     for (std::size_t i = 0; i < count; ++i) {
                         const auto& nd = nodes[i];
-                        if (nd.zone != zs.zone || IsUtilityNode(nd) || NodeHidden(nd)) {
+                        if (nd.zone != kZoneStyles[z].zone || IsUtilityNode(nd) || NodeHidden(nd)) {
                             continue;
                         }
                         const ImVec2 c = centerOf(nd);
@@ -295,12 +309,41 @@ namespace Isekai::UI {
                         zMax.y = std::max(zMax.y, c.y + h);
                         ++members;
                     }
-                    if (members == 0) {
+                    boxes[z] = { zMin, zMax, members > 0 };
+                }
+
+                // The three branches are siblings, so they share a top and bottom. Hugging
+                // their own content made them ragged — MIGHT holds one row fewer than
+                // SHADOW, so its frame ended far higher and read as a glitch.
+                {
+                    float top = FLT_MAX, bot = -FLT_MAX;
+                    int   branches = 0;
+                    for (std::size_t z = 0; z < std::size(kZoneStyles); ++z) {
+                        if (!boxes[z].used || kZoneStyles[z].zone == SkillTree::Zone::kCore) {
+                            continue;
+                        }
+                        top = std::min(top, boxes[z].mn.y);
+                        bot = std::max(bot, boxes[z].mx.y);
+                        ++branches;
+                    }
+                    if (branches > 1) {
+                        for (std::size_t z = 0; z < std::size(kZoneStyles); ++z) {
+                            if (!boxes[z].used || kZoneStyles[z].zone == SkillTree::Zone::kCore) {
+                                continue;
+                            }
+                            boxes[z].mn.y = top;
+                            boxes[z].mx.y = bot;
+                        }
+                    }
+                }
+
+                for (std::size_t z = 0; z < std::size(kZoneStyles); ++z) {
+                    if (!boxes[z].used) {
                         continue;  // every node of this zone is hidden by HideSealedNodes
                     }
-                    // Bottom clears a two-line node name; 30px cut the second line off.
-                    const ImVec2 bMin{ zMin.x - 20.0f * s, zMin.y - 16.0f * s };
-                    const ImVec2 bMax{ zMax.x + 20.0f * s, zMax.y + 46.0f * s };
+                    const auto&  zs = kZoneStyles[z];
+                    const ImVec2 bMin{ boxes[z].mn.x - zpX, boxes[z].mn.y - zpT };
+                    const ImVec2 bMax{ boxes[z].mx.x + zpX, boxes[z].mx.y + zpB };
                     dl->AddRectFilled(bMin, bMax, Style::Col(zs.col, 0.05f * fade), 10.0f * s);
                     dl->AddRect(bMin, bMax, Style::Col(zs.col, 0.20f * fade), 10.0f * s, 0, 1.0f * s);
 
