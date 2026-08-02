@@ -240,6 +240,48 @@
 
   function pushTree() { call("isekaiShowTree", buildTree()); }
 
+  /* Mirrors Shop::Open() — same title/body/choice list, so the shop catalog is
+     previewable here too. No real soul-gem inventory to simulate (the mock has no
+     Storage chest to deliver into), so a "purchase" just deducts System Points and
+     logs, then reopens the shop to show the new balance, exactly like the plugin. */
+  function openShop() {
+    var body = "SYSTEM SHOP\n\n"
+      + "System Points   " + G.points + "\n\n"
+      + "Spend what the tree no longer needs. Delivered straight into your\n"
+      + "Dimensional Storage.";
+
+    function purchase(cost, label) {
+      if (G.points < cost) {
+        global.VS_LOG && global.VS_LOG("shop: not enough System Points for " + label);
+      } else {
+        G.points -= cost;
+        global.VS_LOG && global.VS_LOG("shop: bought " + label + " for " + cost + " SP");
+      }
+      openShop();  // refresh with the new balance, same as the plugin re-calling Open()
+    }
+
+    var actions = [
+      function () { purchase(25, "Grand Soul Gem x1"); },
+      function () { purchase(15, "Common Soul Gem x5"); },
+      function () { purchase(10, "Gold x1000"); },
+      function () {}
+    ];
+
+    Mock.showPanel({
+      title: "[ SYSTEM ]",
+      body: body,
+      reveal: 100000,
+      width: 720,
+      buttons: [
+        { label: "Grand Soul Gem x1  —  25 SP", icon: "", iconOnly: false },
+        { label: "Common Soul Gem x5  —  15 SP", icon: "", iconOnly: false },
+        { label: "Gold x1000  —  10 SP", icon: "", iconOnly: false },
+        { label: "CLOSE", icon: "", iconOnly: false }
+      ],
+      onSelect: function (i) { if (actions[i]) actions[i](); }
+    });
+  }
+
   /* Install the callbacks on the view's window (RegisterJSListener equivalent). */
   function installCallbacks() {
     var w = win();
@@ -277,8 +319,9 @@
     w.isekaiStatusAction = function (action) {
       global.VS_LOG && global.VS_LOG("status action: " + action);
       if (action === "tree") { pushTree(); }        // OpenTree switches screens in-view
+      else if (action === "shop") { openShop(); }    // Shop::Open's choice panel
       else if (action === "close" || action === "storage") { hide(); }
-      // "shop" in-game opens its own panel (like "reboot"); here we just log it.
+      // Storage opens a native container menu in-game — nothing to preview here.
     };
   }
 
