@@ -22,9 +22,13 @@ namespace Isekai::UI {
         constexpr const char* kIconDir = "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\";
 
         // Design-space (1080p) metrics; everything scales with the display.
-        constexpr float kWindowW = 1120.0f;
-        constexpr float kWindowH = 760.0f;
-        constexpr float kCanvasTop = 70.0f;  // below title + separator
+        // The window is deliberately large: the graph is fitted into what is left after
+        // the rail, the header and the footer, so every pixel taken by chrome comes
+        // straight off the node tiles. At 1120x760 the fit landed at 0.69 and tiles were
+        // 44px; 1240x860 lifts that to 0.83 and 53px while still occupying only 65% x 80%
+        // of a 1080p screen (and fitting a 720p one, where s shrinks it to 827x573).
+        constexpr float kWindowW = 1240.0f;
+        constexpr float kWindowH = 860.0f;
         constexpr float kNodeSize = 64.0f;
 
         // Render-thread state.
@@ -218,8 +222,8 @@ namespace Isekai::UI {
                         Style::Col(Style::kTextDim, fade), perks.c_str());
 
             // Everything below starts under the points block. Deriving this instead of
-            // assuming a fixed kCanvasTop is what stops the mastery rail's header from
-            // being drawn straight over "PERK POINTS", which is exactly what happened.
+            // assuming a fixed offset is what stops the mastery rail's header from being
+            // drawn straight over "PERK POINTS", which is exactly what happened.
             const float headBottom =
                 sepY + 38.0f * s + ImGui::GetTextLineHeight() + 12.0f * s;
 
@@ -253,10 +257,11 @@ namespace Isekai::UI {
             //   above    : half the hub tile + the zone frame pad + the zone header text
             //   below    : half a landmark tile + the zone frame pad + a two-line name
             // Raising any of them shrinks `fit` (smaller icons); lowering one clips what
-            // it was reserving for.
-            const float padX = (kNodeSize * 0.5f * kMaxScale + 62.0f) * s;
-            const float padT = (kNodeSize * 0.5f * kMaxScale + 22.0f) * s;
-            const float padB = (kNodeSize * 0.5f * kMaxScale + 48.0f) * s;
+            // it was reserving for. At the current window this settles at fit ~0.83 with
+            // ~4px to spare on the tightest.
+            const float padX = (kNodeSize * 0.5f * kMaxScale + 68.0f) * s;
+            const float padT = (kNodeSize * 0.5f * kMaxScale + 30.0f) * s;
+            const float padB = (kNodeSize * 0.5f * kMaxScale + 58.0f) * s;
 
             float gMinX = FLT_MAX, gMaxX = -FLT_MAX, gMinY = FLT_MAX, gMaxY = -FLT_MAX;
             for (std::size_t i = 0; i < count; ++i) {
@@ -487,9 +492,15 @@ namespace Isekai::UI {
                 // out what any of 15 identical dark squares even is was the single
                 // biggest readability problem the tree had.
                 if (withLabel) {
-                    ImFont*     font = ImGui::GetFont();
-                    const float lblSize = std::max(11.0f * s, ImGui::GetFontSize() * 0.68f);
-                    const float wrapW = 124.0f * s;
+                    ImFont* font = ImGui::GetFont();
+                    // Size and wrap follow `fit`, like everything else in the graph. Tied
+                    // to `s` they were the last piece that did not shrink with the layout:
+                    // the closest same-row neighbours are 170 design units apart, so at
+                    // fit 0.68 they sat 116px apart while a label was allowed to grow to
+                    // 124px — which is exactly why "Thu'um Omniscience" ran into
+                    // "Emberguard". 140 units of wrap always stays under that 170.
+                    const float lblSize = std::max(10.0f * s, 15.0f * fit);
+                    const float wrapW = 140.0f * fit;
                     const ImVec2 ls = font->CalcTextSizeA(lblSize, FLT_MAX, wrapW, node.name);
                     a_dl->AddText(font, lblSize,
                                   ImVec2{ (nMin.x + nMax.x) * 0.5f - ls.x * 0.5f, nMax.y + 7.0f * s },
