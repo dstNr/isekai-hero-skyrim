@@ -32,7 +32,7 @@ namespace Isekai::Analyze {
             // up, or while any game menu holds the keyboard (inventory search, console,
             // dialogue — the hotkey fires "whether or not a panel is open", so this is
             // the only thing stopping it from firing into one).
-            if (UI::IsSystemWindowOpen() || UI::IsSkillTreeOpen()) {
+            if (UI::IsSystemScreenOpen()) {
                 return;
             }
             auto* ui = RE::UI::GetSingleton();

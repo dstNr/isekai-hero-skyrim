@@ -32,6 +32,12 @@ namespace Isekai::UI::Prisma {
     // --- Skill tree ---
     void OpenTree();  // main thread; no-op if !Active()
 
+    // --- System shop (dedicated screen; mirrors UI::ShowShopWindow) ---
+    // Renders Shop::Catalog() as item cards. Purchases come back through the
+    // "isekaiShopBuy" listener as an index into that catalog and re-push the screen,
+    // so the balance and every card's affordability stay current.
+    void OpenShop();  // main thread; no-op if !Active()
+
     // --- Dialog panel (mirrors ShowSystemWindow) ---
     void ShowPanel(std::string a_title, std::string a_body, std::vector<Choice> a_choices,
                    std::function<void(int)> a_onSelect, float a_revealCharsPerSec, float a_width);

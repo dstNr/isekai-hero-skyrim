@@ -257,7 +257,7 @@ namespace Isekai::Progression {
         // replaces the open window outright, and clobbering, say, the blessing
         // selection would throw away its callback and hang the reincarnation.
         void ShowPanelWhenFree(std::string a_body) {
-            if (UI::IsSystemWindowOpen() || UI::IsSkillTreeOpen()) {
+            if (UI::IsSystemScreenOpen()) {
                 DelayedMainThread(1000, [body = std::move(a_body)]() mutable {
                     ShowPanelWhenFree(std::move(body));
                 });
@@ -453,7 +453,7 @@ namespace Isekai::Progression {
 
             // Never replace a live panel: opening over the blessing selection would
             // throw away its callback, and the reincarnation would hang half-finished.
-            if (UI::IsSystemWindowOpen() || UI::IsSkillTreeOpen()) {
+            if (UI::IsSystemScreenOpen()) {
                 return;
             }
 

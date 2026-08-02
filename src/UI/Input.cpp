@@ -1,6 +1,7 @@
 #include "UI/Input.h"
 
 #include "UI/Overlay.h"
+#include "UI/ShopWindow.h"
 #include "UI/SkillTreeWindow.h"
 #include "UI/SystemWindow.h"
 
@@ -274,6 +275,8 @@ namespace Isekai::UI {
                     if (dismissKey && a_event->IsDown()) {
                         if (IsSkillTreeOpen()) {
                             DismissSkillTree();
+                        } else if (IsShopWindowOpen()) {
+                            DismissShopWindow();
                         } else {
                             DismissSystemWindow();
                         }

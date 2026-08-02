@@ -3,6 +3,7 @@
 #include "SkillTree.h"
 #include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
+#include "UI/ShopWindow.h"
 #include "UI/SkillTreeWindow.h"
 #include "UI/Style.h"
 #include "UI/SystemWindow.h"
@@ -157,6 +158,7 @@ namespace Isekai::UI {
                 DrawLevelUpEffect();
                 DrawSystemWindow();
                 DrawSkillTree();
+                DrawShopWindow();
 
                 // Only while we own the input, and above everything else — otherwise
                 // it would sit on screen next to Skyrim's own cursor whenever the game
@@ -176,7 +178,7 @@ namespace Isekai::UI {
     }
 
     bool IsCapturingInput() {
-        return IsSystemWindowOpen() || IsSkillTreeOpen();
+        return IsSystemWindowOpen() || IsSkillTreeOpen() || IsShopWindowOpen();
     }
 
     void SetGameHold(bool a_hold) {

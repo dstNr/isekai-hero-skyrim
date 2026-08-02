@@ -20,7 +20,7 @@ namespace Isekai::UI::Prisma {
         constexpr const char* kViewFile = "Data\\PrismaUI\\views\\IsekaiHero\\index.html";
 
         // Which screen the single view is showing.
-        enum Screen : int { kNone = 0, kTree, kPanel, kFlourish, kStatus };
+        enum Screen : int { kNone = 0, kTree, kPanel, kFlourish, kStatus, kShop };
 
         PRISMA_UI_API::IVPrismaUI1* g_api = nullptr;
         PrismaView                  g_view = 0;
@@ -102,6 +102,10 @@ namespace Isekai::UI::Prisma {
                 j += "\"maxRank\":" + std::to_string(n.maxRank) + ",";
                 j += "\"masteryTier\":" + std::to_string(tier) + ",";
                 j += "\"masteryTierName\":\"" + Esc(SkillTree::TierName(tier)) + "\",";
+                // Display grouping and size — the view frames the graph as labelled
+                // zones and draws the landmarks (hub, capstone, gifts) larger.
+                j += "\"zone\":\"" + Esc(SkillTree::ZoneName(n.zone)) + "\",";
+                j += "\"scale\":" + std::to_string(n.scale) + ",";
                 j += "\"reqPower\":\"" +
                      Esc(Isekai::PowerName(SkillTree::RequiredPower(n.key)).c_str()) + "\",";
                 // >0 only for a DORMANT blessing: the seal is a level away, not a
@@ -156,6 +160,26 @@ namespace Isekai::UI::Prisma {
         }
 
         void PushTree() { Invoke("window.isekaiShowTree(" + BuildTreeJson() + ")"); }
+
+        // The shop catalog + the current balance. Reads game state — MAIN THREAD ONLY.
+        [[nodiscard]] std::string BuildShopJson() {
+            std::string j = "{\"points\":" + std::to_string(GetState().systemPoints) + ",";
+            j += "\"items\":[";
+            const auto items = Isekai::Shop::Catalog();
+            for (std::size_t i = 0; i < items.size(); ++i) {
+                if (i != 0) {
+                    j += ",";
+                }
+                j += "{\"name\":\"" + Esc(items[i].name.c_str()) + "\",";
+                j += "\"qty\":\"" + Esc(items[i].qty.c_str()) + "\",";
+                j += "\"cost\":" + std::to_string(items[i].cost) + ",";
+                j += "\"icon\":\"" + Esc(IconFile(items[i].icon).c_str()) + "\"}";
+            }
+            j += "]}";
+            return j;
+        }
+
+        void PushShop() { Invoke("window.isekaiShowShop(" + BuildShopJson() + ")"); }
 
         // Unfocus + hide the whole view. MAIN THREAD.
         void HideView() {
@@ -223,6 +247,36 @@ namespace Isekai::UI::Prisma {
             }
         }
 
+        // A shop card was clicked. The argument is an index into Shop::Catalog(); the
+        // re-push afterwards is what keeps the balance and the cards' affordability
+        // current without the player reopening anything.
+        void OnShopBuy(const char* a_arg) {
+            int idx = -1;
+            try {
+                idx = std::stoi(a_arg ? a_arg : "-1");
+            } catch (...) {
+                return;
+            }
+            if (idx < 0) {
+                return;
+            }
+            if (auto* task = SKSE::GetTaskInterface()) {
+                task->AddTask([idx]() {
+                    Isekai::Shop::Buy(idx);
+                    PushShop();
+                });
+            }
+        }
+
+        void OnShopClose(const char*) {
+            if (auto* task = SKSE::GetTaskInterface()) {
+                task->AddTask([]() {
+                    HideView();
+                    Sounds::PlayDelayed(Sounds::Sfx::WindowClose, Sounds::kResumeGraceMs);
+                });
+            }
+        }
+
         // The status screen's footer buttons. One listener, an action string — tree /
         // storage / shop / reboot / close.
         void OnStatusAction(const char* a_arg) {
@@ -237,9 +291,8 @@ namespace Isekai::UI::Prisma {
                         Sounds::PlayDelayed(Sounds::Sfx::WindowClose, Sounds::kResumeGraceMs);
                         Storage::Open();
                     } else if (action == "shop") {
-                        // Shop::Open() calls ShowSystemWindow, which we forward to our own
-                        // kPanel screen — takes the view over directly, no HideView needed,
-                        // same as "reboot" below.
+                        // Switches to our own kShop screen from here; like "tree" above it
+                        // stays inside the view, so no HideView and no game menu involved.
                         Isekai::Shop::Open();
                     } else if (action == "reboot") {
                         // Re-opens the blessing choice, which brings up its own panel
@@ -315,6 +368,8 @@ namespace Isekai::UI::Prisma {
         g_api->RegisterJSListener(g_view, "isekaiCloseTree", OnCloseTree);
         g_api->RegisterJSListener(g_view, "isekaiChoose", OnChoose);
         g_api->RegisterJSListener(g_view, "isekaiStatusAction", OnStatusAction);
+        g_api->RegisterJSListener(g_view, "isekaiShopBuy", OnShopBuy);
+        g_api->RegisterJSListener(g_view, "isekaiShopClose", OnShopClose);
         g_api->Hide(g_view);
 
         logger::info("Prisma: web UI active (view {})", g_view);
@@ -326,7 +381,7 @@ namespace Isekai::UI::Prisma {
 
     bool IsBusy() {
         const int s = g_screen.load(std::memory_order_acquire);
-        return s == kTree || s == kPanel || s == kStatus;
+        return s == kTree || s == kPanel || s == kStatus || s == kShop;
     }
 
     void OpenTree() {
@@ -335,6 +390,17 @@ namespace Isekai::UI::Prisma {
         }
         g_screen.store(kTree, std::memory_order_release);
         PushTree();
+        g_api->Show(g_view);
+        g_api->Focus(g_view, /*pauseGame=*/true);
+        Sounds::Play(Sounds::Sfx::WindowOpen);
+    }
+
+    void OpenShop() {
+        if (!Active()) {
+            return;
+        }
+        g_screen.store(kShop, std::memory_order_release);
+        PushShop();
         g_api->Show(g_view);
         g_api->Focus(g_view, /*pauseGame=*/true);
         Sounds::Play(Sounds::Sfx::WindowOpen);

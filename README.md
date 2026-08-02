@@ -58,8 +58,11 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
 - **Passives as real abilities.** All milestone bonuses aggregate into eight
   `System:` abilities visible under Active Effects — recomputed from scratch
   on every load, so they can never double-apply.
-- **System Skill Tree** (`RShift+S` → crystal icon): a hub and three branches,
-  paid with **System Points**. Includes four knowledge unlocks that span
+- **System Skill Tree** (`RShift+S` → crystal icon): a hub and three named,
+  visually framed branches — **MIGHT**, **SHADOW**, **ARCANA** — plus a **MASTERY**
+  rail, all paid with **System Points**. Every node shows its name, and the tree's
+  landmarks (the hub, the World Tree capstone, the Omniscience gifts) are drawn larger
+  than the leaves. Includes four knowledge unlocks that span
   *every loaded plugin* via semantic filters:
   - all shouts + words of power ("has a description", deduplicated by name)
   - all enchantments ("referenced as a base enchantment")
@@ -109,9 +112,10 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   dimension empty, as a stash. A **storage codex** (granted on reincarnation) is a
   table-free physical shortcut: use it from the inventory and the chest opens
   directly, no System panel needed — and it never runs out.
-- **System Shop** — a third button beside Skill Tree and Storage in the status panel:
-  spend System Points on filled soul gems or gold, delivered straight into the
-  Dimensional Storage. Once the tree is bought out, points still have somewhere to go.
+- **System Shop** — a third button beside Skill Tree and Storage in the status panel,
+  opening its own screen of item cards: spend System Points on filled soul gems or gold,
+  delivered straight into the Dimensional Storage. Once the tree is bought out, points
+  still have somewhere to go.
 - **Custom UI & sound.** Solo-Leveling-inspired panels (glow frames, corner
   brackets, typewriter reveal, monospace terminal font), custom SFX routed
   through the game's audio system, icon buttons, ESC handled properly.

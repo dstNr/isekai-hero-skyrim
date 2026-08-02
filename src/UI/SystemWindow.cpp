@@ -3,6 +3,8 @@
 #include "Sounds.h"
 #include "UI/Overlay.h"
 #include "UI/Prisma.h"
+#include "UI/ShopWindow.h"
+#include "UI/SkillTreeWindow.h"
 #include "UI/Style.h"
 #include "UI/Textures.h"
 
@@ -325,6 +327,10 @@ namespace Isekai::UI {
 
     bool IsSystemWindowOpen() {
         return g_open.load(std::memory_order_acquire);
+    }
+
+    bool IsSystemScreenOpen() {
+        return IsSystemWindowOpen() || IsSkillTreeOpen() || IsShopWindowOpen();
     }
 
     void DismissSystemWindow() {

@@ -25,6 +25,7 @@ All notable changes to Isekai Hero are documented here. The format follows
 - **Scrollable utility rail** (both renderers): the rail no longer lays out nodes at a
   fixed height that silently overflowed past the window once enough of them existed —
   it now scrolls, so future additions don't need the whole rail re-tuned.
+
 - **System Rank** in the status panel (both renderers): a derived E through S label next
   to the tier, computed from milestones earned, character level and System Points ever
   invested in the tree. No new state — a pure readout, the same isekai/tower-climbing
@@ -46,6 +47,34 @@ All notable changes to Isekai Hero are documented here. The format follows
   reincarnation, and backfilled on load for saves from before this existed.
 
 ### Changed
+- **Skill tree redesigned** in both renderers, after the old one read as "23 identical
+  dark tiles in a spider web":
+  - **Named zones.** Nodes now declare a `SkillTree::Zone` (CORE / MIGHT / ARCANA /
+    SHADOW / MASTERY) and each branch is drawn inside its own tinted, labelled frame.
+    The three branches existed only in the source's section comments before; nothing on
+    screen grouped them.
+  - **Always-on node names.** Every graph tile carries its name underneath. Finding out
+    what a node was previously meant hovering it, one at a time.
+  - **Size hierarchy** via `Node::scale`: the hub, the World Tree capstone and the four
+    Omniscience gifts are drawn larger, so the tree's landmarks read as landmarks
+    instead of as another +100 Health leaf.
+  - **Fitted layout.** Both renderers now scale and centre the node coordinates into the
+    available box rather than using them as literal offsets, so the graph fills the
+    window instead of leaving a third of it empty, and the table can be re-arranged
+    without re-tuning against a window size.
+  - **The mastery rail became rows**: icon, stat name, ten rank pips grouped into the
+    five tiers, and the current tier — a column of bare icons said nothing about what
+    any of them did or how far along it was.
+- **The System Shop is its own screen** instead of the generic dialog panel with text
+  buttons: item cards with icon, quantity, price and a Buy button, the balance in the
+  header, and unaffordable entries visibly out of reach but still readable (the price is
+  what you are saving up for). Purchases refresh in place. The catalog moved into
+  `Shop::Catalog()`/`Shop::Buy()` so the web patch and the built-in UI offer exactly the
+  same goods at the same prices, rather than each hardcoding a button list.
+- `UI::IsSystemScreenOpen()` replaces the hand-written
+  `IsSystemWindowOpen() || IsSkillTreeOpen()` in the four "don't act over a live screen"
+  guards. Each new screen previously had to be remembered at every call site — and the
+  new shop window was in fact missed at all four until this existed.
 - `Storage::Available()`'s doc comment corrected — it has never required a HERO/ASCENDED
   blessing (NORMAL gets the same empty storage as a stash); the comment just said so.
   Noticed while giving the Shop the same gate. No behaviour change.

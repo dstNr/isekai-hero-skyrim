@@ -50,6 +50,8 @@ add_commonlibsse_plugin(
         src/UI/Overlay.h
         src/UI/Prisma.cpp
         src/UI/Prisma.h
+        src/UI/ShopWindow.cpp
+        src/UI/ShopWindow.h
         src/UI/SkillTreeWindow.cpp
         src/UI/SkillTreeWindow.h
         src/UI/Style.h

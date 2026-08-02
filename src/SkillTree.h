@@ -28,8 +28,25 @@ namespace Isekai::SkillTree {
         float          amount = 0.0f;
     };
 
+    // Which labelled group a node is drawn in. Purely presentational — the real gates
+    // are minPower/prereq — but both renderers frame the tree as named zones, and
+    // deriving the grouping from x/y or from a node's position in the table would be a
+    // second, silent source of truth that drifts the moment a node moves.
+    enum class Zone {
+        kCore,     // the hub and what hangs directly off it
+        kMight,    // the left branch (Health / Thu'um / fire)
+        kArcana,   // the right branch (Magicka / enchanting / frost)
+        kShadow,   // the centre-down branch (Stamina / alchemy / disease) + capstone
+        kMastery,  // the repeatable utility stats — their own rail, not the graph
+    };
+
+    // Zone name for a header, e.g. "MIGHT". Centralised so both renderers label the
+    // zones identically, the same reason TierName() exists.
+    [[nodiscard]] const char* ZoneName(Zone a_zone);
+
     struct Node {
         std::uint32_t key;   // stable across releases; never reuse a value
+        Zone          zone;  // display grouping only — see Zone
         const char*   name;
         const char*   desc;
         const char*   icon;  // file name under Data\SKSE\Plugins\IsekaiHero\icons
@@ -56,6 +73,11 @@ namespace Isekai::SkillTree {
         // 0 for a resistance/absorption/armor-rating AV). Added at struct end so
         // existing initializers are unaffected.
         float baseline = 0.0f;
+
+        // Display size relative to a plain node. The hub, the capstone and the
+        // Omniscience gifts are the tree's landmarks and read as such instead of being
+        // the same tile as a +100 Health leaf. Presentational only.
+        float scale = 1.0f;
     };
 
     // The node that gates the Analyze hotkey (src/Analyze.cpp) — a named constant rather

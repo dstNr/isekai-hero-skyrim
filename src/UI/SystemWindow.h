@@ -38,6 +38,14 @@ namespace Isekai::UI {
     // True while the panel is up — i.e. while it should own mouse and keyboard.
     [[nodiscard]] bool IsSystemWindowOpen();
 
+    // True while ANY of our own built-in screens is up (panel, skill tree, shop). The
+    // "don't act over a live screen" guards all want this rather than the individual
+    // predicates: written out by hand, each new screen has to be remembered at every
+    // call site, and the shop was in fact missed at all four until this existed.
+    // Note this covers the ImGui screens only — the PrismaUI equivalent is
+    // Prisma::IsBusy(), and callers that care about both check each.
+    [[nodiscard]] bool IsSystemScreenOpen();
+
     // ESC behaviour: dismiss the panel as if its single text button (CLOSE/CONTINUE)
     // had been clicked. Panels with an actual decision to make (several text buttons,
     // like the blessing) ignore this — ESC must not choose for the player.

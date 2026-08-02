@@ -28,69 +28,82 @@ namespace Isekai::SkillTree {
         constexpr auto kH = PowerLevel::Hero;
         constexpr auto kA = PowerLevel::Ascended;
 
+        // Layout note: x/y are node centres in the 1120x760 design canvas, and they are
+        // grouped into three vertical bands that the renderers frame and label as zones
+        // (Zone::kMight / kShadow / kArcana). Keeping a node inside its band's x-range is
+        // what makes the zone framing line up — moving one across bands without changing
+        // its Zone will draw it outside its own header.
+        //   MIGHT  x 240..430    SHADOW  x 520..700    ARCANA  x 800..990
         constexpr Node kNodes[] = {
-            // --- Hub ---
-            { 1, "System Core", "The System takes root.\n+25 Health, Magicka and Stamina.",
-              "spells_01_frame.png", 550.0f, 110.0f, 5, kN, { 0, 0 }, Effect::kAttributes,
-              { { AV::kHealth, 25.0f }, { AV::kMagicka, 25.0f }, { AV::kStamina, 25.0f } } },
-            { 2, "Dragon's Voice", "Your Thu'um recovers faster.\n-20% shout cooldown.",
-              "spells_10_frame.png", 780.0f, 110.0f, 15, kN, { 1, 0 }, Effect::kShoutCooldown, {} },
-            { 14, "Perk Synthesis",
+            // --- Hub (Zone::kCore) ---
+            // The hub sits centred above all three bands; its two satellites flank it.
+            { 1, Zone::kCore, "System Core", "The System takes root.\n+25 Health, Magicka and Stamina.",
+              "spells_01_frame.png", 615.0f, 96.0f, 5, kN, { 0, 0 }, Effect::kAttributes,
+              { { AV::kHealth, 25.0f }, { AV::kMagicka, 25.0f }, { AV::kStamina, 25.0f } },
+              false, 0, 0.0f, 1.4f },
+            { 2, Zone::kCore, "Dragon's Voice", "Your Thu'um recovers faster.\n-20% shout cooldown.",
+              "spells_10_frame.png", 850.0f, 96.0f, 15, kN, { 1, 0 }, Effect::kShoutCooldown, {} },
+            { 14, Zone::kCore, "Perk Synthesis",
               "Condense a System Point into raw potential.\n+5 perk points per purchase. REPEATABLE.",
-              "spells_21_frame.png", 320.0f, 110.0f, 1, kN, { 1, 0 }, Effect::kPerkPoint, {} },
+              "spells_21_frame.png", 380.0f, 96.0f, 1, kN, { 1, 0 }, Effect::kPerkPoint, {} },
             // A pure capability gate — no stat bonus (empty bonus array), so nothing
             // needs to change in ApplyEffect/AccumulateBonuses. IsUnlocked(kAnalyzeNodeKey)
             // is read directly by src/Analyze.cpp to decide whether the hotkey does
             // anything (see the kAnalyzeNodeKey comment in the header for why the key is
             // a named constant rather than duplicated as a magic number in both files).
-            { kAnalyzeNodeKey, "System Analysis",
+            { kAnalyzeNodeKey, Zone::kCore, "System Analysis",
               "Unlocks the System's analytical eye.\nPress the Analyze hotkey to appraise whatever you are looking at.",
-              "spells_02_frame.png", 420.0f, 200.0f, 10, kN, { 1, 0 }, Effect::kAttributes, {} },
+              "spells_02_frame.png", 615.0f, 200.0f, 10, kN, { 1, 0 }, Effect::kAttributes, {} },
 
-            // --- Kraft (left) ---
-            { 3, "Vital Surge", "+100 Health.",
-              "spells_25_frame.png", 250.0f, 260.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
+            // --- Might (left band) ---
+            { 3, Zone::kMight, "Vital Surge", "+100 Health.",
+              "spells_25_frame.png", 335.0f, 330.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
               { { AV::kHealth, 100.0f } } },
-            { 4, "Thu'um Omniscience",
+            { 4, Zone::kMight, "Thu'um Omniscience",
               "The System pours every dragon's voice into you.\nAll shouts and words of power unlocked.",
-              "spells_39_frame.png", 160.0f, 410.0f, 25, kH, { 3, 0 }, Effect::kAllShouts, {} },
-            { 5, "Emberguard", "+25% Fire Resist.",
-              "spells_12_frame.png", 340.0f, 410.0f, 15, kN, { 3, 0 }, Effect::kAttributes,
+              "spells_39_frame.png", 250.0f, 470.0f, 25, kH, { 3, 0 }, Effect::kAllShouts, {},
+              false, 0, 0.0f, 1.2f },
+            { 5, Zone::kMight, "Emberguard", "+25% Fire Resist.",
+              "spells_12_frame.png", 420.0f, 470.0f, 15, kN, { 3, 0 }, Effect::kAttributes,
               { { AV::kResistFire, 25.0f } } },
 
-            // --- Arkana (right) ---
-            { 6, "Mana Well", "+100 Magicka.",
-              "spells_15_frame.png", 850.0f, 260.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
+            // --- Arcana (right band) ---
+            { 6, Zone::kArcana, "Mana Well", "+100 Magicka.",
+              "spells_15_frame.png", 895.0f, 330.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
               { { AV::kMagicka, 100.0f } } },
-            { 7, "Arcane Omniscience",
+            { 7, Zone::kArcana, "Arcane Omniscience",
               "Every enchantment laid bare.\nAll enchantments known without disenchanting.",
-              "spells_36_frame.png", 760.0f, 410.0f, 25, kH, { 6, 0 }, Effect::kAllEnchantments, {} },
-            { 8, "Frostguard", "+25% Frost Resist.",
-              "spells_16_frame.png", 940.0f, 410.0f, 15, kN, { 6, 0 }, Effect::kAttributes,
+              "spells_36_frame.png", 810.0f, 470.0f, 25, kH, { 6, 0 }, Effect::kAllEnchantments, {},
+              false, 0, 0.0f, 1.2f },
+            { 8, Zone::kArcana, "Frostguard", "+25% Frost Resist.",
+              "spells_16_frame.png", 980.0f, 470.0f, 15, kN, { 6, 0 }, Effect::kAttributes,
               { { AV::kResistFrost, 25.0f } } },
-            { 9, "Spell Omniscience",
+            { 9, Zone::kArcana, "Spell Omniscience",
               "The System reads every tome ever written.\nAll spells with a spell tome learned.",
-              "spells_37_frame.png", 850.0f, 555.0f, 40, kH, { 7, 0 }, Effect::kAllSpells, {} },
+              "spells_37_frame.png", 810.0f, 610.0f, 40, kH, { 7, 0 }, Effect::kAllSpells, {},
+              false, 0, 0.0f, 1.2f },
 
-            // --- Schatten (centre-down) ---
-            { 10, "Swift Blood", "+100 Stamina.",
-              "spells_32_frame.png", 550.0f, 300.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
+            // --- Shadow (centre band) ---
+            { 10, Zone::kShadow, "Swift Blood", "+100 Stamina.",
+              "spells_32_frame.png", 615.0f, 330.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
               { { AV::kStamina, 100.0f } } },
-            { 11, "Alchemical Insight",
+            { 11, Zone::kShadow, "Alchemical Insight",
               "Every ingredient gives up its secrets.\nAll ingredient effects known.",
-              "spells_31_frame.png", 460.0f, 450.0f, 25, kH, { 10, 0 }, Effect::kAllIngredients, {} },
-            { 12, "Plagueward", "+25% Disease Resist.",
-              "spells_34_frame.png", 640.0f, 450.0f, 15, kN, { 10, 0 }, Effect::kAttributes,
+              "spells_31_frame.png", 535.0f, 470.0f, 25, kH, { 10, 0 }, Effect::kAllIngredients, {},
+              false, 0, 0.0f, 1.2f },
+            { 12, Zone::kShadow, "Plagueward", "+25% Disease Resist.",
+              "spells_34_frame.png", 700.0f, 470.0f, 15, kN, { 10, 0 }, Effect::kAttributes,
               { { AV::kResistDisease, 25.0f } } },
 
-            // --- Capstone ---
-            // Rooted in the Schatten children directly above it, not in the far-away
+            // --- Capstone (bottom of the Shadow band) ---
+            // Rooted in the Shadow children directly above it, not in the far-away
             // branch entries: their long diagonals crossed the whole middle field and
             // grazed every node on the way. Short V-lines, zero crossings — and a
             // deeper gate for the capstone as a side effect. ASCENDED-only.
-            { 13, "World Tree", "The System blossoms through your soul.\n+100 Health, Magicka and Stamina.",
-              "spells_09_frame.png", 550.0f, 600.0f, 50, kA, { 11, 12 }, Effect::kAttributes,
-              { { AV::kHealth, 100.0f }, { AV::kMagicka, 100.0f }, { AV::kStamina, 100.0f } } },
+            { 13, Zone::kShadow, "World Tree", "The System blossoms through your soul.\n+100 Health, Magicka and Stamina.",
+              "spells_09_frame.png", 615.0f, 620.0f, 50, kA, { 11, 12 }, Effect::kAttributes,
+              { { AV::kHealth, 100.0f }, { AV::kMagicka, 100.0f }, { AV::kStamina, 100.0f } },
+              false, 0, 0.0f, 1.45f },
 
             // --- Utility (left margin, REPEATABLE MASTERY nodes) ---
             // Incremental stats that are otherwise fiddly to raise, and give NORMAL a
@@ -106,13 +119,13 @@ namespace Isekai::SkillTree {
             // celebrated finish line (the Grandmaster flourish in TryUnlock) reads as
             // actual progression instead. Fleet of Foot already had this cap from the
             // start — the rest now match it, magnitudes untouched.
-            { 16, "Beast of Burden", "The System shoulders your load.\n+25 Carry Weight per rank.",
+            { 16, Zone::kMastery, "Beast of Burden", "The System shoulders your load.\n+25 Carry Weight per rank.",
               "spells_22_frame.png", 95.0f, 150.0f, 2, kN, { 0, 0 }, Effect::kAttributes,
               { { AV::kCarryWeight, 25.0f } }, true, 10 },
-            { 15, "Fleet of Foot", "The System quickens your stride.\n+3% movement speed per rank.",
+            { 15, Zone::kMastery, "Fleet of Foot", "The System quickens your stride.\n+3% movement speed per rank.",
               "spells_28_frame.png", 95.0f, 221.0f, 3, kN, { 0, 0 }, Effect::kDirectStat,
               { { AV::kSpeedMult, 3.0f } }, true, 10, 100.0f },
-            { 17, "Enduring Vigor", "The System deepens your reserves.\n+25 Health, Magicka and Stamina per rank.",
+            { 17, Zone::kMastery, "Enduring Vigor", "The System deepens your reserves.\n+25 Health, Magicka and Stamina per rank.",
               "spells_06_frame.png", 95.0f, 292.0f, 4, kN, { 0, 0 }, Effect::kAttributes,
               { { AV::kHealth, 25.0f }, { AV::kMagicka, 25.0f }, { AV::kStamina, 25.0f } }, true, 10 },
 
@@ -121,19 +134,19 @@ namespace Isekai::SkillTree {
             // doesn't). All kDirectStat: none of these actor values have an ESP ability
             // spell to fortify (unlike Health/Magicka/Fire/Frost/Disease resist above),
             // so they are set directly, exactly like Fleet of Foot's move speed.
-            { 18, "Storm Ward", "The System turns aside the lightning.\n+5% Shock Resist per rank.",
+            { 18, Zone::kMastery, "Storm Ward", "The System turns aside the lightning.\n+5% Shock Resist per rank.",
               "spells_18_frame.png", 95.0f, 363.0f, 3, kN, { 0, 0 }, Effect::kDirectStat,
               { { AV::kResistShock, 5.0f } }, true, 10, 0.0f },
-            { 19, "Warded Mind", "The System shields your soul from magic.\n+5% Magic Resist per rank.",
+            { 19, Zone::kMastery, "Warded Mind", "The System shields your soul from magic.\n+5% Magic Resist per rank.",
               "spells_19_frame.png", 95.0f, 434.0f, 4, kN, { 0, 0 }, Effect::kDirectStat,
               { { AV::kResistMagic, 5.0f } }, true, 10, 0.0f },
-            { 20, "Arcane Absorption", "The System drinks the spells cast against you.\n+4% Spell Absorption per rank.",
+            { 20, Zone::kMastery, "Arcane Absorption", "The System drinks the spells cast against you.\n+4% Spell Absorption per rank.",
               "spells_20_frame.png", 95.0f, 505.0f, 5, kN, { 0, 0 }, Effect::kDirectStat,
               { { AV::kAbsorbChance, 4.0f } }, true, 10, 0.0f },
-            { 21, "Iron Skin", "The System hardens your hide.\n+10 Armor Rating per rank.",
+            { 21, Zone::kMastery, "Iron Skin", "The System hardens your hide.\n+10 Armor Rating per rank.",
               "spells_23_frame.png", 95.0f, 576.0f, 4, kN, { 0, 0 }, Effect::kDirectStat,
               { { AV::kDamageResist, 10.0f } }, true, 10, 0.0f },
-            { 22, "Rapid Recovery", "The System accelerates your body's grace.\n+10% Health, Magicka and Stamina regeneration per rank.",
+            { 22, Zone::kMastery, "Rapid Recovery", "The System accelerates your body's grace.\n+10% Health, Magicka and Stamina regeneration per rank.",
               "spells_24_frame.png", 95.0f, 647.0f, 5, kN, { 0, 0 }, Effect::kDirectStat,
               { { AV::kHealRateMult, 10.0f }, { AV::kMagickaRateMult, 10.0f }, { AV::kStaminaRateMult, 10.0f } },
               true, 10, 100.0f },
@@ -678,6 +691,17 @@ namespace Isekai::SkillTree {
 
     const char* TierName(std::int32_t a_tier) {
         return (a_tier >= 1 && a_tier <= kTierCount) ? kTierNames[a_tier - 1] : "";
+    }
+
+    const char* ZoneName(Zone a_zone) {
+        switch (a_zone) {
+        case Zone::kCore:    return "CORE";
+        case Zone::kMight:   return "MIGHT";
+        case Zone::kArcana:  return "ARCANA";
+        case Zone::kShadow:  return "SHADOW";
+        case Zone::kMastery: return "MASTERY";
+        default:             return "";
+        }
     }
 
     std::int32_t TotalInvested() {

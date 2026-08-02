@@ -30,39 +30,39 @@
 
   /* --- the real tree ------------------------------------------------------
      Transcribed from kNodes in src/SkillTree.cpp. `req` is the minimum rebirth
-     tier; `prereq` are node keys (0 = none). `rep`/`maxRank` mark repeatables. */
+     tier; `prereq` are node keys (0 = none); `rep`/`maxRank` mark repeatables;
+     `zone` is the display grouping (SkillTree::Zone) and `scale` the tile size
+     multiplier that makes the hub, the capstone and the gifts read as landmarks. */
   var NODES = [
     // hub
-    { key: 1,  name: "System Core",         icon: "spells_01_frame.png", x: 550, y: 110, cost: 5,  req: TIER.Normal,   prereq: [0, 0],   desc: "The System takes root.\n+25 Health, Magicka and Stamina." },
-    { key: 2,  name: "Dragon's Voice",      icon: "spells_10_frame.png", x: 780, y: 110, cost: 15, req: TIER.Normal,   prereq: [1, 0],   desc: "Your Thu'um recovers faster.\n-20% shout cooldown." },
-    { key: 14, name: "Perk Synthesis",      icon: "spells_21_frame.png", x: 320, y: 110, cost: 1,  req: TIER.Normal,   prereq: [1, 0],   rep: true, maxRank: 0, desc: "Condense a System Point into raw potential.\n+5 perk points per purchase. REPEATABLE." },
-    { key: 23, name: "System Analysis",     icon: "spells_02_frame.png", x: 420, y: 200, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "Unlocks the System's analytical eye.\nPress the Analyze hotkey to appraise whatever you are looking at." },
-    // craft (left)
-    { key: 3,  name: "Vital Surge",         icon: "spells_25_frame.png", x: 250, y: 260, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Health." },
-    { key: 4,  name: "Thu'um Omniscience",  icon: "spells_39_frame.png", x: 160, y: 410, cost: 25, req: TIER.Hero,     prereq: [3, 0],   desc: "The System pours every dragon's voice into you.\nAll shouts and words of power unlocked." },
-    { key: 5,  name: "Emberguard",          icon: "spells_12_frame.png", x: 340, y: 410, cost: 15, req: TIER.Normal,   prereq: [3, 0],   desc: "+25% Fire Resist." },
-    // arcana (right)
-    { key: 6,  name: "Mana Well",           icon: "spells_15_frame.png", x: 850, y: 260, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Magicka." },
-    { key: 7,  name: "Arcane Omniscience",  icon: "spells_36_frame.png", x: 760, y: 410, cost: 25, req: TIER.Hero,     prereq: [6, 0],   desc: "Every enchantment laid bare.\nAll enchantments known without disenchanting." },
-    { key: 8,  name: "Frostguard",          icon: "spells_16_frame.png", x: 940, y: 410, cost: 15, req: TIER.Normal,   prereq: [6, 0],   desc: "+25% Frost Resist." },
-    { key: 9,  name: "Spell Omniscience",   icon: "spells_37_frame.png", x: 850, y: 555, cost: 40, req: TIER.Hero,     prereq: [7, 0],   desc: "The System reads every tome ever written.\nAll spells with a spell tome learned." },
-    // shadow (centre-down)
-    { key: 10, name: "Swift Blood",         icon: "spells_32_frame.png", x: 550, y: 300, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Stamina." },
-    { key: 11, name: "Alchemical Insight",  icon: "spells_31_frame.png", x: 460, y: 450, cost: 25, req: TIER.Hero,     prereq: [10, 0],  desc: "Every ingredient gives up its secrets.\nAll ingredient effects known." },
-    { key: 12, name: "Plagueward",          icon: "spells_34_frame.png", x: 640, y: 450, cost: 15, req: TIER.Normal,   prereq: [10, 0],  desc: "+25% Disease Resist." },
-    // capstone
-    { key: 13, name: "World Tree",          icon: "spells_09_frame.png", x: 550, y: 600, cost: 50, req: TIER.Ascended, prereq: [11, 12], desc: "The System blossoms through your soul.\n+100 Health, Magicka and Stamina." },
-    // utility (left margin, repeatable)
-    { key: 16, name: "Beast of Burden",     icon: "spells_22_frame.png", x: 95,  y: 150, cost: 2,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System shoulders your load.\n+25 Carry Weight per rank." },
-    { key: 15, name: "Fleet of Foot",       icon: "spells_28_frame.png", x: 95,  y: 221, cost: 3,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System quickens your stride.\n+3% movement speed per rank." },
-    { key: 17, name: "Enduring Vigor",      icon: "spells_06_frame.png", x: 95,  y: 292, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System deepens your reserves.\n+25 Health, Magicka and Stamina per rank." },
-    // utility, continued: Tier-1 resistance/regen batch (see SkillTree.cpp for the
-    // AV/baseline rationale — all uncapped, same philosophy as the two nodes above).
-    { key: 18, name: "Storm Ward",          icon: "spells_18_frame.png", x: 95,  y: 363, cost: 3,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System turns aside the lightning.\n+5% Shock Resist per rank." },
-    { key: 19, name: "Warded Mind",         icon: "spells_19_frame.png", x: 95,  y: 434, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System shields your soul from magic.\n+5% Magic Resist per rank." },
-    { key: 20, name: "Arcane Absorption",   icon: "spells_20_frame.png", x: 95,  y: 505, cost: 5,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System drinks the spells cast against you.\n+4% Spell Absorption per rank." },
-    { key: 21, name: "Iron Skin",           icon: "spells_23_frame.png", x: 95,  y: 576, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System hardens your hide.\n+10 Armor Rating per rank." },
-    { key: 22, name: "Rapid Recovery",      icon: "spells_24_frame.png", x: 95,  y: 647, cost: 5,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System accelerates your body's grace.\n+10% Health, Magicka and Stamina regeneration per rank." },
+    { key: 1,  zone: "CORE",   scale: 1.4, name: "System Core",         icon: "spells_01_frame.png", x: 615, y: 96,  cost: 5,  req: TIER.Normal,   prereq: [0, 0],   desc: "The System takes root.\n+25 Health, Magicka and Stamina." },
+    { key: 2,  zone: "CORE",   name: "Dragon's Voice",      icon: "spells_10_frame.png", x: 850, y: 96,  cost: 15, req: TIER.Normal,   prereq: [1, 0],   desc: "Your Thu'um recovers faster.\n-20% shout cooldown." },
+    { key: 14, zone: "CORE",   name: "Perk Synthesis",      icon: "spells_21_frame.png", x: 380, y: 96,  cost: 1,  req: TIER.Normal,   prereq: [1, 0],   rep: true, maxRank: 0, desc: "Condense a System Point into raw potential.\n+5 perk points per purchase. REPEATABLE." },
+    { key: 23, zone: "CORE",   name: "System Analysis",     icon: "spells_02_frame.png", x: 615, y: 200, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "Unlocks the System's analytical eye.\nPress the Analyze hotkey to appraise whatever you are looking at." },
+    // might (left band)
+    { key: 3,  zone: "MIGHT",  name: "Vital Surge",         icon: "spells_25_frame.png", x: 335, y: 330, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Health." },
+    { key: 4,  zone: "MIGHT",  scale: 1.2, name: "Thu'um Omniscience",  icon: "spells_39_frame.png", x: 250, y: 470, cost: 25, req: TIER.Hero,     prereq: [3, 0],   desc: "The System pours every dragon's voice into you.\nAll shouts and words of power unlocked." },
+    { key: 5,  zone: "MIGHT",  name: "Emberguard",          icon: "spells_12_frame.png", x: 420, y: 470, cost: 15, req: TIER.Normal,   prereq: [3, 0],   desc: "+25% Fire Resist." },
+    // arcana (right band)
+    { key: 6,  zone: "ARCANA", name: "Mana Well",           icon: "spells_15_frame.png", x: 895, y: 330, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Magicka." },
+    { key: 7,  zone: "ARCANA", scale: 1.2, name: "Arcane Omniscience",  icon: "spells_36_frame.png", x: 810, y: 470, cost: 25, req: TIER.Hero,     prereq: [6, 0],   desc: "Every enchantment laid bare.\nAll enchantments known without disenchanting." },
+    { key: 8,  zone: "ARCANA", name: "Frostguard",          icon: "spells_16_frame.png", x: 980, y: 470, cost: 15, req: TIER.Normal,   prereq: [6, 0],   desc: "+25% Frost Resist." },
+    { key: 9,  zone: "ARCANA", scale: 1.2, name: "Spell Omniscience",   icon: "spells_37_frame.png", x: 810, y: 610, cost: 40, req: TIER.Hero,     prereq: [7, 0],   desc: "The System reads every tome ever written.\nAll spells with a spell tome learned." },
+    // shadow (centre band)
+    { key: 10, zone: "SHADOW", name: "Swift Blood",         icon: "spells_32_frame.png", x: 615, y: 330, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Stamina." },
+    { key: 11, zone: "SHADOW", scale: 1.2, name: "Alchemical Insight",  icon: "spells_31_frame.png", x: 535, y: 470, cost: 25, req: TIER.Hero,     prereq: [10, 0],  desc: "Every ingredient gives up its secrets.\nAll ingredient effects known." },
+    { key: 12, zone: "SHADOW", name: "Plagueward",          icon: "spells_34_frame.png", x: 700, y: 470, cost: 15, req: TIER.Normal,   prereq: [10, 0],  desc: "+25% Disease Resist." },
+    // capstone (bottom of the shadow band)
+    { key: 13, zone: "SHADOW", scale: 1.45, name: "World Tree",         icon: "spells_09_frame.png", x: 615, y: 620, cost: 50, req: TIER.Ascended, prereq: [11, 12], desc: "The System blossoms through your soul.\n+100 Health, Magicka and Stamina." },
+    // mastery rail (repeatable, capped at 10 ranks / 5 tiers)
+    { key: 16, zone: "MASTERY", name: "Beast of Burden",     icon: "spells_22_frame.png", x: 95,  y: 150, cost: 2,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System shoulders your load.\n+25 Carry Weight per rank." },
+    { key: 15, zone: "MASTERY", name: "Fleet of Foot",       icon: "spells_28_frame.png", x: 95,  y: 221, cost: 3,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System quickens your stride.\n+3% movement speed per rank." },
+    { key: 17, zone: "MASTERY", name: "Enduring Vigor",      icon: "spells_06_frame.png", x: 95,  y: 292, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System deepens your reserves.\n+25 Health, Magicka and Stamina per rank." },
+    { key: 18, zone: "MASTERY", name: "Storm Ward",          icon: "spells_18_frame.png", x: 95,  y: 363, cost: 3,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System turns aside the lightning.\n+5% Shock Resist per rank." },
+    { key: 19, zone: "MASTERY", name: "Warded Mind",         icon: "spells_19_frame.png", x: 95,  y: 434, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System shields your soul from magic.\n+5% Magic Resist per rank." },
+    { key: 20, zone: "MASTERY", name: "Arcane Absorption",   icon: "spells_20_frame.png", x: 95,  y: 505, cost: 5,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System drinks the spells cast against you.\n+4% Spell Absorption per rank." },
+    { key: 21, zone: "MASTERY", name: "Iron Skin",           icon: "spells_23_frame.png", x: 95,  y: 576, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System hardens your hide.\n+10 Armor Rating per rank." },
+    { key: 22, zone: "MASTERY", name: "Rapid Recovery",      icon: "spells_24_frame.png", x: 95,  y: 647, cost: 5,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System accelerates your body's grace.\n+10% Health, Magicka and Stamina regeneration per rank." },
   ];
 
   var PERK_MAX = 255; // Isekai::kMaxPerkPoints (see System.h)
@@ -186,6 +186,8 @@
           icon: n.icon,
           x: n.x,
           y: n.y,
+          zone: n.zone,
+          scale: n.scale || 1,
           cost: nextCost(n),
           owned: owned(n),
           tierMet: tierMet(n),
@@ -240,46 +242,31 @@
 
   function pushTree() { call("isekaiShowTree", buildTree()); }
 
-  /* Mirrors Shop::Open() — same title/body/choice list, so the shop catalog is
-     previewable here too. No real soul-gem inventory to simulate (the mock has no
-     Storage chest to deliver into), so a "purchase" just deducts System Points and
-     logs, then reopens the shop to show the new balance, exactly like the plugin. */
-  function openShop() {
-    var body = "SYSTEM SHOP\n\n"
-      + "System Points   " + G.points + "\n\n"
-      + "Spend what the tree no longer needs. Delivered straight into your\n"
-      + "Dimensional Storage.";
+  /* --- SYSTEM SHOP, mirroring src/Shop.cpp -------------------------------
+     Same goods, same prices, same order as Shop::Catalog(), so the indices the view
+     sends back mean the same thing here as in the plugin. */
+  var SHOP_ITEMS = [
+    { name: "Grand Soul Gem",  qty: "x1",    cost: 25, icon: "spells_20_frame.png" },
+    { name: "Common Soul Gem", qty: "x5",    cost: 15, icon: "spells_19_frame.png" },
+    { name: "Gold",            qty: "x1000", cost: 10, icon: "spells_21_frame.png" }
+  ];
 
-    function purchase(cost, label) {
-      if (G.points < cost) {
-        global.VS_LOG && global.VS_LOG("shop: not enough System Points for " + label);
-      } else {
-        G.points -= cost;
-        global.VS_LOG && global.VS_LOG("shop: bought " + label + " for " + cost + " SP");
-      }
-      openShop();  // refresh with the new balance, same as the plugin re-calling Open()
+  function buildShop() { return { points: G.points, items: SHOP_ITEMS }; }
+  function pushShop() { call("isekaiShowShop", buildShop()); }
+
+  /* Mirrors Shop::Buy(): spend, deliver, then re-push so the balance and every card's
+     affordability refresh. There is no chest in the mock, so "deliver" is the log line. */
+  function shopBuy(idx) {
+    var it = SHOP_ITEMS[idx];
+    if (!it) return;
+    if (G.points < it.cost) {
+      global.VS_LOG && global.VS_LOG("shop: cannot afford " + it.name);
+    } else {
+      G.points -= it.cost;
+      global.VS_LOG && global.VS_LOG("shop: bought " + it.name + " " + it.qty +
+                                     " for " + it.cost + " SP");
     }
-
-    var actions = [
-      function () { purchase(25, "Grand Soul Gem x1"); },
-      function () { purchase(15, "Common Soul Gem x5"); },
-      function () { purchase(10, "Gold x1000"); },
-      function () {}
-    ];
-
-    Mock.showPanel({
-      title: "[ SYSTEM ]",
-      body: body,
-      reveal: 100000,
-      width: 720,
-      buttons: [
-        { label: "Grand Soul Gem x1  —  25 SP", icon: "", iconOnly: false },
-        { label: "Common Soul Gem x5  —  15 SP", icon: "", iconOnly: false },
-        { label: "Gold x1000  —  10 SP", icon: "", iconOnly: false },
-        { label: "CLOSE", icon: "", iconOnly: false }
-      ],
-      onSelect: function (i) { if (actions[i]) actions[i](); }
-    });
+    pushShop();
   }
 
   /* Install the callbacks on the view's window (RegisterJSListener equivalent). */
@@ -315,11 +302,21 @@
       if (fn && idx >= 0) fn(idx);
     };
 
+    w.isekaiShopBuy = function (arg) {
+      var idx = parseInt(arg, 10);
+      if (!isNaN(idx)) shopBuy(idx);
+    };
+
+    w.isekaiShopClose = function () {
+      hide();
+      global.VS_LOG && global.VS_LOG("close shop");
+    };
+
     // Mirrors Prisma::OnStatusAction — tree / storage / shop / reboot / close.
     w.isekaiStatusAction = function (action) {
       global.VS_LOG && global.VS_LOG("status action: " + action);
       if (action === "tree") { pushTree(); }        // OpenTree switches screens in-view
-      else if (action === "shop") { openShop(); }    // Shop::Open's choice panel
+      else if (action === "shop") { pushShop(); }    // OpenShop, likewise in-view
       else if (action === "close" || action === "storage") { hide(); }
       // Storage opens a native container menu in-game — nothing to preview here.
     };
@@ -343,6 +340,12 @@
       show();
       pushTree();
       // Focus the frame so the view's ESC handler can fire.
+      if (win()) win().focus();
+    },
+
+    openShop: function () {
+      show();
+      pushShop();
       if (win()) win().focus();
     },
 

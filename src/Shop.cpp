@@ -4,10 +4,9 @@
 #include "Sounds.h"
 #include "Storage.h"
 #include "System.h"
+#include "UI/Prisma.h"
+#include "UI/ShopWindow.h"
 #include "UI/SystemWindow.h"
-
-#include <string>
-#include <vector>
 
 namespace Isekai::Shop {
 
@@ -38,25 +37,41 @@ namespace Isekai::Shop {
             return best;
         }
 
-        // Spend a_cost System Points and hand a_obj/a_count to the storage chest. Declines
-        // quietly (a notification, not a crash) if the player can't afford it or the chest
-        // is not ready — both realistic states a stale, re-opened catalog can hit.
-        void Purchase(std::int32_t a_cost, RE::TESBoundObject* a_obj, std::int32_t a_count) {
-            auto& state = GetState();
-            if (state.systemPoints < a_cost) {
-                RE::DebugNotification("[ SYSTEM ] Not enough System Points.");
-                return;
+        // The catalog as one table: what Catalog() renders and what Buy() spends against,
+        // so a price can never differ between the card the player reads and the purchase
+        // they get. `obj` is resolved lazily because Gold001 is a plain lookup while the
+        // soul gems come from Install()'s scan.
+        struct Entry {
+            const char*         name;
+            const char*         qty;
+            std::int32_t        cost;
+            std::int32_t        count;
+            const char*         icon;
+            RE::TESBoundObject* (*resolve)();
+        };
+
+        constexpr Entry kCatalog[] = {
+            { "Grand Soul Gem", "x1", 25, 1, "spells_20_frame.png",
+              []() -> RE::TESBoundObject* { return g_grand; } },
+            { "Common Soul Gem", "x5", 15, 5, "spells_19_frame.png",
+              []() -> RE::TESBoundObject* { return g_common; } },
+            { "Gold", "x1000", 10, 1000, "spells_21_frame.png",
+              []() -> RE::TESBoundObject* {
+                  return RE::TESForm::LookupByID<RE::TESBoundObject>(kGold);
+              } },
+        };
+
+        // The entries whose form actually resolved, in catalog order. Both Catalog() and
+        // Buy() go through this, so an index means the same thing to each of them even
+        // when a form is missing from the load order.
+        [[nodiscard]] std::vector<const Entry*> LiveEntries() {
+            std::vector<const Entry*> out;
+            for (const auto& e : kCatalog) {
+                if (e.resolve()) {
+                    out.push_back(&e);
+                }
             }
-            auto* chest = Storage::ChestRef();
-            if (!chest || !a_obj) {
-                RE::DebugNotification("[ SYSTEM ] The Dimensional Storage is not ready yet.");
-                return;
-            }
-            state.systemPoints -= a_cost;
-            chest->AddObjectToContainer(a_obj, nullptr, a_count, nullptr);
-            Sounds::Play(Sounds::Sfx::ButtonClick);
-            logger::info("Shop: bought {}x {} for {} System Point(s)", a_count, a_obj->GetName(),
-                         a_cost);
+            return out;
         }
     }
 
@@ -71,6 +86,41 @@ namespace Isekai::Shop {
         return Storage::Available();
     }
 
+    std::vector<Item> Catalog() {
+        std::vector<Item> out;
+        for (const auto* e : LiveEntries()) {
+            out.push_back({ e->name, e->qty, e->cost, e->icon });
+        }
+        return out;
+    }
+
+    bool Buy(int a_index) {
+        const auto live = LiveEntries();
+        if (a_index < 0 || static_cast<std::size_t>(a_index) >= live.size()) {
+            return false;  // a stale card from a catalog built before a form went away
+        }
+        const auto* entry = live[static_cast<std::size_t>(a_index)];
+
+        auto& state = GetState();
+        if (state.systemPoints < entry->cost) {
+            RE::DebugNotification("[ SYSTEM ] Not enough System Points.");
+            return false;
+        }
+        auto* chest = Storage::ChestRef();
+        auto* obj = entry->resolve();
+        if (!chest || !obj) {
+            RE::DebugNotification("[ SYSTEM ] The Dimensional Storage is not ready yet.");
+            return false;
+        }
+
+        state.systemPoints -= entry->cost;
+        chest->AddObjectToContainer(obj, nullptr, entry->count, nullptr);
+        Sounds::Play(Sounds::Sfx::ButtonClick);
+        logger::info("Shop: bought {}x {} for {} System Point(s)", entry->count, entry->name,
+                     entry->cost);
+        return true;
+    }
+
     void Open() {
         // Same guard Storage::Open() uses: reached as a status-panel action, so the
         // panel that led here has already dismissed itself by the time this runs.
@@ -82,46 +132,12 @@ namespace Isekai::Shop {
             return;
         }
 
-        const std::string body =
-            "SYSTEM SHOP\n"
-            "\n"
-            "System Points   " + std::to_string(GetState().systemPoints) + "\n"
-            "\n"
-            "Spend what the tree no longer needs. Delivered straight into your\n"
-            "Dimensional Storage.";
-
-        std::vector<UI::Choice>            choices;
-        std::vector<std::function<void()>> actions;
-
-        if (g_grand) {
-            choices.push_back({ "Grand Soul Gem x1  —  25 SP", {} });
-            actions.emplace_back([]() {
-                Purchase(25, g_grand, 1);
-                Open();  // refresh with the new balance, so buying several is one click each
-            });
+        // Same split every other screen uses: the web patch when it is installed, the
+        // built-in window otherwise.
+        if (UI::Prisma::Active()) {
+            UI::Prisma::OpenShop();
+        } else {
+            UI::ShowShopWindow();
         }
-        if (g_common) {
-            choices.push_back({ "Common Soul Gem x5  —  15 SP", {} });
-            actions.emplace_back([]() {
-                Purchase(15, g_common, 5);
-                Open();
-            });
-        }
-        choices.push_back({ "Gold x1000  —  10 SP", {} });
-        actions.emplace_back([]() {
-            Purchase(10, RE::TESForm::LookupByID<RE::TESBoundObject>(kGold), 1000);
-            Open();
-        });
-        choices.push_back({ "CLOSE", {} });
-        actions.emplace_back([]() {});
-
-        UI::ShowSystemWindow(
-            "[ SYSTEM ]", body, std::move(choices),
-            [actions = std::move(actions)](int a_idx) {
-                if (a_idx >= 0 && static_cast<std::size_t>(a_idx) < actions.size()) {
-                    actions[static_cast<std::size_t>(a_idx)]();
-                }
-            },
-            100000.0f);
     }
 }

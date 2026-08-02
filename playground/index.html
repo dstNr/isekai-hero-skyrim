@@ -91,6 +91,7 @@
     <strong>Screens</strong>
     <button id="btnTree">Skill Tree</button>
     <button id="btnStatus" title="Shift-click for the full 79-title stress test">Status</button>
+    <button id="btnShop">Shop</button>
     <button id="btnPanel">Dialog</button>
     <button id="btnChoice">Choice</button>
     <button id="btnFlourish">Level&nbsp;Up</button>
@@ -149,6 +150,7 @@
     });
 
     document.getElementById("btnTree").onclick = function () { window.IsekaiMock.openTree(); };
+    document.getElementById("btnShop").onclick = function () { window.IsekaiMock.openShop(); };
 
     document.getElementById("btnPanel").onclick = function () {
       window.IsekaiMock.showPanel({

@@ -876,7 +876,7 @@ namespace Isekai {
         // Never awaken over a live panel — the reincarnation dialog owns a callback
         // that a replacement would throw away, leaving the rebirth half-finished. The
         // menu-close watcher brings us straight back here.
-        if (UI::IsSystemWindowOpen() || UI::IsSkillTreeOpen()) {
+        if (UI::IsSystemScreenOpen()) {
             return;
         }
         AwakenTo(earned);
