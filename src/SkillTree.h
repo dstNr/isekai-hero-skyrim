@@ -74,6 +74,22 @@ namespace Isekai::SkillTree {
     // Drives the hover readout ("RANK 3 / 10") and the accumulated bonus.
     [[nodiscard]] std::int32_t Rank(std::uint32_t a_key);
 
+    // Cost of a repeatable node's NEXT purchase. MASTERY nodes — capped repeatables
+    // like Beast of Burden or Storm Ward (maxRank > 0) — rise per tier, 5x from Novice
+    // to Grandmaster; everything else (Perk Synthesis, one-shot nodes) is flat, same as
+    // Node::cost. TryUnlock spends exactly this amount; both renderers show it instead
+    // of the raw Node::cost so the sticker price matches what a purchase will cost.
+    [[nodiscard]] std::int32_t NextCost(std::uint32_t a_key);
+
+    // The tier (1 Novice .. 5 Grandmaster) a MASTERY node's current rank sits in, 2
+    // ranks per tier. 0 for an unbought node or a non-mastery repeatable (Perk
+    // Synthesis — a flat currency exchange, not a stat to master).
+    [[nodiscard]] std::int32_t Tier(std::uint32_t a_key);
+
+    // TierName(Tier(a_key)) as display text ("" for tier 0). Centralised so both
+    // renderers show identical wording, the same reason PowerName() exists.
+    [[nodiscard]] const char* TierName(std::int32_t a_tier);
+
     // Is the player's rebirth tier high enough to unlock this node? Gates the strong
     // "gift" nodes (omniscience for HERO+, capstone for ASCENDED) behind the blessing.
     [[nodiscard]] bool TierMet(std::uint32_t a_key);

@@ -67,11 +67,14 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   - all spells ("has a spell tome")
 
   Plus **repeatable** nodes with no lock-out: **Perk Synthesis** (1 System Point
-  → 5 perk points) and utility ranks — **Fleet of Foot** (move speed), **Beast of
-  Burden** (carry weight), **Enduring Vigor** (Health/Magicka/Stamina), **Storm Ward**
-  (Shock Resist), **Warded Mind** (Magic Resist), **Arcane Absorption** (Spell
-  Absorption), **Iron Skin** (Armor Rating) and **Rapid Recovery** (H/M/S regen). The
-  tree is
+  → 5 perk points, uncapped) and eight **mastery** utility stats in their own
+  scrolling rail — **Fleet of Foot** (move speed), **Beast of Burden** (carry weight),
+  **Enduring Vigor** (Health/Magicka/Stamina), **Storm Ward** (Shock Resist), **Warded
+  Mind** (Magic Resist), **Arcane Absorption** (Spell Absorption), **Iron Skin** (Armor
+  Rating) and **Rapid Recovery** (H/M/S regen). Each climbs 10 ranks across 5 named
+  tiers (Novice through Grandmaster, price rising per tier), with a level-up flourish
+  on reaching Grandmaster — a real, celebrated ceiling instead of an open-ended grind.
+  The tree is
   **gated by rebirth tier** (`Node::minPower`): NORMAL walks the self-made
   stat/utility half, HERO additionally unlocks the four Omniscience gifts, ASCENDED
   additionally unlocks the World Tree capstone. Sealed nodes render greyed with a

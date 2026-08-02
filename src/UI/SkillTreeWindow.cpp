@@ -81,7 +81,9 @@ namespace Isekai::UI {
             // hard-locked regardless of prerequisites or points.
             const bool reachable =
                 SkillTree::PrereqsMet(a_node.key) && SkillTree::TierMet(a_node.key);
-            const bool affordable = SkillTree::Points() >= a_node.cost;
+            // NextCost, not the flat table cost — mastery nodes (capped repeatables)
+            // rise per tier, so what buying costs right now depends on the rank owned.
+            const bool affordable = SkillTree::Points() >= SkillTree::NextCost(a_node.key);
 
             if (unlocked) {
                 return { Style::Col(Style::kAccent), 2.5f * a_s, IM_COL32_WHITE, true };
@@ -106,6 +108,25 @@ namespace Isekai::UI {
             // Locked behind prerequisites: greyed down hard.
             return { Style::Col(Style::kTextDim, 0.35f), 1.0f * a_s,
                      IM_COL32(80, 80, 80, 200), false };
+        }
+
+        // Mastery tiers (Novice..Grandmaster), roman numerals for the rank pip — mirrors
+        // the web patch's ROMAN array.
+        constexpr const char* kRomanTiers[5] = { "I", "II", "III", "IV", "V" };
+
+        // Rough mirror of the web patch's .rank.tierN palette: a warm bronze climb to
+        // gold/white at Grandmaster, distinct from the plain cyan rank pip everything
+        // else uses.
+        [[nodiscard]] ImU32 TierPipColor(std::int32_t a_tier, float a_fade) {
+            const int a = static_cast<int>(255 * a_fade);
+            switch (a_tier) {
+            case 1: return IM_COL32(217, 172, 124, a);
+            case 2: return IM_COL32(227, 200, 143, a);
+            case 3: return IM_COL32(224, 168, 96, a);
+            case 4: return IM_COL32(245, 210, 122, a);
+            case 5: return IM_COL32(255, 255, 255, a);
+            default: return Style::Col(Style::kAccent, a_fade);
+            }
         }
     }
 
@@ -191,13 +212,12 @@ namespace Isekai::UI {
                         Style::Col(Style::kTextDim, fade), perks.c_str());
 
             // --- The graph ---
-            // Utility nodes (x≈95 in the data) are nudged further left so they sit in a
-            // distinct rail, clear of the branch graph's leftmost node (Thu'um at x≈160).
-            constexpr float kUtilShift = 50.0f;
-            const ImVec2    origin{ wMin.x, wMin.y + kCanvasTop * s };
-            const auto      centerOf = [&](const SkillTree::Node& n) {
-                const float x = IsUtilityNode(n) ? n.x - kUtilShift : n.x;
-                return ImVec2{ origin.x + x * s, origin.y + n.y * s };
+            // Utility nodes no longer sit at a literal x/y — they flow inside their own
+            // scrolling rail below, so the branch graph's coordinates need no rail-shift
+            // hack for them any more.
+            const ImVec2 origin{ wMin.x, wMin.y + kCanvasTop * s };
+            const auto   centerOf = [&](const SkillTree::Node& n) {
+                return ImVec2{ origin.x + n.x * s, origin.y + n.y * s };
             };
 
             std::size_t count = 0;
@@ -222,6 +242,8 @@ namespace Isekai::UI {
                 return ImVec2{ a_from.x + nx * edge, a_from.y + ny * edge };
             };
 
+            // Utility nodes never carry a prereq (that is their definition), so this
+            // loop only ever draws branch-graph connections — nothing to skip.
             for (std::size_t i = 0; i < count; ++i) {
                 const auto& node = nodes[i];
                 if (NodeHidden(node)) {
@@ -258,52 +280,16 @@ namespace Isekai::UI {
                 }
             }
 
-            // --- Utility rail: a label and a divider framing the always-open repeatable
-            // column, so its nodes read as a deliberate group rather than floaters.
-            // Drawn before the nodes so they sit on top.
-            {
-                ImVec2 uMin{ FLT_MAX, FLT_MAX }, uMax{ -FLT_MAX, -FLT_MAX };
-                int    uCount = 0;
-                for (std::size_t i = 0; i < count; ++i) {
-                    if (!IsUtilityNode(nodes[i]) || NodeHidden(nodes[i])) {
-                        continue;
-                    }
-                    const ImVec2 c = centerOf(nodes[i]);
-                    uMin.x = std::min(uMin.x, c.x);
-                    uMin.y = std::min(uMin.y, c.y);
-                    uMax.x = std::max(uMax.x, c.x);
-                    uMax.y = std::max(uMax.y, c.y);
-                    ++uCount;
-                }
-                if (uCount > 0) {
-                    const float hb = kNodeSize * 0.5f * s;
-                    const float divX = uMax.x + hb + 26.0f * s;
-                    dl->AddLine(ImVec2{ divX, uMin.y - hb - 28.0f * s },
-                                ImVec2{ divX, uMax.y + hb + 16.0f * s },
-                                Style::Col(Style::kAccent, 0.16f * fade), 1.0f * s);
-                    const char*  ul = "UTILITY";
-                    const ImVec2 ts = ImGui::CalcTextSize(ul);
-                    dl->AddText(ImVec2{ (uMin.x + uMax.x) * 0.5f - ts.x * 0.5f,
-                                        uMin.y - hb - 26.0f * s },
-                                Style::Col(Style::kTextDim, 0.9f * fade), ul);
-                }
-            }
-
-            // Nodes.
+            // Draws one node at [a_min, a_max) into a_dl (the caller's active draw
+            // list — the window's for the branch graph, the rail child's for utility
+            // nodes, so scrolling actually clips them) and dispatches its purchase.
+            // Shared by both so the look and the buy logic can never drift apart.
             g_hovered = 0;
-            const float half = kNodeSize * 0.5f * s;
-            for (std::size_t i = 0; i < count; ++i) {
-                const auto&  node = nodes[i];
-                if (NodeHidden(node)) {
-                    continue;
-                }
-                const ImVec2 c = centerOf(node);
-                const ImVec2 nMin{ c.x - half, c.y - half };
-                const ImVec2 nMax{ c.x + half, c.y + half };
-
+            const auto drawNode = [&](ImDrawList* a_dl, const SkillTree::Node& node, ImVec2 nMin,
+                                      ImVec2 nMax) {
                 ImGui::SetCursorScreenPos(nMin);
                 ImGui::PushID(static_cast<int>(node.key));
-                ImGui::InvisibleButton("##node", ImVec2{ half * 2.0f, half * 2.0f });
+                ImGui::InvisibleButton("##node", ImVec2{ nMax.x - nMin.x, nMax.y - nMin.y });
                 const bool hovered = ImGui::IsItemHovered();
                 const bool clicked = ImGui::IsItemClicked();
                 ImGui::PopID();
@@ -315,33 +301,111 @@ namespace Isekai::UI {
                 const auto visual = VisualFor(node, s);
 
                 if (visual.glow) {
-                    Style::DrawGlowBorder(dl, nMin, nMax, Style::kAccent, 0.6f * fade, 4,
+                    Style::DrawGlowBorder(a_dl, nMin, nMax, Style::kAccent, 0.6f * fade, 4,
                                           1.5f * s);
                 }
                 // Opaque backdrop: any line crossing near the node must terminate
                 // visually at the box, not shimmer through the icon's transparency.
-                dl->AddRectFilled(nMin, nMax,
-                                  ImGui::GetColorU32(ImVec4{ Style::kPanelBg.x, Style::kPanelBg.y,
-                                                             Style::kPanelBg.z, fade }));
+                a_dl->AddRectFilled(nMin, nMax,
+                                    ImGui::GetColorU32(ImVec4{ Style::kPanelBg.x, Style::kPanelBg.y,
+                                                               Style::kPanelBg.z, fade }));
                 const std::string icon = std::string(kIconDir) + node.icon;
                 if (const auto tex = GetTexture(icon)) {
-                    dl->AddImage(tex, nMin, nMax, ImVec2{ 0, 0 }, ImVec2{ 1, 1 },
-                                 visual.iconTint);
+                    a_dl->AddImage(tex, nMin, nMax, ImVec2{ 0, 0 }, ImVec2{ 1, 1 },
+                                   visual.iconTint);
                 }
-                dl->AddRect(nMin, nMax, visual.ring, 0.0f, 0, visual.ringThickness);
+                a_dl->AddRect(nMin, nMax, visual.ring, 0.0f, 0, visual.ringThickness);
                 if (hovered) {
-                    dl->AddRect(ImVec2{ nMin.x - 3.0f * s, nMin.y - 3.0f * s },
-                                ImVec2{ nMax.x + 3.0f * s, nMax.y + 3.0f * s },
-                                Style::Col(Style::kText, 0.9f), 0.0f, 0, 1.0f * s);
+                    a_dl->AddRect(ImVec2{ nMin.x - 3.0f * s, nMin.y - 3.0f * s },
+                                  ImVec2{ nMax.x + 3.0f * s, nMax.y + 3.0f * s },
+                                  Style::Col(Style::kText, 0.9f), 0.0f, 0, 1.0f * s);
+                }
+
+                // Mastery-tier pip, bottom-right corner — the ImGui equivalent of the web
+                // patch's escalating rank badge. Non-mastery repeatables (Perk Synthesis)
+                // fall back to the plain purchase count.
+                if (node.repeatable) {
+                    if (const std::int32_t rank = SkillTree::Rank(node.key); rank > 0) {
+                        const std::int32_t tier = SkillTree::Tier(node.key);
+                        const std::string  label =
+                            tier > 0 ? std::string(kRomanTiers[tier - 1]) : std::to_string(rank);
+                        const ImU32  pipCol = TierPipColor(tier, fade);
+                        const ImVec2 txt = ImGui::CalcTextSize(label.c_str());
+                        const ImVec2 pipSize{ std::max(20.0f * s, txt.x + 10.0f * s), 20.0f * s };
+                        const ImVec2 pMax{ nMax.x + 7.0f * s, nMax.y + 7.0f * s };
+                        const ImVec2 pMin{ pMax.x - pipSize.x, pMax.y - pipSize.y };
+                        a_dl->AddRectFilled(pMin, pMax, ImGui::GetColorU32(ImVec4{ 0.05f, 0.09f, 0.13f, fade }),
+                                            3.0f * s);
+                        a_dl->AddRect(pMin, pMax, pipCol, 3.0f * s, 0, 1.0f * s);
+                        a_dl->AddText(ImVec2{ pMin.x + (pipSize.x - txt.x) * 0.5f,
+                                              pMin.y + (pipSize.y - txt.y) * 0.5f },
+                                      pipCol, label.c_str());
+                    }
                 }
 
                 if (clicked && !NodeOwned(node) && SkillTree::PrereqsMet(node.key) &&
-                    SkillTree::TierMet(node.key) && SkillTree::Points() >= node.cost) {
+                    SkillTree::TierMet(node.key) &&
+                    SkillTree::Points() >= SkillTree::NextCost(node.key)) {
                     const auto key = node.key;
                     if (auto* task = SKSE::GetTaskInterface()) {
                         task->AddTask([key]() { SkillTree::TryUnlock(key); });
                     }
                 }
+            };
+
+            // Branch-graph nodes: fixed x/y, drawn straight onto the window's own list.
+            const float half = kNodeSize * 0.5f * s;
+            for (std::size_t i = 0; i < count; ++i) {
+                const auto& node = nodes[i];
+                if (NodeHidden(node) || IsUtilityNode(node)) {
+                    continue;
+                }
+                const ImVec2 c = centerOf(node);
+                drawNode(dl, node, ImVec2{ c.x - half, c.y - half }, ImVec2{ c.x + half, c.y + half });
+            }
+
+            // --- Utility rail: the always-open repeatable ("mastery") nodes, in their
+            // own scrolling column instead of a fixed coordinate table. A flat list of
+            // literal y-positions (the old approach) needed hand re-tuning every time a
+            // node was added and eventually ran out of the 760px design canvas — a
+            // scrolling child has no such ceiling, so the rail can keep growing.
+            {
+                constexpr float kRailCenterX = 45.0f;  // where the rail used to sit (x=95 - kUtilShift 50)
+                const float     railCenterX = origin.x + kRailCenterX * s;
+                const float     railHalfW = half + 18.0f * s;  // room for the tier pip's overhang
+                const float     railLeft = railCenterX - railHalfW;
+                const float     railTop = origin.y + 20.0f * s;
+                const float     railBottom = wMax.y - 132.0f * s;  // clear of hover-info text + footer
+
+                const char*  label = "UTILITY";
+                const ImVec2 ts = ImGui::CalcTextSize(label);
+                dl->AddText(ImVec2{ railCenterX - ts.x * 0.5f, railTop }, Style::Col(Style::kTextDim, 0.9f * fade),
+                           label);
+                const float divX = railLeft + railHalfW * 2.0f + 14.0f * s;
+                dl->AddLine(ImVec2{ divX, railTop }, ImVec2{ divX, railBottom },
+                           Style::Col(Style::kAccent, 0.16f * fade), 1.0f * s);
+
+                const float childTop = railTop + 26.0f * s;
+                ImGui::SetCursorScreenPos(ImVec2{ railLeft, childTop });
+                [[maybe_unused]] const bool railOpen = ImGui::BeginChild(
+                    "##utilRailChild", ImVec2{ railHalfW * 2.0f, railBottom - childTop }, false);
+                ImDrawList* railDl = ImGui::GetWindowDrawList();
+                float       cursorY = ImGui::GetCursorScreenPos().y + 4.0f * s;
+                for (std::size_t i = 0; i < count; ++i) {
+                    const auto& node = nodes[i];
+                    if (NodeHidden(node) || !IsUtilityNode(node)) {
+                        continue;
+                    }
+                    const ImVec2 nMin{ railLeft + 18.0f * s, cursorY };
+                    const ImVec2 nMax{ nMin.x + half * 2.0f, nMin.y + half * 2.0f };
+                    drawNode(railDl, node, nMin, nMax);
+                    cursorY += half * 2.0f + 24.0f * s;
+                }
+                // Registers the scrolled-past extent even if the loop drew nothing below
+                // the last visible row, so the scrollbar range matches the real content.
+                ImGui::SetCursorScreenPos(ImVec2{ railLeft, cursorY });
+                ImGui::Dummy(ImVec2{ 1.0f, 1.0f });
+                ImGui::EndChild();
             }
 
             // --- Hover info, bottom-left ---
@@ -364,17 +428,22 @@ namespace Isekai::UI {
                                 Style::Col(Style::kText, fade), node->desc);
 
                     // Repeatable nodes carry a "RANK n / max" suffix so the reader can see
-                    // how far they've pushed it (max shown only when capped).
-                    const std::string rankTag =
+                    // how far they've pushed it (max shown only when capped). Mastery
+                    // nodes (capped repeatables) additionally name their tier.
+                    const std::int32_t tier = SkillTree::Tier(node->key);
+                    const std::string  rankTag =
                         node->repeatable
                             ? "   RANK " + std::to_string(SkillTree::Rank(node->key)) +
-                                  (node->maxRank > 0 ? " / " + std::to_string(node->maxRank) : "")
+                                  (node->maxRank > 0 ? " / " + std::to_string(node->maxRank) : "") +
+                                  (tier > 0 ? std::string("  [") + SkillTree::TierName(tier) + "]"
+                                            : std::string{})
                             : std::string{};
+                    const std::int32_t nextCost = SkillTree::NextCost(node->key);
 
                     std::string status;
                     ImU32       statusCol;
                     if (node->repeatable && NodeMaxed(*node)) {
-                        status = "MAXED" + rankTag;
+                        status = (tier > 0 ? "GRANDMASTER" : "MAXED") + rankTag;
                         statusCol = Style::Col(Style::kAccent, fade);
                     } else if (!node->repeatable && SkillTree::IsUnlocked(node->key)) {
                         status = "UNLOCKED";
@@ -396,9 +465,9 @@ namespace Isekai::UI {
                         status = "PERK POOL FULL — spend some perk points first";
                         statusCol = Style::Col(Style::kTextDim, fade);
                     } else {
-                        status = "COST   " + std::to_string(node->cost) + " system point(s)" +
+                        status = "COST   " + std::to_string(nextCost) + " system point(s)" +
                                  rankTag;
-                        statusCol = SkillTree::Points() >= node->cost
+                        statusCol = SkillTree::Points() >= nextCost
                                         ? Style::Col(Style::kAccent, fade)
                                         : IM_COL32(220, 90, 90, static_cast<int>(255 * fade));
                     }

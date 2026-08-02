@@ -53,16 +53,16 @@
     // capstone
     { key: 13, name: "World Tree",          icon: "spells_09_frame.png", x: 550, y: 600, cost: 50, req: TIER.Ascended, prereq: [11, 12], desc: "The System blossoms through your soul.\n+100 Health, Magicka and Stamina." },
     // utility (left margin, repeatable)
-    { key: 16, name: "Beast of Burden",     icon: "spells_22_frame.png", x: 95,  y: 150, cost: 2,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System shoulders your load.\n+25 Carry Weight per rank." },
+    { key: 16, name: "Beast of Burden",     icon: "spells_22_frame.png", x: 95,  y: 150, cost: 2,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System shoulders your load.\n+25 Carry Weight per rank." },
     { key: 15, name: "Fleet of Foot",       icon: "spells_28_frame.png", x: 95,  y: 221, cost: 3,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System quickens your stride.\n+3% movement speed per rank." },
-    { key: 17, name: "Enduring Vigor",      icon: "spells_06_frame.png", x: 95,  y: 292, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System deepens your reserves.\n+25 Health, Magicka and Stamina per rank." },
+    { key: 17, name: "Enduring Vigor",      icon: "spells_06_frame.png", x: 95,  y: 292, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System deepens your reserves.\n+25 Health, Magicka and Stamina per rank." },
     // utility, continued: Tier-1 resistance/regen batch (see SkillTree.cpp for the
     // AV/baseline rationale — all uncapped, same philosophy as the two nodes above).
-    { key: 18, name: "Storm Ward",          icon: "spells_18_frame.png", x: 95,  y: 363, cost: 3,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System turns aside the lightning.\n+5% Shock Resist per rank." },
-    { key: 19, name: "Warded Mind",         icon: "spells_19_frame.png", x: 95,  y: 434, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System shields your soul from magic.\n+5% Magic Resist per rank." },
-    { key: 20, name: "Arcane Absorption",   icon: "spells_20_frame.png", x: 95,  y: 505, cost: 5,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System drinks the spells cast against you.\n+4% Spell Absorption per rank." },
-    { key: 21, name: "Iron Skin",           icon: "spells_23_frame.png", x: 95,  y: 576, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System hardens your hide.\n+10 Armor Rating per rank." },
-    { key: 22, name: "Rapid Recovery",      icon: "spells_24_frame.png", x: 95,  y: 647, cost: 5,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 0,  desc: "The System accelerates your body's grace.\n+10% Health, Magicka and Stamina regeneration per rank." },
+    { key: 18, name: "Storm Ward",          icon: "spells_18_frame.png", x: 95,  y: 363, cost: 3,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System turns aside the lightning.\n+5% Shock Resist per rank." },
+    { key: 19, name: "Warded Mind",         icon: "spells_19_frame.png", x: 95,  y: 434, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System shields your soul from magic.\n+5% Magic Resist per rank." },
+    { key: 20, name: "Arcane Absorption",   icon: "spells_20_frame.png", x: 95,  y: 505, cost: 5,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System drinks the spells cast against you.\n+4% Spell Absorption per rank." },
+    { key: 21, name: "Iron Skin",           icon: "spells_23_frame.png", x: 95,  y: 576, cost: 4,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System hardens your hide.\n+10 Armor Rating per rank." },
+    { key: 22, name: "Rapid Recovery",      icon: "spells_24_frame.png", x: 95,  y: 647, cost: 5,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System accelerates your body's grace.\n+10% Health, Magicka and Stamina regeneration per rank." },
   ];
 
   var PERK_MAX = 255; // Isekai::kMaxPerkPoints (see System.h)
@@ -122,12 +122,41 @@
 
   function refundable(n) { return !NO_REFUND[n.key]; }
 
+  /* Mastery tiers, mirroring SkillTree.cpp's IsMasteryNode/TierOfRank/RankCost. A
+     MASTERY node is a capped repeatable (maxRank > 0) — Perk Synthesis (maxRank 0) is
+     the only other repeatable and stays a flat, uncapped exchange. */
+  var TIER_COUNT = 5, RANKS_PER_TIER = 2;
+  var MASTERY_TIER_NAMES = ["Novice", "Adept", "Expert", "Master", "Grandmaster"];
+
+  function isMastery(n) { return n.rep && n.maxRank > 0; }
+
+  function tierOfRank(rank) {
+    if (rank <= 0) return 0;
+    return Math.min(TIER_COUNT, Math.floor((rank - 1) / RANKS_PER_TIER) + 1);
+  }
+
+  function tierOf(n) { return isMastery(n) ? tierOfRank(rankOf(n.key)) : 0; }
+
+  /* What buying rank `rank` of a mastery node costs: base cost x that rank's tier. */
+  function rankCost(n, rank) { return isMastery(n) ? n.cost * tierOfRank(rank) : n.cost; }
+
+  function nextCost(n) { return rankCost(n, (n.rep ? rankOf(n.key) : 0) + 1); }
+
+  /* Total SP sunk into a repeatable at `rank` — the sum of every tiered purchase for
+     mastery nodes, a flat cost*rank for everything else (Perk Synthesis). */
+  function repeatableCostToRank(n, rank) {
+    if (!isMastery(n)) return n.cost * rank;
+    var total = 0;
+    for (var i = 1; i <= rank; i++) total += rankCost(n, i);
+    return total;
+  }
+
   /* RespecRefund / Respec, mirroring the plugin. */
   function respecAmount() {
     var total = 0;
     NODES.forEach(function (n) {
       if (!refundable(n)) return;
-      total += n.rep ? n.cost * rankOf(n.key) : (isUnlocked(n.key) ? n.cost : 0);
+      total += n.rep ? repeatableCostToRank(n, rankOf(n.key)) : (isUnlocked(n.key) ? n.cost : 0);
     });
     return total;
   }
@@ -157,13 +186,15 @@
           icon: n.icon,
           x: n.x,
           y: n.y,
-          cost: n.cost,
+          cost: nextCost(n),
           owned: owned(n),
           tierMet: tierMet(n),
           prereqMet: prereqsMet(n),
           repeatable: !!n.rep,
           rank: rankOf(n.key),
           maxRank: n.maxRank || 0,
+          masteryTier: tierOf(n),
+          masteryTierName: MASTERY_TIER_NAMES[tierOf(n) - 1] || "",
           reqPower: TIER_NAME[n.req],
           reqLevel: awakeningLevelFor(n.req),
           prereq: [n.prereq[0] || 0, n.prereq[1] || 0]
@@ -176,12 +207,13 @@
   function tryUnlock(key) {
     var n = byKey[key];
     if (!n) return;
-    if (owned(n) || !prereqsMet(n) || !tierMet(n) || G.points < n.cost) return;
+    var cost = nextCost(n);
+    if (owned(n) || !prereqsMet(n) || !tierMet(n) || G.points < cost) return;
 
     // Perk Synthesis is blocked when the pool is already full, like the plugin.
     if (n.key === 14 && G.perks >= PERK_MAX) return;
 
-    G.points -= n.cost;
+    G.points -= cost;
     if (n.rep) {
       G.ranks[key] = rankOf(key) + 1;
       if (n.key === 14) G.perks = Math.min(PERK_MAX, G.perks + 5);

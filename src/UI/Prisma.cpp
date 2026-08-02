@@ -78,6 +78,7 @@ namespace Isekai::UI::Prisma {
                 const std::int32_t rank = SkillTree::Rank(n.key);
                 const bool         maxed = n.repeatable && n.maxRank > 0 && rank >= n.maxRank;
                 const bool         owned = n.repeatable ? maxed : SkillTree::IsUnlocked(n.key);
+                const std::int32_t tier = SkillTree::Tier(n.key);
 
                 if (i != 0) {
                     j += ",";
@@ -89,13 +90,18 @@ namespace Isekai::UI::Prisma {
                 j += "\"icon\":\"" + Esc(n.icon) + "\",";
                 j += "\"x\":" + std::to_string(static_cast<int>(n.x)) + ",";
                 j += "\"y\":" + std::to_string(static_cast<int>(n.y)) + ",";
-                j += "\"cost\":" + std::to_string(n.cost) + ",";
+                // The NEXT purchase's price, not the flat table value — mastery nodes
+                // (capped repeatables) rise per tier, so what buying costs right now
+                // depends on the rank already owned.
+                j += "\"cost\":" + std::to_string(SkillTree::NextCost(n.key)) + ",";
                 j += "\"owned\":" + std::string(Bool(owned)) + ",";
                 j += "\"tierMet\":" + std::string(Bool(SkillTree::TierMet(n.key))) + ",";
                 j += "\"prereqMet\":" + std::string(Bool(SkillTree::PrereqsMet(n.key))) + ",";
                 j += "\"repeatable\":" + std::string(Bool(n.repeatable)) + ",";
                 j += "\"rank\":" + std::to_string(rank) + ",";
                 j += "\"maxRank\":" + std::to_string(n.maxRank) + ",";
+                j += "\"masteryTier\":" + std::to_string(tier) + ",";
+                j += "\"masteryTierName\":\"" + Esc(SkillTree::TierName(tier)) + "\",";
                 j += "\"reqPower\":\"" +
                      Esc(Isekai::PowerName(SkillTree::RequiredPower(n.key)).c_str()) + "\",";
                 // >0 only for a DORMANT blessing: the seal is a level away, not a

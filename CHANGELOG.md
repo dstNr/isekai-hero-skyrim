@@ -12,8 +12,19 @@ All notable changes to Isekai Hero are documented here. The format follows
   (Shock Resist), **Warded Mind** (Magic Resist), **Arcane Absorption** (Spell
   Absorption), **Iron Skin** (Armor Rating) and **Rapid Recovery** (Health/Magicka/
   Stamina regeneration). Same utility-rail rules as Fleet of Foot and friends — NORMAL
-  tier, no prerequisites, deliberately uncapped: the System Points economy is the actual
-  brake on getting "really, really OP", not an arbitrary rank limit.
+  tier, no prerequisites.
+- **Mastery tiers** for every utility-rail stat (Beast of Burden, Fleet of Foot,
+  Enduring Vigor and the five above): capped at 10 ranks, split into 5 named tiers
+  (Novice through Grandmaster, 2 ranks each) with the price rising per tier instead of
+  staying flat. Reaching Grandmaster fires the same flourish (rings, title punch,
+  sound) a milestone gets. Earlier builds left these uncapped — buying the same node
+  forever read as a shop, not a skill tree; a real, celebrated finish line reads as
+  actual progression. Perk Synthesis is unaffected (a flat SP-to-perk-point exchange,
+  not a stat to master). Both renderers show the tier on the node (a roman-numeral
+  badge/pip escalating bronze to gold) and in its tooltip.
+- **Scrollable utility rail** (both renderers): the rail no longer lays out nodes at a
+  fixed height that silently overflowed past the window once enough of them existed —
+  it now scrolls, so future additions don't need the whole rail re-tuned.
 - **System Rank** in the status panel (both renderers): a derived E through S label next
   to the tier, computed from milestones earned, character level and System Points ever
   invested in the tree. No new state — a pure readout, the same isekai/tower-climbing

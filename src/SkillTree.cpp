@@ -3,6 +3,7 @@
 #include "Passives.h"
 #include "Sounds.h"
 #include "System.h"
+#include "UI/LevelUpEffect.h"
 
 #include <algorithm>
 #include <mutex>
@@ -91,45 +92,51 @@ namespace Isekai::SkillTree {
               "spells_09_frame.png", 550.0f, 600.0f, 50, kA, { 11, 12 }, Effect::kAttributes,
               { { AV::kHealth, 100.0f }, { AV::kMagicka, 100.0f }, { AV::kStamina, 100.0f } } },
 
-            // --- Utility (left margin, REPEATABLE) ---
+            // --- Utility (left margin, REPEATABLE MASTERY nodes) ---
             // Incremental stats that are otherwise fiddly to raise, and give NORMAL a
             // reason to keep spending. No prerequisites — always open, tier NORMAL, so
             // every rebirth can grind them. Deliberately NOT attack speed (a well-known
             // source of animation/mod conflicts).
+            //
+            // Every node below is capped at maxRank=10 — a MASTERY node (see IsMasteryNode):
+            // 5 named tiers of 2 ranks each (Novice..Grandmaster), escalating cost per
+            // tier (see NextRankCost). Earlier builds left these uncapped ("the SP economy
+            // is the brake, not a rank limit") — feedback was that buying the same node
+            // forever felt like a shop, not a skill tree; a real ceiling with a named,
+            // celebrated finish line (the Grandmaster flourish in TryUnlock) reads as
+            // actual progression instead. Fleet of Foot already had this cap from the
+            // start — the rest now match it, magnitudes untouched.
             { 16, "Beast of Burden", "The System shoulders your load.\n+25 Carry Weight per rank.",
               "spells_22_frame.png", 95.0f, 150.0f, 2, kN, { 0, 0 }, Effect::kAttributes,
-              { { AV::kCarryWeight, 25.0f } }, true, 0 },
+              { { AV::kCarryWeight, 25.0f } }, true, 10 },
             { 15, "Fleet of Foot", "The System quickens your stride.\n+3% movement speed per rank.",
               "spells_28_frame.png", 95.0f, 221.0f, 3, kN, { 0, 0 }, Effect::kDirectStat,
               { { AV::kSpeedMult, 3.0f } }, true, 10, 100.0f },
             { 17, "Enduring Vigor", "The System deepens your reserves.\n+25 Health, Magicka and Stamina per rank.",
               "spells_06_frame.png", 95.0f, 292.0f, 4, kN, { 0, 0 }, Effect::kAttributes,
-              { { AV::kHealth, 25.0f }, { AV::kMagicka, 25.0f }, { AV::kStamina, 25.0f } }, true, 0 },
+              { { AV::kHealth, 25.0f }, { AV::kMagicka, 25.0f }, { AV::kStamina, 25.0f } }, true, 10 },
 
             // --- Utility, continued: Tier-1 resistance/regen batch (user feedback —
             // "more skills to spend points on"; noted fire/frost resist exist but shock
             // doesn't). All kDirectStat: none of these actor values have an ESP ability
             // spell to fortify (unlike Health/Magicka/Fire/Frost/Disease resist above),
             // so they are set directly, exactly like Fleet of Foot's move speed.
-            // Deliberately uncapped, matching Beast of Burden/Enduring Vigor above: the
-            // player explicitly asked to be able to get "really, really OP", and the
-            // System Points economy is the actual brake on that, not an arbitrary rank cap.
             { 18, "Storm Ward", "The System turns aside the lightning.\n+5% Shock Resist per rank.",
               "spells_18_frame.png", 95.0f, 363.0f, 3, kN, { 0, 0 }, Effect::kDirectStat,
-              { { AV::kResistShock, 5.0f } }, true, 0, 0.0f },
+              { { AV::kResistShock, 5.0f } }, true, 10, 0.0f },
             { 19, "Warded Mind", "The System shields your soul from magic.\n+5% Magic Resist per rank.",
               "spells_19_frame.png", 95.0f, 434.0f, 4, kN, { 0, 0 }, Effect::kDirectStat,
-              { { AV::kResistMagic, 5.0f } }, true, 0, 0.0f },
+              { { AV::kResistMagic, 5.0f } }, true, 10, 0.0f },
             { 20, "Arcane Absorption", "The System drinks the spells cast against you.\n+4% Spell Absorption per rank.",
               "spells_20_frame.png", 95.0f, 505.0f, 5, kN, { 0, 0 }, Effect::kDirectStat,
-              { { AV::kAbsorbChance, 4.0f } }, true, 0, 0.0f },
+              { { AV::kAbsorbChance, 4.0f } }, true, 10, 0.0f },
             { 21, "Iron Skin", "The System hardens your hide.\n+10 Armor Rating per rank.",
               "spells_23_frame.png", 95.0f, 576.0f, 4, kN, { 0, 0 }, Effect::kDirectStat,
-              { { AV::kDamageResist, 10.0f } }, true, 0, 0.0f },
+              { { AV::kDamageResist, 10.0f } }, true, 10, 0.0f },
             { 22, "Rapid Recovery", "The System accelerates your body's grace.\n+10% Health, Magicka and Stamina regeneration per rank.",
               "spells_24_frame.png", 95.0f, 647.0f, 5, kN, { 0, 0 }, Effect::kDirectStat,
               { { AV::kHealRateMult, 10.0f }, { AV::kMagickaRateMult, 10.0f }, { AV::kStaminaRateMult, 10.0f } },
-              true, 0, 100.0f },
+              true, 10, 100.0f },
         };
 
         // Unlock state lives in State::unlockedNodes (co-save). The tree window reads
@@ -176,6 +183,53 @@ namespace Isekai::SkillTree {
             ranks.erase(std::remove_if(ranks.begin(), ranks.end(),
                                        [a_key](const auto& e) { return e.first == a_key; }),
                         ranks.end());
+        }
+
+        // A MASTERY node is a capped repeatable — Beast of Burden, Storm Ward and the
+        // rest of the Tier-1 batch. Perk Synthesis is the only other repeatable
+        // (maxRank 0, uncapped): it converts SP into perk points rather than growing a
+        // stat, so it stays a flat, uncapped exchange rather than a tiered mastery.
+        [[nodiscard]] bool IsMasteryNode(const Node& a_node) {
+            return a_node.repeatable && a_node.maxRank > 0;
+        }
+
+        constexpr std::int32_t kTierCount = 5;      // Novice..Grandmaster
+        constexpr std::int32_t kRanksPerTier = 2;    // -> maxRank 10 across every mastery node
+        constexpr const char*  kTierNames[kTierCount] = { "Novice", "Adept", "Expert", "Master",
+                                                           "Grandmaster" };
+
+        // 1-based tier a given rank (1..maxRank) falls in; 0 for rank <= 0.
+        [[nodiscard]] std::int32_t TierOfRank(std::int32_t a_rank) {
+            if (a_rank <= 0) {
+                return 0;
+            }
+            return std::min(kTierCount, (a_rank - 1) / kRanksPerTier + 1);
+        }
+
+        // What buying rank a_rank of a mastery node costs: base cost x that rank's
+        // tier, so Novice ranks are cheap and Grandmaster ranks cost 5x. Flat cost for
+        // everything else.
+        [[nodiscard]] std::int32_t RankCost(const Node& a_node, std::int32_t a_rank) {
+            return IsMasteryNode(a_node) ? a_node.cost * TierOfRank(a_rank) : a_node.cost;
+        }
+
+        // Total SP sunk into a mastery node at a_rank — the sum of every tiered
+        // purchase so far, not a flat cost*rank guess. TotalInvested/RespecRefund need
+        // this so a respec gives back exactly what was paid.
+        [[nodiscard]] std::int32_t MasteryCostToRank(const Node& a_node, std::int32_t a_rank) {
+            std::int32_t total = 0;
+            for (std::int32_t i = 1; i <= a_rank; ++i) {
+                total += RankCost(a_node, i);
+            }
+            return total;
+        }
+
+        // What a repeatable node's purchase so far (any kind) actually cost in total —
+        // the one place TotalInvested/RespecRefund/Respec go for the "cost * rank"
+        // figure, so mastery's tiered pricing and Perk Synthesis's flat pricing don't
+        // need separate call sites.
+        [[nodiscard]] std::int32_t RepeatableCostToRank(const Node& a_node, std::int32_t a_rank) {
+            return IsMasteryNode(a_node) ? MasteryCostToRank(a_node, a_rank) : a_node.cost * a_rank;
         }
 
         // Only nodes whose effect can be fully undone may be refunded — see the note on
@@ -503,8 +557,10 @@ namespace Isekai::SkillTree {
             return false;
         }
 
-        auto& state = GetState();
-        if (state.systemPoints < node->cost) {
+        auto&              state = GetState();
+        const std::int32_t rankBefore = node->repeatable ? Rank(a_key) : 0;
+        const std::int32_t purchaseCost = RankCost(*node, rankBefore + 1);
+        if (state.systemPoints < purchaseCost) {
             return false;
         }
 
@@ -518,19 +574,21 @@ namespace Isekai::SkillTree {
             if (grant <= 0) {
                 return false;
             }
-            state.systemPoints -= node->cost;
+            state.systemPoints -= purchaseCost;
             GrantPerkPoints(grant);
             Sounds::Play(Sounds::Sfx::ButtonClick);
-            logger::info("SkillTree: synthesised {} perk point(s) for {} SP", grant, node->cost);
+            logger::info("SkillTree: synthesised {} perk point(s) for {} SP", grant, purchaseCost);
             return true;
         }
 
-        state.systemPoints -= node->cost;
+        state.systemPoints -= purchaseCost;
 
+        std::int32_t rankAfter = 0;
         {
             std::scoped_lock lock(g_mutex);
             if (node->repeatable) {
                 AddRankNoLock(a_key);  // stays buyable; the rank drives the bonus
+                rankAfter = RankNoLock(a_key);
             } else {
                 state.unlockedNodes.push_back(a_key);
             }
@@ -540,9 +598,15 @@ namespace Isekai::SkillTree {
         Passives::Refresh();
         Sounds::Play(Sounds::Sfx::LevelUp);
 
+        // Reaching Grandmaster on a mastery node is a real finish line — worth the same
+        // flourish (rings, title punch, sound) a milestone gets, not just a badge tick.
+        if (IsMasteryNode(*node) && rankAfter == node->maxRank) {
+            UI::PlayLevelUpEffect("GRANDMASTER", node->name);
+        }
+
         logger::info("SkillTree: unlocked '{}'{} for {} point(s)", node->name,
-                     node->repeatable ? (" -> rank " + std::to_string(Rank(a_key))) : std::string{},
-                     node->cost);
+                     node->repeatable ? (" -> rank " + std::to_string(rankAfter)) : std::string{},
+                     purchaseCost);
         return true;
     }
 
@@ -596,11 +660,31 @@ namespace Isekai::SkillTree {
         return RankNoLock(a_key);
     }
 
+    std::int32_t NextCost(std::uint32_t a_key) {
+        const auto* node = Find(a_key);
+        if (!node) {
+            return 0;
+        }
+        return RankCost(*node, (node->repeatable ? Rank(a_key) : 0) + 1);
+    }
+
+    std::int32_t Tier(std::uint32_t a_key) {
+        const auto* node = Find(a_key);
+        if (!node || !IsMasteryNode(*node)) {
+            return 0;
+        }
+        return TierOfRank(Rank(a_key));
+    }
+
+    const char* TierName(std::int32_t a_tier) {
+        return (a_tier >= 1 && a_tier <= kTierCount) ? kTierNames[a_tier - 1] : "";
+    }
+
     std::int32_t TotalInvested() {
         std::scoped_lock lock(g_mutex);
         std::int32_t total = 0;
         for (const auto& node : kNodes) {
-            total += node.repeatable ? node.cost * RankNoLock(node.key)
+            total += node.repeatable ? RepeatableCostToRank(node, RankNoLock(node.key))
                                      : (IsUnlockedNoLock(node.key) ? node.cost : 0);
         }
         return total;
@@ -613,7 +697,7 @@ namespace Isekai::SkillTree {
             if (!IsRefundable(node.effect)) {
                 continue;
             }
-            total += node.repeatable ? node.cost * RankNoLock(node.key)
+            total += node.repeatable ? RepeatableCostToRank(node, RankNoLock(node.key))
                                      : (IsUnlockedNoLock(node.key) ? node.cost : 0);
         }
         return total;
@@ -634,7 +718,7 @@ namespace Isekai::SkillTree {
                     if (rank <= 0) {
                         continue;
                     }
-                    refund += node.cost * rank;
+                    refund += RepeatableCostToRank(node, rank);
                     ClearRankNoLock(node.key);
                 } else {
                     if (!IsUnlockedNoLock(node.key)) {

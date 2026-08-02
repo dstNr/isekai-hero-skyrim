@@ -133,8 +133,15 @@
            border-right: 1px solid rgba(90,210,255,0.14); }
   #urailHead { color: var(--dim); font-size: 10px; letter-spacing: 0.32em;
                text-transform: uppercase; opacity: 0.75; }
+  /* Scrolls once the rail has more nodes than fit — a growing list (more utility
+     stats keep getting added) needs a bounded box, not an ever-taller one that
+     eventually overflows the fixed-height stage. align-items stays flex-start (not
+     centered) so overflow only ever clips/scrolls at the bottom, never the top. */
   #urailNodes { flex: 1; display: flex; flex-direction: column; align-items: center;
-                justify-content: center; gap: clamp(20px, 3.4vh, 46px); }
+                gap: clamp(14px, 2.2vh, 30px); padding: 6px 0; overflow-y: auto;
+                overflow-x: hidden; scrollbar-width: thin; }
+  #urailNodes::-webkit-scrollbar { width: 4px; }
+  #urailNodes::-webkit-scrollbar-thumb { background: rgba(90,210,255,0.3); border-radius: 3px; }
   .node.docked { position: relative; margin: 0; }   /* flows in the rail, not absolute */
 
   .node { position: absolute; width: 62px; height: 62px; margin: -31px 0 0 -31px;
@@ -187,6 +194,20 @@
           background: linear-gradient(180deg, #0d2033, #071522); border: 1px solid var(--accent);
           border-radius: 6px; color: var(--accent); font-size: 11px; font-weight: 700;
           line-height: 18px; text-align: center; box-shadow: 0 0 12px rgba(90,210,255,0.45); }
+
+  /* Mastery tiers (Novice..Grandmaster): the rank pip climbs through a warm bronze ->
+     gold escalation instead of just a number ticking up — a visible sense of
+     progress independent of the node's owned/buyable state. */
+  .rank.tier1 { border-color: rgba(190,140,90,0.8); color: #d9ac7c;
+                box-shadow: 0 0 10px rgba(190,140,90,0.35); }
+  .rank.tier2 { border-color: rgba(200,170,110,0.85); color: #e3c88f;
+                box-shadow: 0 0 12px rgba(200,170,110,0.4); }
+  .rank.tier3 { border-color: rgba(224,168,96,0.9); color: var(--amber);
+                box-shadow: 0 0 14px rgba(224,168,96,0.5); }
+  .rank.tier4 { border-color: rgba(240,200,110,0.95); color: #f5d27a;
+                box-shadow: 0 0 16px rgba(240,200,110,0.6); }
+  .rank.tier5 { border-color: #fff; color: #fff; background: linear-gradient(180deg, #3a2f10, #1a1508);
+                box-shadow: 0 0 20px rgba(255,225,140,0.75); }
 
   /* Floating tooltip card next to the hovered node. */
   #tip { position: absolute; width: 300px; padding: 14px 16px; pointer-events: none; opacity: 0;
@@ -515,6 +536,9 @@ const RAIL = 130;                        // utility-rail width + gap, reserved o
    rail, not the branch graph, so they're excluded from the graph layout. */
 const isUtil = (n) => n.repeatable && !n.prereq[0] && !n.prereq[1];
 
+/* Mastery tier (1-5, Novice..Grandmaster) as a roman numeral for the rank badge. */
+const ROMAN = ["", "I", "II", "III", "IV", "V"];
+
 function showScreen(name) {
   ["tree", "panel", "flourish", "status"].forEach(s => $("screen-" + s).classList.toggle("active", s === name));
 }
@@ -570,8 +594,13 @@ function stateOf(n) {
   return "locked";
 }
 function statusOf(n) {
-  const tag = n.repeatable ? " · Rank " + n.rank + (n.maxRank > 0 ? "/" + n.maxRank : "") : "";
-  if (n.repeatable && n.maxRank > 0 && n.rank >= n.maxRank) return { t: "Maxed" + tag, c: "var(--accent)" };
+  // Mastery nodes (capped repeatables) show their named tier alongside the raw rank;
+  // Perk Synthesis and one-shot nodes keep the plain "Rank N" form.
+  const tag = n.masteryTier > 0 ? " · " + n.masteryTierName + " (" + n.rank + "/" + n.maxRank + ")"
+            : n.repeatable ? " · Rank " + n.rank + (n.maxRank > 0 ? "/" + n.maxRank : "") : "";
+  if (n.repeatable && n.maxRank > 0 && n.rank >= n.maxRank) {
+    return { t: (n.masteryTier > 0 ? "Grandmaster" : "Maxed") + tag, c: "var(--accent)" };
+  }
   if (n.owned) return { t: "Unlocked", c: "var(--accent)" };
   if (!n.tierMet) return {
     // A dormant blessing seals by level, not by the rebirth you chose.
@@ -686,7 +715,10 @@ function renderTree() {
     let pip = el.querySelector(".rank");
     if (n.repeatable && n.rank > 0) {
       if (!pip) { pip = document.createElement("div"); pip.className = "rank"; el.appendChild(pip); }
-      pip.textContent = n.rank;
+      // Mastery nodes show the tier as a roman numeral (I-V); Perk Synthesis (not a
+      // mastery node — no tier) keeps the raw purchase count.
+      pip.textContent = n.masteryTier > 0 ? ROMAN[n.masteryTier] : n.rank;
+      pip.className = "rank" + (n.masteryTier > 0 ? " tier" + n.masteryTier : "");
     } else if (pip) {
       pip.remove();
     }
