@@ -177,8 +177,11 @@ namespace Isekai {
             // not. A DORMANT start is NORMAL here and its grant arrives later via AwakenTo.
             const Blessing b = BlessingFor(g_state.grantTier);
             const float attrBonus = ApplyBlessing(b);
-            Storage::GrantStartingMaterials();  // crafting stock, FULL HERO/ASCENDED only
-            Storage::GrantCodexIfMissing();     // physical fallback access — every blessing
+            // No crafting stock here any more: the Dimensional Storage starts empty for
+            // every blessing and is filled through the System Shop's material packs, so
+            // what it holds is something the player chose to spend points on. HERO and
+            // ASCENDED still fill it sooner — their reward scale multiplies point income.
+            Storage::GrantCodexIfMissing();  // physical fallback access — every blessing
 
             logger::info(
                 "Reincarnation applied: power={} skills={} level={} perks=+{} attr=+{} gold={} souls=+{}",
@@ -425,14 +428,9 @@ namespace Isekai {
             if (!g_state.shattered) {
                 g_state.grantTier = a_tier;  // this awakening did hand over its grant
                 ApplyBlessing(BlessingFor(a_tier));
-                // The starting stock is a *starting* stock: it comes with the first
-                // awakening only. The second one just gains the tiers' new material
-                // types, not another full crate of everything.
-                if (from == PowerLevel::Normal) {
-                    Storage::GrantStartingMaterials();
-                } else {
-                    Storage::TopUpStock();
-                }
+                // No crafting stock is handed over here either — see ApplyReincarnation.
+                // The awakening raises the reward scale, which is what pays for the
+                // storage now.
             }
 
             const auto* player = RE::PlayerCharacter::GetSingleton();
@@ -835,9 +833,10 @@ namespace Isekai {
                 // Chests stocked by earlier builds still hold the Creation Club
                 // ingredients that made the crafting shuttle stutter — clean them out.
                 Storage::PruneForeignStock();
-                // And bring older chests up to the current material set — add-on/DLC
-                // materials, missing ingredients, the full soul gem set (black included).
-                Storage::TopUpStock();
+                // NOTE: no top-up here any more. It used to add every material type the
+                // chest was missing on each load — which, now that the chest starts
+                // empty, would quietly refill it for free and defeat buying materials
+                // with System Points. Older saves keep what they already hold.
                 // Sweep out orphaned chest husks earlier rebuilds left behind (save bloat).
                 Storage::PruneOrphanChests();
                 // Backfill the codex token for saves reincarnated before it existed.

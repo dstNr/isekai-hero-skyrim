@@ -71,6 +71,23 @@ All notable changes to Isekai Hero are documented here. The format follows
   what you are saving up for). Purchases refresh in place. The catalog moved into
   `Shop::Catalog()`/`Shop::Buy()` so the web patch and the built-in UI offer exactly the
   same goods at the same prices, rather than each hardcoding a button list.
+- **The Dimensional Storage now starts empty, for every blessing.** It used to arrive
+  pre-stocked for a HERO/ASCENDED starting gift, and every load quietly topped it up with
+  any material type it was missing. Both are gone: the chest is filled through the shop's
+  new **material packs** instead, so its contents are something you chose to spend System
+  Points on. HERO and ASCENDED still get there sooner — their reward scale multiplies
+  point income — but nothing is handed over unearned.
+  **Existing saves keep whatever their chest already holds**; they simply stop gaining
+  new material types on load.
+- **Shop catalog rebuilt around material packs**: Smithing / Alchemy / Soul Gems, each in
+  a small and a large size (the large one is five times the materials for roughly three
+  times the price), plus gold in two sizes — eight cards, and both renderers now wrap
+  them into rows. Quantities are *per material type*, and the packs are the same three
+  sweeps the chest used to be stocked from, so there is still only one definition of what
+  counts as a smithing material. The individual Grand/Common soul gem entries are gone,
+  replaced by the soul gem packs.
+  Icon art for the eight cards is not included — see `docs/SHOP_ICON_PROMPTS.md`; cards
+  render without an image until the files exist.
 - `UI::IsSystemScreenOpen()` replaces the hand-written
   `IsSystemWindowOpen() || IsSkillTreeOpen()` in the four "don't act over a live screen"
   guards. Each new screen previously had to be remembered at every call site — and the

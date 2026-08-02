@@ -244,11 +244,17 @@
 
   /* --- SYSTEM SHOP, mirroring src/Shop.cpp -------------------------------
      Same goods, same prices, same order as Shop::Catalog(), so the indices the view
-     sends back mean the same thing here as in the plugin. */
+     sends back mean the same thing here as in the plugin. Quantities are per material
+     TYPE — one alchemy pack covers every official ingredient in the load order. */
   var SHOP_ITEMS = [
-    { name: "Grand Soul Gem",  qty: "x1",    cost: 25, icon: "spells_20_frame.png" },
-    { name: "Common Soul Gem", qty: "x5",    cost: 15, icon: "spells_19_frame.png" },
-    { name: "Gold",            qty: "x1000", cost: 10, icon: "spells_21_frame.png" }
+    { name: "Smithing Materials",  qty: "20 of each",  cost: 15, icon: "shop_smithing_small.png" },
+    { name: "Smithing Crate",      qty: "100 of each", cost: 50, icon: "shop_smithing_large.png" },
+    { name: "Alchemy Ingredients", qty: "20 of each",  cost: 15, icon: "shop_alchemy_small.png" },
+    { name: "Alchemy Crate",       qty: "100 of each", cost: 50, icon: "shop_alchemy_large.png" },
+    { name: "Soul Gems",           qty: "10 of each",  cost: 20, icon: "shop_souls_small.png" },
+    { name: "Soul Gem Crate",      qty: "50 of each",  cost: 65, icon: "shop_souls_large.png" },
+    { name: "Gold",                qty: "x1000",       cost: 10, icon: "shop_gold_small.png" },
+    { name: "Gold Hoard",          qty: "x10000",      cost: 75, icon: "shop_gold_large.png" }
   ];
 
   function buildShop() { return { points: G.points, items: SHOP_ITEMS }; }

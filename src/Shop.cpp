@@ -1,6 +1,5 @@
 #include "Shop.h"
 
-#include "Plugin.h"
 #include "Sounds.h"
 #include "Storage.h"
 #include "System.h"
@@ -13,61 +12,67 @@ namespace Isekai::Shop {
     namespace {
         constexpr RE::FormID kGold = 0x0000000F;
 
-        // One representative filled soul gem per grade from the official masters — same
-        // dedup idiom SkillTree's UnlockAllEnchantments uses (lowest FormID wins, so the
-        // pick is deterministic across loads). Resolved once at Install(), not on every
-        // catalog open.
-        RE::TESSoulGem* g_grand = nullptr;
-        RE::TESSoulGem* g_common = nullptr;
-
-        [[nodiscard]] RE::TESSoulGem* FindSoulGem(RE::SOUL_LEVEL a_grade) {
-            auto* data = RE::TESDataHandler::GetSingleton();
-            if (!data) {
-                return nullptr;
-            }
-            RE::TESSoulGem* best = nullptr;
-            for (auto* gem : data->GetFormArray<RE::TESSoulGem>()) {
-                if (!gem || !Plugin::IsOfficialMaster(gem) || gem->GetContainedSoul() != a_grade) {
-                    continue;
-                }
-                if (!best || gem->GetFormID() < best->GetFormID()) {
-                    best = gem;
-                }
-            }
-            return best;
-        }
+        // What a card does when bought.
+        enum class Kind {
+            kPack,  // stock every material of a category, `amount` of each
+            kGold,  // hand over `amount` septims
+        };
 
         // The catalog as one table: what Catalog() renders and what Buy() spends against,
         // so a price can never differ between the card the player reads and the purchase
-        // they get. `obj` is resolved lazily because Gold001 is a plain lookup while the
-        // soul gems come from Install()'s scan.
+        // they actually get.
+        //
+        // Two sizes per category on purpose: the small pack is what you can afford early,
+        // the large one is worth saving for (5x the materials for ~3.3x the price). The
+        // quantities are per material TYPE, not per pack — the alchemy packs alone cover
+        // every official ingredient in the load order.
         struct Entry {
-            const char*         name;
-            const char*         qty;
-            std::int32_t        cost;
-            std::int32_t        count;
-            const char*         icon;
-            RE::TESBoundObject* (*resolve)();
+            const char*              name;
+            const char*              qty;
+            std::int32_t             cost;
+            const char*              icon;
+            Kind                     kind;
+            Storage::MaterialCategory category;  // kPack only
+            std::int32_t             amount;
         };
 
+        using Cat = Storage::MaterialCategory;
+
+        // First-pass pricing, deliberately round: the whole point-economy is still a
+        // testing configuration (see README), and these are the numbers most likely to
+        // need tuning once the empty-chest start has actually been played.
         constexpr Entry kCatalog[] = {
-            { "Grand Soul Gem", "x1", 25, 1, "spells_20_frame.png",
-              []() -> RE::TESBoundObject* { return g_grand; } },
-            { "Common Soul Gem", "x5", 15, 5, "spells_19_frame.png",
-              []() -> RE::TESBoundObject* { return g_common; } },
-            { "Gold", "x1000", 10, 1000, "spells_21_frame.png",
-              []() -> RE::TESBoundObject* {
-                  return RE::TESForm::LookupByID<RE::TESBoundObject>(kGold);
-              } },
+            { "Smithing Materials", "20 of each", 15, "shop_smithing_small.png",
+              Kind::kPack, Cat::kSmithing, 20 },
+            { "Smithing Crate", "100 of each", 50, "shop_smithing_large.png",
+              Kind::kPack, Cat::kSmithing, 100 },
+            { "Alchemy Ingredients", "20 of each", 15, "shop_alchemy_small.png",
+              Kind::kPack, Cat::kAlchemy, 20 },
+            { "Alchemy Crate", "100 of each", 50, "shop_alchemy_large.png",
+              Kind::kPack, Cat::kAlchemy, 100 },
+            { "Soul Gems", "10 of each", 20, "shop_souls_small.png",
+              Kind::kPack, Cat::kEnchanting, 10 },
+            { "Soul Gem Crate", "50 of each", 65, "shop_souls_large.png",
+              Kind::kPack, Cat::kEnchanting, 50 },
+            { "Gold", "x1000", 10, "shop_gold_small.png", Kind::kGold, Cat::kSmithing, 1000 },
+            { "Gold Hoard", "x10000", 75, "shop_gold_large.png", Kind::kGold, Cat::kSmithing,
+              10000 },
         };
 
-        // The entries whose form actually resolved, in catalog order. Both Catalog() and
-        // Buy() go through this, so an index means the same thing to each of them even
-        // when a form is missing from the load order.
+        // Gold is the only entry with a form that can be missing; the material packs are
+        // sweeps and always "resolve". Both Catalog() and Buy() filter through this, so
+        // an index means the same thing to each of them.
+        [[nodiscard]] bool EntryAvailable(const Entry& a_entry) {
+            if (a_entry.kind != Kind::kGold) {
+                return true;
+            }
+            return RE::TESForm::LookupByID<RE::TESBoundObject>(kGold) != nullptr;
+        }
+
         [[nodiscard]] std::vector<const Entry*> LiveEntries() {
             std::vector<const Entry*> out;
             for (const auto& e : kCatalog) {
-                if (e.resolve()) {
+                if (EntryAvailable(e)) {
                     out.push_back(&e);
                 }
             }
@@ -76,10 +81,11 @@ namespace Isekai::Shop {
     }
 
     void Install() {
-        g_grand = FindSoulGem(RE::SOUL_LEVEL::kGrand);
-        g_common = FindSoulGem(RE::SOUL_LEVEL::kCommon);
-        logger::info("Shop: catalog resolved (grand={}, common={})", g_grand != nullptr,
-                     g_common != nullptr);
+        // Nothing to resolve up front any more: the material packs are sweeps run at
+        // purchase time (so a mid-playthrough load-order change is picked up), and gold
+        // is a single well-known form. Kept as an install hook because System.cpp's
+        // kDataLoaded sequence calls it and a future catalog may need it again.
+        logger::info("Shop: catalog ready ({} entries)", std::size(kCatalog));
     }
 
     bool Available() {
@@ -106,17 +112,25 @@ namespace Isekai::Shop {
             RE::DebugNotification("[ SYSTEM ] Not enough System Points.");
             return false;
         }
-        auto* chest = Storage::ChestRef();
-        auto* obj = entry->resolve();
-        if (!chest || !obj) {
+
+        // Deliver FIRST, and only charge if it landed: the chest is created on demand
+        // now, so "could not deliver" is a real outcome and must not cost the player
+        // their points.
+        bool delivered = false;
+        if (entry->kind == Kind::kGold) {
+            delivered = Storage::Deliver(RE::TESForm::LookupByID<RE::TESBoundObject>(kGold),
+                                         entry->amount);
+        } else {
+            delivered = Storage::StockCategory(entry->category, entry->amount) > 0;
+        }
+        if (!delivered) {
             RE::DebugNotification("[ SYSTEM ] The Dimensional Storage is not ready yet.");
             return false;
         }
 
         state.systemPoints -= entry->cost;
-        chest->AddObjectToContainer(obj, nullptr, entry->count, nullptr);
         Sounds::Play(Sounds::Sfx::ButtonClick);
-        logger::info("Shop: bought {}x {} for {} System Point(s)", entry->count, entry->name,
+        logger::info("Shop: bought '{}' ({}) for {} System Point(s)", entry->name, entry->qty,
                      entry->cost);
         return true;
     }

@@ -234,7 +234,9 @@ namespace Isekai::UI {
             // and the always-on node name below.
             const float padX = (kNodeSize * 0.5f * kMaxScale + 52.0f) * s;
             const float padT = (kNodeSize * 0.5f * kMaxScale + 22.0f) * s;
-            const float padB = (kNodeSize * 0.5f * kMaxScale + 30.0f) * s;
+            // Bottom needs the zone frame's own padding AND a two-line node name
+            // ("Thu'um Omniscience" and "Spell Omniscience" both wrap).
+            const float padB = (kNodeSize * 0.5f * kMaxScale + 56.0f) * s;
 
             float gMinX = FLT_MAX, gMaxX = -FLT_MAX, gMinY = FLT_MAX, gMaxY = -FLT_MAX;
             for (std::size_t i = 0; i < count; ++i) {
@@ -296,8 +298,9 @@ namespace Isekai::UI {
                     if (members == 0) {
                         continue;  // every node of this zone is hidden by HideSealedNodes
                     }
+                    // Bottom clears a two-line node name; 30px cut the second line off.
                     const ImVec2 bMin{ zMin.x - 20.0f * s, zMin.y - 16.0f * s };
-                    const ImVec2 bMax{ zMax.x + 20.0f * s, zMax.y + 30.0f * s };
+                    const ImVec2 bMax{ zMax.x + 20.0f * s, zMax.y + 46.0f * s };
                     dl->AddRectFilled(bMin, bMax, Style::Col(zs.col, 0.05f * fade), 10.0f * s);
                     dl->AddRect(bMin, bMax, Style::Col(zs.col, 0.20f * fade), 10.0f * s, 0, 1.0f * s);
 
@@ -518,7 +521,8 @@ namespace Isekai::UI {
                     // read as the web rail's .mPips.
                     const std::int32_t rank = SkillTree::Rank(node.key);
                     const std::int32_t maxRank = node.maxRank > 0 ? node.maxRank : 10;
-                    const float        pipW = 6.0f * s, pipH = 4.0f * s, pipGap = 2.0f * s;
+                    // Narrow enough that pips + the tier tag both fit the rail width.
+                    const float        pipW = 5.0f * s, pipH = 4.0f * s, pipGap = 1.0f * s;
                     float              px = tx;
                     const float        py = y + iconSz - 13.0f * s;
                     for (std::int32_t r = 0; r < maxRank; ++r) {

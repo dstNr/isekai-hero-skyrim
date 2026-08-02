@@ -128,8 +128,8 @@
      their own labelled dock on the left. Rows, not bare icons — a column of unlabelled
      tiles read as a toolbar rather than as part of the tree, so each row now carries the
      stat's name and its tier progress next to the icon. */
-  #urail { position: absolute; left: 0; top: 0; bottom: 0; width: 196px;
-           display: flex; flex-direction: column; padding: 2px 12px 0 2px;
+  #urail { position: absolute; left: 0; top: 0; bottom: 0; width: 206px;
+           display: flex; flex-direction: column; padding: 2px 8px 0 2px;
            background: linear-gradient(90deg, rgba(90,210,255,0.05), transparent);
            border-right: 1px solid rgba(90,210,255,0.14); }
   #urailHead { color: var(--dim); font-size: 10px; letter-spacing: 0.32em;
@@ -157,13 +157,15 @@
   .mName { font-size: 11px; color: var(--text); letter-spacing: 0.04em;
            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .mMeta { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
-  /* Ten pips, one per rank, grouped visually into the five tiers by the gap. */
-  .mPips { display: flex; gap: 2px; }
-  .mPips i { width: 7px; height: 4px; border-radius: 1px; background: rgba(125,165,200,0.25); }
+  /* Ten pips, one per rank, grouped visually into the five tiers by the gap. Sized so
+     the whole row (icon + name + pips + tier tag) fits the rail without the tag being
+     clipped — it read as "2 S" instead of "2 SP" when the pips were wider. */
+  .mPips { display: flex; gap: 1px; flex: none; }
+  .mPips i { width: 5px; height: 4px; border-radius: 1px; background: rgba(125,165,200,0.25); }
   .mPips i.on { background: var(--accent); box-shadow: 0 0 5px rgba(90,210,255,0.6); }
-  .mPips i.sep { margin-right: 3px; }
-  .mTier { font-size: 9px; letter-spacing: 0.14em; color: var(--dim); margin-left: auto;
-           white-space: nowrap; }
+  .mPips i.sep { margin-right: 2px; }
+  .mTier { font-size: 9px; letter-spacing: 0.1em; color: var(--dim); margin-left: auto;
+           white-space: nowrap; flex: none; }
   .mTier.t5 { color: #fff; text-shadow: 0 0 8px rgba(255,225,140,0.8); }
 
   /* Zone framing: a soft tinted box with a header behind each branch, so MIGHT /
@@ -323,6 +325,9 @@
 
   #shFoot { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
   #shHint { color: var(--dim); font-size: 12px; letter-spacing: 0.1em; opacity: 0.75; }
+  /* Match the skill tree's footer buttons — the default .btn padding left this one
+     visibly cramped next to the cards' full-width Buy buttons. */
+  #shClose { padding: 12px 34px; font-size: 13px; flex: none; }
 
   /* ======================= DIALOG PANEL ======================= */
   #panel { width: min(var(--pw, 720px), 92vw); max-height: 88vh;
@@ -695,7 +700,7 @@ function layout() {
      Symmetric padding clipped both. */
   const padX = NODE_R + 30;
   const padTop = NODE_R + 42;
-  const padBot = NODE_R + 46;
+  const padBot = NODE_R + 58;   // zone frame's own bottom padding + a two-line name
   const availW = W - RAIL;                       // graph lives right of the mastery rail
   const k = Math.min((availW - padX * 2) / cw, (H - padTop - padBot) / ch);
   return { k, W, H,
@@ -721,7 +726,9 @@ function zoneBoxes(L) {
       x0 = Math.min(x0, p.x - r); x1 = Math.max(x1, p.x + r);
       y0 = Math.min(y0, p.y - r); y1 = Math.max(y1, p.y + r);
     });
-    const padX = 22, padTop = 20, padBot = 34;   // room for the label under the last row
+    // padBot has to clear a TWO-line name ("Thu'um Omniscience", "Spell Omniscience"
+    // both wrap at .nlabel's width): 6px offset + 2 lines at 10px/1.25 + slack.
+    const padX = 22, padTop = 20, padBot = 46;
     out.push({ zone: z, cls: ZONE_CLASS[z] || "",
                x: x0 - padX, y: y0 - padTop,
                w: (x1 - x0) + padX * 2, h: (y1 - y0) + padTop + padBot });

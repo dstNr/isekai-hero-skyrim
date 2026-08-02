@@ -1,6 +1,18 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+
 namespace Isekai::Storage {
+
+    // What a shop material pack fills the chest with. The three categories are exactly
+    // the three sweeps the chest was stocked from before it became purchasable, so
+    // there is still only one definition of "what counts as a smithing material".
+    enum class MaterialCategory {
+        kSmithing,    // Misc materials any official-master recipe consumes (+ the gem set)
+        kAlchemy,     // every named ingredient from the official masters
+        kEnchanting,  // every filled soul gem base form from the official masters
+    };
 
     // Resolve the container out of IsekaiHero.esp and hook the crafting menu
     // (materials in storage are lent to the player while it is open).
@@ -21,22 +33,25 @@ namespace Isekai::Storage {
     // load as a backfill for saves from before this existed — harmless no-op otherwise.
     void GrantCodexIfMissing();
 
-    // Stock the storage with crafting materials and gold, scaled by the blessing
-    // (HERO x2, ASCENDED x4 on a NORMAL-sized base that nobody ever receives,
-    // since NORMAL has no storage). Called once, from the reincarnation.
-    void GrantStartingMaterials();
+    // Add a_perItem of every material in a_category to the chest, creating the chest if
+    // it does not exist yet. Returns how many distinct stacks were added (0 if the chest
+    // could not be created). This is what the System Shop's material packs buy.
+    //
+    // The chest is no longer stocked at reincarnation: it starts empty for every
+    // blessing and is filled with System Points instead, so what you carry is something
+    // you chose to spend on rather than something the tier handed you. HERO/ASCENDED
+    // still get there faster — their reward scale multiplies System Point income.
+    std::size_t StockCategory(MaterialCategory a_category, std::int32_t a_perItem);
+
+    // Deliver a_count of a plain form (the shop's gold packs) into the chest, creating
+    // it if needed. Returns false when the chest could not be created.
+    bool Deliver(RE::TESBoundObject* a_obj, std::int32_t a_count);
 
     // Remove non-vanilla ingredients from the chest. Earlier builds stocked the
     // Creation Club ones too, whose tracker scripts made every alchemy visit
     // stutter — chests from those saves keep the problem until cleaned. Called on
     // every load.
     void PruneForeignStock();
-
-    // Bring an existing chest up to the current material set — add-on/DLC materials, any
-    // ingredient or filled soul gem type it is missing — without refilling stacks the
-    // player has spent or touching the gold. Older saves therefore gain new materials on
-    // load without a fresh reincarnation. Called on every load.
-    void TopUpStock();
 
     // Delete leftover storage-chest references from earlier rebuilds. RebuildChest used
     // to only disable the old chest, so a long save can hold several orphaned husks; this

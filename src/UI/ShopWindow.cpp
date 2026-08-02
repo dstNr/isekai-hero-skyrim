@@ -23,12 +23,13 @@ namespace Isekai::UI {
 
         // Design-space (1080p) metrics; everything scales with the display, same as the
         // skill tree window.
-        constexpr float kCardW = 210.0f;
-        constexpr float kCardH = 250.0f;
-        constexpr float kCardGap = 20.0f;
+        constexpr float kCardW = 200.0f;
+        constexpr float kCardH = 236.0f;
+        constexpr float kCardGap = 18.0f;
         constexpr float kPad = 28.0f;
-        constexpr float kHeadH = 104.0f;   // title + points row + separator
-        constexpr float kFootH = 78.0f;    // hint + close button
+        constexpr float kHeadH = 104.0f;  // title + points row + separator
+        constexpr float kFootH = 78.0f;   // hint + close button
+        constexpr int   kCols = 4;        // catalog wraps into rows of this many cards
 
         float g_elapsed = 0.0f;  // drives the fade-in
 
@@ -78,11 +79,16 @@ namespace Isekai::UI {
         const float  fade = std::min(g_elapsed / 0.3f, 1.0f);
         const ImVec2 screen = io.DisplaySize;
 
-        // Width follows the catalog, so one row of cards always fits exactly.
-        const float wDesign =
-            kPad * 2.0f + static_cast<float>(std::max(count, 1)) * kCardW +
-            static_cast<float>(std::max(count - 1, 0)) * kCardGap;
-        const ImVec2 size{ wDesign * s, (kHeadH + kCardH + kFootH) * s };
+        // The catalog wraps into rows of kCols, and the window follows: eight cards no
+        // longer fit one row, and a window sized for one would run off the screen.
+        const int cols = std::max(1, std::min(kCols, count));
+        const int rows = std::max(1, (count + cols - 1) / cols);
+
+        const float wDesign = kPad * 2.0f + static_cast<float>(cols) * kCardW +
+                              static_cast<float>(cols - 1) * kCardGap;
+        const float hDesign = kHeadH + static_cast<float>(rows) * kCardH +
+                              static_cast<float>(rows - 1) * kCardGap + kFootH;
+        const ImVec2 size{ wDesign * s, hDesign * s };
 
         ImGui::SetNextWindowPos(ImVec2{ screen.x * 0.5f, screen.y * 0.5f }, ImGuiCond_Always,
                                 ImVec2{ 0.5f, 0.5f });
@@ -135,9 +141,13 @@ namespace Isekai::UI {
             for (int i = 0; i < count; ++i) {
                 const auto&  item = items[static_cast<std::size_t>(i)];
                 const bool   afford = points >= item.cost;
-                const float  x = wMin.x + kPad * s + static_cast<float>(i) * (kCardW + kCardGap) * s;
-                const ImVec2 cMin{ x, cardsY };
-                const ImVec2 cMax{ x + kCardW * s, cardsY + kCardH * s };
+                const int    col = i % cols;
+                const int    row = i / cols;
+                const float  x =
+                    wMin.x + kPad * s + static_cast<float>(col) * (kCardW + kCardGap) * s;
+                const float  y = cardsY + static_cast<float>(row) * (kCardH + kCardGap) * s;
+                const ImVec2 cMin{ x, y };
+                const ImVec2 cMax{ x + kCardW * s, y + kCardH * s };
 
                 ImGui::SetCursorScreenPos(cMin);
                 ImGui::PushID(i);
