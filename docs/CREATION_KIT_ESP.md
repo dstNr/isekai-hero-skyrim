@@ -254,6 +254,91 @@ In SSEEdit (as in Part E):
 
 ---
 
+## Part H — System potions (via SSEEdit)
+
+Ten consumables sold by the System Shop. **No new Magic Effects are needed** — every one
+is built by pointing an existing vanilla effect at a new magnitude and duration, so this
+is pure data entry, not record design.
+
+### The one technique you need
+
+An ALCH record's `Effects` block is a list. Each entry has:
+
+- **`EFID - Base Effect`** — a reference to a Magic Effect. This is a dropdown: you can
+  re-point it at *any* effect in the load order.
+- **`EFIT - Magnitude / Duration / Area`** — the numbers for that effect on this potion.
+
+So the recipe for every potion below is the same:
+
+1. `Skyrim.esm` → **`Ingestible`** → find **`Potion of Minor Healing`**
+   *(any simple potion works; this one has exactly one effect, which keeps it tidy)*
+2. Right-click → **Copy as new record into…** → `IsekaiHero.esp`
+   → give it the **Editor ID** from the table
+3. **`FULL - Name`** → the display name from the table
+4. **`DATA - Weight`** → `0`,  **`ENIT → Value`** → `0`
+5. In **`Effects`**: you need one entry per line in the "Effects" column.
+   - The copied record already has one — re-point its `EFID` and set its `EFIT`.
+   - For each further effect: right-click the `Effects` header → **Add**, then set
+     `EFID` and `EFIT` on the new entry.
+6. Save on close.
+
+> **Finding an effect in the `EFID` dropdown:** the alchemy ones are named after what the
+> player sees — type `Fortify One-Handed`, `Restore Health`, `Cure Disease`. Their editor
+> IDs mostly start with `Alch`. If two entries share a name, pick the one whose own
+> `FULL - Name` matches; that is the one potions use.
+
+> **Duration 0 is not "no effect"** — for an instant effect (Restore, Cure) it means
+> "apply once, now". Only the buffs below get a real duration.
+
+### Group 1 — Restoratives (instant)
+
+Spammable in combat. These exist separately from the elixirs on purpose: drinking a
+one-hour elixir just to top up health would burn its buff.
+
+| Editor ID | Name | Effects (magnitude / duration) |
+|---|---|---|
+| `IsekaiPotionVigor` | System Restorative: Vigor | Restore Health `10000` / `0` |
+| `IsekaiPotionFocus` | System Restorative: Focus | Restore Magicka `10000` / `0` |
+| `IsekaiPotionVitality` | System Restorative: Vitality | Restore Stamina `10000` / `0` |
+| `IsekaiPotionPanacea` | Panacea | Cure Disease `0` / `0` **+** Cure Poison `0` / `0` |
+
+> Cure Disease and Cure Poison ignore magnitude — they either fire or they don't.
+> **Panacea cannot cure Lycanthropy or established Vampirism**; both are quest-locked in
+> Skyrim. It does clear Sanguinare Vampiris while still in the three-day incubation.
+
+### Group 2 — Elixirs (one hour)
+
+Every duration below is **`3600`**.
+
+| Editor ID | Name | Effects (magnitude / duration) |
+|---|---|---|
+| `IsekaiElixirSystem` | Elixir of the System | Fortify Health `500` / `3600`<br>Fortify Magicka `500` / `3600`<br>Fortify Stamina `500` / `3600` |
+| `IsekaiElixirAscended` | Draught of the Ascended | Fortify One-Handed `500` / `3600`<br>Fortify Two-Handed `500` / `3600`<br>Fortify Marksman `500` / `3600`<br>Fortify Destruction `500` / `3600` |
+| `IsekaiElixirAegis` | Aegis Elixir | Resist Magic `85` / `3600`<br>Resist Fire `85` / `3600`<br>Resist Frost `85` / `3600`<br>Resist Shock `85` / `3600` |
+| `IsekaiElixirPhantom` | Phantom Draught | Invisibility `0` / `3600`<br>Muffle `0` / `3600`<br>Fortify Sneak `500` / `3600` |
+| `IsekaiElixirCasting` | Elixir of Endless Casting | Fortify Magicka Regen `1000` / `3600`<br>Fortify Magicka `1000` / `3600` |
+| `IsekaiElixirTitan` | Titan's Draught | Fortify Carry Weight `2000` / `3600`<br>Fortify Stamina `500` / `3600`<br>Waterbreathing `0` / `3600` |
+
+> **85 is the ceiling for resistances**, not caution on my part: Skyrim's
+> `fPlayerMaxResistance` caps them there, so a larger number changes nothing.
+> **Invisibility still breaks on attacking or interacting** — that is vanilla behaviour
+> and no potion can override it.
+
+### Afterwards — the FormIDs
+
+The shop looks these up by their local FormID, and only shows a card once the form
+resolves — so an incomplete ESP costs nothing, the missing potions simply don't appear.
+
+Two ways to get me the IDs, either is fine:
+
+- **From SSEEdit directly:** each new record shows its FormID in the header (e.g.
+  `FE012D80`). Because the ESP is ESL-flagged, the part I need is the **last three hex
+  digits** (`D80`). Send me the list.
+- **From the game:** start once and send the log — the plugin dumps every form the ESP
+  contributes with its ID (see Part F).
+
+---
+
 ## Part F — Save and start once
 
 1. **File → Save** (overwrites `IsekaiHero.esp`).

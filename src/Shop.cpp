@@ -1,5 +1,6 @@
 #include "Shop.h"
 
+#include "Plugin.h"
 #include "Sounds.h"
 #include "Storage.h"
 #include "System.h"
@@ -14,8 +15,9 @@ namespace Isekai::Shop {
 
         // What a card does when bought.
         enum class Kind {
-            kPack,  // stock every material of a category, `amount` of each
-            kGold,  // hand over `amount` septims
+            kPack,     // stock every material of a category, `amount` of each
+            kGold,     // hand over `amount` septims
+            kOurItem,  // hand over `amount` of a form from IsekaiHero.esp
         };
 
         // The catalog as one table: what Catalog() renders and what Buy() spends against,
@@ -27,13 +29,14 @@ namespace Isekai::Shop {
         // quantities are per material TYPE, not per pack — the alchemy packs alone cover
         // every official ingredient in the load order.
         struct Entry {
-            const char*              name;
-            const char*              qty;
-            std::int32_t             cost;
-            const char*              icon;
-            Kind                     kind;
+            const char*               name;
+            const char*               qty;
+            std::int32_t              cost;
+            const char*               icon;
+            Kind                      kind;
             Storage::MaterialCategory category;  // kPack only
-            std::int32_t             amount;
+            std::int32_t              amount;
+            RE::FormID                localID = 0;  // kOurItem only, ESP-local
         };
 
         using Cat = Storage::MaterialCategory;
@@ -71,16 +74,59 @@ namespace Isekai::Shop {
               100'000 },
             { "Gold Hoard", "x1,000,000", 20, "shop_gold_large.png", Kind::kGold,
               Cat::kSmithing, 1'000'000 },
+
+            // --- System potions (docs/CREATION_KIT_ESP.md, Part H) ---
+            // localID is the record's ESP-local FormID. It is 0 until the record exists:
+            // the entry then fails to resolve and is left out of the catalog entirely, so
+            // an ESP without these potions simply shows the eight cards above. Fill an ID
+            // in and its card appears — no other change needed.
+            //
+            // Restoratives are instant and meant to be spammed, hence the low price; the
+            // hour-long elixirs cost a little more but are still inside a starting
+            // blessing, matching the material packs' "the System hands you the world"
+            // pricing.
+            { "Restorative: Vigor", "x10", 3, "shop_potion_vigor.png",
+              Kind::kOurItem, Cat::kSmithing, 10, 0x000 },
+            { "Restorative: Focus", "x10", 3, "shop_potion_focus.png",
+              Kind::kOurItem, Cat::kSmithing, 10, 0x000 },
+            { "Restorative: Vitality", "x10", 3, "shop_potion_vitality.png",
+              Kind::kOurItem, Cat::kSmithing, 10, 0x000 },
+            { "Panacea", "x10", 3, "shop_potion_panacea.png",
+              Kind::kOurItem, Cat::kSmithing, 10, 0x000 },
+            { "Elixir of the System", "x10", 6, "shop_elixir_system.png",
+              Kind::kOurItem, Cat::kSmithing, 10, 0x000 },
+            { "Draught of the Ascended", "x10", 6, "shop_elixir_ascended.png",
+              Kind::kOurItem, Cat::kSmithing, 10, 0x000 },
+            { "Aegis Elixir", "x10", 6, "shop_elixir_aegis.png",
+              Kind::kOurItem, Cat::kSmithing, 10, 0x000 },
+            { "Phantom Draught", "x10", 6, "shop_elixir_phantom.png",
+              Kind::kOurItem, Cat::kSmithing, 10, 0x000 },
+            { "Elixir of Endless Casting", "x10", 6, "shop_elixir_casting.png",
+              Kind::kOurItem, Cat::kSmithing, 10, 0x000 },
+            { "Titan's Draught", "x10", 6, "shop_elixir_titan.png",
+              Kind::kOurItem, Cat::kSmithing, 10, 0x000 },
         };
 
-        // Gold is the only entry with a form that can be missing; the material packs are
-        // sweeps and always "resolve". Both Catalog() and Buy() filter through this, so
-        // an index means the same thing to each of them.
-        [[nodiscard]] bool EntryAvailable(const Entry& a_entry) {
-            if (a_entry.kind != Kind::kGold) {
-                return true;
+        // The form an entry hands over, or nullptr for the material packs (which are
+        // sweeps, not a single form).
+        [[nodiscard]] RE::TESBoundObject* EntryForm(const Entry& a_entry) {
+            switch (a_entry.kind) {
+            case Kind::kGold:
+                return RE::TESForm::LookupByID<RE::TESBoundObject>(kGold);
+            case Kind::kOurItem:
+                return a_entry.localID == 0
+                           ? nullptr  // record not created yet — card stays hidden
+                           : Plugin::LookupOurForm<RE::TESBoundObject>(a_entry.localID);
+            default:
+                return nullptr;
             }
-            return RE::TESForm::LookupByID<RE::TESBoundObject>(kGold) != nullptr;
+        }
+
+        // Both Catalog() and Buy() filter through this, so an index means the same thing
+        // to each of them. A potion whose ESP record does not exist drops out here, which
+        // is what lets the catalog ship ahead of the Creation Kit work.
+        [[nodiscard]] bool EntryAvailable(const Entry& a_entry) {
+            return a_entry.kind == Kind::kPack || EntryForm(a_entry) != nullptr;
         }
 
         [[nodiscard]] std::vector<const Entry*> LiveEntries() {
@@ -131,11 +177,10 @@ namespace Isekai::Shop {
         // now, so "could not deliver" is a real outcome and must not cost the player
         // their points.
         bool delivered = false;
-        if (entry->kind == Kind::kGold) {
-            delivered = Storage::Deliver(RE::TESForm::LookupByID<RE::TESBoundObject>(kGold),
-                                         entry->amount);
-        } else {
+        if (entry->kind == Kind::kPack) {
             delivered = Storage::StockCategory(entry->category, entry->amount) > 0;
+        } else {
+            delivered = Storage::Deliver(EntryForm(*entry), entry->amount);
         }
         if (!delivered) {
             RE::DebugNotification("[ SYSTEM ] The Dimensional Storage is not ready yet.");

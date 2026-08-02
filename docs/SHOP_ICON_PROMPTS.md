@@ -95,6 +95,28 @@ an overflowing heap of golden septim coins spilling from a tipped iron-bound che
 warm reflective gold, a few gemstones mixed into the pile.
 ```
 
+## Potion icons (Part H)
+
+Ten more, for the System potions. Same requirements and same style block as above — only
+the subject line changes. These cards stay hidden until their ESP record exists, so the
+icons can wait until after the Creation Kit work.
+
+| File name | Card | Subject line |
+|---|---|---|
+| `shop_potion_vigor.png` | Restorative: Vigor | `a round glass flask of glowing crimson liquid, cork stopper, warm red inner light` |
+| `shop_potion_focus.png` | Restorative: Focus | `a slender glass vial of luminous deep-blue liquid, cork stopper, cool blue inner glow` |
+| `shop_potion_vitality.png` | Restorative: Vitality | `a squat glass bottle of glowing emerald-green liquid, cork stopper, soft green inner light` |
+| `shop_potion_panacea.png` | Panacea | `a clear crystal vial of pale luminous liquid with drifting golden motes, silver filigree collar` |
+| `shop_elixir_system.png` | Elixir of the System | `an ornate hexagonal glass decanter of swirling cyan and white light, faceted stopper, radiant` |
+| `shop_elixir_ascended.png` | Draught of the Ascended | `a heavy iron-banded flask of molten orange liquid, embers rising inside, brutal and warlike` |
+| `shop_elixir_aegis.png` | Aegis Elixir | `a shield-shaped glass flask of pale silver-blue liquid, faint hexagonal barrier shimmer around it` |
+| `shop_elixir_phantom.png` | Phantom Draught | `a smoky dark-violet vial, its contents half-transparent and wisping away at the edges` |
+| `shop_elixir_casting.png` | Elixir of Endless Casting | `a tall spiral glass flask of violently glowing purple liquid, arcane sparks arcing off it` |
+| `shop_elixir_titan.png` | Titan's Draught | `a massive stone-and-bronze flagon of thick amber liquid, oversized and heavy` |
+
+Keep the four **Restoratives** visually plainer than the six **Elixirs** — they are the
+cheap spammable ones, and the elixirs should read as the prize.
+
 ## After generating
 
 1. Save all eight into `icons/` with exactly the file names above.
