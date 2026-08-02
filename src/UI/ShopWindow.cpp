@@ -23,8 +23,8 @@ namespace Isekai::UI {
 
         // Design-space (1080p) metrics; everything scales with the display, same as the
         // skill tree window.
-        constexpr float kCardW = 200.0f;
-        constexpr float kCardH = 236.0f;
+        constexpr float kCardW = 216.0f;  // wide enough that "Alchemy Ingredients" fits one line
+        constexpr float kCardH = 240.0f;
         constexpr float kCardGap = 18.0f;
         constexpr float kPad = 28.0f;
         constexpr float kHeadH = 104.0f;  // title + points row + separator
@@ -169,8 +169,8 @@ namespace Isekai::UI {
                             (afford && hovered ? 2.0f : 1.0f) * s);
 
                 // Icon
-                const float  iconSize = 92.0f * s;
-                const ImVec2 iMin{ (cMin.x + cMax.x) * 0.5f - iconSize * 0.5f, cMin.y + 20.0f * s };
+                const float  iconSize = 88.0f * s;
+                const ImVec2 iMin{ (cMin.x + cMax.x) * 0.5f - iconSize * 0.5f, cMin.y + 16.0f * s };
                 const ImVec2 iMax{ iMin.x + iconSize, iMin.y + iconSize };
                 if (const auto tex = GetTexture(std::string(kIconDir) + item.icon)) {
                     const int a = static_cast<int>(255 * fade * dim);
@@ -178,15 +178,29 @@ namespace Isekai::UI {
                                  IM_COL32(255, 255, 255, a));
                 }
 
-                // Name / quantity / price, each centred in the card.
-                const auto centred = [&](const std::string& text, float y, ImU32 col) {
-                    const ImVec2 ts = ImGui::CalcTextSize(text.c_str());
-                    dl->AddText(ImVec2{ (cMin.x + cMax.x) * 0.5f - ts.x * 0.5f, y }, col,
-                                text.c_str());
+                // Name / quantity / price, centred and WRAPPED inside the card. Drawn
+                // unwrapped at full body size, the longer names ("Alchemy Ingredients")
+                // were wider than the card and ran across its border.
+                ImFont*     font = ImGui::GetFont();
+                const float fs = ImGui::GetFontSize();
+                const float wrapW = kCardW * s - 20.0f * s;
+                const auto  centred = [&](const std::string& text, float size, float y, ImU32 col) {
+                    const ImVec2 ts = font->CalcTextSizeA(size, FLT_MAX, wrapW, text.c_str());
+                    dl->AddText(font, size,
+                                ImVec2{ (cMin.x + cMax.x) * 0.5f - ts.x * 0.5f, y }, col,
+                                text.c_str(), nullptr, wrapW);
+                    return ts.y;
                 };
-                centred(item.name, iMax.y + 14.0f * s, Style::Col(Style::kText, fade * dim));
-                centred(item.qty, iMax.y + 40.0f * s, Style::Col(Style::kTextDim, fade * dim));
-                centred(std::to_string(item.cost) + " SP", iMax.y + 68.0f * s,
+
+                const float nameSz = std::max(13.0f * s, fs * 0.82f);
+                const float subSz = std::max(11.0f * s, fs * 0.7f);
+
+                float ty = iMax.y + 12.0f * s;
+                ty += centred(item.name, nameSz, ty, Style::Col(Style::kText, fade * dim)) +
+                      6.0f * s;
+                ty += centred(item.qty, subSz, ty, Style::Col(Style::kTextDim, fade * dim)) +
+                      8.0f * s;
+                centred(std::to_string(item.cost) + " SP", nameSz, ty,
                         afford ? Style::Col(Style::kAccent, fade)
                                : IM_COL32(220, 90, 90, static_cast<int>(255 * fade)));
 

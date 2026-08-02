@@ -30,6 +30,9 @@ namespace Isekai::UI {
         // Render-thread state.
         float         g_elapsed = 0.0f;   // drives fade-in and the "affordable" pulse
         std::uint32_t g_hovered = 0;      // node key under the cursor, 0 = none
+        // Screen rect of that node, so the hover card can be placed beside it rather
+        // than in a band at the bottom of the window.
+        ImVec2        g_hoverMin{}, g_hoverMax{};
         float         g_respecArmedUntil = 0.0f;  // respec waits for a confirming second click
 
         // Close from the render thread: hand the unpause to the main thread, same
@@ -214,6 +217,12 @@ namespace Isekai::UI {
             dl->AddText(ImVec2{ wMin.x + 28.0f * s, sepY + 38.0f * s },
                         Style::Col(Style::kTextDim, fade), perks.c_str());
 
+            // Everything below starts under the points block. Deriving this instead of
+            // assuming a fixed kCanvasTop is what stops the mastery rail's header from
+            // being drawn straight over "PERK POINTS", which is exactly what happened.
+            const float headBottom =
+                sepY + 38.0f * s + ImGui::GetTextLineHeight() + 12.0f * s;
+
             // --- The graph ---
             // The node table's x/y are a DESIGN layout, not window offsets: they are
             // fitted (uniform scale, centred) into the area right of the mastery rail.
@@ -227,16 +236,27 @@ namespace Isekai::UI {
 
             const float boxL = wMin.x + (kRailW + 20.0f) * s;
             const float boxR = wMax.x - 26.0f * s;
-            const float boxT = wMin.y + (kCanvasTop + 26.0f) * s;
-            const float boxB = wMax.y - 150.0f * s;  // clear of the hover readout + footer
+            const float boxT = headBottom + 8.0f * s;
+            // Only the footer buttons are reserved now. The hover readout used to own a
+            // 150px band down here, and the graph paid for it: on a 760px-tall window
+            // that band plus the header left barely 45% of the height for the tree, which
+            // is why everything was squeezed and the labels collided. It floats by the
+            // cursor instead, the same as the web view's tooltip.
+            const float boxB = wMax.y - 88.0f * s;
 
-            // Inside that box: half a landmark tile, plus room for a zone header above
-            // and the always-on node name below.
-            const float padX = (kNodeSize * 0.5f * kMaxScale + 52.0f) * s;
+            // Reserve inside that box for everything drawn AROUND a node centre. These
+            // are in `s` units while their contents scale with `fit`, so each has to be
+            // large enough at the resulting fit — a circular relationship that was solved
+            // numerically rather than guessed. At 1080p this lands at fit ~0.68 with
+            // ~4px to spare on the tightest of the three:
+            //   sideways : half a landmark tile + the zone frame pad + half a node name
+            //   above    : half the hub tile + the zone frame pad + the zone header text
+            //   below    : half a landmark tile + the zone frame pad + a two-line name
+            // Raising any of them shrinks `fit` (smaller icons); lowering one clips what
+            // it was reserving for.
+            const float padX = (kNodeSize * 0.5f * kMaxScale + 62.0f) * s;
             const float padT = (kNodeSize * 0.5f * kMaxScale + 22.0f) * s;
-            // Bottom needs the zone frame's own padding AND a two-line node name
-            // ("Thu'um Omniscience" and "Spell Omniscience" both wrap).
-            const float padB = (kNodeSize * 0.5f * kMaxScale + 56.0f) * s;
+            const float padB = (kNodeSize * 0.5f * kMaxScale + 48.0f) * s;
 
             float gMinX = FLT_MAX, gMaxX = -FLT_MAX, gMinY = FLT_MAX, gMaxY = -FLT_MAX;
             for (std::size_t i = 0; i < count; ++i) {
@@ -259,11 +279,14 @@ namespace Isekai::UI {
             const auto centerOf = [&](const SkillTree::Node& n) {
                 return ImVec2{ offX + n.x * fit, offY + n.y * fit };
             };
-            // Only POSITIONS are fitted — a tile keeps a readable size of its own, scaled
-            // by Node::scale so the hub, the capstone and the gifts read as landmarks.
-            // Shrinking the icons with the fit as well just made them illegible.
+            // Tiles scale with `fit`, exactly like the positions and the zone padding.
+            // They used to scale with `s` alone — so when the graph was compressed to fit
+            // the window (fit < s), the gaps between nodes shrank while the tiles did not,
+            // and labels, frames and icons grew into each other. Every piece of the graph
+            // now shares one factor, which is what makes the clearances in SkillTree.cpp's
+            // layout note hold. Mirrors the web view's radOf().
             const auto halfOf = [&](const SkillTree::Node& n) {
-                return kNodeSize * 0.5f * n.scale * s;
+                return kNodeSize * 0.5f * n.scale * fit;
             };
 
             // --- Zone frames: a tinted box and a header behind each branch, so CORE /
@@ -433,6 +456,8 @@ namespace Isekai::UI {
 
                 if (hovered) {
                     g_hovered = node.key;
+                    g_hoverMin = hitMin;
+                    g_hoverMax = hitMax;
                 }
 
                 const auto visual = VisualFor(node, s);
@@ -523,8 +548,8 @@ namespace Isekai::UI {
             {
                 const float railL = wMin.x + 22.0f * s;
                 const float railR = wMin.x + kRailW * s;
-                const float railTop = wMin.y + (kCanvasTop + 16.0f) * s;
-                const float railBot = wMax.y - 150.0f * s;
+                const float railTop = headBottom;         // under the points block, not over it
+                const float railBot = wMax.y - 88.0f * s;  // same footer reserve as the graph
 
                 const char*  head = "MASTERY";
                 const ImVec2 hs = ImGui::CalcTextSize(head);
@@ -599,7 +624,10 @@ namespace Isekai::UI {
                 ImGui::EndChild();
             }
 
-            // --- Hover info, bottom-left ---
+            // --- Hover card, floating beside the node ---
+            // Was a fixed band along the bottom of the window, which cost the graph 150px
+            // of height for something only visible on hover. Placed by the node instead,
+            // like the web view's tooltip.
             if (g_hovered != 0) {
                 const SkillTree::Node* node = nullptr;
                 for (std::size_t i = 0; i < count; ++i) {
@@ -609,15 +637,6 @@ namespace Isekai::UI {
                     }
                 }
                 if (node) {
-                    // Bottom-left, where it lived before the (since removed) soul
-                    // exchange button briefly shared the corner with it.
-                    const float infoX = wMin.x + 28.0f * s;
-                    const float infoY = wMax.y - 118.0f * s;
-                    dl->AddText(ImVec2{ infoX, infoY }, Style::Col(Style::kAccent, fade),
-                                node->name);
-                    dl->AddText(ImVec2{ infoX, infoY + 26.0f * s },
-                                Style::Col(Style::kText, fade), node->desc);
-
                     // Repeatable nodes carry a "RANK n / max" suffix so the reader can see
                     // how far they've pushed it (max shown only when capped). Mastery
                     // nodes (capped repeatables) additionally name their tier.
@@ -662,7 +681,52 @@ namespace Isekai::UI {
                                         ? Style::Col(Style::kAccent, fade)
                                         : IM_COL32(220, 90, 90, static_cast<int>(255 * fade));
                     }
-                    dl->AddText(ImVec2{ infoX, infoY + 78.0f * s }, statusCol, status.c_str());
+
+                    // Lay the card out from its own contents, then place it beside the
+                    // node — flipped to the other side or clamped when it would leave the
+                    // window, so a node near an edge still shows a readable card.
+                    const float padCard = 14.0f * s;
+                    const float wrapW = 300.0f * s;
+                    ImFont*     font = ImGui::GetFont();
+                    const float fs = ImGui::GetFontSize();
+                    const float nameSz = fs;
+                    const float bodySz = std::max(12.0f * s, fs * 0.8f);
+
+                    const ImVec2 nameDim = font->CalcTextSizeA(nameSz, FLT_MAX, wrapW, node->name);
+                    const ImVec2 descDim = font->CalcTextSizeA(bodySz, FLT_MAX, wrapW, node->desc);
+                    const ImVec2 statDim =
+                        font->CalcTextSizeA(bodySz, FLT_MAX, wrapW, status.c_str());
+
+                    const float cardW =
+                        std::max({ nameDim.x, descDim.x, statDim.x }) + padCard * 2.0f;
+                    const float cardH = nameDim.y + descDim.y + statDim.y + padCard * 2.0f +
+                                        16.0f * s;
+
+                    float cx = g_hoverMax.x + 16.0f * s;
+                    if (cx + cardW > wMax.x - 12.0f * s) {
+                        cx = g_hoverMin.x - 16.0f * s - cardW;  // flip to the left
+                    }
+                    cx = std::clamp(cx, wMin.x + 12.0f * s, wMax.x - cardW - 12.0f * s);
+                    float cy = (g_hoverMin.y + g_hoverMax.y) * 0.5f - cardH * 0.5f;
+                    cy = std::clamp(cy, wMin.y + 12.0f * s, wMax.y - cardH - 12.0f * s);
+
+                    const ImVec2 cMin{ cx, cy };
+                    const ImVec2 cMax{ cx + cardW, cy + cardH };
+                    dl->AddRectFilled(cMin, cMax,
+                                      ImGui::GetColorU32(ImVec4{ 0.04f, 0.08f, 0.14f, 0.97f * fade }),
+                                      6.0f * s);
+                    dl->AddRect(cMin, cMax, Style::Col(Style::kAccent, 0.45f * fade), 6.0f * s, 0,
+                                1.0f * s);
+
+                    float ty = cMin.y + padCard;
+                    dl->AddText(font, nameSz, ImVec2{ cMin.x + padCard, ty },
+                                Style::Col(Style::kAccent, fade), node->name, nullptr, wrapW);
+                    ty += nameDim.y + 8.0f * s;
+                    dl->AddText(font, bodySz, ImVec2{ cMin.x + padCard, ty },
+                                Style::Col(Style::kText, 0.92f * fade), node->desc, nullptr, wrapW);
+                    ty += descDim.y + 8.0f * s;
+                    dl->AddText(font, bodySz, ImVec2{ cMin.x + padCard, ty }, statusCol,
+                                status.c_str(), nullptr, wrapW);
                 }
             }
 
