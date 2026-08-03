@@ -110,6 +110,37 @@ namespace Isekai::SelfTest {
                 }
             }
             Add(out, missing.empty(), true, "milestone quests", std::move(detail));
+
+            // Same contract the skill tree's attribute nodes live under: a passive whose
+            // actor value has no ability spell behind it grants nothing and says nothing.
+            // Reported by title AND actor value, because which value is uncovered depends
+            // entirely on what the ESP's magic effects carry — that is not knowable from
+            // the source, only from a running game.
+            const auto covered = Passives::CoveredActorValues();
+            std::vector<std::string> dead;
+            for (const auto& [title, av] : Progression::PassiveActorValues()) {
+                if (av == RE::ActorValue::kNone) {
+                    continue;
+                }
+                if (std::find(covered.begin(), covered.end(), av) == covered.end()) {
+                    const std::string entry =
+                        std::string(title) + " (AV " + std::to_string(static_cast<int>(av)) + ")";
+                    if (std::find(dead.begin(), dead.end(), entry) == dead.end()) {
+                        dead.push_back(entry);
+                    }
+                }
+            }
+            std::string passDetail =
+                std::to_string(covered.size()) + " actor values have an ability";
+            if (!dead.empty()) {
+                passDetail += " — these titles grant NOTHING: ";
+                for (std::size_t i = 0; i < dead.size(); ++i) {
+                    passDetail += (i ? ", " : "") + dead[i];
+                }
+                passDetail += " (the ESP needs an ability spell for that actor value)";
+            }
+            Add(out, dead.empty(), true, "milestone passives are backed",
+                std::move(passDetail));
         }
 
         // Dimensional Storage. Its contents are no longer granted but bought, so the

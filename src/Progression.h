@@ -57,4 +57,13 @@ namespace Isekai::Progression {
     // the log, but a warning in a long log is not something a tester will spot; the
     // self-test turns it into a PASS/FAIL line.
     [[nodiscard]] std::pair<std::vector<std::string>, std::size_t> UnresolvedMilestones();
+
+    // Every (passive title, actor value) the milestone table hands out, so the self-test
+    // can check them against Passives::CoveredActorValues().
+    //
+    // Same silent contract as the skill tree's kAttributes nodes, and the reason this
+    // exists: a passive naming an actor value with no ability spell behind it grants
+    // nothing, reports nothing, and looks exactly like a milestone that simply has a
+    // small effect.
+    [[nodiscard]] std::vector<std::pair<const char*, RE::ActorValue>> PassiveActorValues();
 }

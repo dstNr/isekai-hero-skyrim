@@ -425,6 +425,29 @@ check("milestones: keys and quest editor IDs are unique", () => {
   return `${keys.length} milestones`;
 });
 
+check("milestones: no more distinct actor values than there are abilities", () => {
+  // Each passive is delivered by an ESP ability spell, one per actor value. If the
+  // milestone table names MORE distinct actor values than there are ability spells, at
+  // least one passive cannot possibly be backed — and an unbacked passive grants nothing,
+  // silently. This is pure arithmetic, so it holds without knowing which actor value each
+  // ability actually carries (only a running game knows that; the self-test names it).
+  const cpp = read("src/Progression.cpp");
+  const from = cpp.indexOf("constexpr Milestone kMilestones[] = {");
+  const body = cpp.slice(from, cpp.indexOf("\n        };", from));
+  const avs = new Set([...body.matchAll(/AV::k(\w+)/g)].map((m) => m[1]));
+  need(avs.size > 0, "no actor values parsed from the milestone table — parser stale?");
+
+  const abilities = [...read("src/Passives.cpp")
+    .matchAll(/^\s*0x000[0-9A-Fa-f]{3},\s*\/\//gm)].length;
+  need(abilities > 0, "no ability form IDs parsed — parser stale?");
+
+  need(avs.size <= abilities,
+       `milestones grant ${avs.size} distinct actor values (${[...avs].sort().join(", ")}) ` +
+       `but the ESP has only ${abilities} ability spells — at least one passive is dead. ` +
+       `Add an ability for the missing actor value, or stop granting it.`);
+  return `${avs.size} actor values, ${abilities} abilities`;
+});
+
 /* -- 8. build wiring ------------------------------------------------------- */
 
 check("build: every src file is listed in CMakeLists", () => {

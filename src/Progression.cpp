@@ -817,6 +817,15 @@ namespace Isekai::Progression {
         return { std::move(missing), std::size(kMilestones) };
     }
 
+    std::vector<std::pair<const char*, RE::ActorValue>> PassiveActorValues() {
+        std::vector<std::pair<const char*, RE::ActorValue>> out;
+        out.reserve(std::size(kMilestones));
+        for (const auto& m : kMilestones) {
+            out.emplace_back(m.passive.name, m.passive.actorValue);
+        }
+        return out;
+    }
+
     std::string SystemRank() {
         // A deliberately simple, transparent formula rather than a tuned curve — milestones
         // are capped at 79, so rank growth past "finished the available content" has to come
