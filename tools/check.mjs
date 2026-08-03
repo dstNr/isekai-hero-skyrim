@@ -341,7 +341,87 @@ check("co-save: every state field written is also read", () => {
   return `${written.length} fields round-trip`;
 });
 
-/* -- 6. build wiring ------------------------------------------------------- */
+/* -- 6. the ESP's form IDs -------------------------------------------------
+   Four separate tables in three files name local FormIDs in IsekaiHero.esp. They
+   must not collide: two features pointing at one record means one of them is
+   wired to the wrong thing, and nothing about that is visible at runtime — both
+   resolve, both look fine, one behaves oddly. */
+
+function espFormIds() {
+  const grab = (file, re) =>
+    [...read(file).matchAll(re)].map((m) => ({ id: parseInt(m[1], 16), file, note: m[2] || "" }));
+
+  const ids = [
+    ...grab("src/Passives.cpp", /^\s*(0x000[0-9A-Fa-f]{3}),\s*\/\/\s*(.+)$/gm),
+    ...grab("src/Sounds.cpp", /^\s*(0x000[0-9A-Fa-f]{3}),\s*\/\/\s*(.+)$/gm),
+    ...grab("src/Storage.cpp", /constexpr RE::FormID \w+ = (0x000[0-9A-Fa-f]{3});()/g),
+  ];
+  // Potion IDs are 0 until their records exist; a real one joins the collision check.
+  const shop = [...read("src/Shop.cpp").matchAll(/Cat::k\w+,\s*\d+,\s*(0x[0-9A-Fa-f]+)\s*\}/g)]
+    .map((m) => parseInt(m[1], 16))
+    .filter((v) => v !== 0)
+    .map((v) => ({ id: v, file: "src/Shop.cpp", note: "potion" }));
+  return [...ids, ...shop];
+}
+
+check("ESP: no two features claim the same form ID", () => {
+  const all = espFormIds();
+  need(all.length > 0, "no ESP form IDs parsed — parser stale?");
+  const byId = new Map();
+  for (const e of all) {
+    const prev = byId.get(e.id);
+    need(!prev,
+         `0x${e.id.toString(16).toUpperCase().padStart(6, "0")} is claimed by both ` +
+         `${prev?.file} (${prev?.note}) and ${e.file} (${e.note})`);
+    byId.set(e.id, e);
+  }
+  return `${all.length} ids, all distinct`;
+});
+
+check("ESP: the ability and sound tables have their expected sizes", () => {
+  // The self-test compares these counts at runtime; if the tables themselves change,
+  // that comparison silently starts measuring the wrong thing.
+  const abilities = [...read("src/Passives.cpp")
+    .matchAll(/^\s*0x000[0-9A-Fa-f]{3},\s*\/\//gm)].length;
+  const sounds = [...read("src/Sounds.cpp")
+    .matchAll(/^\s*0x000[0-9A-Fa-f]{3},\s*\/\//gm)].length;
+  const selfTest = read("src/SelfTest.cpp");
+  const expected = selfTest.match(/kExpectedAbilities = (\d+)/);
+  need(expected, "SelfTest.cpp no longer states kExpectedAbilities");
+  need(abilities === +expected[1],
+       `Passives lists ${abilities} abilities but the self-test expects ${expected[1]}`);
+  need(sounds === 4, `Sounds lists ${sounds} descriptors, expected 4`);
+  return `${abilities} abilities, ${sounds} sounds`;
+});
+
+/* -- 7. milestones --------------------------------------------------------- */
+
+check("milestones: keys and quest editor IDs are unique", () => {
+  const cpp = read("src/Progression.cpp");
+  const from = cpp.indexOf("constexpr Milestone kMilestones[] = {");
+  need(from >= 0, "kMilestones table not found");
+  const body = cpp.slice(from, cpp.indexOf("\n        };", from));
+
+  const keys = [...body.matchAll(/\{\s*(\d+),\s*"/g)].map((m) => +m[1]);
+  need(keys.length > 0, "no milestones parsed — parser stale?");
+  const dupeKeys = keys.filter((k, i) => keys.indexOf(k) !== i);
+  need(dupeKeys.length === 0, `duplicate milestone keys: ${[...new Set(dupeKeys)].join(", ")}`);
+
+  // Milestone is { key, editorID, questName, ... } — the editor ID is the FIRST quoted
+  // string, not the second. Getting that wrong made this check flag "Prophet" and "The
+  // Jagged Crown", which are legitimately shared DISPLAY names: DLC1VQ03Hunter and
+  // DLC1VQ03Vampire are the two Dawnguard branches, CW02A/CW02B the two civil war sides.
+  // Duplicate display names are expected; duplicate editor IDs are the bug.
+  const ids = [...body.matchAll(/\{\s*\d+,\s*"([^"]+)"/g)].map((m) => m[1]);
+  need(ids.length === keys.length, `parsed ${keys.length} keys but ${ids.length} editor IDs`);
+  const dupeIds = ids.filter((v, i) => ids.indexOf(v) !== i);
+  need(dupeIds.length === 0,
+       `two milestones watch the same quest, so one can never fire: ` +
+       `${[...new Set(dupeIds)].join(", ")}`);
+  return `${keys.length} milestones`;
+});
+
+/* -- 8. build wiring ------------------------------------------------------- */
 
 check("build: every src file is listed in CMakeLists", () => {
   const cmake = read("CMakeLists.txt");

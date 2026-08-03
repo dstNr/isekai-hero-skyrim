@@ -43,6 +43,13 @@ namespace Isekai::Storage {
     // still get there faster — their reward scale multiplies System Point income.
     std::size_t StockCategory(MaterialCategory a_category, std::int32_t a_perItem);
 
+    // How many distinct materials a_category would deliver, WITHOUT delivering them or
+    // creating a chest. The self-test uses this: the categories are semantic sweeps over
+    // the load order (recipe components, official ingredients, filled soul gems), and if
+    // one of those filters ever stops matching, the pack still sells and still charges —
+    // it just quietly hands over nothing.
+    [[nodiscard]] std::size_t CountCategory(MaterialCategory a_category);
+
     // Deliver a_count of a plain form (the shop's gold packs) into the chest, creating
     // it if needed. Returns false when the chest could not be created.
     bool Deliver(RE::TESBoundObject* a_obj, std::int32_t a_count);

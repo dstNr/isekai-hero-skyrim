@@ -47,4 +47,14 @@ namespace Isekai::Progression {
     // panel now, and is meant to be the hook a future SkyrimNet "legend scales" decorator
     // reads instead of the coarser blessing tier (see docs/IDEAS.md).
     [[nodiscard]] std::string SystemRank();
+
+    // Milestones whose quest editor ID resolves to nothing in the current load order,
+    // by display name, plus the total milestone count.
+    //
+    // These are the mod's largest silent-failure surface: 79 hand-typed editor IDs, and
+    // one that does not match simply never pays out — no error, no missing feature the
+    // player could name, just a reward that never arrives. Install() warns about them in
+    // the log, but a warning in a long log is not something a tester will spot; the
+    // self-test turns it into a PASS/FAIL line.
+    [[nodiscard]] std::pair<std::vector<std::string>, std::size_t> UnresolvedMilestones();
 }

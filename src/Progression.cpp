@@ -719,6 +719,8 @@ namespace Isekai::Progression {
 
         // Loudly flag any milestone whose quest we cannot find: a typo'd editor ID
         // would otherwise just sit there silently rewarding nothing, forever.
+        // UnresolvedMilestones() exposes the same list to the self-test, where it becomes
+        // a PASS/FAIL line rather than a warning buried in the load log.
         for (const auto& m : kMilestones) {
             if (!g_quests.contains(m.editorID)) {
                 logger::warn("Progression: milestone '{}' has no quest '{}' — it will never fire",
@@ -803,6 +805,16 @@ namespace Isekai::Progression {
             }
         }
         return earned;
+    }
+
+    std::pair<std::vector<std::string>, std::size_t> UnresolvedMilestones() {
+        std::vector<std::string> missing;
+        for (const auto& m : kMilestones) {
+            if (!g_quests.contains(m.editorID)) {
+                missing.emplace_back(std::string(m.questName) + " [" + m.editorID + "]");
+            }
+        }
+        return { std::move(missing), std::size(kMilestones) };
     }
 
     std::string SystemRank() {

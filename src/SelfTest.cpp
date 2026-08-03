@@ -4,7 +4,9 @@
 #include "CraftHooks.h"
 #include "Passives.h"
 #include "Plugin.h"
+#include "Progression.h"
 #include "Quests.h"
+#include "Sounds.h"
 #include "Shop.h"
 #include "SkillTree.h"
 #include "Storage.h"
@@ -55,22 +57,98 @@ namespace Isekai::SelfTest {
 
         // --- the checks -------------------------------------------------------
 
+        // Is IsekaiHero.esp the file this build expects? Every feature is anchored to a
+        // form in it, and a mismatched or partially-edited ESP breaks them one at a time
+        // rather than loudly.
         void CheckPlugin(std::vector<Result>& out) {
             const bool loaded = Plugin::IsLoaded();
             Add(out, loaded, true, "ESP loaded",
                 loaded ? std::string(Plugin::kFileName)
                        : std::string(Plugin::kFileName) + " is NOT in the load order");
             if (!loaded) {
-                return;
+                return;  // everything below would just repeat the same failure
             }
-            // The two forms the code hard-depends on. Their local IDs live in Storage.cpp;
-            // resolving them here proves the ESP is the one the code was built against.
+
+            // The 8 ability spells. These carry every milestone passive AND every
+            // Effect::kAttributes skill-tree node; a missing one silently drops whichever
+            // actor value it backed.
+            const auto covered = Passives::CoveredActorValues();
+            constexpr std::size_t kExpectedAbilities = 8;
+            Add(out, covered.size() == kExpectedAbilities, true, "ESP ability spells",
+                std::to_string(covered.size()) + "/" + std::to_string(kExpectedAbilities) +
+                    " resolved" +
+                    (covered.size() == kExpectedAbilities
+                         ? ""
+                         : " — the missing ones grant nothing; see the Passives: lines above"));
+
+            const auto [sounds, soundsTotal] = Sounds::Resolved();
+            Add(out, sounds == soundsTotal, false, "ESP sound descriptors",
+                std::to_string(sounds) + "/" + std::to_string(soundsTotal) + " resolved" +
+                    (sounds == soundsTotal ? "" : " — those effects will be silent"));
+
             auto* chest = Plugin::LookupOurForm<RE::TESObjectCONT>(0x000D7A);
-            Add(out, chest != nullptr, true, "storage container form",
+            Add(out, chest != nullptr, true, "ESP storage container",
                 chest ? "resolved" : "0x000D7A missing — Dimensional Storage cannot work");
             auto* codex = Plugin::LookupOurForm<RE::TESBoundObject>(0x000D7F);
-            Add(out, codex != nullptr, false, "storage codex form",
+            Add(out, codex != nullptr, false, "ESP storage codex",
                 codex ? "resolved" : "0x000D7F missing — the physical shortcut is gone");
+        }
+
+        // The 79 milestones are the mod's biggest hand-typed surface: each names a quest
+        // by editor ID, and one that does not match never pays out, silently.
+        void CheckMilestones(std::vector<Result>& out) {
+            const auto [missing, total] = Progression::UnresolvedMilestones();
+            std::string detail = std::to_string(total - missing.size()) + "/" +
+                                 std::to_string(total) + " milestone quests resolve";
+            if (!missing.empty()) {
+                detail += " — these can never fire: ";
+                for (std::size_t i = 0; i < missing.size() && i < 6; ++i) {
+                    detail += (i ? ", " : "") + missing[i];
+                }
+                if (missing.size() > 6) {
+                    detail += ", +" + std::to_string(missing.size() - 6) + " more (see the log)";
+                }
+            }
+            Add(out, missing.empty(), true, "milestone quests", std::move(detail));
+        }
+
+        // Dimensional Storage. Its contents are no longer granted but bought, so the
+        // thing that can silently break is the sweep behind each material pack: if a
+        // filter stops matching, the pack still sells and still charges, and delivers
+        // nothing.
+        void CheckStorage(std::vector<Result>& out) {
+            Add(out, true, false, "storage available",
+                Storage::Available() ? "yes" : "no (character not reincarnated)");
+
+            auto* ref = Storage::ChestRef();
+            Add(out, true, false, "storage chest",
+                ref ? "exists, " + std::to_string(ref->GetInventoryCounts().size()) +
+                          " distinct item(s)"
+                    : "not created yet (created on first use — normal)");
+
+            struct Cat {
+                Storage::MaterialCategory cat;
+                const char*               name;
+            };
+            const Cat cats[] = {
+                { Storage::MaterialCategory::kSmithing, "smithing" },
+                { Storage::MaterialCategory::kAlchemy, "alchemy" },
+                { Storage::MaterialCategory::kEnchanting, "soul gems" },
+            };
+            std::string detail;
+            bool        allFound = true;
+            for (const auto& c : cats) {
+                const auto n = Storage::CountCategory(c.cat);
+                if (n == 0) {
+                    allFound = false;
+                }
+                detail += (detail.empty() ? "" : ", ") + std::string(c.name) + " " +
+                          std::to_string(n);
+            }
+            Add(out, allFound, true, "shop material sweeps",
+                detail + (allFound ? " materials found"
+                                   : " — a category finds NOTHING; its pack would charge "
+                                     "for an empty delivery"));
         }
 
         void CheckQuests(std::vector<Result>& out) {
@@ -276,8 +354,10 @@ namespace Isekai::SelfTest {
         std::vector<Result> out;
         CheckPlugin(out);
         CheckEnvironment(out);
+        CheckMilestones(out);
         CheckSkillTree(out);
         CheckQuests(out);
+        CheckStorage(out);
         CheckShop(out);
         CheckCrafting(out);
 

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstddef>
+#include <utility>
+
 namespace Isekai::Sounds {
 
     // The mod's own sound effects, backed by Sound Descriptor records in
@@ -14,6 +17,11 @@ namespace Isekai::Sounds {
 
     // Resolve the descriptors out of the ESP. Call at kDataLoaded.
     void Install();
+
+    // How many of the ESP's sound descriptors resolved, and how many were expected.
+    // A missing one is silent by design (the System just plays nothing), so the
+    // self-test reports the ratio rather than leaving it to the load log.
+    [[nodiscard]] std::pair<std::size_t, std::size_t> Resolved();
 
     // Fire and forget. Quietly does nothing while the descriptors are not wired up
     // yet, so call sites never need to care.

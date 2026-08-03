@@ -484,13 +484,17 @@ namespace Isekai::Storage {
         return true;
     }
 
-    std::size_t StockCategory(MaterialCategory a_category, std::int32_t a_perItem) {
-        if (a_perItem <= 0) {
+    // Shared by StockCategory and CountCategory. a_perItem <= 0 means "count only": the
+    // sweep runs identically but nothing is delivered and no chest is created, so the
+    // self-test can ask what a pack WOULD hand over without changing the save.
+    static std::size_t SweepCategory(MaterialCategory a_category, std::int32_t a_perItem) {
+        const bool dryRun = a_perItem <= 0;
+        auto*      data = RE::TESDataHandler::GetSingleton();
+        if (!data) {
             return 0;
         }
-        auto* chest = EnsureChest();
-        auto* data = RE::TESDataHandler::GetSingleton();
-        if (!chest || !data) {
+        auto* chest = dryRun ? nullptr : EnsureChest();
+        if (!dryRun && !chest) {
             return 0;
         }
 
@@ -502,7 +506,9 @@ namespace Isekai::Storage {
             if (!obj || !seen.insert(obj).second) {
                 return;
             }
-            chest->AddObjectToContainer(obj, nullptr, a_perItem, nullptr);
+            if (!dryRun) {
+                chest->AddObjectToContainer(obj, nullptr, a_perItem, nullptr);
+            }
             ++stocked;
         };
 
@@ -604,9 +610,22 @@ namespace Isekai::Storage {
             break;
         }
 
-        logger::info("Storage: stocked {} stack(s) x{} for category {}", stocked, a_perItem,
-                     static_cast<int>(a_category));
+        if (!dryRun) {
+            logger::info("Storage: stocked {} stack(s) x{} for category {}", stocked, a_perItem,
+                         static_cast<int>(a_category));
+        }
         return stocked;
+    }
+
+    std::size_t StockCategory(MaterialCategory a_category, std::int32_t a_perItem) {
+        if (a_perItem <= 0) {
+            return 0;  // a purchase must deliver something; only the dry run may pass 0
+        }
+        return SweepCategory(a_category, a_perItem);
+    }
+
+    std::size_t CountCategory(MaterialCategory a_category) {
+        return SweepCategory(a_category, 0);
     }
 
     void Open() {
