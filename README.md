@@ -113,6 +113,11 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   A **storage codex** (granted on reincarnation) is a table-free physical shortcut:
   use it from the inventory and the chest opens directly, no System panel needed —
   and it never runs out.
+- **System Quests.** The System keeps a standing objective on you — "Slay 25 Draugr" —
+  and pays System Points when you finish it, then hands out the next. Targets are matched
+  by actor *keyword*, so creatures added by other mods count too. No timer, no busywork:
+  it ticks over in the background of however you were already playing, and it is what
+  keeps System Points coming in once the 79 milestones run out.
 - **System Shop** — a third button beside Skill Tree and Storage in the status panel,
   opening its own screen of item cards. Spend System Points on **material packs**
   (smithing, alchemy, soul gems — each in a small and a large size) or on gold, all

@@ -6,6 +6,7 @@
 #include "Passives.h"
 #include "Plugin.h"
 #include "Progression.h"
+#include "Quests.h"
 #include "SkillTree.h"
 #include "Shop.h"
 #include "SkyrimNet.h"
@@ -33,8 +34,9 @@ namespace Isekai {
         constexpr std::uint32_t kSerID = 'ISKA';    // unique plugin id
         constexpr std::uint32_t kRecState = 'STAT';  // record tag
         // 7: shattered flag; 8: repeatable node ranks; 9: dormant flag;
-        // 10: grantTier / treeTier / custom (the decoupled CUSTOM axes)
-        constexpr std::uint32_t kVersion = 10;
+        // 10: grantTier / treeTier / custom (the decoupled CUSTOM axes);
+        // 11: the standing System objective (questKey / questProgress)
+        constexpr std::uint32_t kVersion = 11;
 
         void SystemMsg(const char* a_text) {
             RE::DebugNotification(a_text);
@@ -182,6 +184,7 @@ namespace Isekai {
             // what it holds is something the player chose to spend points on. HERO and
             // ASCENDED still fill it sooner — their reward scale multiplies point income.
             Storage::GrantCodexIfMissing();  // physical fallback access — every blessing
+            Quests::EnsureObjective();       // the System's first standing objective
 
             logger::info(
                 "Reincarnation applied: power={} skills={} level={} perks=+{} attr=+{} gold={} souls=+{}",
@@ -647,6 +650,9 @@ namespace Isekai {
             a_intf->WriteRecordData(g_state.treeTier);
             a_intf->WriteRecordData(g_state.custom);
 
+            a_intf->WriteRecordData(g_state.questKey);  // v11
+            a_intf->WriteRecordData(g_state.questProgress);
+
             logger::info(
                 "State saved (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={}, "
                 "dormant={}, custom={}, grant={}, tree={})",
@@ -751,6 +757,16 @@ namespace Isekai {
                     g_state.treeTier = g_state.power;
                     g_state.grantTier = g_state.shattered ? PowerLevel::Normal : g_state.power;
                 }
+
+                // v11: the standing System objective. An older save has none, and
+                // Quests::EnsureObjective (run on load) rolls the first one — so an
+                // existing character picks up the feature without a reboot.
+                g_state.questKey = 0;
+                g_state.questProgress = 0;
+                if (version >= 11) {
+                    a_intf->ReadRecordData(g_state.questKey);
+                    a_intf->ReadRecordData(g_state.questProgress);
+                }
             }
 
             logger::info(
@@ -799,6 +815,7 @@ namespace Isekai {
                 SkyrimNet::Install();   // optional AI-NPC context; no-op without SkyrimNet
                 Progression::Install();
                 Analyze::Install();     // "System Analysis" hotkey (skill-tree gated)
+                Quests::Install();      // watches kills for the standing objective
 
                 if (auto* ui = RE::UI::GetSingleton()) {
                     ui->AddEventSink<RE::MenuOpenCloseEvent>(MenuWatcher::GetSingleton());
@@ -841,6 +858,9 @@ namespace Isekai {
                 Storage::PruneOrphanChests();
                 // Backfill the codex token for saves reincarnated before it existed.
                 Storage::GrantCodexIfMissing();
+                // Hand out a standing objective — including to characters from before
+                // System Quests existed, whose save simply carries none.
+                Quests::EnsureObjective();
                 break;
 
             default:

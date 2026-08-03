@@ -95,6 +95,13 @@ namespace Isekai {
         // and deliberately separate from dragon souls. Paid by milestones; souls can
         // be converted into it as their post-main-quest sink.
         std::int32_t systemPoints = 0;
+
+        // The standing System objective (src/Quests.cpp), by its stable quarry key.
+        // 0 = none yet; EnsureObjective rolls one on the next load. Kept as a key rather
+        // than a table index so re-ordering the quarry table cannot silently turn a live
+        // objective into a different one.
+        std::uint32_t questKey = 0;
+        std::int32_t  questProgress = 0;
     };
 
     [[nodiscard]] State& GetState();

@@ -59,22 +59,18 @@ The tree's economy — where points come from and where they go.
   much harder (perks per type — a reporter plays a bound-weapon build via Biggie Traits).
 - **Multiple standing-stone bonuses at once** — managing ability spells; complex.
 
-### System Quests
+### System Quests — ✅ shipped
 
-**Status:** 🅿️ Roadmap — the other half of "System Quests + System Shop"; the Shop half
-shipped (see the one-liner list up top), split off because it was the self-contained,
-low-risk piece — Quests needs its own design pass on event-tracking specifics (which kill/
-event hooks, how objectives rotate and expire, new persistent timer state, a co-save bump)
-that the Shop didn't.
-**Why it still matters:** System Points had exactly one source (milestones) before the
-Shop gave them a second sink; Quests would give them a second *source* — points from
-moment-to-moment play, not just quest completions — closing the loop the other way.
-**Origin:** expands the "System Shop" note from the old Papyrus backlog
-(`papyrus/FEATURES.md`) — neither half was ever built there.
+A standing kill objective paying System Points, matched by ActorType keyword
+(`src/Quests.cpp`). Shipped without the timer the original note assumed: expiry needs
+game-time tracking, a failed state and its UX, and in a mod about feeling OP a running-out
+timer is mostly friction. The state fields are in the co-save (v11), so adding one later
+would not need another format bump.
 
-The System hands out lightweight objectives ("Slay 12 Draugr") via a kill/event tracker +
-a short timer, paying System Points on completion — read as System narration (fits the
-"[SYSTEM] as a voice" territory SkyrimNet Tier 3 explores). Medium effort.
+**Possible follow-ups:** more objective *kinds* than kills (explore N dungeons, craft N
+items, sell N septims' worth) — each needs its own event source, which is why the first
+pass is kills only. Also: several objectives at once, which needs a list layout in the
+status panel rather than the single row it has now.
 
 ### Modularity / configurable node values
 

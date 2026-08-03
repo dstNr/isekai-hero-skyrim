@@ -2,6 +2,7 @@
 
 #include "Config.h"
 #include "Passives.h"
+#include "Quests.h"
 #include "SkillTree.h"
 #include "Shop.h"
 #include "SkyrimNet.h"
@@ -418,6 +419,13 @@ namespace Isekai::Progression {
             j += "\"hasShop\":" + std::string(boolStr(Shop::Available())) + ",";
             j += "\"canReboot\":" + std::string(boolStr(st.reincarnated)) + ",";
 
+            // The standing System objective. questText is "" when there is none, which is
+            // what the view keys off to hide the row entirely.
+            j += "\"questText\":\"" + JsonEsc(Quests::Text()) + "\",";
+            j += "\"questProgress\":" + std::to_string(Quests::Progress()) + ",";
+            j += "\"questTarget\":" + std::to_string(Quests::Target()) + ",";
+            j += "\"questReward\":" + std::to_string(Quests::Reward()) + ",";
+
             j += "\"attunements\":[";
             bool first = true;
             for (const auto& [av, total] : totals) {
@@ -496,6 +504,13 @@ namespace Isekai::Progression {
             body += "MILESTONES    " + std::to_string(earned) + " / " +
                     std::to_string(std::size(kMilestones)) + "\n";
             body += "SYSTEM POINTS " + std::to_string(GetState().systemPoints) + "\n";
+
+            if (Quests::Active()) {
+                body += "OBJECTIVE     " + Quests::Text() + "   " +
+                        std::to_string(Quests::Progress()) + " / " +
+                        std::to_string(Quests::Target()) + "   (+" +
+                        std::to_string(Quests::Reward()) + " SP)\n";
+            }
 
             // The aggregated totals — the same numbers the abilities carry in the
             // magic menu, so the two views can be checked against each other.

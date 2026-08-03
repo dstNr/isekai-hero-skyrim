@@ -7,6 +7,25 @@ All notable changes to Isekai Hero are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **System Quests** — the System hands out a standing objective ("Slay 25 Draugr") and pays
+  System Points for it. This closes an imbalance the shop created: milestones were the only
+  *source* of points and there are a finite 79 of them, while the sinks kept growing (skill
+  tree, then material packs, gold, potions, and a Dimensional Storage that no longer arrives
+  pre-stocked). Quests give points an income that comes from playing.
+  - Targets are matched by **keyword**, not by race — `ActorTypeUndead`, `ActorTypeAnimal`,
+    `ActorTypeDaedra` and so on. A creature mod's draugr counts without the mod knowing we
+    exist, the same semantic-filter approach the skill tree's knowledge unlocks use; a race
+    list would go stale the moment anyone installs a creature pack.
+  - One objective at a time, no timer. It rolls a different quarry on completion, so you are
+    never left idle and never handed the same job twice in a row.
+  - A kill counts when the killer is the player **or one of their teammates** (followers,
+    summons, reanimated thralls). Strict "player only" reads as broken in play — a poison, a
+    rune or a follower's final blow is most of a mage's or a sneak's kills.
+  - Shown in the status panel in both renderers, with the same progress bar the milestone
+    tile uses.
+  - Co-save version 11 (`questKey` / `questProgress`), appended behind a version gate like
+    every field since v3. **Existing characters pick up an objective on the next load** — no
+    reboot, no new game.
 - **Five new repeatable skill-tree nodes**, closing the resistance/regen gaps a player
   pointed out (fire and frost resist existed, shock resist didn't): **Storm Ward**
   (Shock Resist), **Warded Mind** (Magic Resist), **Arcane Absorption** (Spell

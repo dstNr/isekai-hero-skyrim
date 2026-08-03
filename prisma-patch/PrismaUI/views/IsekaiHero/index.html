@@ -400,6 +400,17 @@
            background: linear-gradient(90deg, var(--accent-dk), var(--accent)); }
 
   .sect { font-size: 11px; margin-bottom: 8px; }
+
+  /* The standing System objective: one line, with the same bar the milestone tile uses
+     so the two read as the same kind of progress. */
+  #sQuest { padding: 9px 12px; border: 1px solid var(--line); border-radius: 3px;
+            background: rgba(90,210,255,0.05); }
+  #sQuestRow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  #sQuestText { font-size: 13px; color: var(--text); letter-spacing: 0.04em; }
+  #sQuestCount { font-size: 12px; color: var(--accent); white-space: nowrap; }
+  #sQuestCount span { color: var(--dim); margin-left: 8px; }
+  #sQuest .bar { margin-top: 8px; }
+
   #sAtt { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
   .att { display: flex; justify-content: space-between; gap: 8px; padding: 7px 12px;
          border: 1px solid var(--line); border-radius: 3px; background: rgba(90,210,255,0.05);
@@ -592,6 +603,16 @@
         <div class="tile">
           <div class="tLabel mono">System Points</div>
           <div class="tVal mono"><b id="sPts">—</b></div>
+        </div>
+      </div>
+      <div id="sQuestSect" class="hidden">
+        <div class="sect eyebrow mono">Objective</div>
+        <div id="sQuest">
+          <div id="sQuestRow">
+            <div id="sQuestText" class="mono"></div>
+            <div id="sQuestCount" class="mono"></div>
+          </div>
+          <div class="bar"><i id="sQuestBar"></i></div>
         </div>
       </div>
       <div id="sAttSect">
@@ -1152,6 +1173,18 @@ function renderStatus() {
   $("sMileTot").textContent = " / " + total;
   $("sBar").style.width = (total ? Math.round(100 * earned / total) : 0) + "%";
   $("sPts").textContent = s.points || 0;
+
+  // The standing objective. An empty questText means the System has handed out no work
+  // (an un-reincarnated character), and the whole section stays hidden.
+  const qText = s.questText || "";
+  $("sQuestSect").classList.toggle("hidden", !qText);
+  if (qText) {
+    const qp = s.questProgress || 0, qt = s.questTarget || 0;
+    $("sQuestText").textContent = qText;
+    $("sQuestCount").innerHTML = qp + " / " + qt +
+                                 '<span>+' + (s.questReward || 0) + " SP</span>";
+    $("sQuestBar").style.width = (qt ? Math.round(100 * Math.min(qp, qt) / qt) : 0) + "%";
+  }
 
   const at = $("sAtt"); at.innerHTML = "";
   (s.attunements || []).forEach(a => {
