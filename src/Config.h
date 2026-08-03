@@ -39,4 +39,9 @@ namespace Isekai::Config {
     // bought), as a DirectInput scan code. Default 0x2F (V) — no modifier; distinct from
     // the System-menu key so it can fire without opening a menu. See src/Analyze.cpp.
     [[nodiscard]] std::uint32_t AnalyzeKey();
+
+    // Scan code that runs the in-game self-test (src/SelfTest.cpp), or 0 for off, which
+    // is the default — it is a diagnostic to be switched on when reporting a problem,
+    // not something a normal playthrough should be able to trigger by accident.
+    [[nodiscard]] std::uint32_t SelfTestKey();
 }

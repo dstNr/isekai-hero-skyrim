@@ -19,6 +19,9 @@ namespace Isekai::Config {
         std::uint16_t g_dormantAscendedLevel = 80;
         bool          g_skyrimNetIntegration = true;
         std::uint32_t g_analyzeKey = 0x2F;  // DIK_V
+        // 0 = off. Off by default: the self-test is a diagnostic for bug reports, not a
+        // feature, and a stray key that pops a notification would just be noise.
+        std::uint32_t g_selfTestKey = 0;
 
         [[nodiscard]] std::string Trim(std::string a_s) {
             const auto notSpace = [](unsigned char c) { return !std::isspace(c); };
@@ -69,6 +72,7 @@ namespace Isekai::Config {
         g_dormantAscendedLevel = 80;
         g_skyrimNetIntegration = true;
         g_analyzeKey = 0x2F;  // DIK_V
+        g_selfTestKey = 0;
 
         std::ifstream in(kIniPath);
         if (!in) {
@@ -104,6 +108,8 @@ namespace Isekai::Config {
                 g_skyrimNetIntegration = AsBool(val);
             } else if (key == "analyzekey") {
                 g_analyzeKey = AsScanCode(val, g_analyzeKey);
+            } else if (key == "selftestkey") {
+                g_selfTestKey = AsScanCode(val, g_selfTestKey);
             }
         }
 
@@ -118,9 +124,9 @@ namespace Isekai::Config {
 
         logger::info("Config: HideSealedNodes={}, SystemMenuKey={:#x}, SystemMenuModifier={:#x}, "
                      "DormantHeroLevel={}, DormantAscendedLevel={}, SkyrimNetIntegration={}, "
-                     "AnalyzeKey={:#x}",
+                     "AnalyzeKey={:#x}, SelfTestKey={:#x}",
                      g_hideSealedNodes, g_systemMenuKey, g_systemMenuModifier, g_dormantHeroLevel,
-                     g_dormantAscendedLevel, g_skyrimNetIntegration, g_analyzeKey);
+                     g_dormantAscendedLevel, g_skyrimNetIntegration, g_analyzeKey, g_selfTestKey);
     }
 
     bool HideSealedNodes() {
@@ -149,5 +155,9 @@ namespace Isekai::Config {
 
     std::uint32_t AnalyzeKey() {
         return g_analyzeKey;
+    }
+
+    std::uint32_t SelfTestKey() {
+        return g_selfTestKey;
     }
 }

@@ -206,6 +206,15 @@ namespace Isekai::Quests {
         Roll(q ? q->key : 0);
     }
 
+    std::vector<std::pair<const char*, const char*>> QuarryKeywords() {
+        std::vector<std::pair<const char*, const char*>> out;
+        out.reserve(std::size(kQuarries));
+        for (const auto& q : kQuarries) {
+            out.emplace_back(q.name, q.keyword);
+        }
+        return out;
+    }
+
     void Install() {
         if (auto* holder = RE::ScriptEventSourceHolder::GetSingleton()) {
             holder->AddEventSink<RE::TESDeathEvent>(DeathWatcher::GetSingleton());

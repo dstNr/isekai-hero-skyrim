@@ -11,8 +11,16 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace Isekai::Quests {
+
+    // Every quarry as (display name, ActorType keyword editor ID), for the self-test to
+    // confirm against the running load order. These IDs are typed by hand, and a wrong
+    // one fails silently — the objective is simply never satisfiable, with no error
+    // anywhere. Checking them is the single most valuable thing the self-test does.
+    [[nodiscard]] std::vector<std::pair<const char*, const char*>> QuarryKeywords();
 
     // Register the death-event sink and make sure a character that should have an
     // objective has one. Call at kDataLoaded.

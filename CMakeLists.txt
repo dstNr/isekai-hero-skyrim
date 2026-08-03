@@ -28,6 +28,8 @@ add_commonlibsse_plugin(
         src/Progression.cpp
         src/Quests.cpp
         src/Quests.h
+        src/SelfTest.cpp
+        src/SelfTest.h
         src/Progression.h
         src/SkillTree.cpp
         src/SkillTree.h

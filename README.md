@@ -177,9 +177,31 @@ Toolchain: **Visual Studio 2022 Build Tools** (MSVC + Windows SDK + CMake +
 Ninja) and **vcpkg**.
 
 ```powershell
-./build.bat      # configure + build + deploy DLL/PDB/icons into the game folder
-./package.ps1    # pack a mod-manager-ready 7z into dist/
+./build.bat            # configure + build + deploy DLL/PDB/icons into the game folder
+./package.ps1          # pack a mod-manager-ready 7z into dist/
+node tools/check.mjs   # consistency checks — no game, no compiler, ~1s
 ```
+
+### Testing
+
+Almost every line here orchestrates game API calls and cannot run outside Skyrim, so
+there is no unit-test suite — it would have caught very little. What actually went wrong
+during development was different: **the same data described in two places drifting apart**,
+and **geometry whose terms did not all scale together**. Two things cover that:
+
+- **`node tools/check.mjs`** — runs without the game. Verifies the skill-tree node table
+  against the playground mock, the shop catalog against its mock, that every advertised
+  icon exists, that the status JSON's fields are emitted/read/mocked consistently, that no
+  two zone frames or node tiles overlap and no node name can reach its neighbour, that
+  `kVersion` matches the highest co-save read gate, that every saved field is also loaded,
+  and that no source file is missing from `CMakeLists.txt`. Every check exists because its
+  bug happened at least once.
+- **The in-game self-test** — set `SelfTestKey` in `IsekaiHero.ini` (off by default) and
+  press it. Checks what is only decidable in a running game: that the ESP's forms resolve,
+  that **every quest target keyword actually exists in the load order** (a mistyped one
+  fails silently — the objective simply never completes), that the shop can deliver what it
+  advertises, and that the crafting hooks installed. Writes a PASS/FAIL block to the log.
+  This is the thing to ask a bug reporter for.
 
 `build.bat` refuses to deploy while Skyrim is running (a locked DLL used to
 mean silently testing stale code). It builds `RelWithDebInfo`, so Crash

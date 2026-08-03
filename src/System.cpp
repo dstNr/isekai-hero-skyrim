@@ -7,6 +7,7 @@
 #include "Plugin.h"
 #include "Progression.h"
 #include "Quests.h"
+#include "SelfTest.h"
 #include "SkillTree.h"
 #include "Shop.h"
 #include "SkyrimNet.h"
@@ -816,6 +817,7 @@ namespace Isekai {
                 Progression::Install();
                 Analyze::Install();     // "System Analysis" hotkey (skill-tree gated)
                 Quests::Install();      // watches kills for the standing objective
+                SelfTest::Install();    // diagnostic hotkey, off unless the ini sets one
 
                 if (auto* ui = RE::UI::GetSingleton()) {
                     ui->AddEventSink<RE::MenuOpenCloseEvent>(MenuWatcher::GetSingleton());

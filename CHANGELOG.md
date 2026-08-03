@@ -7,6 +7,18 @@ All notable changes to Isekai Hero are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Consistency checks (`node tools/check.mjs`)** and an **in-game self-test**
+  (`SelfTestKey` in the ini, off by default). Deliberately not a unit-test suite: every
+  translation unit force-includes CommonLibSSE through the PCH and most of the code
+  orchestrates game API calls, so unit tests would have caught very little of what
+  actually broke. The recurring failure was different — the same data described in two
+  places drifting apart, and layout terms that did not all scale together.
+  The static checks cover the node table vs. the playground mock, the shop catalog and its
+  icons, the status JSON contract across all three layers, zone/tile/label geometry,
+  `kVersion` against the highest co-save read gate, save/load field symmetry, and
+  `CMakeLists` completeness. The self-test covers what only a running game knows: form
+  resolution, **whether every quest target keyword exists in the load order** (a mistyped
+  one fails silently), shop deliverability, and hook installation.
 - **System Quests** — the System hands out a standing objective ("Slay 25 Draugr") and pays
   System Points for it. This closes an imbalance the shop created: milestones were the only
   *source* of points and there are a finite 79 of them, while the sinks kept growing (skill
