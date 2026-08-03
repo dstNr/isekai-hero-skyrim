@@ -284,7 +284,7 @@ In the dialog that opens:
 
 1. **ID** → the Editor ID from the tables below
 2. **Name** → the display name
-3. **Weight** → `0`,  **Value** → `0`
+3. **Weight** → `0.5` (as vanilla potions),  **Value** → from the table
 4. The **Effects** list (lower part of the dialog) → right-click inside it → **New**
    - Pick the effect by the name the player sees — `Restore Health`, `Fortify One-Handed`,
      `Cure Disease`. A second dialog takes **Magnitude**, **Area** and **Duration**.
@@ -303,12 +303,12 @@ In the dialog that opens:
 Spammable in combat. These exist separately from the elixirs on purpose: drinking a
 one-hour elixir just to top up health would burn its buff.
 
-| Editor ID | Name | Effects (magnitude / duration) |
-|---|---|---|
-| `IsekaiPotionVigor` | System Restorative: Vigor | Restore Health `10000` / `0` |
-| `IsekaiPotionFocus` | System Restorative: Focus | Restore Magicka `10000` / `0` |
-| `IsekaiPotionVitality` | System Restorative: Vitality | Restore Stamina `10000` / `0` |
-| `IsekaiPotionPanacea` | Panacea | Cure Disease `0` / `0` **+** Cure Poison `0` / `0` |
+| Editor ID | Name | Value | Effects (magnitude / duration) |
+|---|---|---|---|
+| `IsekaiPotionVigor` | System Restorative: Vigor | `250` | Restore Health `10000` / `0` |
+| `IsekaiPotionFocus` | System Restorative: Focus | `250` | Restore Magicka `10000` / `0` |
+| `IsekaiPotionVitality` | System Restorative: Vitality | `250` | Restore Stamina `10000` / `0` |
+| `IsekaiPotionPanacea` | Panacea | `150` | Cure Disease `0` / `0` **+** Cure Poison `0` / `0` |
 
 > Cure Disease and Cure Poison ignore magnitude — they either fire or they don't.
 > **Panacea cannot cure Lycanthropy or established Vampirism**; both are quest-locked in
@@ -318,19 +318,35 @@ one-hour elixir just to top up health would burn its buff.
 
 Every duration below is **`3600`**.
 
-| Editor ID | Name | Effects (magnitude / duration) |
-|---|---|---|
-| `IsekaiElixirSystem` | Elixir of the System | Fortify Health `500` / `3600`<br>Fortify Magicka `500` / `3600`<br>Fortify Stamina `500` / `3600` |
-| `IsekaiElixirAscended` | Draught of the Ascended | Fortify One-Handed `500` / `3600`<br>Fortify Two-Handed `500` / `3600`<br>Fortify Marksman `500` / `3600`<br>Fortify Destruction `500` / `3600` |
-| `IsekaiElixirAegis` | Aegis Elixir | Resist Magic `85` / `3600`<br>Resist Fire `85` / `3600`<br>Resist Frost `85` / `3600`<br>Resist Shock `85` / `3600` |
-| `IsekaiElixirPhantom` | Phantom Draught | Invisibility `0` / `3600`<br>Muffle `0` / `3600`<br>Fortify Sneak `500` / `3600` |
-| `IsekaiElixirCasting` | Elixir of Endless Casting | Fortify Magicka Regen `1000` / `3600`<br>Fortify Magicka `1000` / `3600` |
-| `IsekaiElixirTitan` | Titan's Draught | Fortify Carry Weight `2000` / `3600`<br>Fortify Stamina `500` / `3600`<br>Waterbreathing `0` / `3600` |
+| Editor ID | Name | Value | Effects (magnitude / duration) |
+|---|---|---|---|
+| `IsekaiElixirSystem` | Elixir of the System | `1200` | Fortify Health `500` / `3600`<br>Fortify Magicka `500` / `3600`<br>Fortify Stamina `500` / `3600` |
+| `IsekaiElixirAscended` | Draught of the Ascended | `1200` | Fortify One-Handed `500` / `3600`<br>Fortify Two-Handed `500` / `3600`<br>Fortify Marksman `500` / `3600`<br>Fortify Destruction `500` / `3600` |
+| `IsekaiElixirAegis` | Aegis Elixir | `1000` | Resist Magic `85` / `3600`<br>Resist Fire `85` / `3600`<br>Resist Frost `85` / `3600`<br>Resist Shock `85` / `3600` |
+| `IsekaiElixirPhantom` | Phantom Draught | `1000` | Invisibility `0` / `3600`<br>Muffle `0` / `3600`<br>Fortify Sneak `500` / `3600` |
+| `IsekaiElixirCasting` | Elixir of Endless Casting | `1000` | Fortify Magicka Regen `1000` / `3600`<br>Fortify Magicka `1000` / `3600` |
+| `IsekaiElixirTitan` | Titan's Draught | `800` | Fortify Carry Weight `2000` / `3600`<br>Fortify Stamina `500` / `3600`<br>Waterbreathing `0` / `3600` |
 
 > **85 is the ceiling for resistances**, not caution on my part: Skyrim's
 > `fPlayerMaxResistance` caps them there, so a larger number changes nothing.
 > **Invisibility still breaks on attacking or interacting** — that is vanilla behaviour
 > and no potion can override it.
+
+### A note on Value and Weight
+
+These carry a real gold value on purpose, roughly one tier above vanilla's strongest
+potions (Ultimate Healing is ~132). An earlier draft of this guide said `Value = 0`, which
+was copied from the storage codex in Part G — correct there, because the codex is a UI
+token rather than an item, and wrong here: a potion showing no value at all just looks
+broken in the inventory.
+
+It opens no exploit. Converting System Points to gold by selling potions would net roughly
+2,500 gold nominal for 3 points, before the merchant's markdown and their limited purse —
+while the shop's own gold pack pays 100,000 gold for 5 points. Selling potions is about a
+hundred times worse than the direct route, so nobody will ever do it.
+
+Weight `0.5` matches vanilla potions. They arrive in the Dimensional Storage rather than
+your pockets, so weight only ever applies to what you deliberately carry.
 
 ### Afterwards — the FormIDs
 
