@@ -154,6 +154,15 @@ namespace Isekai::Passives {
                      std::size(kAbilityFormIDs));
     }
 
+    std::vector<RE::ActorValue> CoveredActorValues() {
+        std::vector<RE::ActorValue> out;
+        out.reserve(g_abilities.size());
+        for (const auto& [av, ability] : g_abilities) {
+            out.push_back(av);
+        }
+        return out;
+    }
+
     void Refresh() {
         auto* player = RE::PlayerCharacter::GetSingleton();
         if (!player || g_abilities.empty()) {

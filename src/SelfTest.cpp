@@ -2,14 +2,18 @@
 
 #include "Config.h"
 #include "CraftHooks.h"
+#include "Passives.h"
 #include "Plugin.h"
 #include "Quests.h"
 #include "Shop.h"
+#include "SkillTree.h"
 #include "Storage.h"
 #include "System.h"
 #include "UI/Input.h"
 #include "UI/Prisma.h"
 
+#include <algorithm>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -130,6 +134,111 @@ namespace Isekai::SelfTest {
             Add(out, missing.empty(), false, "shop card icons", std::move(detail));
         }
 
+        // The skill tree's runtime contracts. Its DATA (coordinates, keys, geometry) is
+        // checked statically by tools/check.mjs; what only a running game can answer is
+        // whether the things the table names actually exist and actually work.
+        void CheckSkillTree(std::vector<Result>& out) {
+            std::size_t count = 0;
+            const auto* nodes = SkillTree::Nodes(count);
+            Add(out, count > 0, true, "skill tree loaded",
+                std::to_string(count) + " nodes");
+            if (count == 0) {
+                return;
+            }
+
+            // THE important one. Effect::kAttributes routes its bonus through the ESP's
+            // ability spells (Passives), and only the actor values those spells cover can
+            // be granted. A node naming any other actor value is a no-op that reports
+            // nothing — you buy it, you pay for it, and nothing happens. This has bitten
+            // once already, during the Tier-1 resistance batch.
+            const auto covered = Passives::CoveredActorValues();
+            std::vector<std::string> dead;
+            for (std::size_t i = 0; i < count; ++i) {
+                const auto& n = nodes[i];
+                if (n.effect != SkillTree::Effect::kAttributes) {
+                    continue;  // kDirectStat writes the actor value itself, no ability needed
+                }
+                for (const auto& b : n.bonus) {
+                    if (b.av == RE::ActorValue::kNone) {
+                        continue;
+                    }
+                    if (std::find(covered.begin(), covered.end(), b.av) == covered.end()) {
+                        dead.emplace_back(std::string(n.name) + " (AV " +
+                                          std::to_string(static_cast<int>(b.av)) + ")");
+                    }
+                }
+            }
+            std::string detail = std::to_string(covered.size()) + " actor values have an ability";
+            if (!dead.empty()) {
+                detail += " — these nodes grant NOTHING: ";
+                for (std::size_t i = 0; i < dead.size(); ++i) {
+                    detail += (i ? ", " : "") + dead[i];
+                }
+            }
+            Add(out, dead.empty(), true, "attribute nodes are backed", std::move(detail));
+
+            // Icons. A missing file is a blank tile, which reads as a broken tree rather
+            // than a missing asset. Only meaningful where the built-in UI actually draws.
+            if (!REL::Module::IsVR()) {
+                std::vector<std::string> missingIcons;
+                for (std::size_t i = 0; i < count; ++i) {
+                    const std::string path =
+                        "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\" + std::string(nodes[i].icon);
+                    if (!std::filesystem::exists(path)) {
+                        missingIcons.emplace_back(nodes[i].icon);
+                    }
+                }
+                std::string iconDetail = std::to_string(count - missingIcons.size()) + "/" +
+                                         std::to_string(count) + " node icons on disk";
+                if (!missingIcons.empty()) {
+                    iconDetail += " — MISSING: ";
+                    for (std::size_t i = 0; i < missingIcons.size(); ++i) {
+                        iconDetail += (i ? ", " : "") + missingIcons[i];
+                    }
+                }
+                Add(out, missingIcons.empty(), false, "skill tree icons", std::move(iconDetail));
+            }
+
+            // Anything the save remembers must still be a real node. A key that no longer
+            // exists means points were spent on something this build cannot honour.
+            const auto& st = GetState();
+            const auto known = [&](std::uint32_t key) {
+                for (std::size_t i = 0; i < count; ++i) {
+                    if (nodes[i].key == key) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            std::vector<std::string> orphans;
+            for (const auto key : st.unlockedNodes) {
+                if (!known(key)) {
+                    orphans.emplace_back("unlocked #" + std::to_string(key));
+                }
+            }
+            for (const auto& [key, rank] : st.nodeRanks) {
+                if (!known(key)) {
+                    orphans.emplace_back("rank #" + std::to_string(key));
+                }
+            }
+            std::string saveDetail = std::to_string(st.unlockedNodes.size()) + " unlocked, " +
+                                     std::to_string(st.nodeRanks.size()) + " ranked";
+            if (!orphans.empty()) {
+                saveDetail += " — save refers to nodes this build does not have: ";
+                for (std::size_t i = 0; i < orphans.size(); ++i) {
+                    saveDetail += (i ? ", " : "") + orphans[i];
+                }
+            }
+            Add(out, orphans.empty(), true, "saved nodes still exist", std::move(saveDetail));
+
+            // The Analyze hotkey is gated on one specific node key; if that constant and
+            // the table ever part ways, the hotkey can never be unlocked.
+            Add(out, known(SkillTree::kAnalyzeNodeKey), true, "analyze node key",
+                known(SkillTree::kAnalyzeNodeKey)
+                    ? "#" + std::to_string(SkillTree::kAnalyzeNodeKey) + " present"
+                    : "kAnalyzeNodeKey names no node — the Analyze hotkey is unreachable");
+        }
+
         void CheckCrafting(std::vector<Result>& out) {
             const bool item = CraftHooks::ItemCraftingHooksActive();
             const bool iter = CraftHooks::IterationHooksActive();
@@ -167,6 +276,7 @@ namespace Isekai::SelfTest {
         std::vector<Result> out;
         CheckPlugin(out);
         CheckEnvironment(out);
+        CheckSkillTree(out);
         CheckQuests(out);
         CheckShop(out);
         CheckCrafting(out);

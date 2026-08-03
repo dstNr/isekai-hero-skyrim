@@ -124,6 +124,47 @@ check("skill tree: node keys are unique", () => {
   return `${keys.length} unique`;
 });
 
+check("skill tree: every node icon file exists", () => {
+  const cpp = read("src/SkillTree.cpp");
+  const from = cpp.indexOf("constexpr Node kNodes[] = {");
+  const body = cpp.slice(from, cpp.indexOf("\n        };", from));
+  const icons = [...new Set([...body.matchAll(/"([\w.]+\.png)"/g)].map((m) => m[1]))];
+  need(icons.length > 0, "no node icons parsed — parser stale?");
+  for (const i of icons) {
+    need(existsSync(join(ROOT, "icons", i)), `icons/${i} is missing — that tile renders blank`);
+  }
+  return `${icons.length} icons`;
+});
+
+check("skill tree: every prerequisite names a real node", () => {
+  const cpp = read("src/SkillTree.cpp");
+  const from = cpp.indexOf("constexpr Node kNodes[] = {");
+  const body = cpp.slice(from, cpp.indexOf("\n        };", from));
+  const keys = new Set(parseSkillTreeNodes().map((n) => n.key));
+  const prereqs = [...body.matchAll(/\{\s*(\d+),\s*(\d+)\s*\},\s*Effect::/g)];
+  need(prereqs.length > 0, "no prereq pairs parsed — parser stale?");
+  let refs = 0;
+  for (const m of prereqs) {
+    for (const p of [+m[1], +m[2]]) {
+      if (p === 0) continue;   // 0 = no prerequisite
+      refs++;
+      need(keys.has(p), `a node lists prerequisite #${p}, which does not exist`);
+    }
+  }
+  return `${refs} references`;
+});
+
+check("skill tree: kAnalyzeNodeKey names a real node", () => {
+  const hdr = read("src/SkillTree.h");
+  const m = hdr.match(/kAnalyzeNodeKey = (\d+)/);
+  need(m, "kAnalyzeNodeKey not found in SkillTree.h");
+  const keys = new Set(parseSkillTreeNodes().map((n) => n.key));
+  need(keys.has(+m[1]),
+       `kAnalyzeNodeKey is ${m[1]} but no node has that key — the Analyze hotkey ` +
+       `could never be unlocked`);
+  return `#${m[1]}`;
+});
+
 /* -- 2. zone geometry ------------------------------------------------------
    Both renderers pad zone frames in design units scaled by the same fit factor
    as the node positions and radii, so the whole layout is proportional and can
