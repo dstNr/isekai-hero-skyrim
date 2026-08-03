@@ -199,9 +199,15 @@ and **geometry whose terms did not all scale together**. Two things cover that:
 - **The in-game self-test** — set `SelfTestKey` in `IsekaiHero.ini` (off by default) and
   press it. Checks what is only decidable in a running game: that the ESP's forms resolve,
   that **every quest target keyword actually exists in the load order** (a mistyped one
-  fails silently — the objective simply never completes), that the shop can deliver what it
-  advertises, and that the crafting hooks installed. Writes a PASS/FAIL block to the log.
-  This is the thing to ask a bug reporter for.
+  fails silently — the objective simply never completes), that all 79 milestone quests
+  resolve, that each material pack's sweep finds anything, and that the crafting hooks
+  installed. Writes a PASS/FAIL block to the log. This is the thing to ask a bug reporter
+  for.
+
+Neither can test anything that **changes state** — whether a purchase really arrives,
+whether respec reverts correctly, whether a kill counts. That is what
+[docs/MANUAL_TESTS.md](docs/MANUAL_TESTS.md) is: the in-game test plan, ordered by risk,
+covering exactly the gaps the two layers above leave and nothing they already prove.
 
 `build.bat` refuses to deploy while Skyrim is running (a locked DLL used to
 mean silently testing stale code). It builds `RelWithDebInfo`, so Crash
