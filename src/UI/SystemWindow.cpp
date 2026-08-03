@@ -333,6 +333,26 @@ namespace Isekai::UI {
         return IsSystemWindowOpen() || IsSkillTreeOpen() || IsShopWindowOpen();
     }
 
+    bool BuiltInUiCanDisplay() {
+        if (!REL::Module::IsVR()) {
+            return true;
+        }
+        // In VR the only renderer we have is the PrismaUI patch. Say so — once per
+        // session, and as a native notification, because those DO render in the headset
+        // while nothing of ours does.
+        static bool warned = false;
+        if (!warned) {
+            warned = true;
+            logger::warn("UI: asked to show a built-in screen in VR without an active "
+                         "PrismaUI view. The ImGui overlay is disabled in VR, so nothing "
+                         "would have appeared. Needs the Isekai PrismaUI patch AND "
+                         "PrismaUI's 1.5.0 VR build.");
+        }
+        RE::DebugNotification("[ SYSTEM ] Needs the PrismaUI patch (1.5.0 VR build) to show "
+                              "its menu in VR.");
+        return false;
+    }
+
     void DismissSystemWindow() {
         if (!IsSystemWindowOpen()) {
             return;
@@ -364,6 +384,12 @@ namespace Isekai::UI {
         if (Prisma::Active()) {
             Prisma::ShowPanel(std::move(a_title), std::move(a_body), std::move(a_choices),
                               std::move(a_onSelect), a_revealCharsPerSec, a_width);
+            return;
+        }
+        if (!BuiltInUiCanDisplay()) {
+            // The callback is dropped on purpose: a panel nobody can see must not leave a
+            // pending decision behind. Callers that own a one-shot flag (the reincarnation)
+            // guard on Prisma::Active() themselves before getting here.
             return;
         }
         {

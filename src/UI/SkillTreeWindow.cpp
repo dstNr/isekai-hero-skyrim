@@ -6,6 +6,7 @@
 #include "System.h"
 #include "UI/Overlay.h"
 #include "UI/Style.h"
+#include "UI/SystemWindow.h"  // BuiltInUiCanDisplay
 #include "UI/Textures.h"
 
 #include <imgui.h>
@@ -151,6 +152,9 @@ namespace Isekai::UI {
     }
 
     void ShowSkillTree() {
+        if (!BuiltInUiCanDisplay()) {
+            return;  // VR without PrismaUI — would open an invisible window
+        }
         g_elapsed = 0.0f;
         g_hovered = 0;
         g_respecArmedUntil = 0.0f;

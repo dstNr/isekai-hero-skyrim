@@ -38,6 +38,15 @@ namespace Isekai::UI {
     // True while the panel is up — i.e. while it should own mouse and keyboard.
     [[nodiscard]] bool IsSystemWindowOpen();
 
+    // False when the built-in (ImGui) UI cannot possibly appear: that is Skyrim VR, where
+    // the overlay hook is deliberately skipped (it crashes on the VR renderer and would
+    // only ever have drawn on the desktop mirror anyway). Every built-in entry point
+    // checks this and tells the player what is missing, because the alternative is what a
+    // VR tester actually hit — the hotkey fires, the panel is "shown", and nothing at all
+    // happens, which is indistinguishable from the hotkey not working.
+    // Only ever false in VR; the flat runtime always has the overlay.
+    [[nodiscard]] bool BuiltInUiCanDisplay();
+
     // True while ANY of our own built-in screens is up (panel, skill tree, shop). The
     // "don't act over a live screen" guards all want this rather than the individual
     // predicates: written out by hand, each new screen has to be remembered at every

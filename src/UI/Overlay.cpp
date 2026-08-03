@@ -247,8 +247,11 @@ namespace Isekai::UI {
         REL::safe_write(reinterpret_cast<std::uintptr_t>(&vtable[kPresentVTableIndex]),
                         reinterpret_cast<std::uintptr_t>(&HookedPresent));
 
-        InstallInput();
-
+        // NOTE: no InstallInput() here. It ran a second time on the flat runtime after the
+        // VR fix moved the call to the top of this function, and it is not idempotent:
+        // MenuControls::AddHandler appends without a duplicate check, so the menu guard
+        // ended up in the chain twice (and the rotation below then put one copy at the
+        // front while the other stayed in the middle).
         logger::info("UI: swap chain Present hooked — overlay armed");
     }
 }
