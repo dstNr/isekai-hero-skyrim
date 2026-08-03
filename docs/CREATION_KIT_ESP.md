@@ -254,41 +254,49 @@ In SSEEdit (as in Part E):
 
 ---
 
-## Part H — System potions (via SSEEdit)
+## Part H — System potions (via the Creation Kit)
 
 Ten consumables sold by the System Shop. **No new Magic Effects are needed** — every one
-is built by pointing an existing vanilla effect at a new magnitude and duration, so this
-is pure data entry, not record design.
+points existing vanilla effects at new magnitudes and durations, so this is data entry,
+not record design.
 
-### The one technique you need
+> **Why the Creation Kit and not SSEEdit here?** Parts E and G are single-field copies,
+> which xEdit does well. These potions need *several effects each*, and adding entries to
+> a record's effect list in xEdit is awkward to impossible depending on the record. The CK
+> has a purpose-built effect list with a proper dialog. Use the right tool.
 
-An ALCH record's `Effects` block is a list. Each entry has:
+### Setup
 
-- **`EFID - Base Effect`** — a reference to a Magic Effect. This is a dropdown: you can
-  re-point it at *any* effect in the load order.
-- **`EFIT - Magnitude / Duration / Area`** — the numbers for that effect on this potion.
+Same as **Preparation** at the top, with one difference: `IsekaiHero.esp` already exists,
+so load it and make it active.
 
-So the recipe for every potion below is the same:
+1. **File → Data**
+2. Tick `Skyrim.esm`, `Update.esm` **and** `IsekaiHero.esp`
+3. Select `IsekaiHero.esp` and click **Set as Active File** — everything you create now
+   lands in it
+4. **OK**, dismiss the warnings with *Yes to All*
 
-1. `Skyrim.esm` → **`Ingestible`** → find **`Potion of Minor Healing`**
-   *(any simple potion works; this one has exactly one effect, which keeps it tidy)*
-2. Right-click → **Copy as new record into…** → `IsekaiHero.esp`
-   → give it the **Editor ID** from the table
-3. **`FULL - Name`** → the display name from the table
-4. **`DATA - Weight`** → `0`,  **`ENIT → Value`** → `0`
-5. In **`Effects`**: you need one entry per line in the "Effects" column.
-   - The copied record already has one — re-point its `EFID` and set its `EFIT`.
-   - For each further effect: right-click the `Effects` header → **Add**, then set
-     `EFID` and `EFIT` on the new entry.
-6. Save on close.
+### Creating one potion
 
-> **Finding an effect in the `EFID` dropdown:** the alchemy ones are named after what the
-> player sees — type `Fortify One-Handed`, `Restore Health`, `Cure Disease`. Their editor
-> IDs mostly start with `Alch`. If two entries share a name, pick the one whose own
-> `FULL - Name` matches; that is the one potions use.
+**Object Window** → left tree: **Magic → Potion** → right-click the list → **New**
 
-> **Duration 0 is not "no effect"** — for an instant effect (Restore, Cure) it means
-> "apply once, now". Only the buffs below get a real duration.
+In the dialog that opens:
+
+1. **ID** → the Editor ID from the tables below
+2. **Name** → the display name
+3. **Weight** → `0`,  **Value** → `0`
+4. The **Effects** list (lower part of the dialog) → right-click inside it → **New**
+   - Pick the effect by the name the player sees — `Restore Health`, `Fortify One-Handed`,
+     `Cure Disease`. A second dialog takes **Magnitude**, **Area** and **Duration**.
+   - Leave **Area** at `0` throughout — none of these are area effects.
+   - Repeat for each line in that potion's row.
+5. **OK**
+
+> **Duration 0 is not "no effect".** For an instant effect (Restore, Cure) it means "apply
+> once, now". Only the elixirs get a real duration.
+
+> If a name appears twice in the effect picker, take the one whose description matches
+> what a potion does — the alchemy variants are the ones potions use.
 
 ### Group 1 — Restoratives (instant)
 
@@ -329,13 +337,25 @@ Every duration below is **`3600`**.
 The shop looks these up by their local FormID, and only shows a card once the form
 resolves — so an incomplete ESP costs nothing, the missing potions simply don't appear.
 
-Two ways to get me the IDs, either is fine:
+Three ways to get me the IDs, whichever is least effort:
 
-- **From SSEEdit directly:** each new record shows its FormID in the header (e.g.
-  `FE012D80`). Because the ESP is ESL-flagged, the part I need is the **last three hex
-  digits** (`D80`). Send me the list.
+- **From the Creation Kit:** the potion list has a **Form ID** column. Because the ESP is
+  ESL-flagged, the part I need is the **last three hex digits** (e.g. `FE012D80` → `D80`).
+- **From SSEEdit:** open `IsekaiHero.esp`, the new records sit under `Ingestible`, and each
+  header shows its FormID. Same last three digits.
 - **From the game:** start once and send the log — the plugin dumps every form the ESP
-  contributes with its ID (see Part F).
+  contributes with its ID (see Part F). This one needs no tool at all.
+
+Do them all in one pass and send the list together; I wire them in one edit.
+
+### If the CK will not save, or a record vanishes
+
+- **"Set as Active File" greyed out** — you selected a master (`.esm`). Only `.esp` files
+  can be active.
+- **The new potion is not in `IsekaiHero.esp` afterwards** — it was created while a
+  different file was active. Check the title bar; it names the active file.
+- **The CK refuses to save with an error about a missing effect** — an effect row was left
+  without a chosen Magic Effect. Delete the empty row.
 
 ---
 
@@ -364,3 +384,4 @@ quest IDs. So there is no guessed number in the code.
 | Chest empties itself | Forgot the `Respawns` checkbox (Part C) |
 | Passives don't take effect | Ability type is `Spell` instead of `Ability` (Part B) |
 | Effect doesn't show in the menu | `Hide in UI` accidentally ticked (Part A) |
+| Can't add an effect to a potion in SSEEdit | Use the Creation Kit for those — **Magic → Potion** has a real effect list. Part H was originally written for xEdit and that was the wrong tool. |
