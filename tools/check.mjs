@@ -280,18 +280,22 @@ check("shop: every visible card has its icon file", () => {
   return `${visible.length} icons present`;
 });
 
-check("shop: potion entries are either fully wired or fully absent", () => {
-  // A potion with a localID but no icon would render as a blank card; one with an
-  // icon but no ID is simply pending. Only the first combination is a bug.
+check("shop: potions have an icon before they have an ESP id", () => {
+  // Two independent things gate a potion card: its artwork and its ESP record. Having
+  // the icon without the record is the normal pending state. Having the RECORD without
+  // the icon is the bug — the card goes live and renders blank.
   const pots = parseShopCatalog().filter((e) => e.kind === "OurItem");
+  need(pots.length > 0, "no potion entries parsed — parser stale?");
   for (const e of pots) {
     if (e.localID) {
       need(existsSync(join(ROOT, "icons", e.icon)),
-           `${e.name} has an ESP id but no icons/${e.icon}`);
+           `${e.name} has an ESP id but no icons/${e.icon} — its card would be blank`);
     }
   }
+  const icons = pots.filter((e) => existsSync(join(ROOT, "icons", e.icon))).length;
   const wired = pots.filter((e) => e.localID).length;
-  return `${wired}/${pots.length} wired`;
+  return `${pots.length} potions: ${icons} icons ready, ${wired} ESP records` +
+         (wired < pots.length ? ` — ${pots.length - wired} card(s) still hidden` : "");
 });
 
 /* -- 4. cross-layer JSON contracts ----------------------------------------- */
