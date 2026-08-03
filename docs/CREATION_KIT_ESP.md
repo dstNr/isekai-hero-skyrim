@@ -1,7 +1,26 @@
 # Creation Kit guide: `IsekaiHero.esp`
 
-A one-time CK session, ~20–30 minutes. After that C++ does all the work again — you
-never have to touch the Creation Kit again.
+Everything the mod needs from a plugin file. Parts A–G built the original ESP; the later
+parts were added as features needed them.
+
+## What is outstanding right now
+
+| Part | What | Why now |
+|---|---|---|
+| **I** | Shock Resist magic effect + ability | **Fixes a live bug** — two milestones have never granted anything. ~3 min |
+| **H** | The ten System potions | Their shop cards, icons and code are all done and waiting; only the records are missing. ~30 min |
+| **J** | Damage abilities | *Optional.* Unblocks a roadmap item, but nothing references them yet. |
+
+Do **I** first — it is three minutes and repairs something broken. Then **H** if you have
+the time. **J** only if you want to go further.
+
+Afterwards send me the FormIDs (the last three hex digits of each) and I wire them in;
+see *Afterwards — the FormIDs* under Part H for the three ways to read them off.
+
+> `node tools/check.mjs` currently **fails** on the Part I arity error. That is deliberate:
+> it stays red until the ESP has that ability, so the bug cannot be forgotten again.
+
+---
 
 ## Why an ESP at all?
 
@@ -372,6 +391,90 @@ Do them all in one pass and send the list together; I wire them in one edit.
   different file was active. Check the title bar; it names the active file.
 - **The CK refuses to save with an error about a missing effect** — an effect row was left
   without a chosen Magic Effect. Delete the empty row.
+
+---
+
+## Part I — the missing Shock Resist ability (fixes a live bug)
+
+**Do this one.** It is not a new feature; it repairs something that has never worked.
+
+### What is wrong
+
+The milestone table grants **nine** distinct actor values, but Parts A and B built only
+**eight** ability spells. Each passive is delivered by one ability per actor value, so at
+least one is unbacked — and an unbacked passive grants nothing, logs nothing, and looks
+exactly like a milestone whose effect is simply small. By name, the missing one is Shock
+Resist: the eight cover Health, Magicka, Stamina, Carry Weight, and the Magic/Fire/Frost/
+Disease resistances.
+
+Two milestones are affected, and have been from the start:
+
+| Milestone | Quest | Grants |
+|---|---|---|
+| Scholar | *Hitting the Books* (College of Winterhold) | +5% Shock Resist |
+| Nightingale | *Trinity Restored* (Thieves Guild) | +5% Shock Resist |
+
+`node tools/check.mjs` fails on this until it is fixed, and the in-game self-test names
+the exact actor value once you run it (F11, if `SelfTestKey` is set).
+
+### The magic effect
+
+**Object Window** → **Magic → Magic Effect** → right-click → **New**, or simply
+**Duplicate** `IsekaiME_ResistFire` and change three fields. Everything else is identical
+to Part A — archetype `Peak Value Modifier`, casting `Constant Effect`, delivery `Self`,
+flags **`Recover`** ✅ and **`No Duration`** ✅, magnitude/duration/area empty.
+
+| ID | Name | Assoc. Item 1 |
+|---|---|---|
+| `IsekaiME_ResistShock` | `System: Shock Resist` | `ResistShock` |
+
+### The ability
+
+**Magic → Spell** → right-click → **New**, or duplicate `IsekaiAB_ResistFire`. Same as
+Part B: type `Ability`, casting `Constant Effect`, delivery `Self`, cost 0, and one effect
+entry at **magnitude 0, duration 0, area 0**.
+
+| Ability ID | Magic effect |
+|---|---|
+| `IsekaiAB_ResistShock` | `IsekaiME_ResistShock` |
+
+Send me its FormID (last three hex digits) with the potions' — it goes into
+`kAbilityFormIDs` in `src/Passives.cpp`, and the two milestones start paying immediately,
+including retroactively on the next load.
+
+---
+
+## Part J — damage abilities (optional, and nothing uses them yet)
+
+Only worth doing if you want to unblock the roadmap's damage nodes. **Creating these
+changes nothing on its own** — no skill-tree node references them until I add one, and I
+would rather design those (magnitudes, costs, which rebirth tier) than have you build
+records blind.
+
+`docs/IDEAS.md` records damage nodes as blocked because "there is no global spell-damage
+actor value". That turned out to be wrong — several exist:
+
+| Actor value | What it scales | Note |
+|---|---|---|
+| `AttackDamageMult` | **all** weapon damage | Its base is `1.0`, not `0`, so a magnitude of `0.5` means +50%, not +50 points |
+| `DestructionPowerModifier` | Destruction spell damage | The actor value the Augmented Flames-style perks use |
+| `CriticalChance` | critical hit chance | |
+| `WeaponSpeedMult` | attack speed | Base `1.0` as well. **Known for animation conflicts** — the skill tree deliberately avoids attack speed elsewhere, and this is why |
+
+If you make them, follow Part A/B exactly, with `Assoc. Item 1` set to the actor value:
+
+| Magic effect | Name | Ability |
+|---|---|---|
+| `IsekaiME_AttackDamage` | `System: Attack Damage` | `IsekaiAB_AttackDamage` |
+| `IsekaiME_SpellDamage` | `System: Spell Damage` | `IsekaiAB_SpellDamage` |
+
+> The base-`1.0` values are the reason `Progression.cpp` limits passives to actor values
+> that add onto a known base. Their magnitudes need testing in game before any node ships
+> with a number — send me the FormIDs and I will build the nodes with values we can then
+> tune together.
+
+I would skip `WeaponSpeedMult` entirely. Attack speed is the single most conflict-prone
+value in Skyrim modding, and the tree already avoids it on purpose.
 
 ---
 
