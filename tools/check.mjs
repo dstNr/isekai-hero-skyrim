@@ -298,6 +298,36 @@ check("shop: potions have an icon before they have an ESP id", () => {
          (wired < pots.length ? ` — ${pots.length - wired} card(s) still hidden` : "");
 });
 
+check("shop: the built-in window still fits a 1080p screen", () => {
+  // The ImGui shop sizes itself from the catalog, so growing the catalog grows the
+  // window. With the potions wired it reached 18 cards, and at the original four columns
+  // that was a 1454px-tall window on a 1080p display - taller than the screen, with no
+  // scrolling to fall back on.
+  const src = read("src/UI/ShopWindow.cpp");
+  const num = (re, what) => {
+    const m = src.match(re);
+    need(m, `could not read ${what} from ShopWindow.cpp`);
+    return parseFloat(m[1]);
+  };
+  const cardW = num(/kCardW = ([\d.]+)f/, "kCardW");
+  const cardH = num(/kCardH = ([\d.]+)f/, "kCardH");
+  const gap = num(/kCardGap = ([\d.]+)f/, "kCardGap");
+  const pad = num(/kPad = ([\d.]+)f/, "kPad");
+  const head = num(/kHeadH = ([\d.]+)f/, "kHeadH");
+  const foot = num(/kFootH = ([\d.]+)f/, "kFootH");
+  const cols = num(/kCols = (\d+)/, "kCols");
+
+  const count = parseShopCatalog().filter((e) => e.kind !== "OurItem" || e.localID).length;
+  const c = Math.max(1, Math.min(cols, count));
+  const rows = Math.max(1, Math.ceil(count / c));
+  const w = pad * 2 + c * cardW + (c - 1) * gap;
+  const h = head + rows * cardH + (rows - 1) * gap + foot;
+
+  need(w <= 1920 && h <= 1080,
+       `${count} cards in ${c} columns makes a ${w}x${h} window, which does not fit 1920x1080`);
+  return `${count} cards, ${c}x${rows} -> ${w}x${h}`;
+});
+
 /* -- 4. cross-layer JSON contracts ----------------------------------------- */
 
 function contract(label, cppFile, prefix) {
@@ -380,6 +410,93 @@ check("ESP: no two features claim the same form ID", () => {
     byId.set(e.id, e);
   }
   return `${all.length} ids, all distinct`;
+});
+
+/* Read plugin/IsekaiHero.esp itself. Everything above compares source against source;
+   this compares source against the actual plugin, which is the only way to catch a
+   FormID the code names but the ESP does not have (or vice versa). */
+function parseEsp() {
+  const buf = readFileSync(join(ROOT, "plugin/IsekaiHero.esp"));
+  need(buf.subarray(0, 4).toString("ascii") === "TES4", "plugin/IsekaiHero.esp is not a TES4 file");
+  const hdrSize = buf.readUInt32LE(4);
+  const flags = buf.readUInt32LE(8);
+  const light = (flags & 0x200) !== 0;
+
+  const edidOf = (body) => {
+    let i = 0;
+    while (i + 6 <= body.length) {
+      const sig = body.subarray(i, i + 4).toString("ascii");
+      const size = body.readUInt16LE(i + 4);
+      if (sig === "EDID") return body.subarray(i + 6, i + 6 + size).toString("ascii").replace(/\0.*$/, "");
+      i += 6 + size;
+    }
+    return "";
+  };
+
+  const recs = [];
+  const walk = (off, end) => {
+    while (off + 24 <= end) {
+      const sig = buf.subarray(off, off + 4).toString("ascii");
+      if (sig === "GRUP") {
+        const gsize = buf.readUInt32LE(off + 4);
+        if (gsize < 24) return;
+        walk(off + 24, off + gsize);
+        off += gsize;
+      } else {
+        const dsize = buf.readUInt32LE(off + 4);
+        const rflags = buf.readUInt32LE(off + 8);
+        const fid = buf.readUInt32LE(off + 12);
+        // Compressed records are rare here and we only need the EDID; skip if so.
+        const body = (rflags & 0x00040000) ? Buffer.alloc(0) : buf.subarray(off + 24, off + 24 + dsize);
+        recs.push({ sig, formID: fid, local: fid & 0x00ffffff, edid: edidOf(body) });
+        off += 24 + dsize;
+      }
+    }
+  };
+  walk(24 + hdrSize, buf.length);
+  need(recs.length > 0, "no records parsed from the ESP — parser stale?");
+  return { light, recs };
+}
+
+check("ESP: every FormID is valid for a light plugin", () => {
+  const { light, recs } = parseEsp();
+  if (!light) {
+    return `${recs.length} records (plugin is NOT ESL-flagged, so any local id is fine)`;
+  }
+  // A light plugin has 12 bits of local FormID. A record above 0xFFF is remapped by the
+  // engine to its low 12 bits, so it lands somewhere other than where the file says -
+  // it may happen to work, but xEdit flags it and any FormID compaction will move it.
+  const bad = recs.filter((r) => r.local > 0xfff);
+  need(bad.length === 0,
+       `${bad.length} record(s) outside the ESL range (max 0xFFF): ` +
+       bad.map((r) => `${r.edid || r.sig} 0x${r.local.toString(16).toUpperCase()}`).join(", "));
+  return `${recs.length} records, all <= 0xFFF`;
+});
+
+check("ESP: every FormID the code names exists in the plugin", () => {
+  const { recs } = parseEsp();
+  const byLocal = new Map(recs.map((r) => [r.local, r]));
+
+  // Everywhere the source hardcodes a local FormID from our own ESP.
+  const named = [];
+  const add = (file, re, label) => {
+    for (const m of read(file).matchAll(re)) {
+      const id = parseInt(m[1], 16);
+      if (id !== 0) named.push({ id, file, label: label || m[2] || "" });
+    }
+  };
+  add("src/Passives.cpp", /^\s*(0x000[0-9A-Fa-f]{3}),\s*\/\/\s*(.+)$/gm);
+  add("src/Sounds.cpp", /^\s*(0x000[0-9A-Fa-f]{3}),\s*\/\/\s*(.+)$/gm);
+  add("src/Storage.cpp", /constexpr RE::FormID (?:\w+) = (0x000[0-9A-Fa-f]{3});/g, "storage form");
+  add("src/Shop.cpp", /Cat::k\w+,\s*\d+,\s*(0x[0-9A-Fa-f]+)\s*\}/g, "shop item");
+  need(named.length > 0, "no ESP FormIDs found in the source — parser stale?");
+
+  const missing = named.filter((n) => !byLocal.has(n.id));
+  need(missing.length === 0,
+       `the code references ${missing.length} form(s) the ESP does not contain: ` +
+       missing.map((n) => `0x${n.id.toString(16).toUpperCase().padStart(6, "0")} ` +
+                          `(${n.label.trim()}, ${n.file})`).join("; "));
+  return `${named.length} referenced forms, all present`;
 });
 
 check("ESP: the ability and sound tables have their expected sizes", () => {

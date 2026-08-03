@@ -30,7 +30,12 @@ namespace Isekai::UI {
         constexpr float kPad = 28.0f;
         constexpr float kHeadH = 104.0f;  // title + points row + separator
         constexpr float kFootH = 78.0f;   // hint + close button
-        constexpr int   kCols = 4;        // catalog wraps into rows of this many cards
+        // The catalog wraps into rows of this many cards. Six, not four: with the ten
+        // potions wired the catalog is 18 entries, and four columns meant five rows —
+        // a 974x1454 window, taller than a 1080p screen. Six gives three rows at
+        // 1442x938, which also still fits a 720p display once `s` scales it down.
+        // tools/check.mjs asserts this stays true.
+        constexpr int kCols = 6;
 
         float g_elapsed = 0.0f;  // drives the fade-in
 

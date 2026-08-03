@@ -254,7 +254,19 @@
     { name: "Soul Gems",           qty: "50 of each",  cost:  5, icon: "shop_souls_small.png" },
     { name: "Soul Gem Crate",      qty: "250 of each", cost: 15, icon: "shop_souls_large.png" },
     { name: "Gold",                qty: "x100,000",    cost:  5, icon: "shop_gold_small.png" },
-    { name: "Gold Hoard",          qty: "x1,000,000",  cost: 20, icon: "shop_gold_large.png" }
+    { name: "Gold Hoard",          qty: "x1,000,000",  cost: 20, icon: "shop_gold_large.png" },
+    // System potions. These only appear in game once their ESP record resolves; the
+    // mock always shows them, which is the point of a preview.
+    { name: "Restorative: Vigor",       qty: "x10", cost: 3, icon: "shop_potion_vigor.png" },
+    { name: "Restorative: Focus",       qty: "x10", cost: 3, icon: "shop_potion_focus.png" },
+    { name: "Restorative: Vitality",    qty: "x10", cost: 3, icon: "shop_potion_vitality.png" },
+    { name: "Panacea",                  qty: "x10", cost: 3, icon: "shop_potion_panacea.png" },
+    { name: "Elixir of the System",     qty: "x10", cost: 6, icon: "shop_elixir_system.png" },
+    { name: "Draught of the Ascended",  qty: "x10", cost: 6, icon: "shop_elixir_ascended.png" },
+    { name: "Aegis Elixir",             qty: "x10", cost: 6, icon: "shop_elixir_aegis.png" },
+    { name: "Phantom Draught",          qty: "x10", cost: 6, icon: "shop_elixir_phantom.png" },
+    { name: "Elixir of Endless Casting", qty: "x10", cost: 6, icon: "shop_elixir_casting.png" },
+    { name: "Titan's Draught",          qty: "x10", cost: 6, icon: "shop_elixir_titan.png" }
   ];
 
   function buildShop() { return { points: G.points, items: SHOP_ITEMS }; }
