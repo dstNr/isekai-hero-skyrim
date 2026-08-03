@@ -64,10 +64,15 @@ is there.
      now runs BEFORE the VR return (event sinks only, renderer-free, VR-safe); only the
      swap-chain hook stays skipped. The log now shows
      `System hotkey fired — opening status (...)` for confirmation.
-   → A real VR UI is **Phase 2** (in-HMD rendering via OpenVR overlay / stereo targets; a
-     tester named the mod **"ImGui VR Helper"**, which can render ImGui in VR — possibly
-     the way to get the ImGui overlay into the headset after all. Or — smaller — a fallback
-     to the game's own `MessageBox` menus for the panels, which the headset renders itself).
+   → **Addendum 2 (tester report on 0.6.1, Aug 2026):** the hotkey still did not open the
+     menu. Verified that the input fix above IS in the `v0.6.1` tag, so the handler is
+     reached. The remaining hole was that a built-in screen in VR failed **silently**: with
+     PrismaUI inactive, `ShowStatusPanel` fell through to the ImGui path, which in VR is
+     never rendered — the panel was "opened" into nothing, indistinguishable from a dead
+     hotkey. `UI::BuiltInUiCanDisplay()` now gates the three built-in entry points and
+     raises a native notification instead. **This is a diagnosis fix, not proof of the root
+     cause** — whether that tester's PrismaUI view is actually active still has to come from
+     their log (see "Reading a VR log" below).
 3. **PrismaUI patch in VR — clarified upstream (as of July 2026):** VR is supported **only
    in the PrismaUI 1.5.0 VR alpha / 1.5.0-rc**, as an experimental alpha ("full VR support
    is coming", best on Meta headsets, alpha build via Discord/Dwemer Mods, not the stable
@@ -93,12 +98,75 @@ is there.
    yet verified in VR**, but empirically grounded (DumpForms found the forms in the same
    log). On a VR test, watch for `Passives: 8 of 8` and `Sounds: 4 of 4` in the log.
 
+## Reading a VR log
+
+Ask for `Documents\My Games\Skyrim VR\SKSE\IsekaiHeroSKSE.log`. **No special build is
+needed** — every line below has existed since `v0.6.1` (verified against the tag). Exactly
+one `Prisma:` line is written at load, and it alone separates the likely causes:
+
+| Log line | Means |
+|---|---|
+| `Prisma: web UI active (view N)` | PrismaUI is fine — look further downstream |
+| `Prisma: PrismaUI not loaded` | the framework is absent or its API request failed |
+| `Prisma: PrismaUI present but the view patch is not installed` | **our** patch archive is missing (the most common case: the base mod ships two archives) |
+| `Prisma: CreateView failed` | the framework is there but rejected our view |
+
+Then check whether `System hotkey fired — opening status (prisma=…, paused=…)` appears on
+a key press. Present ⇒ input works and the problem is rendering; absent ⇒ input.
+
+## Phase 2 — getting the UI into the headset
+
+Three routes, in the order they are currently worth considering.
+
+### (a) ImGui VR Helper — most promising, but not the "four easy steps" it looks like
+
+[alandtse/imgui-vr-helper](https://github.com/alandtse/imgui-vr-helper) renders an
+existing ImGui menu onto a flat panel in VR. Its README documents four integration steps:
+pull `api/` via CMake FetchContent, `Connect()` in `kPostPostLoad`, `Update(menuOpen)` per
+frame, and `RenderFrame()` in place of `ImGui_ImplDX11_RenderDrawData`. It is a runtime
+dependency, but `Connect()` returns false when absent, so the soft-dependency pattern we
+already use for PrismaUI and SkyrimNet applies. API headers are LGPL-3.0-or-later; the
+helper itself GPL-3.0 with modding exceptions. **This repo currently has no LICENSE file
+at all — settle that before taking an LGPL dependency.**
+
+**What makes it bigger than four steps for us**, from reading the client SDK header:
+
+> "No per-frame render callback mechanism exists. The client must actively call `Update()`
+> … from its own frame context."
+
+The helper owns *its* Present hook but never calls us. We would still need our own
+per-frame tick — and ours is exactly what does not work in VR (bug 2 above). The cause is
+visible in CommonLibSSE-NG's `RE/R/Renderer.h`: `RendererData` is a single flat layout with
+hard-coded offsets and a `static_assert`, with **no VR variant**. `renderWindows[0].swapChain`
+therefore reads garbage under VR. The same broken read also backs `UI/Textures.cpp` (the
+icon loader takes `renderer->data.forwarder` as its `ID3D11Device`), which is harmless only
+because the overlay never runs in VR today — under the helper it would go live.
+
+Sizing, if it comes to it: our DirectX surface is confined to **two files** —
+`UI/Overlay.cpp` and `UI/Textures.cpp`. Everything else (SystemWindow, SkillTreeWindow,
+ShopWindow, LevelUpEffect, Input, Style) is renderer-agnostic ImGui and would carry over
+untouched. The open work is a VR-valid device/swap-chain acquisition plus a frame tick,
+and controller bindings via `AddCombo()` since `RShift+S` means nothing in VR. Estimate:
+2–4 sessions of work, dominated not by the code but by the fact that **nobody on this side
+can test it** — every iteration is a round trip through a tester, on a code path that
+crashes rather than fails softly when wrong.
+
+### (b) PrismaUI (current strategy)
+
+Already implemented and free if it works; depends on PrismaUI's own 1.5.0 VR alpha. Other
+PrismaUI mods demonstrably open in VR, so the framework is viable — establish whether our
+patch is actually installed before investing in (a).
+
+### (c) `MessageBox` fallback
+
+Route the dialog panels through the game's own menus, which the headset renders natively.
+Smallest of the three, but the skill tree and the shop have no sensible `MessageBox` form,
+so it only ever covers part of the UI.
+
 ## Phases
 
 - **Phase 1 (done):** VR-loadable build, runtime logging, docs, requirements. The overlay
   crash is fixed (the hook is skipped in VR) — the mod loads and the logic runs, but VR has
-  no UI for now.
-- **Phase 2 (open):** get the UI into the headset. Two routes: (a) in-HMD rendering via
-  OpenVR overlay / stereo targets (heavy), or (b) a fallback to the game's own `MessageBox`
-  menus for the panels (the headset renders them natively; the skill tree stays the hard
-  case). Only worthwhile with a VR test environment.
+  no UI of its own.
+- **Phase 2 (open):** see the three routes above. Still gated on a VR test environment, or
+  at least on a responsive tester.

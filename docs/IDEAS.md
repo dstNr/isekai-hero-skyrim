@@ -6,11 +6,15 @@ the one-liner list below — the reasoning behind them lives in git history and
 
 **Shipped, not detailed here:** repeatable utility nodes (including the Tier 1
 resistance/regen batch — Storm Ward, Warded Mind, Arcane Absorption, Iron Skin, Rapid
-Recovery), Shattered/Dormant/Custom blessings, skill-tree respec, the Reboot button,
-remappable hotkey + `HideSealedNodes` ini, the PrismaUI status dashboard, orphaned-chest
-cleanup, System Rank (E–S) in the status panel, System Analysis (the Analyze hotkey),
-System Shop (soul gems/gold for System Points), the storage codex (physical fallback
-access to Dimensional Storage). See `CHANGELOG.md` for versions.
+Recovery), mastery tiers on those nodes (10 ranks / 5 named tiers, escalating cost),
+Shattered/Dormant/Custom blessings, skill-tree respec, the Reboot button, remappable
+hotkey + `HideSealedNodes` ini, the PrismaUI status dashboard, orphaned-chest cleanup,
+System Rank (E–S) in the status panel, System Analysis (the Analyze hotkey), the storage
+codex (physical fallback access to Dimensional Storage), the skill tree's zone redesign
+(named branches, node labels, size hierarchy), and the System Shop — now its own screen of
+item cards selling material packs, gold and (pending their ESP records) System potions,
+which is also how the Dimensional Storage gets filled at all since it stopped arriving
+pre-stocked. See `CHANGELOG.md` for versions.
 
 ---
 
@@ -118,10 +122,9 @@ cover every input method" problems).
 
 ### Skyrim VR — Phase 2 (in-HMD UI)
 
-**Status:** 🅿️ Blocked on a VR test environment. Phase 1 (VR-loadable, no crash, forms
-resolve, PrismaUI as the VR UI) is shipped; see `docs/VR.md` for the full status.
-Two routes for getting UI into the headset without depending on PrismaUI's own VR alpha:
-(a) in-HMD rendering via an OpenVR overlay / stereo targets (heavy), or (b) a fallback to
-the game's own `MessageBox` menus for panels, which the headset renders natively (the
-skill tree stays the hard case either way). Only worth designing in detail once there is
-a VR install to test against.
+**Status:** 🅿️ Blocked on a VR test environment (or a responsive tester). Phase 1
+(VR-loadable, no crash, forms resolve, PrismaUI as the VR UI) is shipped.
+**The three routes are now costed out in `docs/VR.md`** — including why the ImGui VR
+Helper's "four integration steps" do not cover our case (it exposes no per-frame render
+callback, and our own frame tick is precisely what is broken in VR). Read that before
+picking this up; the analysis is done, only the decision is open.
