@@ -73,7 +73,7 @@ namespace Isekai::SelfTest {
             // Effect::kAttributes skill-tree node; a missing one silently drops whichever
             // actor value it backed.
             const auto covered = Passives::CoveredActorValues();
-            constexpr std::size_t kExpectedAbilities = 8;
+            constexpr std::size_t kExpectedAbilities = 9;
             Add(out, covered.size() == kExpectedAbilities, true, "ESP ability spells",
                 std::to_string(covered.size()) + "/" + std::to_string(kExpectedAbilities) +
                     " resolved" +

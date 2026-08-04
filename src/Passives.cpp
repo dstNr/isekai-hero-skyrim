@@ -26,6 +26,11 @@ namespace Isekai::Passives {
             0x000D72,  // System: Emberskin
             0x000D74,  // System: Frostskin
             0x000D76,  // System: Purity
+            // Added later than the rest, hence the gap. Without it the two milestones
+            // that grant Shock Resist ("Hitting the Books", "Trinity Restored") had no
+            // ability to carry their bonus and silently granted nothing — the milestone
+            // table names nine actor values and this list had only eight.
+            0x000D8C,  // System: Shock Resist
         };
 
         struct Ability {

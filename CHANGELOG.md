@@ -6,7 +6,23 @@ All notable changes to Isekai Hero are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- **Two milestones have never granted anything.** *Hitting the Books* (College of
+  Winterhold) and *Trinity Restored* (Thieves Guild) both award Shock Resist, but the ESP
+  carried ability spells for only eight actor values and Shock Resist was not among them —
+  a passive with no ability behind it grants nothing and reports nothing. The ESP now has
+  a ninth ability and both pay out, retroactively on the next load for existing characters.
+  Found by counting: the milestone table names nine distinct actor values against eight
+  abilities, which `tools/check.mjs` now asserts permanently.
+
 ### Added
+- **The ten System potions are live** — four instant Restoratives (health, magicka,
+  stamina, cure disease and poison) and six one-hour Elixirs, sold in the System Shop at
+  3 and 6 System Points for ten at a time. Their ESP records now exist, so the cards that
+  had been waiting on them appear.
+  The built-in shop moved from four columns to six in the same change: eighteen cards at
+  four columns produced a 1454px-tall window, taller than a 1080p screen and with no
+  scrolling to fall back on.
 - **Consistency checks (`node tools/check.mjs`)** and an **in-game self-test**
   (`SelfTestKey` in the ini, off by default). Deliberately not a unit-test suite: every
   translation unit force-includes CommonLibSSE through the PCH and most of the code
