@@ -1,5 +1,9 @@
 # Shop icon generation prompts
 
+> Shop card art only. The rest of the interface — the status panel buttons, the blessing
+> choice, the rank badge — plus the mod page art is in
+> [UI_ART_PROMPTS.md](UI_ART_PROMPTS.md).
+
 The System Shop's eight cards each want an icon. The plugin already references them by
 file name — generate the PNGs, drop them in `icons/`, and both renderers pick them up
 with no code change (the build and package scripts copy the whole folder).

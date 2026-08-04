@@ -43,6 +43,13 @@ namespace Isekai {
             RE::DebugNotification(a_text);
         }
 
+        // Icon paths for the reincarnation choices. Files may not exist yet: a missing
+        // icon renders as no icon, exactly as these buttons looked before, so wiring the
+        // names ahead of the art costs nothing. See docs/UI_ART_PROMPTS.md.
+        [[nodiscard]] std::string BlessingIcon(const char* a_name) {
+            return std::string("Data\SKSE\Plugins\IsekaiHero\icons\\") + a_name;
+        }
+
         // ---- Reincarnation flow (choice captured into g_state) ----
 
         // kMaxPerkPoints now lives in System.h — and is 255, not 127: the field is
@@ -275,7 +282,10 @@ namespace Isekai {
 
             UI::ShowSystemWindow(
                 "[ SYSTEM ]", intro,
-                std::vector<std::string>{ "FULL AWAKENING", "SHATTERED" },
+                std::vector<UI::Choice>{
+                    { "FULL AWAKENING", BlessingIcon("blessing_full.png"), false },
+                    { "SHATTERED", BlessingIcon("blessing_shattered.png"), false },
+                },
                 [](int a_idx) {
                     g_state.shattered = (a_idx == 1);
                     // Full hands over the tier's flat grant; Shattered takes none. (For a
@@ -299,7 +309,11 @@ namespace Isekai {
                      std::function<void()> a_next) {
             UI::ShowSystemWindow(
                 "[ SYSTEM ]", std::move(a_prompt),
-                std::vector<std::string>{ "NORMAL", "HERO", "ASCENDED" },
+                std::vector<UI::Choice>{
+                    { "NORMAL", BlessingIcon("blessing_normal.png"), false },
+                    { "HERO", BlessingIcon("blessing_hero.png"), false },
+                    { "ASCENDED", BlessingIcon("blessing_ascended.png"), false },
+                },
                 [a_set = std::move(a_set), a_next = std::move(a_next)](int a_idx) {
                     a_set(static_cast<PowerLevel>(std::clamp(a_idx, 0, 2)));
                     a_next();
@@ -375,7 +389,13 @@ namespace Isekai {
                 "            its own.\n"
                 "\n"
                 "Choose your path:",
-                std::vector<std::string>{ "NORMAL", "HERO", "ASCENDED", "DORMANT", "CUSTOM" },
+                std::vector<UI::Choice>{
+                    { "NORMAL", BlessingIcon("blessing_normal.png"), false },
+                    { "HERO", BlessingIcon("blessing_hero.png"), false },
+                    { "ASCENDED", BlessingIcon("blessing_ascended.png"), false },
+                    { "DORMANT", BlessingIcon("blessing_dormant.png"), false },
+                    { "CUSTOM", BlessingIcon("blessing_custom.png"), false },
+                },
                 [](int a_idx) {
                     // CUSTOM sets the three axes apart in its own builder.
                     if (a_idx == 4) {
