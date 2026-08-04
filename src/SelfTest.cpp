@@ -480,16 +480,35 @@ namespace Isekai::SelfTest {
                      fatal > 0 ? " — SOMETHING IS BROKEN, see FAIL above" : "");
         logger::info("=======================================================");
 
-        // The in-game half of the report: enough to know whether to go read the log.
-        // The automatic run stays quiet unless something is actually broken — a
-        // notification on every load would just train the player to ignore it.
-        if (a_notify || fatal > 0) {
-            const std::string msg =
-                failed == 0
-                    ? "[ SYSTEM ] Self-test: all " + std::to_string(out.size()) + " checks passed."
-                    : "[ SYSTEM ] Self-test: " + std::to_string(failed) + " of " +
-                          std::to_string(out.size()) + " failed — see IsekaiHeroSKSE.log.";
-            RE::DebugNotification(msg.c_str());
+        // The in-game half of the report.
+        //
+        // The hotkey run gets a MESSAGE BOX, not a notification. A corner notification
+        // fades in a couple of seconds and is trivially missed, which is indistinguishable
+        // from the key not working at all — and that is exactly what a diagnostic key must
+        // never be ambiguous about. It also carries the failures themselves, so the
+        // common cases need no log at all.
+        //
+        // The automatic run on load stays quiet unless something actually failed: a box on
+        // every load would be intolerable, and a notification would train you to ignore it.
+        if (a_notify) {
+            std::string box = "[ SYSTEM ] SELF-TEST\n\n" + std::to_string(out.size() - failed) +
+                              " of " + std::to_string(out.size()) + " checks passed.";
+            if (failed > 0) {
+                box += "\n";
+                for (const auto& r : out) {
+                    if (!r.pass) {
+                        box += "\n" + std::string(r.fatal ? "FAIL  " : "warn  ") + r.name + ": " +
+                               r.detail;
+                    }
+                }
+            }
+            box += "\n\nFull report: IsekaiHeroSKSE.log";
+            RE::DebugMessageBox(box.c_str());
+        } else if (fatal > 0) {
+            RE::DebugNotification(("[ SYSTEM ] Self-test: " + std::to_string(failed) + " of " +
+                                   std::to_string(out.size()) +
+                                   " failed — see IsekaiHeroSKSE.log.")
+                                      .c_str());
         }
     }
 

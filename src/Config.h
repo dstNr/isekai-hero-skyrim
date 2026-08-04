@@ -29,10 +29,11 @@ namespace Isekai::Config {
     [[nodiscard]] std::uint16_t DormantHeroLevel();
     [[nodiscard]] std::uint16_t DormantAscendedLevel();
 
-    // Hand the player the storage codex — an inventory item that opens the Dimensional
-    // Storage when "drunk". Default true. It is a fallback for anyone whose hotkey or
-    // panel does not work (Skyrim VR, most of all), but it does put a permanent extra
-    // item in the inventory, which is not what everyone wants. See src/Storage.cpp.
+    // Hand the player the storage codex — an inventory item meant to open the Dimensional
+    // Storage when "drunk". **Default false: the feature is not finished.** The item is
+    // handed out and it carries the container's own name, but drinking it does not open
+    // anything, so all it does today is sit in the inventory looking like a stray copy of
+    // the chest. Turn it back on once that works. See src/Storage.cpp.
     [[nodiscard]] bool StorageCodex();
 
     // Feed the player's System status (blessing, milestones) to SkyrimNet, if it is

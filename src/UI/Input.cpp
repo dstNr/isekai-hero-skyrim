@@ -350,6 +350,22 @@ namespace Isekai::UI {
         g_hotkeys[a_scanCode] = Hotkey{ std::move(a_fn), a_modifier };
     }
 
+    void LogHotkeys() {
+        std::scoped_lock lock(g_hotkeyMutex);
+        if (g_hotkeys.empty()) {
+            logger::warn("UI: no hotkeys armed at all");
+            return;
+        }
+        std::string list;
+        for (const auto& [code, hk] : g_hotkeys) {
+            list += (list.empty() ? "" : ", ") + std::format("{:#04x}", code);
+            if (hk.modifier != 0) {
+                list += std::format(" (+{:#04x})", hk.modifier);
+            }
+        }
+        logger::info("UI: {} hotkey(s) armed: {}", g_hotkeys.size(), list);
+    }
+
     void InstallInput() {
         if (auto* manager = RE::BSInputDeviceManager::GetSingleton()) {
             manager->AddEventSink(InputSink::GetSingleton());

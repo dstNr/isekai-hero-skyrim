@@ -337,19 +337,28 @@ namespace Isekai::Storage {
         if (!g_codexToken || !GetState().reincarnated) {
             return;
         }
-        // Opt-out: the codex is a fallback for anyone whose hotkey or panel does not work
-        // (Skyrim VR above all), but it is still a permanent extra item in the inventory —
-        // and it shares the container's name, so it reads as a stray copy of the storage
-        // rather than a key to it. Anyone who does not need it can switch it off.
-        if (!Config::StorageCodex()) {
-            return;
-        }
         auto* player = RE::PlayerCharacter::GetSingleton();
         if (!player) {
             return;
         }
         const auto counts = player->GetInventoryCounts();
-        if (counts.contains(g_codexToken)) {
+        const auto it = counts.find(g_codexToken);
+        const auto held = it != counts.end() ? it->second : 0;
+
+        // Switched off (the default while the codex does not actually open anything):
+        // take back one we handed out earlier, rather than leaving an inert item behind
+        // that the setting claims is not there. Only ever OUR token, only the player's.
+        if (!Config::StorageCodex()) {
+            if (held > 0) {
+                player->RemoveItem(g_codexToken, held, RE::ITEM_REMOVE_REASON::kRemove, nullptr,
+                                   nullptr);
+                logger::info("Storage: reclaimed {} storage codex token(s) — StorageCodex is off",
+                             held);
+            }
+            return;
+        }
+
+        if (held > 0) {
             return;  // already carries one — nothing to do
         }
         player->AddObjectToContainer(g_codexToken, nullptr, 1, nullptr);

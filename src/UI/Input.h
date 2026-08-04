@@ -14,6 +14,13 @@ namespace Isekai::UI {
     void RegisterHotkey(std::uint32_t a_scanCode, std::function<void()> a_fn,
                         std::uint32_t a_modifier = 0);
 
+    // Log every hotkey that ended up armed. Call once, after everything has registered.
+    // Each module logs its own registration already, but those lines are scattered
+    // through the load log and say what a module INTENDED — this is the table the input
+    // handler actually consults, which is the only thing that answers "why does my key
+    // do nothing".
+    void LogHotkeys();
+
     // Subscribe to Skyrim's own input event stream.
     //
     // We cannot read the mouse through the window message queue: Skyrim grabs it

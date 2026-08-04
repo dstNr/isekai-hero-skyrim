@@ -13,6 +13,7 @@
 #include "SkyrimNet.h"
 #include "Sounds.h"
 #include "Storage.h"
+#include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
 #include "UI/Overlay.h"
 #include "UI/Prisma.h"
@@ -838,6 +839,7 @@ namespace Isekai {
                 Analyze::Install();     // "System Analysis" hotkey (skill-tree gated)
                 Quests::Install();      // watches kills for the standing objective
                 SelfTest::Install();    // diagnostic hotkey, off unless the ini sets one
+                UI::LogHotkeys();       // the table the input handler actually consults
 
                 if (auto* ui = RE::UI::GetSingleton()) {
                     ui->AddEventSink<RE::MenuOpenCloseEvent>(MenuWatcher::GetSingleton());

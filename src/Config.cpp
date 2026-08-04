@@ -17,7 +17,10 @@ namespace Isekai::Config {
         std::uint32_t g_systemMenuModifier = 0x36;  // DIK_RSHIFT
         std::uint16_t g_dormantHeroLevel = 25;
         std::uint16_t g_dormantAscendedLevel = 80;
-        bool          g_storageCodex = true;
+        // Off until the codex actually works: it is handed out, it carries the
+        // container's name, and drinking it does not open anything. An unfinished
+        // feature should not be leaving items in people's inventories.
+        bool          g_storageCodex = false;
         bool          g_skyrimNetIntegration = true;
         std::uint32_t g_analyzeKey = 0x2F;  // DIK_V
         // 0 = off. Off by default: the self-test is a diagnostic for bug reports, not a
@@ -72,7 +75,7 @@ namespace Isekai::Config {
         g_systemMenuModifier = 0x36;  // DIK_RSHIFT
         g_dormantHeroLevel = 25;
         g_dormantAscendedLevel = 80;
-        g_storageCodex = true;
+        g_storageCodex = false;
         g_skyrimNetIntegration = true;
         g_analyzeKey = 0x2F;  // DIK_V
         g_selfTestKey = 0;
