@@ -39,8 +39,16 @@ namespace Isekai::UI {
             std::vector<std::pair<int, bool>>        buttons;  // (ImGui button, down)
         };
 
-        // (The old compile-time kLogKeyPresses lived here. It is Config::LogKeyPresses()
-        // now — a build switch is useless for diagnosing someone else's machine.)
+        // (The old compile-time kLogKeyPresses lived here. It is
+        // Config::LogInputDiagnostics() now — a build switch is useless for diagnosing
+        // someone else's machine.)
+
+        // The input diagnostic stops itself after this many presses. Enough to identify
+        // the device and scan code a hotkey arrives under, which is all it is for, and
+        // short enough that leaving the setting on cannot turn into a running record of
+        // everything typed in game. It also keeps the log readable.
+        constexpr int         kInputDiagnosticLimit = 200;
+        std::atomic<int>      g_inputDiagnosticCount{ 0 };
 
         std::mutex g_mutex;
         Pending    g_pending;
@@ -115,12 +123,25 @@ namespace Isekai::UI {
                     // is real: Skyrim VR delivers controller buttons as kVRRight (5) /
                     // kVRLeft (6), which the keyboard-only path below drops silently.
                     // Switched from the ini so a tester needs no special build.
-                    if (button->IsDown() && Config::LogKeyPresses()) {
-                        logger::info("input: device={} scanCode={:#x} ({})",
-                                     static_cast<int>(event->GetDevice()), button->GetIDCode(),
-                                     event->GetDevice() == RE::INPUT_DEVICE::kKeyboard
-                                         ? "keyboard — hotkeys see this"
-                                         : "NOT keyboard — hotkeys ignore this");
+                    //
+                    // Device and scan code only — nothing here or anywhere else turns a
+                    // scan code into a character. It stops after kInputDiagnosticLimit so
+                    // that forgetting the setting cannot leave it recording.
+                    if (button->IsDown() && Config::LogInputDiagnostics()) {
+                        const int n = g_inputDiagnosticCount.fetch_add(1) + 1;
+                        if (n <= kInputDiagnosticLimit) {
+                            logger::info("input: device={} scanCode={:#x} ({})",
+                                         static_cast<int>(event->GetDevice()),
+                                         button->GetIDCode(),
+                                         event->GetDevice() == RE::INPUT_DEVICE::kKeyboard
+                                             ? "keyboard — hotkeys see this"
+                                             : "NOT keyboard — hotkeys ignore this");
+                            if (n == kInputDiagnosticLimit) {
+                                logger::info("input: diagnostic limit reached ({} presses) — "
+                                             "no further input will be logged this session",
+                                             kInputDiagnosticLimit);
+                            }
+                        }
                     }
 
                     if (event->GetDevice() != RE::INPUT_DEVICE::kKeyboard) {

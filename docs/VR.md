@@ -119,9 +119,9 @@ matched. Whether that is the cause depends on what device the tester's key arriv
 which nothing in the log said, because the key-press diagnostic was a compile-time
 constant set to `false`.
 
-It is `LogKeyPresses` in the ini now, so it can be switched on without a special build.
-Ask the tester to set it, press the menu key, and send the log. Every button press then
-logs as:
+It is `LogInputDiagnostics` in the ini now, so it can be switched on without a special
+build. Ask the tester to set it, press the menu key, and send the log. Every button press
+then logs as:
 
 ```
 input: device=0 scanCode=0x2f (keyboard — hotkeys see this)
@@ -139,6 +139,14 @@ input: device=5 scanCode=0x…  (NOT keyboard — hotkeys ignore this)
 > That tester's ini has `SystemMenuKey=0x2f, SystemMenuModifier=0x0` — V with no modifier,
 > not the default RShift+S. Worth confirming they are pressing V on a physical keyboard,
 > since that is the only thing the current code can act on.
+
+> **On asking a user to enable input logging.** The mod reads Skyrim's own in-process
+> event stream (`BSInputDeviceManager::AddEventSink`) — there is no `SetWindowsHookEx`, no
+> `GetAsyncKeyState`, no raw input, and nothing anywhere converts a scan code to a
+> character, so the API patterns antivirus keylogger heuristics look for are absent. It
+> still records scan codes typed into game text fields, which is why it is off by default,
+> named for what it is, documented in the ini, and stops after 200 presses per session.
+> Worth saying plainly when asking someone to switch it on.
 
 ## Reading a VR log
 

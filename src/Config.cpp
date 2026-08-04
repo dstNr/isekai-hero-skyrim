@@ -22,7 +22,7 @@ namespace Isekai::Config {
         // 0 = off. Off by default: the self-test is a diagnostic for bug reports, not a
         // feature, and a stray key that pops a notification would just be noise.
         std::uint32_t g_selfTestKey = 0;
-        bool          g_logKeyPresses = false;
+        bool          g_logInputDiag = false;
 
         [[nodiscard]] std::string Trim(std::string a_s) {
             const auto notSpace = [](unsigned char c) { return !std::isspace(c); };
@@ -74,7 +74,7 @@ namespace Isekai::Config {
         g_skyrimNetIntegration = true;
         g_analyzeKey = 0x2F;  // DIK_V
         g_selfTestKey = 0;
-        g_logKeyPresses = false;
+        g_logInputDiag = false;
 
         std::ifstream in(kIniPath);
         if (!in) {
@@ -112,8 +112,8 @@ namespace Isekai::Config {
                 g_analyzeKey = AsScanCode(val, g_analyzeKey);
             } else if (key == "selftestkey") {
                 g_selfTestKey = AsScanCode(val, g_selfTestKey);
-            } else if (key == "logkeypresses") {
-                g_logKeyPresses = AsBool(val);
+            } else if (key == "loginputdiagnostics") {
+                g_logInputDiag = AsBool(val);
             }
         }
 
@@ -128,10 +128,10 @@ namespace Isekai::Config {
 
         logger::info("Config: HideSealedNodes={}, SystemMenuKey={:#x}, SystemMenuModifier={:#x}, "
                      "DormantHeroLevel={}, DormantAscendedLevel={}, SkyrimNetIntegration={}, "
-                     "AnalyzeKey={:#x}, SelfTestKey={:#x}, LogKeyPresses={}",
+                     "AnalyzeKey={:#x}, SelfTestKey={:#x}, LogInputDiagnostics={}",
                      g_hideSealedNodes, g_systemMenuKey, g_systemMenuModifier, g_dormantHeroLevel,
                      g_dormantAscendedLevel, g_skyrimNetIntegration, g_analyzeKey, g_selfTestKey,
-                     g_logKeyPresses);
+                     g_logInputDiag);
     }
 
     bool HideSealedNodes() {
@@ -166,7 +166,7 @@ namespace Isekai::Config {
         return g_selfTestKey;
     }
 
-    bool LogKeyPresses() {
-        return g_logKeyPresses;
+    bool LogInputDiagnostics() {
+        return g_logInputDiag;
     }
 }

@@ -45,13 +45,20 @@ namespace Isekai::Config {
     // not something a normal playthrough should be able to trigger by accident.
     [[nodiscard]] std::uint32_t SelfTestKey();
 
-    // Log every button press with its input device and scan code. Off by default; it is
-    // noisy, and only useful when a hotkey does not fire.
+    // Log button presses with their input device and scan code, to diagnose a hotkey that
+    // does nothing. Off by default, and it stops itself after a short burst (see
+    // kInputDiagnosticLimit in Input.cpp).
     //
-    // The point is that it needs no special build: when a tester reports a dead hotkey,
+    // It needs no special build, which is the point: when a tester reports a dead hotkey,
     // the log otherwise cannot distinguish "no input event arrives at all" from "one
-    // arrives under a device or scan code we do not accept". That second case is real —
-    // Skyrim VR delivers controller buttons as kVRRight/kVRLeft, which the hotkey path
-    // ignores.
-    [[nodiscard]] bool LogKeyPresses();
+    // arrives under a device we do not accept". That second case is real — Skyrim VR
+    // delivers controller buttons as kVRRight/kVRLeft, which the hotkey path ignores.
+    //
+    // On what this records, since the name invites the question: we subscribe to Skyrim's
+    // own in-process event stream (BSInputDeviceManager), not a Windows keyboard hook —
+    // no SetWindowsHookEx, no GetAsyncKeyState, no raw input. Only presses the running
+    // game routes to us, and only as device + scan code; nothing anywhere translates a
+    // scan code into a character. Text typed into a game field would still appear as
+    // scan codes though, which is why this is off by default and self-limiting.
+    [[nodiscard]] bool LogInputDiagnostics();
 }
