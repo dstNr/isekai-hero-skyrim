@@ -24,10 +24,14 @@ namespace Isekai::UI {
     // a_width is in 1080p pixels (scaled with the display): the default suits story
     // panels; tabular ones like the status ledger need more room, or their columns
     // wrap and the table falls apart.
+    // a_emblem is an optional PNG drawn in the header's left margin, opposite the
+    // icon actions on the right — the status panel puts the System Rank insignia
+    // there. Ignored by the PrismaUI path, which renders its own status screen.
     void ShowSystemWindow(std::string a_title, std::string a_body,
                           std::vector<Choice> a_choices,
                           std::function<void(int)> a_onSelect,
-                          float a_revealCharsPerSec = 45.0f, float a_width = 720.0f);
+                          float a_revealCharsPerSec = 45.0f, float a_width = 720.0f,
+                          std::string a_emblem = {});
 
     // Convenience for the common text-only case.
     void ShowSystemWindow(std::string a_title, std::string a_body,

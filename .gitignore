@@ -14,6 +14,13 @@ papyrus/Scripts/SourceDeps/*.psc
 papyrus/Scripts/SourceDeps/*.bsa
 papyrus/Scripts/*.pex
 
+# --- Icon sources ---
+# Only the flat, shipped 512x512 PNGs in icons/ are tracked. The generator's
+# full-resolution output is kept beside them for re-exports but never redistributed
+# (build.bat and both package scripts copy icons\*.png non-recursively anyway).
+icons/_src/
+icons/Shop/
+
 # --- Editor / OS ---
 *.bak
 *.tmp

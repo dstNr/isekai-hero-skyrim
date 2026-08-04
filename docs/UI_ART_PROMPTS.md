@@ -3,10 +3,20 @@
 Everything the interface still borrows or renders as bare text. Shop card art lives in
 `SHOP_ICON_PROMPTS.md`; this covers the rest of the UI plus the mod page.
 
+> **Status: sections 1–3 are done.** All 16 icons were generated, resized, committed and
+> wired. The prompts stay here for regenerating any single one. Only **section 4 (mod page
+> art)** is still open.
+
 Drop finished PNGs in `icons/` (flat — `build.bat` and both package scripts copy
 `icons\*.png` **non-recursively**, so a subfolder ships nowhere). A missing file is never
 fatal: the built-in UI draws no icon and the web view hides it, so these can arrive one at
 a time.
+
+**512×512 exactly.** Generators like to hand back 1024 or 2048; the first batch arrived
+that way and was 16 MB of archive for pixels nothing samples — the biggest of these draws
+at 76 px, the rank badges at ~24 px. `node tools/check.mjs` now fails on any icon that is
+not 512×512. Full-resolution originals live in `icons/_src/`, which is gitignored and
+never ships.
 
 ## Shared style block
 
@@ -43,8 +53,7 @@ opens. They currently borrow arbitrary spell art.
 | `ui_storage.png` | Storage | `an open dimensional portal shaped like a chest mouth, cyan void inside with faint geometric depth, angular frame` |
 | `ui_shop.png` | Shop | `a floating merchant scale over a hexagonal cyan sigil, one pan holding a coin, the other a crystal` |
 
-> Once these three land I swap the paths in `Progression.cpp` (they point at
-> `spells_38/03/04_frame.png` today) and in `Overlay.cpp`'s texture preload.
+> **Wired.** `Progression.cpp` names these three, and `Overlay.cpp` preloads them.
 
 ## 2. Blessing choice (7)
 
@@ -87,8 +96,11 @@ these are the strictest of the set: an emblem, not an illustration.
 > tells you at a glance how far along you are — a set of six similarly pretty emblems
 > conveys nothing.
 
-> These need a code change from me as well (the badge is text in both renderers), so send
-> them and I will wire it.
+> **Wired.** Neither renderer names these files: both build `rank_<letter>.png` from the
+> letter `SystemRank()` returns, so adding a rank means adding an insignia. The web view
+> puts it inside the `RANK X` chip; the built-in panel draws it in the header's left
+> margin, opposite the action buttons. The letter stays visible in both — the emblem is
+> the glance, the letter is the readout.
 
 ---
 
@@ -135,9 +147,13 @@ banner. Two or three is plenty. Suggested subjects:
 
 ## When files arrive
 
-1. Put them in `icons/` (the mod page art belongs in `docs/` or straight on Nexus — it
-   must **not** go in `icons/`, which ships to every user inside the archive).
-2. Run `node tools/check.mjs` — it verifies every icon a card or node names actually
-   exists.
-3. Tell me, and I wire whatever still needs code: the three status buttons and the rank
-   badge. The blessing icons need nothing.
+1. Put them in `icons/`, flat, at 512×512 (the mod page art belongs in `docs/` or
+   straight on Nexus — it must **not** go in `icons/`, which ships to every user inside
+   the archive).
+2. Run `node tools/check.mjs`. Four checks cover this set: every icon a C++ file names by
+   hand exists, the web view's status buttons name real icons, every rank `SystemRank()`
+   can return has an insignia, and every shipped PNG is 512×512.
+3. `build.bat` deploys the folder — but note it **skips the icon copy while Skyrim is
+   running**, so close the game first or the DLL updates and the art does not.
+4. In game, the `SelfTestKey` report has an `interface icons` line listing what actually
+   reached the Data folder.

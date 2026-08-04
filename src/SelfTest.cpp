@@ -359,6 +359,39 @@ namespace Isekai::SelfTest {
                                      "stored materials");
         }
 
+        // The interface chrome — status buttons, blessing choice, rank insignia. Unlike
+        // the tree and shop icons these are named inline rather than in a table, and the
+        // rank ones are derived from a letter, so nothing at runtime would otherwise
+        // notice they never deployed. A missing one draws nothing at all, which looks
+        // like a button that was never built rather than a file that never arrived.
+        void CheckUiIcons(std::vector<Result>& out) {
+            static constexpr const char* kChrome[] = {
+                "ui_skilltree.png",  "ui_storage.png",        "ui_shop.png",
+                "blessing_normal.png", "blessing_hero.png",   "blessing_ascended.png",
+                "blessing_full.png", "blessing_shattered.png", "blessing_dormant.png",
+                "blessing_custom.png",
+                "rank_e.png",        "rank_d.png",            "rank_c.png",
+                "rank_b.png",        "rank_a.png",            "rank_s.png",
+            };
+
+            std::vector<std::string> missing;
+            for (const char* icon : kChrome) {
+                const std::string path = "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\" + std::string(icon);
+                if (!std::filesystem::exists(path)) {
+                    missing.emplace_back(icon);
+                }
+            }
+            std::string detail = std::to_string(std::size(kChrome) - missing.size()) + "/" +
+                                 std::to_string(std::size(kChrome)) + " interface icons on disk";
+            if (!missing.empty()) {
+                detail += " — MISSING: ";
+                for (std::size_t i = 0; i < missing.size(); ++i) {
+                    detail += (i ? ", " : "") + missing[i];
+                }
+            }
+            Add(out, missing.empty(), false, "interface icons", std::move(detail));
+        }
+
         void CheckEnvironment(std::vector<Result>& out) {
             const bool vr = REL::Module::IsVR();
             const bool prisma = UI::Prisma::Active();
@@ -390,6 +423,7 @@ namespace Isekai::SelfTest {
         CheckQuests(out);
         CheckStorage(out);
         CheckShop(out);
+        CheckUiIcons(out);
         CheckCrafting(out);
 
         std::size_t failed = 0;

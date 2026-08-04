@@ -123,12 +123,23 @@ namespace Isekai::UI {
             // felt — here the same cost hides behind the loading screen.
             {
                 constexpr const char* kIconDir = "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\";
-                GetTexture(std::string(kIconDir) + "spells_03_frame.png");  // storage
-                GetTexture(std::string(kIconDir) + "spells_38_frame.png");  // skill tree
+                // The handle is deliberately dropped — the cache keeps it, and warming
+                // it is the whole point of the call here.
+                const auto warm = [&](const std::string& a_name) {
+                    static_cast<void>(GetTexture(kIconDir + a_name));
+                };
+
+                // Status panel chrome: the three action buttons and every rank insignia
+                // (the badge changes as the character grows, so all six are warmed).
+                for (const char* icon : { "ui_skilltree.png", "ui_storage.png", "ui_shop.png",
+                                          "rank_e.png", "rank_d.png", "rank_c.png", "rank_b.png",
+                                          "rank_a.png", "rank_s.png" }) {
+                    warm(icon);
+                }
                 std::size_t count = 0;
                 const auto* nodes = SkillTree::Nodes(count);
                 for (std::size_t i = 0; i < count; ++i) {
-                    GetTexture(std::string(kIconDir) + nodes[i].icon);
+                    warm(nodes[i].icon);
                 }
                 logger::info("UI: panel icons preloaded");
             }

@@ -298,6 +298,87 @@ check("shop: potions have an icon before they have an ESP id", () => {
          (wired < pots.length ? ` — ${pots.length - wired} card(s) still hidden` : "");
 });
 
+/* -- UI chrome icons --------------------------------------------------------
+   The skill tree and the shop name their icons in a table this file already
+   parses. Everything else — the status panel's buttons, the blessing choice, the
+   rank insignia — names them inline in C++ or in the web view, and the rank ones
+   are not named at all but derived from a letter. Those are the ones that go
+   missing quietly: a missing PNG draws nothing at all, which looks exactly like a
+   button that was never added. */
+
+function cppSources() {
+  const out = [];
+  (function walk(dir) {
+    for (const e of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+      const rel = `${dir}/${e.name}`;
+      if (e.isDirectory()) walk(rel);
+      else if (e.name.endsWith(".cpp")) out.push(rel);
+    }
+  })("src");
+  return out;
+}
+
+check("ui: every icon a C++ file names by hand exists", () => {
+  // Matches the escaped literal as it appears in source: "…icons\\name.png".
+  // Comments are stripped first — Prisma.cpp explains its path helper with a
+  // "…\\icons\\x.png" example, and an example is not a missing file.
+  const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  const found = new Map();  // icon -> file that names it
+  for (const f of cppSources()) {
+    for (const m of strip(read(f)).matchAll(/icons\\\\([\w.]+\.png)/g)) {
+      if (!found.has(m[1])) found.set(m[1], f);
+    }
+  }
+  need(found.size > 0, "no inline icon literals parsed — parser stale?");
+  for (const [icon, file] of found) {
+    need(existsSync(join(ROOT, "icons", icon)),
+         `icons/${icon} is missing — ${file} draws nothing where it expects art`);
+  }
+  return `${found.size} icons`;
+});
+
+check("ui: the web view's status buttons name real icons", () => {
+  const html = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  const icons = [...html.matchAll(/addIcon\([^,]+,\s*"([\w.]+\.png)"/g)].map((m) => m[1]);
+  need(icons.length > 0, "no addIcon calls parsed — parser stale?");
+  for (const i of icons) {
+    need(existsSync(join(ROOT, "icons", i)), `icons/${i} is missing — that button renders bare`);
+  }
+  return `${icons.length} buttons`;
+});
+
+check("ui: every rank SystemRank can return has an insignia", () => {
+  // Neither renderer names these files: both build "rank_<letter>.png" from the
+  // letter. Retune the thresholds and add a rank, and nothing but this check
+  // notices that its emblem was never drawn.
+  const cpp = read("src/Progression.cpp");
+  const from = cpp.indexOf("std::string SystemRank()");
+  need(from >= 0, "SystemRank not found in Progression.cpp");
+  const body = cpp.slice(from, cpp.indexOf("\n    }", from));
+  const letters = [...new Set([...body.matchAll(/return "(\w)";/g)].map((m) => m[1]))];
+  need(letters.length > 0, "no rank letters parsed — parser stale?");
+  for (const l of letters) {
+    const icon = `rank_${l.toLowerCase()}.png`;
+    need(existsSync(join(ROOT, "icons", icon)), `rank ${l} has no icons/${icon}`);
+  }
+  return `${letters.join("")} — ${letters.length} insignia`;
+});
+
+check("icons: every shipped PNG is 512x512", () => {
+  // The generator hands back whatever resolution it likes; the first batch of UI art
+  // arrived at 1024 and 2048, which is 16 MB of archive for pixels nothing ever
+  // samples (the largest of these draws at 76px, the rank badges at ~24px).
+  const odd = [];
+  for (const name of readdirSync(join(ROOT, "icons")).filter((f) => f.endsWith(".png"))) {
+    const b = readFileSync(join(ROOT, "icons", name));
+    need(b.length > 24 && b.readUInt32BE(0) === 0x89504e47, `icons/${name} is not a PNG`);
+    const w = b.readUInt32BE(16), h = b.readUInt32BE(20);
+    if (w !== 512 || h !== 512) odd.push(`${name} (${w}x${h})`);
+  }
+  need(odd.length === 0, `off-spec: ${odd.join(", ")}`);
+  return `${readdirSync(join(ROOT, "icons")).filter((f) => f.endsWith(".png")).length} PNGs`;
+});
+
 check("shop: the built-in window still fits a 1080p screen", () => {
   // The ImGui shop sizes itself from the catalog, so growing the catalog grows the
   // window. With the potions wired it reached 18 cards, and at the original four columns

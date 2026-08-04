@@ -15,6 +15,7 @@
 #include "UI/SystemWindow.h"
 
 #include <algorithm>
+#include <cctype>
 #include <map>
 #include <string>
 #include <string_view>
@@ -190,6 +191,18 @@ namespace Isekai::Progression {
                 earned += AlreadyGranted(m.key) ? 1 : 0;
             }
             return earned;
+        }
+
+        // The insignia PNG for the current System Rank ("S" -> icons\rank_s.png). Derived
+        // from the letter rather than kept as a second table, so retuning the thresholds
+        // in SystemRank can never leave the emblem showing a rank the text disagrees with.
+        [[nodiscard]] std::string RankIcon() {
+            std::string letter = SystemRank();
+            if (letter.empty()) {
+                return {};
+            }
+            letter[0] = static_cast<char>(std::tolower(static_cast<unsigned char>(letter[0])));
+            return "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\rank_" + letter.substr(0, 1) + ".png";
         }
 
         [[nodiscard]] const Milestone* FindByQuest(const RE::TESQuest* a_quest) {
@@ -554,7 +567,7 @@ namespace Isekai::Progression {
 
             if (GetState().reincarnated) {
                 choices.push_back({ "SKILL TREE",
-                                    "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\spells_38_frame.png",
+                                    "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\ui_skilltree.png",
                                     /*iconOnly=*/true });
                 actions.emplace_back([]() {
                     // Web tree if the optional PrismaUI patch is installed, else ImGui.
@@ -567,13 +580,13 @@ namespace Isekai::Progression {
             }
             if (Storage::Available()) {
                 choices.push_back({ "STORAGE",
-                                    "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\spells_03_frame.png",
+                                    "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\ui_storage.png",
                                     /*iconOnly=*/true });
                 actions.emplace_back([]() { Storage::Open(); });
             }
             if (Shop::Available()) {
                 choices.push_back({ "SHOP",
-                                    "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\spells_04_frame.png",
+                                    "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\ui_shop.png",
                                     /*iconOnly=*/true });
                 actions.emplace_back([]() { Shop::Open(); });
             }
@@ -615,8 +628,11 @@ namespace Isekai::Progression {
             // watch half a minute of typewriter before they can read their own stats.
             // Wider than the story panels: the ledger rows run to ~70 monospace
             // characters, and at the default width the quest names wrapped mid-word.
+            // The rank insignia rides in the header's left margin. It duplicates the
+            // SYSTEM RANK line on purpose: the line is the precise readout, the emblem
+            // is the thing you register at a glance (E is dull, S blazes).
             UI::ShowSystemWindow("[ SYSTEM ] STATUS", std::move(body), std::move(choices),
-                                 std::move(onSelect), 100000.0f, 980.0f);
+                                 std::move(onSelect), 100000.0f, 980.0f, RankIcon());
         }
 
         // F11: pay out the next milestone still owed, exactly as a real quest would.

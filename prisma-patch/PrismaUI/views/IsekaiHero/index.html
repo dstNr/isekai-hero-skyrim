@@ -380,9 +380,14 @@
            font-size: 11px; letter-spacing: 0.2em; color: var(--accent); align-self: center; }
   .badge.dormant { color: var(--amber); border-color: rgba(224,168,96,0.5); }
   /* Filled, bold — a rank insignia rather than an outline chip, so it reads as
-     distinct from the mode badge (SHATTERED/CUSTOM/DORMANT) next to it. */
+     distinct from the mode badge (SHATTERED/CUSTOM/DORMANT) next to it. The emblem
+     sits inside the chip; if its PNG is missing the img hides itself and the chip
+     falls back to the plain "RANK S" text it used to be. */
   .badge.rank { background: rgba(90,210,255,0.14); border-color: rgba(90,210,255,0.55);
-                color: #fff; font-weight: 700; }
+                color: #fff; font-weight: 700;
+                display: flex; align-items: center; gap: 7px; padding: 3px 12px 3px 6px; }
+  .badge.rank img { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0;
+                    filter: drop-shadow(0 0 6px rgba(90,210,255,0.45)); }
   #sAwaken { color: var(--amber); font-size: 12px; letter-spacing: 0.1em; margin-top: 6px; }
   #sCustom { color: var(--dim); font-size: 12px; letter-spacing: 0.06em; margin-top: 6px; }
   #sCustom b { color: var(--accent); font-weight: 600; }
@@ -1135,9 +1140,9 @@ function buildStatusActions() {
     b.textContent = label; b.onclick = onClick; box.appendChild(b); return b;
   };
 
-  if (STATUS.hasTree)    addIcon("Skill Tree", "spells_38_frame.png", () => statusAction("tree"));
-  if (STATUS.hasStorage) addIcon("Storage", "spells_03_frame.png", () => statusAction("storage"));
-  if (STATUS.hasShop)    addIcon("Shop", "spells_04_frame.png", () => statusAction("shop"));
+  if (STATUS.hasTree)    addIcon("Skill Tree", "ui_skilltree.png", () => statusAction("tree"));
+  if (STATUS.hasStorage) addIcon("Storage", "ui_storage.png", () => statusAction("storage"));
+  if (STATUS.hasShop)    addIcon("Shop", "ui_shop.png", () => statusAction("shop"));
   if (STATUS.canReboot)  { const rb = addBtn("Reboot", "amber", () => rebootClick(rb)); }
   addBtn("Close", "", () => statusAction("close"));
 }
@@ -1145,7 +1150,12 @@ function buildStatusActions() {
 function renderStatus() {
   const s = STATUS;
   $("sTier").textContent = s.tier || "NORMAL";
-  $("sRank").textContent = "RANK " + (s.rank || "E");
+  // Insignia + letter. The plugin sends the letter only, so the file name is derived
+  // here the same way Progression::RankIcon derives it on the C++ side.
+  const rank = (s.rank || "E").toUpperCase();
+  $("sRank").innerHTML = '<img src="icons/rank_' + rank.toLowerCase() + '.png" alt="" '
+                       + 'onerror="this.style.display=\'none\'">'
+                       + '<span>RANK ' + esc(rank) + "</span>";
 
   const mode = s.mode || "";
   const mb = $("sMode");

@@ -25,6 +25,7 @@ namespace Isekai::UI {
             std::string              title;
             std::string              body;
             std::vector<Choice>      choices;
+            std::string              emblem;  // optional header insignia; empty = none
             std::function<void(int)> onSelect;
             float                    revealCharsPerSec = 45.0f;
             float                    width = 720.0f;  // at 1080p; scaled with display
@@ -163,6 +164,26 @@ namespace Isekai::UI {
                             Style::Col(Style::kAccent, 0.45f * fade), 1.0f);
                 ImGui::Spacing();
                 ImGui::Spacing();
+
+                // --- Header emblem (the System Rank insignia), in the left margin.
+                // Drawn straight onto the draw list rather than through the layout, so
+                // it cannot push the centred title off-centre or feed the panel's
+                // height calculation. Every title we use is short enough that the
+                // margin is free; a missing PNG simply draws nothing.
+                if (!g_win.emblem.empty()) {
+                    if (const ImTextureID emblem = GetTexture(g_win.emblem)) {
+                        const float band = sepY - wMin.y;
+                        const float side = std::min(56.0f * s, band - 8.0f * s);
+                        if (side > 0.0f) {
+                            const float x = wMin.x + 20.0f * s;
+                            const float cy = (wMin.y + sepY) * 0.5f;
+                            dl->AddImage(emblem, ImVec2{ x, cy - side * 0.5f },
+                                         ImVec2{ x + side, cy + side * 0.5f }, ImVec2{ 0, 0 },
+                                         ImVec2{ 1, 1 },
+                                         IM_COL32(255, 255, 255, static_cast<int>(fade * 255.0f)));
+                        }
+                    }
+                }
 
                 // --- Body, typewriter reveal ---
                 ImGui::PushFont(Style::g_body, Style::BodySize());
@@ -377,7 +398,7 @@ namespace Isekai::UI {
     void ShowSystemWindow(std::string a_title, std::string a_body,
                           std::vector<Choice> a_choices,
                           std::function<void(int)> a_onSelect, float a_revealCharsPerSec,
-                          float a_width) {
+                          float a_width, std::string a_emblem) {
         // Optional web renderer: hand the whole panel to PrismaUI when the patch is live.
         // It owns focus/pause and calls the selection back on the main thread — the ImGui
         // path below (state, SetGameHold, DrawPanel) is skipped entirely.
@@ -397,6 +418,7 @@ namespace Isekai::UI {
             g_win.title = std::move(a_title);
             g_win.body = std::move(a_body);
             g_win.choices = std::move(a_choices);
+            g_win.emblem = std::move(a_emblem);
             g_win.onSelect = std::move(a_onSelect);
             g_win.revealCharsPerSec = std::max(a_revealCharsPerSec, 1.0f);
             g_win.width = std::max(a_width, 300.0f);
