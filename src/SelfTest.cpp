@@ -488,8 +488,7 @@ namespace Isekai::SelfTest {
         // never be ambiguous about. It also carries the failures themselves, so the
         // common cases need no log at all.
         //
-        // The automatic run on load stays quiet unless something actually failed: a box on
-        // every load would be intolerable, and a notification would train you to ignore it.
+        // The automatic run on load draws nothing at all — see the note below it.
         if (a_notify) {
             std::string box = "[ SYSTEM ] SELF-TEST\n\n" + std::to_string(out.size() - failed) +
                               " of " + std::to_string(out.size()) + " checks passed.";
@@ -504,12 +503,12 @@ namespace Isekai::SelfTest {
             }
             box += "\n\nFull report: IsekaiHeroSKSE.log";
             RE::DebugMessageBox(box.c_str());
-        } else if (fatal > 0) {
-            RE::DebugNotification(("[ SYSTEM ] Self-test: " + std::to_string(failed) + " of " +
-                                   std::to_string(out.size()) +
-                                   " failed — see IsekaiHeroSKSE.log.")
-                                      .c_str());
         }
+        // The automatic run draws NOTHING on screen, not even on a failure. It fires
+        // while the loading screen is still up, so anything it posts is queued by the UI
+        // and flushed at whatever unrelated moment the screen next frees up — which read
+        // as "the self-test runs when I press ESC". A diagnostic that surfaces at a
+        // random moment is worse than one that only writes to the log.
     }
 
     void RunOnLoad() {
