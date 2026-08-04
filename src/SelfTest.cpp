@@ -180,6 +180,28 @@ namespace Isekai::SelfTest {
                 detail + (allFound ? " materials found"
                                    : " — a category finds NOTHING; its pack would charge "
                                      "for an empty delivery"));
+
+            // What our OWN goods (the ESP potions) resolve to and how many the chest
+            // holds. "I bought a potion and it is not in the storage" cannot be answered
+            // from the outside: a form that fails to resolve, a delivery that no-ops and
+            // a chest the player is not looking at all look the same. This names each
+            // potion, its runtime form and its count, so the log settles it.
+            std::string held;
+            std::size_t missing = 0;
+            for (const auto& item : Shop::OurGoods()) {
+                auto* obj = item.second;
+                if (!obj) {
+                    ++missing;
+                    held += (held.empty() ? "" : ", ") + item.first + " UNRESOLVED";
+                    continue;
+                }
+                held += (held.empty() ? "" : ", ") + item.first + " " +
+                        std::to_string(Storage::ChestCount(obj));
+            }
+            if (held.empty()) {
+                held = "no ESP goods in the catalog yet";
+            }
+            Add(out, missing == 0, false, "storage: our own goods", std::move(held));
         }
 
         void CheckQuests(std::vector<Result>& out) {

@@ -174,6 +174,16 @@ namespace Isekai::Shop {
         return { std::begin(kShelfNames), std::end(kShelfNames) };
     }
 
+    std::vector<std::pair<std::string, RE::TESBoundObject*>> OurGoods() {
+        std::vector<std::pair<std::string, RE::TESBoundObject*>> out;
+        for (const auto& e : kCatalog) {
+            if (e.kind == Kind::kOurItem && e.localID != 0) {
+                out.emplace_back(e.name, EntryForm(e));
+            }
+        }
+        return out;
+    }
+
     std::vector<Item> Catalog() {
         std::vector<Item> out;
         for (const auto* e : LiveEntries()) {
@@ -211,7 +221,18 @@ namespace Isekai::Shop {
         }
 
         state.systemPoints -= entry->cost;
-        Sounds::Play(Sounds::Sfx::ButtonClick);
+
+        // The reward sting, not the panel click. Buying is the payoff of every milestone
+        // earned so far, and it used to sound exactly like pressing "Cancel".
+        Sounds::Play(Sounds::Sfx::LevelUp);
+
+        // Say so on screen. Nothing confirmed a purchase before: the card stayed put, the
+        // goods land in a chest that is not open, and the only trace was a log line — so
+        // a successful buy was indistinguishable from a click that never registered.
+        RE::DebugNotification((std::string("[ SYSTEM ] ") + entry->name + " " + entry->qty +
+                               " -> Dimensional Storage")
+                                  .c_str());
+
         logger::info("Shop: bought '{}' ({}) for {} System Point(s)", entry->name, entry->qty,
                      entry->cost);
         return true;

@@ -1,5 +1,6 @@
 #include "Storage.h"
 
+#include "Config.h"
 #include "CraftHooks.h"
 #include "Plugin.h"
 #include "Sounds.h"
@@ -336,6 +337,13 @@ namespace Isekai::Storage {
         if (!g_codexToken || !GetState().reincarnated) {
             return;
         }
+        // Opt-out: the codex is a fallback for anyone whose hotkey or panel does not work
+        // (Skyrim VR above all), but it is still a permanent extra item in the inventory —
+        // and it shares the container's name, so it reads as a stray copy of the storage
+        // rather than a key to it. Anyone who does not need it can switch it off.
+        if (!Config::StorageCodex()) {
+            return;
+        }
         auto* player = RE::PlayerCharacter::GetSingleton();
         if (!player) {
             return;
@@ -481,7 +489,19 @@ namespace Isekai::Storage {
             return false;
         }
         chest->AddObjectToContainer(a_obj, nullptr, a_count, nullptr);
-        return true;
+
+        // Read the count back rather than trusting the add. "I bought it and it is not in
+        // the storage" is otherwise unanswerable from a log: nothing here returns a
+        // failure, so a silent no-op and a successful delivery look identical. This line
+        // tells the two apart, and names the chest so a delivery into a rebuilt/stale
+        // reference is visible as well.
+        const auto counts = chest->GetInventoryCounts();
+        const auto it = counts.find(a_obj);
+        const auto now = it != counts.end() ? it->second : 0;
+        logger::info("Storage: delivered {}x '{}' ({:#x}) -> chest {:#x} now holds {}", a_count,
+                     a_obj->GetName() ? a_obj->GetName() : "?", a_obj->GetFormID(),
+                     chest->GetFormID(), now);
+        return now > 0;
     }
 
     // Shared by StockCategory and CountCategory. a_perItem <= 0 means "count only": the

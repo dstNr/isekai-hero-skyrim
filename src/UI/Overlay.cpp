@@ -133,7 +133,15 @@ namespace Isekai::UI {
                 // (the badge changes as the character grows, so all six are warmed).
                 for (const char* icon : { "ui_skilltree.png", "ui_storage.png", "ui_shop.png",
                                           "rank_e.png", "rank_d.png", "rank_c.png", "rank_b.png",
-                                          "rank_a.png", "rank_s.png" }) {
+                                          "rank_a.png", "rank_s.png",
+                                          // The blessing choice is shown once per character,
+                                          // so warming it is not about the hitch — it is so a
+                                          // missing file is reported at load instead of only
+                                          // at the one moment it would have been drawn.
+                                          "blessing_normal.png", "blessing_hero.png",
+                                          "blessing_ascended.png", "blessing_full.png",
+                                          "blessing_shattered.png", "blessing_dormant.png",
+                                          "blessing_custom.png" }) {
                     warm(icon);
                 }
                 std::size_t count = 0;

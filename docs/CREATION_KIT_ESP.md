@@ -5,20 +5,19 @@ parts were added as features needed them.
 
 ## What is outstanding right now
 
+Parts H and I are **done** — the ten potions and the Shock Resist ability are in the
+plugin and wired up. What is left:
+
 | Part | What | Why now |
 |---|---|---|
-| **I** | Shock Resist magic effect + ability | **Fixes a live bug** — two milestones have never granted anything. ~3 min |
-| **H** | The ten System potions | Their shop cards, icons and code are all done and waiting; only the records are missing. ~30 min |
+| **G fix** | Rename `IsekaiStorageToken` | One field. It currently carries the container's name, so it reads as a stray copy of the storage in the inventory. ~1 min |
 | **J** | Damage abilities | *Optional.* Unblocks a roadmap item, but nothing references them yet. |
 
-Do **I** first — it is three minutes and repairs something broken. Then **H** if you have
-the time. **J** only if you want to go further.
+The **G fix** is a single `FULL - Name` change — see the warning box in Part G. **J** only
+if you want to go further.
 
 Afterwards send me the FormIDs (the last three hex digits of each) and I wire them in;
 see *Afterwards — the FormIDs* under Part H for the three ways to read them off.
-
-> `node tools/check.mjs` currently **fails** on the Part I arity error. That is deliberate:
-> it stays red until the ESP has that ability, so the bug cannot be forgotten again.
 
 ---
 
@@ -256,6 +255,17 @@ Access to the Dimensional Storage goes through an inventory item: "use" it like 
 > single slot — zero conflict surface. The item's look (model) and name are still free to
 > choose; only the inventory category stays "Potions".
 
+> ⚠️ **Do not name it after the container.** An earlier version of this guide said
+> `Dimensional Storage` — the same name the CONT record in Part F carries. The result is
+> an inventory item that looks like a stray copy of the chest rather than the key to it,
+> and it is the first thing a player asks about. **If your plugin already has it under
+> the old name, open `IsekaiStorageToken` and change `FULL - Name` to `Storage Codex`** —
+> nothing in the code reads the name, so that one field is the whole change.
+>
+> Players who want no extra item at all can set `StorageCodex = 0` in `IsekaiHero.ini`;
+> the panel button remains the normal way in. The codex only exists as a fallback for
+> anyone whose hotkey or panel does not work — Skyrim VR above all.
+
 In SSEEdit (as in Part E):
 
 1. `Skyrim.esm` → category **`Ingestible`** → select a simple potion
@@ -265,7 +275,7 @@ In SSEEdit (as in Part E):
 2. Right-click → **Copy as new record into…** → `IsekaiHero.esp`
    → editor ID: **`IsekaiStorageToken`**
 3. On the new record:
-   - **`FULL - Name`** → `Dimensional Storage`
+   - **`FULL - Name`** → `Storage Codex`
    - **`Effects`** block → right-click → **Remove** (entirely — no healing effect)
    - **`DATA - Weight`** → `0`
    - **`ENIT`**: `Value` → `0`, **clear `Sound - Consume`** (otherwise it glugs when opened)

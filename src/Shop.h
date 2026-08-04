@@ -12,6 +12,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Isekai::Shop {
@@ -45,6 +46,13 @@ namespace Isekai::Shop {
     // takes, so both renderers must build their list from one Catalog() call and not
     // renumber it.
     [[nodiscard]] std::vector<Item> Catalog();
+
+    // The catalog entries backed by a form of our own (the ESP potions), each with the
+    // form it resolves to at runtime — nullptr when the record is missing. Only the
+    // self-test uses this: "I bought it and it is not in my storage" needs to separate a
+    // form that never resolved from a delivery that did not land, and from a chest the
+    // player simply is not looking at. Name and pointer answer the first two.
+    [[nodiscard]] std::vector<std::pair<std::string, RE::TESBoundObject*>> OurGoods();
 
     // Spend and deliver entry a_index of Catalog(). False when the index is stale, the
     // player cannot afford it, or the storage chest is not ready — each already reported

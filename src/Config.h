@@ -29,6 +29,12 @@ namespace Isekai::Config {
     [[nodiscard]] std::uint16_t DormantHeroLevel();
     [[nodiscard]] std::uint16_t DormantAscendedLevel();
 
+    // Hand the player the storage codex — an inventory item that opens the Dimensional
+    // Storage when "drunk". Default true. It is a fallback for anyone whose hotkey or
+    // panel does not work (Skyrim VR, most of all), but it does put a permanent extra
+    // item in the inventory, which is not what everyone wants. See src/Storage.cpp.
+    [[nodiscard]] bool StorageCodex();
+
     // Feed the player's System status (blessing, milestones) to SkyrimNet, if it is
     // installed, so AI-driven NPCs can react to the reincarnated hero. Default true, but
     // it only ever does anything when SkyrimNet is actually present — off is for players

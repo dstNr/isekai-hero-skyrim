@@ -411,14 +411,24 @@ function cppSources() {
 }
 
 check("ui: every icon a C++ file names by hand exists", () => {
-  // Matches the escaped literal as it appears in source: "…icons\\name.png".
-  // Comments are stripped first — Prisma.cpp explains its path helper with a
+  // Two spellings, because only one of them is a literal path. The status buttons write
+  // the whole thing out ("…icons\\ui_shop.png"); the blessing choices pass a bare file
+  // name to BlessingIcon(), which prepends the folder. The first version of this check
+  // only knew the literal form and so silently covered 3 icons instead of 10 — it would
+  // have passed with every blessing PNG missing, which is precisely the case it exists
+  // for. Add a helper here whenever a new one is introduced.
+  //
+  // Comments are stripped first: Prisma.cpp explains its path helper with a
   // "…\\icons\\x.png" example, and an example is not a missing file.
   const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  const patterns = [/icons\\\\([\w.]+\.png)/g, /BlessingIcon\("([\w.]+\.png)"\)/g];
   const found = new Map();  // icon -> file that names it
   for (const f of cppSources()) {
-    for (const m of strip(read(f)).matchAll(/icons\\\\([\w.]+\.png)/g)) {
-      if (!found.has(m[1])) found.set(m[1], f);
+    const src = strip(read(f));
+    for (const re of patterns) {
+      for (const m of src.matchAll(re)) {
+        if (!found.has(m[1])) found.set(m[1], f);
+      }
     }
   }
   need(found.size > 0, "no inline icon literals parsed — parser stale?");
@@ -426,7 +436,11 @@ check("ui: every icon a C++ file names by hand exists", () => {
     need(existsSync(join(ROOT, "icons", icon)),
          `icons/${icon} is missing — ${file} draws nothing where it expects art`);
   }
-  return `${found.size} icons`;
+  // Guard the guard: the blessing set is the one that vanished from this check once.
+  const blessings = [...found.keys()].filter((n) => n.startsWith("blessing_"));
+  need(blessings.length >= 7,
+       `only ${blessings.length} blessing icons seen — the BlessingIcon parser is stale`);
+  return `${found.size} icons (${blessings.length} blessings)`;
 });
 
 check("ui: the web view's status buttons name real icons", () => {
