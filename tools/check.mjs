@@ -456,6 +456,23 @@ check("ui: every rank SystemRank can return has an insignia", () => {
   return `${letters.join("")} — ${letters.length} insignia`;
 });
 
+check("ui: the web view's rank insignia is actually on screen", () => {
+  // It was not, for as long as it existed. The status chip carried a bare "rank" class,
+  // and the skill tree's node pip owns an unscoped `.rank { position: absolute;
+  // bottom: -7px; right: -7px }` — so the chip was pinned to the bottom-right corner of
+  // the status card. Nothing about that is a syntax error and both screens still
+  // "worked", which is exactly why it went unnoticed until the chip gained an emblem.
+  const view = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  need(!/^\s*\.rank\s*\{/m.test(view),
+       "an unscoped `.rank {` rule is back — it will also match the status screen's " +
+       "rank element. Scope it to `.node .rank`.");
+  for (const id of ["sRankIcon", "sRankLetter"]) {
+    need(new RegExp(`id="${id}"`).test(view), `the status screen lost #${id}`);
+    need(new RegExp(`\\$\\("${id}"\\)`).test(view), `nothing fills #${id} at render time`);
+  }
+  return "scoped, and both parts are rendered";
+});
+
 check("icons: every shipped PNG is 512x512", () => {
   // The generator hands back whatever resolution it likes; the first batch of UI art
   // arrived at 1024 and 2048, which is 16 MB of archive for pixels nothing ever

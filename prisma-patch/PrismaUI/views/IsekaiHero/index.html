@@ -255,7 +255,11 @@
   .node:hover { transform: scale(1.16) translateY(-2px); border-color: #fff; z-index: 5;
                 box-shadow: 0 0 16px rgba(90,210,255,0.55), 0 8px 18px rgba(0,0,0,0.5); }
 
-  .rank { position: absolute; bottom: -7px; right: -7px; min-width: 20px; height: 20px; padding: 0 5px;
+  /* Scoped to .node on purpose. Unscoped, this rule also caught the status screen's
+     System Rank chip (it carried a "rank" class too) and pinned it to the bottom-right
+     corner of the status card, where it sat unnoticed until the chip gained an emblem.
+     Keep the selector specific: "rank" is too generic a word to own globally. */
+  .node .rank { position: absolute; bottom: -7px; right: -7px; min-width: 20px; height: 20px; padding: 0 5px;
           background: linear-gradient(180deg, #0d2033, #071522); border: 1px solid var(--accent);
           border-radius: 6px; color: var(--accent); font-size: 11px; font-weight: 700;
           line-height: 18px; text-align: center; box-shadow: 0 0 12px rgba(90,210,255,0.45); }
@@ -411,15 +415,21 @@
   .badge { padding: 3px 11px; border: 1px solid var(--line); border-radius: 20px;
            font-size: 11px; letter-spacing: 0.2em; color: var(--accent); align-self: center; }
   .badge.dormant { color: var(--amber); border-color: rgba(224,168,96,0.5); }
-  /* Filled, bold — a rank insignia rather than an outline chip, so it reads as
-     distinct from the mode badge (SHATTERED/CUSTOM/DORMANT) next to it. The emblem
-     sits inside the chip; if its PNG is missing the img hides itself and the chip
-     falls back to the plain "RANK S" text it used to be. */
-  .badge.rank { background: rgba(90,210,255,0.14); border-color: rgba(90,210,255,0.55);
-                color: #fff; font-weight: 700;
-                display: flex; align-items: center; gap: 7px; padding: 3px 12px 3px 6px; }
-  .badge.rank img { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0;
-                    filter: drop-shadow(0 0 6px rgba(90,210,255,0.45)); }
+  /* System Rank, as a block under the tier rather than a chip beside it. The header row
+     is as tall as the three icon buttons opposite it, which left a band of dead space
+     under the tier name; the rank is the one thing on this screen that earns it. It also
+     lets the insignia be drawn at a size where it is actually legible — as a chip it was
+     22px, which is smaller than the art is designed for.
+     If the PNG is missing the img hides itself and the letter carries the meaning. */
+  #sRankBlock { display: flex; align-items: center; gap: clamp(10px, 1.1vw, 16px);
+                margin-top: clamp(14px, 1.8vw, 24px); }
+  #sRankIcon { width: clamp(44px, 4.4vw, 62px); height: clamp(44px, 4.4vw, 62px);
+               object-fit: contain; flex: none;
+               filter: drop-shadow(0 0 10px rgba(90,210,255,0.4)); }
+  #sRankText { min-width: 0; }
+  #sRankLetter { font-size: clamp(22px, 2.6vw, 34px); font-weight: 700; line-height: 1.1;
+                 letter-spacing: 0.12em; color: #fff;
+                 text-shadow: 0 0 18px rgba(90,210,255,0.45); }
   #sAwaken { color: var(--amber); font-size: 12px; letter-spacing: 0.1em; margin-top: 6px; }
   #sCustom { color: var(--dim); font-size: 12px; letter-spacing: 0.06em; margin-top: 6px; }
   #sCustom b { color: var(--accent); font-weight: 600; }
@@ -622,11 +632,17 @@
           <div class="eyebrow mono">System · Status</div>
           <div id="sTierRow">
             <div id="sTier" class="mono">—</div>
-            <div id="sRank" class="badge mono rank"></div>
             <div id="sMode" class="badge mono hidden"></div>
           </div>
           <div id="sAwaken" class="mono hidden"></div>
           <div id="sCustom" class="mono hidden"></div>
+          <div id="sRankBlock">
+            <img id="sRankIcon" alt="" onerror="this.style.display='none'">
+            <div id="sRankText">
+              <div class="eyebrow mono">System Rank</div>
+              <div id="sRankLetter" class="mono">—</div>
+            </div>
+          </div>
         </div>
         <div id="sIcons"></div>
       </div>
@@ -1268,9 +1284,10 @@ function renderStatus() {
   // Insignia + letter. The plugin sends the letter only, so the file name is derived
   // here the same way Progression::RankIcon derives it on the C++ side.
   const rank = (s.rank || "E").toUpperCase();
-  $("sRank").innerHTML = '<img src="icons/rank_' + rank.toLowerCase() + '.png" alt="" '
-                       + 'onerror="this.style.display=\'none\'">'
-                       + '<span>RANK ' + esc(rank) + "</span>";
+  const icon = $("sRankIcon");
+  icon.style.display = "";           // a previous rank's missing PNG may have hidden it
+  icon.src = "icons/rank_" + rank.toLowerCase() + ".png";
+  $("sRankLetter").textContent = "RANK " + rank;
 
   const mode = s.mode || "";
   const mb = $("sMode");
