@@ -198,9 +198,16 @@
           animation: nodeIn 0.4s var(--ease) both; }
 
   /* Always-on name under each graph node. Hovering for a tooltip to find out what any
-     of 15 identical dark tiles even is was the single biggest readability problem. */
+     of 15 identical dark tiles even is was the single biggest readability problem.
+
+     The width is load-bearing, not cosmetic — LABEL_W below must match it. A label is
+     wider than the tile it belongs to, so it is the label, not the tile, that decides
+     how far a node reaches: at 104px it overhung the zone frame, sat in the corridor
+     its own child links use, and left 15px to the neighbouring band. 88px is the
+     widest that still clears all three (see the layout note in SkillTree.cpp), and it
+     still holds "Omniscience" and "Alchemical" on one line. */
   .nlabel { position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
-            width: 104px; text-align: center; font-size: 10px; line-height: 1.25;
+            width: 88px; text-align: center; font-size: 10px; line-height: 1.25;
             letter-spacing: 0.05em; color: var(--dim); pointer-events: none;
             text-shadow: 0 2px 6px rgba(0,0,0,0.9); transition: color 0.25s var(--ease); }
   .node.owned   .nlabel { color: var(--accent); }
@@ -299,10 +306,35 @@
   #shHead { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; }
   #shTitle { font-size: clamp(17px, 1.45vw, 23px); }
 
-  #shGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: clamp(10px, 1.2vw, 16px); overflow-y: auto; padding: 2px; }
+  /* Category rail down the left, cards to the right. Eighteen cards in one flat grid
+     was a wall — the eye had nowhere to start. A rail (rather than tabs across the top)
+     matches the skill tree's mastery dock and can carry each shelf's count without the
+     header turning into a row of text. */
+  #shBody { display: flex; gap: clamp(14px, 1.6vw, 22px); min-height: 0; flex: 1; }
+  #shRail { display: flex; flex-direction: column; gap: 2px; flex: none;
+            width: clamp(140px, 15vw, 186px);
+            border-right: 1px solid rgba(90,210,255,0.14); padding-right: clamp(10px, 1.2vw, 16px); }
+  .shelf { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+           padding: 11px 12px; border-left: 3px solid transparent; cursor: pointer;
+           color: var(--dim); font-size: 12px; letter-spacing: 0.16em;
+           transition: color 0.2s var(--ease), background 0.2s var(--ease),
+                       border-color 0.2s var(--ease); }
+  .shelf b { font-weight: 400; color: rgba(138,168,196,0.6); font-size: 11px;
+             letter-spacing: 0.1em; }
+  .shelf:hover { color: var(--text); background: rgba(90,210,255,0.05); }
+  .shelf.on { color: var(--accent); background: rgba(90,210,255,0.10);
+              border-left-color: var(--accent); }
+  .shelf.on b { color: var(--accent); opacity: 0.7; }
+
+  #shGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            align-content: start; gap: clamp(10px, 1.2vw, 16px);
+            overflow-y: auto; padding: 2px; flex: 1; min-width: 0; }
   #shGrid::-webkit-scrollbar { width: 5px; }
   #shGrid::-webkit-scrollbar-thumb { background: rgba(90,210,255,0.3); border-radius: 3px; }
+  /* A shelf can legitimately be empty — the potions only appear once their ESP records
+     exist — so say so rather than leaving a blank panel. */
+  #shGrid .shEmpty { grid-column: 1 / -1; color: var(--dim); font-size: 12px;
+                     letter-spacing: 0.12em; opacity: 0.7; padding: 30px 4px; }
 
   .card { display: flex; flex-direction: column; align-items: center; gap: 9px;
           padding: clamp(14px, 1.6vw, 20px) 12px; border-radius: 4px;
@@ -646,7 +678,10 @@
         <div class="chip mono"><i></i>System Points <b id="shPoints">—</b></div>
       </div>
       <div class="rule"></div>
-      <div id="shGrid"></div>
+      <div id="shBody">
+        <div id="shRail"></div>
+        <div id="shGrid"></div>
+      </div>
       <div id="shFoot">
         <div id="shHint" class="mono">Delivered into your Dimensional Storage · ESC to close</div>
         <button id="shClose" class="btn mono" onclick="shopClose()">Close</button>
@@ -739,6 +774,25 @@ const posOf = (L, n) => ({ x: L.ox + n.x * L.k, y: L.oy + n.y * L.k });
    this, so a bigger landmark node doesn't get its connections drawn under it. */
 const radOf = (L, n) => NODE_R * (n.scale || 1) * L.k;
 
+/* The always-on name under a node, in canvas px. These are CSS pixels and deliberately
+   do NOT scale with L.k — the text does not either, so a scaled box would stop matching
+   what is drawn. Must agree with .nlabel's width / line-height above.
+
+   A node's real footprint is the tile UNION this box, and the box is the wider of the
+   two. Everything that used to reason about tiles only — the zone frames, the link
+   trimming — got that wrong, which is why labels hung out of their frame and every link
+   ran through its own parent's name. */
+const LABEL_W = 88, LABEL_GAP = 6, LABEL_LINE = 12.5, LABEL_LINES = 2;
+const LABEL_H = LABEL_GAP + LABEL_LINE * LABEL_LINES;
+
+/* The box a node occupies including its name, in canvas px. LABEL_LINES is assumed
+   rather than measured: reserving room for two lines everywhere keeps the frames from
+   jittering as names wrap differently, and the branch frames share a bottom regardless. */
+function nodeBox(L, n) {
+  const p = posOf(L, n), r = radOf(L, n), hw = Math.max(r, LABEL_W / 2);
+  return { x0: p.x - hw, x1: p.x + hw, y0: p.y - r, y1: p.y + r + LABEL_H };
+}
+
 /* One padded box per zone, derived from that zone's own node positions rather than
    hardcoded — a node moving inside its band keeps the frame correct automatically.
 
@@ -746,8 +800,13 @@ const radOf = (L, n) => NODE_R * (n.scale || 1) * L.k;
    node radii. Unscaled padding was the bug behind the overlapping frames: the gaps
    between bands shrink with k while a fixed pad does not, so below k ~0.9 the frames
    grew into each other. Scaled, the clearances declared in SkillTree.cpp's layout note
-   hold at every window size. */
-const ZPAD_X = 16, ZPAD_TOP = 18, ZPAD_BOT = 44;  // design units; BOT clears a 2-line name
+   hold at every window size.
+
+   The box is grown from nodeBox, not from the tiles: a name is wider than its tile, so
+   framing the tiles left every outer name hanging over the border. ZPAD_BOT is small
+   now because the name is inside the box rather than something the padding has to
+   guess room for. */
+const ZPAD_X = 10, ZPAD_TOP = 18, ZPAD_BOT = 12;  // design units
 
 function zoneBoxes(L) {
   const px = ZPAD_X * L.k, pt = ZPAD_TOP * L.k, pb = ZPAD_BOT * L.k;
@@ -757,9 +816,9 @@ function zoneBoxes(L) {
     if (!members.length) return;
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
     members.forEach(n => {
-      const p = posOf(L, n), r = radOf(L, n);
-      x0 = Math.min(x0, p.x - r); x1 = Math.max(x1, p.x + r);
-      y0 = Math.min(y0, p.y - r); y1 = Math.max(y1, p.y + r);
+      const b = nodeBox(L, n);
+      x0 = Math.min(x0, b.x0); x1 = Math.max(x1, b.x1);
+      y0 = Math.min(y0, b.y0); y1 = Math.max(y1, b.y1);
     });
     raw.push({ zone: z, cls: ZONE_CLASS[z] || "", x0, x1, y0, y1, branch: z !== "CORE" });
   });
@@ -783,6 +842,28 @@ function zoneBoxes(L) {
 function trimTo(a, b, r) {
   const dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx * dx + dy * dy) || 1;
   return { x: a.x + dx / len * r, y: a.y + dy / len * r };
+}
+
+/* Where the link from `from` to `to` should start: the point at which it leaves the
+   PARENT's box — tile plus name. Trimming to the tile radius alone put the first ~25px
+   of every link straight through the parent's own name, because the name is wider than
+   the tile and sits exactly where the children's links fan out.
+
+   Children need no equivalent: their name is below them and links arrive from above. */
+function linkStart(L, from, to, gap) {
+  const a = posOf(L, from), b = posOf(L, to);
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const box = nodeBox(L, from);
+  // Distance along the ray at which it leaves each wall of the box; the nearest wins.
+  const hits = [];
+  if (dx > 0) hits.push((box.x1 - a.x) / dx);
+  if (dx < 0) hits.push((box.x0 - a.x) / dx);
+  if (dy > 0) hits.push((box.y1 - a.y) / dy);
+  if (dy < 0) hits.push((box.y0 - a.y) / dy);
+  const t = hits.length ? Math.min(...hits) : 0;
+  const len = Math.hypot(dx, dy) || 1;
+  const d = Math.min(t * len + gap, len - radOf(L, to) - gap);
+  return { x: a.x + dx / len * d, y: a.y + dy / len * d };
 }
 
 function stateOf(n) {
@@ -956,20 +1037,54 @@ function renderTree() {
   const svg = $("lines");
   svg.setAttribute("viewBox", "0 0 " + L.W + " " + L.H);
   svg.innerHTML = "";
-  const addLine = (a, b, cls) => {
-    const el = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    el.setAttribute("x1", a.x); el.setAttribute("y1", a.y);
-    el.setAttribute("x2", b.x); el.setAttribute("y2", b.y);
+  /* A link is a straight line unless a third node stands in the way, in which case it
+     bows around it. Only one link needs this today — the hub reaches Swift Blood
+     straight through System Analysis, which made the tree claim a gate that does not
+     exist — but doing it by geometry rather than by special case means the next node
+     added below the hub cannot reintroduce the lie. */
+  const addLink = (a, b, bow, cls) => {
+    const el = document.createElementNS("http://www.w3.org/2000/svg",
+                                        bow ? "path" : "line");
+    if (bow) {
+      el.setAttribute("d", `M ${a.x} ${a.y} Q ${bow.x} ${bow.y} ${b.x} ${b.y}`);
+    } else {
+      el.setAttribute("x1", a.x); el.setAttribute("y1", a.y);
+      el.setAttribute("x2", b.x); el.setAttribute("y2", b.y);
+    }
     el.setAttribute("class", "lnk " + cls);
     svg.appendChild(el);
   };
+
+  /* The control point that clears whatever the straight segment runs into, or null. */
+  function bowAround(L, a, b, from, to) {
+    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+    let worst = 0, side = 1;
+    TREE.nodes.filter(n => !isUtil(n) && n !== from && n !== to).forEach(n => {
+      const p = posOf(L, n), r = radOf(L, n);
+      // Distance from the node centre to the segment, and which side it falls on.
+      const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (len * len)));
+      const d = Math.hypot(p.x - (a.x + dx * t), p.y - (a.y + dy * t));
+      const need = r + 10 - d;
+      if (need > worst) {
+        worst = need;
+        // Bow away from the obstacle; a dead-centre one goes right by convention.
+        side = (dx * (p.y - a.y) - dy * (p.x - a.x)) > 0 ? -1 : 1;
+      }
+    });
+    if (worst <= 0) return null;
+    const off = (worst + 14) * 2;  // quadratic peaks at half the control offset
+    return { x: (a.x + b.x) / 2 + (-dy / len) * off * side,
+             y: (a.y + b.y) / 2 + (dx / len) * off * side };
+  }
+
   TREE.nodes.forEach(n => (n.prereq || []).forEach(pk => {
     if (!pk) return;
     const from = byKey.get(pk); if (!from) return;
-    const p = posOf(L, from), q = posOf(L, n);
-    const a = trimTo(p, q, radOf(L, from) + 5), b = trimTo(q, p, radOf(L, n) + 5);
-    if (from.owned && n.owned) { addLine(a, b, "halo"); addLine(a, b, "on"); }
-    else                        { addLine(a, b, from.owned ? "half" : "off"); }
+    const q = posOf(L, n);
+    const a = linkStart(L, from, n, 5), b = trimTo(q, posOf(L, from), radOf(L, n) + 5);
+    const bow = bowAround(L, a, b, from, n);
+    if (from.owned && n.owned) { addLink(a, b, bow, "halo"); addLink(a, b, bow, "on"); }
+    else                        { addLink(a, b, bow, from.owned ? "half" : "off"); }
   }));
 
   // --- graph nodes: create once, then update in place ---
@@ -1230,18 +1345,56 @@ window.isekaiShowStatus = (data) => {
 };
 
 /* ---------------- SYSTEM SHOP ---------------- */
-let SHOP = { points: 0, items: [] };
+let SHOP = { points: 0, shelves: [], items: [] };
+let SHELF = 0;   // which category the rail has selected; survives a re-push after buying
 
-function shopClose() { callBack("isekaiShopClose", ""); }
+// Closing resets the rail, so the shop always opens on the first shelf; a purchase
+// re-pushes the catalog without closing, and there the selection has to survive.
+function shopClose() { SHELF = 0; callBack("isekaiShopClose", ""); }
 function shopBuy(i) { callBack("isekaiShopBuy", String(i)); }
 
 /* Rebuilt wholesale on every push: the catalog is a handful of cards, and each purchase
-   re-pushes it anyway (the balance and every card's affordability change at once). */
+   re-pushes it anyway (the balance and every card's affordability change at once).
+
+   The card index handed to shopBuy is the item's position in the FULL catalog, not in
+   the filtered shelf — that index is what Shop::Buy() resolves against, and renumbering
+   per shelf would buy whatever happens to sit at that offset in the whole list. */
 function renderShop() {
   $("shPoints").textContent = SHOP.points;
+
+  const shelves = SHOP.shelves && SHOP.shelves.length ? SHOP.shelves : [];
+  SHELF = Math.max(0, Math.min(SHELF, shelves.length - 1));
+
+  const rail = $("shRail");
+  rail.innerHTML = "";
+  shelves.forEach((name, z) => {
+    const held = (SHOP.items || []).filter((it) => it.shelf === name).length;
+    const row = document.createElement("div");
+    row.className = "shelf mono" + (z === SHELF ? " on" : "");
+    row.innerHTML = esc(name) + "<b>" + held + "</b>";
+    row.addEventListener("click", () => { SHELF = z; renderShop(); });
+    rail.appendChild(row);
+  });
+  rail.classList.toggle("hidden", shelves.length < 2);
+
+  const active = shelves[SHELF];
   const grid = $("shGrid");
   grid.innerHTML = "";
-  (SHOP.items || []).forEach((it, i) => {
+
+  const visible = (SHOP.items || [])
+    .map((it, i) => ({ it, i }))
+    .filter(({ it }) => !active || it.shelf === active);
+
+  if (!visible.length) {
+    const msg = document.createElement("div");
+    msg.className = "shEmpty mono";
+    msg.textContent = (SHOP.items || []).length ? "Nothing on this shelf yet."
+                                                : "The catalog is empty.";
+    grid.appendChild(msg);
+    return;
+  }
+
+  visible.forEach(({ it, i }) => {
     const afford = SHOP.points >= it.cost;
     const card = document.createElement("div");
     card.className = "card" + (afford ? " can" : " cant");

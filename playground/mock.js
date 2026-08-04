@@ -38,22 +38,22 @@
     { key: 1,  zone: "CORE",   scale: 1.4, name: "System Core",         icon: "spells_01_frame.png", x: 615, y: 96,  cost: 5,  req: TIER.Normal,   prereq: [0, 0],   desc: "The System takes root.\n+25 Health, Magicka and Stamina." },
     { key: 2,  zone: "CORE",   name: "Dragon's Voice",      icon: "spells_10_frame.png", x: 880, y: 96,  cost: 15, req: TIER.Normal,   prereq: [1, 0],   desc: "Your Thu'um recovers faster.\n-20% shout cooldown." },
     { key: 14, zone: "CORE",   name: "Perk Synthesis",      icon: "spells_21_frame.png", x: 350, y: 96,  cost: 1,  req: TIER.Normal,   prereq: [1, 0],   rep: true, maxRank: 0, desc: "Condense a System Point into raw potential.\n+5 perk points per purchase. REPEATABLE." },
-    { key: 23, zone: "CORE",   name: "System Analysis",     icon: "spells_02_frame.png", x: 615, y: 200, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "Unlocks the System's analytical eye.\nPress the Analyze hotkey to appraise whatever you are looking at." },
+    { key: 23, zone: "CORE",   name: "System Analysis",     icon: "spells_02_frame.png", x: 880, y: 236, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "Unlocks the System's analytical eye.\nPress the Analyze hotkey to appraise whatever you are looking at." },
     // might (left band)
-    { key: 3,  zone: "MIGHT",  name: "Vital Surge",         icon: "spells_25_frame.png", x: 300, y: 360, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Health." },
-    { key: 4,  zone: "MIGHT",  scale: 1.2, name: "Thu'um Omniscience",  icon: "spells_39_frame.png", x: 210, y: 500, cost: 25, req: TIER.Hero,     prereq: [3, 0],   desc: "The System pours every dragon's voice into you.\nAll shouts and words of power unlocked." },
-    { key: 5,  zone: "MIGHT",  name: "Emberguard",          icon: "spells_12_frame.png", x: 390, y: 500, cost: 15, req: TIER.Normal,   prereq: [3, 0],   desc: "+25% Fire Resist." },
+    { key: 3,  zone: "MIGHT",  name: "Vital Surge",         icon: "spells_25_frame.png", x: 300, y: 400, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Health." },
+    { key: 4,  zone: "MIGHT",  scale: 1.2, name: "Thu'um Omniscience",  icon: "spells_39_frame.png", x: 210, y: 540, cost: 25, req: TIER.Hero,     prereq: [3, 0],   desc: "The System pours every dragon's voice into you.\nAll shouts and words of power unlocked." },
+    { key: 5,  zone: "MIGHT",  name: "Emberguard",          icon: "spells_12_frame.png", x: 390, y: 540, cost: 15, req: TIER.Normal,   prereq: [3, 0],   desc: "+25% Fire Resist." },
     // arcana (right band)
-    { key: 6,  zone: "ARCANA", name: "Mana Well",           icon: "spells_15_frame.png", x: 930, y: 360, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Magicka." },
-    { key: 7,  zone: "ARCANA", scale: 1.2, name: "Arcane Omniscience",  icon: "spells_36_frame.png", x: 845, y: 500, cost: 25, req: TIER.Hero,     prereq: [6, 0],   desc: "Every enchantment laid bare.\nAll enchantments known without disenchanting." },
-    { key: 8,  zone: "ARCANA", name: "Frostguard",          icon: "spells_16_frame.png", x: 1015, y: 500, cost: 15, req: TIER.Normal,   prereq: [6, 0],   desc: "+25% Frost Resist." },
-    { key: 9,  zone: "ARCANA", scale: 1.2, name: "Spell Omniscience",   icon: "spells_37_frame.png", x: 845, y: 640, cost: 40, req: TIER.Hero,     prereq: [7, 0],   desc: "The System reads every tome ever written.\nAll spells with a spell tome learned." },
+    { key: 6,  zone: "ARCANA", name: "Mana Well",           icon: "spells_15_frame.png", x: 930, y: 400, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Magicka." },
+    { key: 7,  zone: "ARCANA", scale: 1.2, name: "Arcane Omniscience",  icon: "spells_36_frame.png", x: 845, y: 540, cost: 25, req: TIER.Hero,     prereq: [6, 0],   desc: "Every enchantment laid bare.\nAll enchantments known without disenchanting." },
+    { key: 8,  zone: "ARCANA", name: "Frostguard",          icon: "spells_16_frame.png", x: 1015, y: 540, cost: 15, req: TIER.Normal,   prereq: [6, 0],   desc: "+25% Frost Resist." },
+    { key: 9,  zone: "ARCANA", scale: 1.2, name: "Spell Omniscience",   icon: "spells_37_frame.png", x: 845, y: 680, cost: 40, req: TIER.Hero,     prereq: [7, 0],   desc: "The System reads every tome ever written.\nAll spells with a spell tome learned." },
     // shadow (centre band)
-    { key: 10, zone: "SHADOW", name: "Swift Blood",         icon: "spells_32_frame.png", x: 615, y: 360, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Stamina." },
-    { key: 11, zone: "SHADOW", scale: 1.2, name: "Alchemical Insight",  icon: "spells_31_frame.png", x: 530, y: 500, cost: 25, req: TIER.Hero,     prereq: [10, 0],  desc: "Every ingredient gives up its secrets.\nAll ingredient effects known." },
-    { key: 12, zone: "SHADOW", name: "Plagueward",          icon: "spells_34_frame.png", x: 700, y: 500, cost: 15, req: TIER.Normal,   prereq: [10, 0],  desc: "+25% Disease Resist." },
+    { key: 10, zone: "SHADOW", name: "Swift Blood",         icon: "spells_32_frame.png", x: 615, y: 400, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Stamina." },
+    { key: 11, zone: "SHADOW", scale: 1.2, name: "Alchemical Insight",  icon: "spells_31_frame.png", x: 530, y: 540, cost: 25, req: TIER.Hero,     prereq: [10, 0],  desc: "Every ingredient gives up its secrets.\nAll ingredient effects known." },
+    { key: 12, zone: "SHADOW", name: "Plagueward",          icon: "spells_34_frame.png", x: 700, y: 540, cost: 15, req: TIER.Normal,   prereq: [10, 0],  desc: "+25% Disease Resist." },
     // capstone (bottom of the shadow band)
-    { key: 13, zone: "SHADOW", scale: 1.45, name: "World Tree",         icon: "spells_09_frame.png", x: 615, y: 650, cost: 50, req: TIER.Ascended, prereq: [11, 12], desc: "The System blossoms through your soul.\n+100 Health, Magicka and Stamina." },
+    { key: 13, zone: "SHADOW", scale: 1.45, name: "World Tree",         icon: "spells_09_frame.png", x: 615, y: 690, cost: 50, req: TIER.Ascended, prereq: [11, 12], desc: "The System blossoms through your soul.\n+100 Health, Magicka and Stamina." },
     // mastery rail (repeatable, capped at 10 ranks / 5 tiers)
     { key: 16, zone: "MASTERY", name: "Beast of Burden",     icon: "spells_22_frame.png", x: 95,  y: 150, cost: 2,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System shoulders your load.\n+25 Carry Weight per rank." },
     { key: 15, zone: "MASTERY", name: "Fleet of Foot",       icon: "spells_28_frame.png", x: 95,  y: 221, cost: 3,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System quickens your stride.\n+3% movement speed per rank." },
@@ -247,29 +247,31 @@
      sends back mean the same thing here as in the plugin. Quantities are per material
      TYPE — one alchemy pack covers every official ingredient in the load order. */
   var SHOP_ITEMS = [
-    { name: "Smithing Materials",  qty: "100 of each", cost:  5, icon: "shop_smithing_small.png" },
-    { name: "Smithing Crate",      qty: "500 of each", cost: 15, icon: "shop_smithing_large.png" },
-    { name: "Alchemy Ingredients", qty: "100 of each", cost:  5, icon: "shop_alchemy_small.png" },
-    { name: "Alchemy Crate",       qty: "500 of each", cost: 15, icon: "shop_alchemy_large.png" },
-    { name: "Soul Gems",           qty: "50 of each",  cost:  5, icon: "shop_souls_small.png" },
-    { name: "Soul Gem Crate",      qty: "250 of each", cost: 15, icon: "shop_souls_large.png" },
-    { name: "Gold",                qty: "x100,000",    cost:  5, icon: "shop_gold_small.png" },
-    { name: "Gold Hoard",          qty: "x1,000,000",  cost: 20, icon: "shop_gold_large.png" },
+    { name: "Smithing Materials",  qty: "100 of each", cost:  5, icon: "shop_smithing_small.png", shelf: "MATERIALS" },
+    { name: "Smithing Crate",      qty: "500 of each", cost: 15, icon: "shop_smithing_large.png", shelf: "MATERIALS" },
+    { name: "Alchemy Ingredients", qty: "100 of each", cost:  5, icon: "shop_alchemy_small.png", shelf: "MATERIALS" },
+    { name: "Alchemy Crate",       qty: "500 of each", cost: 15, icon: "shop_alchemy_large.png", shelf: "MATERIALS" },
+    { name: "Soul Gems",           qty: "50 of each",  cost:  5, icon: "shop_souls_small.png", shelf: "MATERIALS" },
+    { name: "Soul Gem Crate",      qty: "250 of each", cost: 15, icon: "shop_souls_large.png", shelf: "MATERIALS" },
+    { name: "Gold",                qty: "x100,000",    cost:  5, icon: "shop_gold_small.png", shelf: "WEALTH" },
+    { name: "Gold Hoard",          qty: "x1,000,000",  cost: 20, icon: "shop_gold_large.png", shelf: "WEALTH" },
     // System potions. These only appear in game once their ESP record resolves; the
     // mock always shows them, which is the point of a preview.
-    { name: "Restorative: Vigor",       qty: "x10", cost: 3, icon: "shop_potion_vigor.png" },
-    { name: "Restorative: Focus",       qty: "x10", cost: 3, icon: "shop_potion_focus.png" },
-    { name: "Restorative: Vitality",    qty: "x10", cost: 3, icon: "shop_potion_vitality.png" },
-    { name: "Panacea",                  qty: "x10", cost: 3, icon: "shop_potion_panacea.png" },
-    { name: "Elixir of the System",     qty: "x10", cost: 6, icon: "shop_elixir_system.png" },
-    { name: "Draught of the Ascended",  qty: "x10", cost: 6, icon: "shop_elixir_ascended.png" },
-    { name: "Aegis Elixir",             qty: "x10", cost: 6, icon: "shop_elixir_aegis.png" },
-    { name: "Phantom Draught",          qty: "x10", cost: 6, icon: "shop_elixir_phantom.png" },
-    { name: "Elixir of Endless Casting", qty: "x10", cost: 6, icon: "shop_elixir_casting.png" },
-    { name: "Titan's Draught",          qty: "x10", cost: 6, icon: "shop_elixir_titan.png" }
+    { name: "Restorative: Vigor",       qty: "x10", cost: 3, icon: "shop_potion_vigor.png", shelf: "RESTORATIVES" },
+    { name: "Restorative: Focus",       qty: "x10", cost: 3, icon: "shop_potion_focus.png", shelf: "RESTORATIVES" },
+    { name: "Restorative: Vitality",    qty: "x10", cost: 3, icon: "shop_potion_vitality.png", shelf: "RESTORATIVES" },
+    { name: "Panacea",                  qty: "x10", cost: 3, icon: "shop_potion_panacea.png", shelf: "RESTORATIVES" },
+    { name: "Elixir of the System",     qty: "x10", cost: 6, icon: "shop_elixir_system.png", shelf: "ELIXIRS" },
+    { name: "Draught of the Ascended",  qty: "x10", cost: 6, icon: "shop_elixir_ascended.png", shelf: "ELIXIRS" },
+    { name: "Aegis Elixir",             qty: "x10", cost: 6, icon: "shop_elixir_aegis.png", shelf: "ELIXIRS" },
+    { name: "Phantom Draught",          qty: "x10", cost: 6, icon: "shop_elixir_phantom.png", shelf: "ELIXIRS" },
+    { name: "Elixir of Endless Casting", qty: "x10", cost: 6, icon: "shop_elixir_casting.png", shelf: "ELIXIRS" },
+    { name: "Titan's Draught",          qty: "x10", cost: 6, icon: "shop_elixir_titan.png", shelf: "ELIXIRS" }
   ];
 
-  function buildShop() { return { points: G.points, items: SHOP_ITEMS }; }
+  var SHOP_SHELVES = ["MATERIALS", "WEALTH", "RESTORATIVES", "ELIXIRS"];
+
+  function buildShop() { return { points: G.points, shelves: SHOP_SHELVES, items: SHOP_ITEMS }; }
   function pushShop() { call("isekaiShowShop", buildShop()); }
 
   /* Mirrors Shop::Buy(): spend, deliver, then re-push so the balance and every card's

@@ -241,6 +241,18 @@ namespace Isekai::SelfTest {
                 }
             }
             Add(out, missing.empty(), false, "shop card icons", std::move(detail));
+
+            // How the rail will look. A shelf can be empty for a legitimate reason — the
+            // potions only resolve once their ESP records exist — so this is a report,
+            // not a failure. It is what tells a bug reporter whether a whole category
+            // came up blank in game.
+            std::string shelves;
+            for (const auto& shelf : Shop::Shelves()) {
+                const auto held = std::count_if(catalog.begin(), catalog.end(),
+                                                [&](const auto& it) { return it.shelf == shelf; });
+                shelves += (shelves.empty() ? "" : ", ") + shelf + " " + std::to_string(held);
+            }
+            Add(out, true, false, "shop shelves", std::move(shelves));
         }
 
         // The skill tree's runtime contracts. Its DATA (coordinates, keys, geometry) is

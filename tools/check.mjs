@@ -60,10 +60,18 @@ function parseSkillTreeNodes() {
     const pos = chunk.match(/"[^"]*\.png",\s*(-?[\d.]+)f,\s*(-?[\d.]+)f,\s*(\d+),/);
     need(pos, `node ${m[1]}: could not read x/y/cost`);
     const scale = chunk.match(/0\.0f,\s*([\d.]+)f\s*\}/);
+    // First quoted string after the zone is the display name; the prereq pair sits
+    // immediately before the Effect. Both feed the label-geometry checks below.
+    const name = chunk.match(/Zone::k\w+,\s*"([^"]+)"/);
+    need(name, `node ${m[1]}: could not read the name`);
+    const pre = chunk.match(/\{\s*(\d+),\s*(\d+)\s*\},\s*Effect::/);
+    need(pre, `node ${m[1]}: could not read the prereq pair`);
     return {
       key: m[1] === "kAnalyzeNodeKey" ? 23 : +m[1],
       zone: m[2].toUpperCase(),
+      name: name[1],
       x: +pos[1], y: +pos[2], cost: +pos[3],
+      prereq: [+pre[1], +pre[2]].filter(Boolean),
       scale: scale ? +scale[1] : 1,
     };
   });
@@ -84,19 +92,31 @@ function parseShopCatalog() {
   const from = cpp.indexOf("constexpr Entry kCatalog[] = {");
   need(from >= 0, "kCatalog not found in Shop.cpp");
   const body = cpp.slice(from, cpp.indexOf("\n        };", from));
-  const re = /\{\s*"([^"]+)",\s*"([^"]+)",\s*(\d+),\s*"([^"]+)",\s*\n?\s*Kind::k(\w+),\s*Cat::k\w+,\s*([\d']+)\s*(?:,\s*(0x[0-9A-Fa-f]+))?\s*\}/g;
+  const re = /\{\s*"([^"]+)",\s*"([^"]+)",\s*(\d+),\s*"([^"]+)",\s*\n?\s*Kind::k(\w+),\s*Cat::k\w+,\s*([\d']+),\s*Shelf::k(\w+)\s*(?:,\s*(0x[0-9A-Fa-f]+))?\s*\}/g;
   const out = [...body.matchAll(re)].map((m) => ({
     name: m[1], qty: m[2], cost: +m[3], icon: m[4],
-    kind: m[5], amount: m[6], localID: m[7] ? parseInt(m[7], 16) : null,
+    kind: m[5], amount: m[6], shelf: m[7], localID: m[8] ? parseInt(m[8], 16) : null,
   }));
   need(out.length > 0, "no catalog entries parsed from Shop.cpp");
   return out;
 }
 
+/* The shelf NAMES, in the order both renderers offer them. */
+function parseShelfNames() {
+  const cpp = read("src/Shop.cpp");
+  const m = cpp.match(/kShelfNames\[\]\s*=\s*\{([\s\S]*?)\};/);
+  need(m, "kShelfNames not found in Shop.cpp");
+  const out = [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]);
+  need(out.length > 0, "no shelf names parsed — parser stale?");
+  return out;
+}
+
 function parseMockShop() {
   const mock = read("playground/mock.js");
-  const re = /\{\s*name:\s*"([^"]+)",\s*qty:\s*"([^"]+)",\s*cost:\s*(\d+),\s*icon:\s*"([^"]+)"\s*\}/g;
-  const out = [...mock.matchAll(re)].map((m) => ({ name: m[1], qty: m[2], cost: +m[3], icon: m[4] }));
+  const re = /\{\s*name:\s*"([^"]+)",\s*qty:\s*"([^"]+)",\s*cost:\s*(\d+),\s*icon:\s*"([^"]+)",\s*shelf:\s*"([^"]+)"\s*\}/g;
+  const out = [...mock.matchAll(re)].map((m) => ({
+    name: m[1], qty: m[2], cost: +m[3], icon: m[4], shelf: m[5],
+  }));
   need(out.length > 0, "no shop items parsed from playground/mock.js");
   return out;
 }
@@ -169,18 +189,32 @@ check("skill tree: kAnalyzeNodeKey names a real node", () => {
    Both renderers pad zone frames in design units scaled by the same fit factor
    as the node positions and radii, so the whole layout is proportional and can
    be verified in design units alone. It was NOT proportional once: the padding
-   was in raw pixels, and below a fit of ~0.9 the frames grew into each other. */
+   was in raw pixels, and below a fit of ~0.9 the frames grew into each other.
 
-const NODE_R = 31, ZPAD_X = 16, ZPAD_TOP = 18, ZPAD_BOT = 44;
+   What is measured here is the node BOX, not the tile: every node carries an
+   always-on name below it, and the name is wider than its tile. Checking tiles
+   alone passed happily while the outer names hung over their zone border, every
+   link ran through its own parent's name, and the CORE column had 6px between
+   "System Core" and the tile under it. */
+
+const NODE_R = 31;
+const LABEL_W = 108, LABEL_H = 38;   // design units; ~88x31 CSS px in the web view
+const ZPAD_X = 10, ZPAD_TOP = 18, ZPAD_BOT = 12;
+
+/* Tile union name — a node's real footprint. */
+function nodeBox(n) {
+  const r = NODE_R * n.scale, hw = Math.max(r, LABEL_W / 2);
+  return { x0: n.x - hw, x1: n.x + hw, y0: n.y - r, y1: n.y + r + LABEL_H };
+}
 
 function zoneFrames() {
   const graph = parseSkillTreeNodes().filter((n) => n.zone !== "MASTERY");
   const z = {};
   for (const n of graph) {
-    const r = NODE_R * n.scale;
+    const nb = nodeBox(n);
     const b = (z[n.zone] ??= { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9 });
-    b.x0 = Math.min(b.x0, n.x - r); b.x1 = Math.max(b.x1, n.x + r);
-    b.y0 = Math.min(b.y0, n.y - r); b.y1 = Math.max(b.y1, n.y + r);
+    b.x0 = Math.min(b.x0, nb.x0); b.x1 = Math.max(b.x1, nb.x1);
+    b.y0 = Math.min(b.y0, nb.y0); b.y1 = Math.max(b.y1, nb.y1);
   }
   // The three branches share a top and bottom (see zoneBoxes / the ImGui equivalent).
   const branches = Object.keys(z).filter((k) => k !== "CORE");
@@ -221,38 +255,94 @@ check("skill tree: the three branch frames are equal height", () => {
   return `${hs[0]} units`;
 });
 
-check("skill tree: node tiles never collide", () => {
+check("skill tree: every node stays inside its own zone frame", () => {
+  // The one the screenshot showed: "Perk Synthesis" and "Dragon's Voice" hung over
+  // the CORE border because the frame was grown from the tiles, and a name is wider
+  // than its tile.
+  const frames = zoneFrames();
+  let tightest = Infinity, who = "";
+  for (const n of parseSkillTreeNodes().filter((x) => x.zone !== "MASTERY")) {
+    const b = nodeBox(n), f = frames[n.zone];
+    const c = Math.min(b.x0 - f.x0, f.x1 - b.x1, b.y0 - f.y0, f.y1 - b.y1);
+    need(c >= 0, `"${n.name}" sticks out of the ${n.zone} frame by ${(-c).toFixed(0)} units`);
+    if (c < tightest) { tightest = c; who = n.name; }
+  }
+  return `tightest "${who}" with ${tightest.toFixed(0)} units`;
+});
+
+check("skill tree: node boxes never collide", () => {
+  // Boxes, not tiles: two tiles 40 units apart do not touch, but their names do.
   const nodes = parseSkillTreeNodes().filter((n) => n.zone !== "MASTERY");
   let closest = Infinity, pair = "";
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
-      const a = nodes[i], b = nodes[j];
-      const need_ = NODE_R * a.scale + NODE_R * b.scale;
-      const gap = Math.max(Math.abs(a.x - b.x) - need_, Math.abs(a.y - b.y) - need_);
-      if (gap < closest) { closest = gap; pair = `${a.key}/${b.key}`; }
-      need(gap >= 0, `tiles ${a.key} and ${b.key} overlap`);
+      const a = nodeBox(nodes[i]), b = nodeBox(nodes[j]);
+      const gap = Math.max(Math.max(a.x0, b.x0) - Math.min(a.x1, b.x1),
+                           Math.max(a.y0, b.y0) - Math.min(a.y1, b.y1));
+      need(gap >= 0,
+           `"${nodes[i].name}" and "${nodes[j].name}" overlap once their names are counted`);
+      if (gap < closest) { closest = gap; pair = `${nodes[i].name}/${nodes[j].name}`; }
     }
   }
   return `closest ${pair} at ${closest.toFixed(0)} units`;
 });
 
-check("skill tree: a node name can never reach its neighbour", () => {
-  // Label wrap is 140 design units (both renderers). Two same-row neighbours must
-  // therefore sit more than 140 apart, or their centred labels can touch.
-  const WRAP = 140;
+check("skill tree: a link always has room to leave its parent's name", () => {
+  // Both renderers start a link where it exits the PARENT's box, name included, and
+  // clamp it so it cannot overshoot the child. When the two nodes sit closer than
+  // parent-tile + name + child-tile, that clamp bites and the link is drawn starting
+  // inside the parent's own name — which is what the CORE column did at 104 units.
   const nodes = parseSkillTreeNodes().filter((n) => n.zone !== "MASTERY");
-  let tightest = Infinity;
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = i + 1; j < nodes.length; j++) {
-      const a = nodes[i], b = nodes[j];
-      if (Math.abs(a.y - b.y) > 1) continue;         // different rows: labels cannot meet
-      const dx = Math.abs(a.x - b.x);
-      tightest = Math.min(tightest, dx);
-      need(dx >= WRAP, `nodes ${a.key} and ${b.key} share a row but are only ${dx} apart ` +
-                       `(labels wrap at ${WRAP})`);
+  const byKey = new Map(nodes.map((n) => [n.key, n]));
+  let tightest = Infinity, who = "none";
+  for (const child of nodes) {
+    for (const pk of child.prereq || []) {
+      const parent = pk && byKey.get(pk);
+      if (!parent) continue;
+      const b = nodeBox(parent);
+      const dx = child.x - parent.x, dy = child.y - parent.y, len = Math.hypot(dx, dy);
+      const hits = [];
+      if (dx > 0) hits.push((b.x1 - parent.x) / dx);
+      if (dx < 0) hits.push((b.x0 - parent.x) / dx);
+      if (dy > 0) hits.push((b.y1 - parent.y) / dy);
+      if (dy < 0) hits.push((b.y0 - parent.y) / dy);
+      const slack = (len - NODE_R * child.scale) - (hits.length ? Math.min(...hits) : 0) * len;
+      need(slack >= 0, `"${parent.name}" -> "${child.name}" has no room: the link would ` +
+                       `start ${(-slack).toFixed(0)} units inside "${parent.name}"'s own name`);
+      if (slack < tightest) { tightest = slack; who = `${parent.name} -> ${child.name}`; }
     }
   }
-  return tightest === Infinity ? "no same-row pairs" : `tightest row pair ${tightest} units`;
+  return `tightest ${who} with ${tightest.toFixed(0)} units`;
+});
+
+check("skill tree: no link is drawn through an unrelated node", () => {
+  // A link that passes over a third node reads as a gate that does not exist — the
+  // hub reaches Swift Blood straight through System Analysis. The renderers bow those
+  // links around the obstacle; this counts them, and fails if one is so deeply buried
+  // that a bow could not read as a detour.
+  const nodes = parseSkillTreeNodes().filter((n) => n.zone !== "MASTERY");
+  const byKey = new Map(nodes.map((n) => [n.key, n]));
+  const bowed = [];
+  for (const child of nodes) {
+    for (const pk of child.prereq || []) {
+      const parent = pk && byKey.get(pk);
+      if (!parent) continue;
+      const dx = child.x - parent.x, dy = child.y - parent.y, len = Math.hypot(dx, dy) || 1;
+      for (const o of nodes) {
+        if (o === parent || o === child) continue;
+        const t = Math.max(0, Math.min(1,
+          ((o.x - parent.x) * dx + (o.y - parent.y) * dy) / (len * len)));
+        const d = Math.hypot(o.x - (parent.x + dx * t), o.y - (parent.y + dy * t));
+        const r = NODE_R * o.scale;
+        if (d < r + 10) {
+          need(d > r * 0.3, `"${parent.name}" -> "${child.name}" runs almost dead-centre ` +
+                            `through "${o.name}" — no bow can make that read as a detour`);
+          bowed.push(`${parent.name}->${child.name} around ${o.name}`);
+        }
+      }
+    }
+  }
+  return bowed.length ? `${bowed.length} bowed: ${bowed.join(", ")}` : "all links are straight";
 });
 
 /* -- 3. shop catalog ------------------------------------------------------- */
@@ -264,6 +354,8 @@ check("shop: visible catalog matches the playground", () => {
   need(visible.length === mock.length,
        `${visible.length} visible C++ entries vs ${mock.length} in the playground`);
   visible.forEach((e, i) => {
+    need(mock[i].shelf.toLowerCase() === e.shelf.toLowerCase(),
+         `"${e.name}" is on ${e.shelf} in C++ but ${mock[i].shelf} in the playground`);
     for (const f of ["name", "qty", "cost", "icon"]) {
       need(e[f] === mock[i][f], `entry ${i}.${f}: C++ "${e[f]}" vs playground "${mock[i][f]}"`);
     }
@@ -379,11 +471,40 @@ check("icons: every shipped PNG is 512x512", () => {
   return `${readdirSync(join(ROOT, "icons")).filter((f) => f.endsWith(".png")).length} PNGs`;
 });
 
+check("shop: every entry names a shelf that exists", () => {
+  const names = new Set(parseShelfNames());
+  const cpp = parseShopCatalog();
+  for (const e of cpp) {
+    // The table writes Shelf::kElixirs; kShelfNames holds the display string. Compare
+    // case-insensitively rather than duplicating the mapping here.
+    const hit = [...names].some((n) => n.toLowerCase() === e.shelf.toLowerCase());
+    need(hit, `"${e.name}" is on shelf ${e.shelf}, which kShelfNames does not list`);
+  }
+  const used = new Set(cpp.map((e) => e.shelf.toUpperCase()));
+  const empty = [...names].filter((n) => !used.has(n));
+  need(empty.length === 0, `shelf ${empty.join(", ")} holds nothing — it would render blank`);
+  return `${names.size} shelves, ${cpp.length} entries`;
+});
+
+check("shop: the shelf list agrees across C++, the view and the playground", () => {
+  const cpp = parseShelfNames();
+  const mock = read("playground/mock.js").match(/SHOP_SHELVES\s*=\s*\[([^\]]*)\]/);
+  need(mock, "SHOP_SHELVES not found in playground/mock.js");
+  const mockNames = [...mock[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  need(cpp.join("|") === mockNames.join("|"),
+       `C++ offers [${cpp.join(", ")}], the playground [${mockNames.join(", ")}]`);
+  // The view builds its rail from the pushed list, so it must not hardcode any of them.
+  const view = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  need(/SHOP\.shelves/.test(view), "the view no longer reads SHOP.shelves — rail parser stale?");
+  return cpp.join(" / ");
+});
+
 check("shop: the built-in window still fits a 1080p screen", () => {
   // The ImGui shop sizes itself from the catalog, so growing the catalog grows the
   // window. With the potions wired it reached 18 cards, and at the original four columns
   // that was a 1454px-tall window on a 1080p display - taller than the screen, with no
-  // scrolling to fall back on.
+  // scrolling to fall back on. Now it sizes from the BIGGEST SHELF rather than the whole
+  // catalog (so switching category never resizes it) plus the rail.
   const src = read("src/UI/ShopWindow.cpp");
   const num = (re, what) => {
     const m = src.match(re);
@@ -396,17 +517,28 @@ check("shop: the built-in window still fits a 1080p screen", () => {
   const pad = num(/kPad = ([\d.]+)f/, "kPad");
   const head = num(/kHeadH = ([\d.]+)f/, "kHeadH");
   const foot = num(/kFootH = ([\d.]+)f/, "kFootH");
+  const railW = num(/kRailW = ([\d.]+)f/, "kRailW");
+  const railGap = num(/kRailGap = ([\d.]+)f/, "kRailGap");
+  const railRowH = num(/kRailRowH = ([\d.]+)f/, "kRailRowH");
   const cols = num(/kCols = (\d+)/, "kCols");
 
-  const count = parseShopCatalog().filter((e) => e.kind !== "OurItem" || e.localID).length;
-  const c = Math.max(1, Math.min(cols, count));
-  const rows = Math.max(1, Math.ceil(count / c));
-  const w = pad * 2 + c * cardW + (c - 1) * gap;
+  const live = parseShopCatalog().filter((e) => e.kind !== "OurItem" || e.localID);
+  const shelves = parseShelfNames();
+  const widest = Math.max(1, ...shelves.map(
+    (n) => live.filter((e) => e.shelf.toUpperCase() === n).length));
+  const rows = Math.max(1, Math.ceil(widest / cols));
+  const w = pad * 2 + railW + railGap + cols * cardW + (cols - 1) * gap;
   const h = head + rows * cardH + (rows - 1) * gap + foot;
 
   need(w <= 1920 && h <= 1080,
-       `${count} cards in ${c} columns makes a ${w}x${h} window, which does not fit 1920x1080`);
-  return `${count} cards, ${c}x${rows} -> ${w}x${h}`;
+       `${widest} cards on the biggest shelf makes a ${w}x${h} window, which does not fit ` +
+       `1920x1080`);
+  // The rail lives in the same vertical band as the cards; more shelves than fit there
+  // would run off the bottom, and it does not scroll.
+  const railH = shelves.length * railRowH;
+  need(railH <= h - head - foot + rows * cardH,
+       `${shelves.length} shelves need ${railH} units of rail, more than the card area offers`);
+  return `${live.length} cards, biggest shelf ${widest} -> ${cols}x${rows} -> ${w}x${h}`;
 });
 
 /* -- 4. cross-layer JSON contracts ----------------------------------------- */
@@ -472,7 +604,7 @@ function espFormIds() {
     ...grab("src/Storage.cpp", /constexpr RE::FormID \w+ = (0x000[0-9A-Fa-f]{3});()/g),
   ];
   // Potion IDs are 0 until their records exist; a real one joins the collision check.
-  const shop = [...read("src/Shop.cpp").matchAll(/Cat::k\w+,\s*\d+,\s*(0x[0-9A-Fa-f]+)\s*\}/g)]
+  const shop = [...read("src/Shop.cpp").matchAll(/Cat::k\w+,\s*\d+,\s*Shelf::k\w+,\s*(0x[0-9A-Fa-f]+)\s*\}/g)]
     .map((m) => parseInt(m[1], 16))
     .filter((v) => v !== 0)
     .map((v) => ({ id: v, file: "src/Shop.cpp", note: "potion" }));
@@ -569,7 +701,7 @@ check("ESP: every FormID the code names exists in the plugin", () => {
   add("src/Passives.cpp", /^\s*(0x000[0-9A-Fa-f]{3}),\s*\/\/\s*(.+)$/gm);
   add("src/Sounds.cpp", /^\s*(0x000[0-9A-Fa-f]{3}),\s*\/\/\s*(.+)$/gm);
   add("src/Storage.cpp", /constexpr RE::FormID (?:\w+) = (0x000[0-9A-Fa-f]{3});/g, "storage form");
-  add("src/Shop.cpp", /Cat::k\w+,\s*\d+,\s*(0x[0-9A-Fa-f]+)\s*\}/g, "shop item");
+  add("src/Shop.cpp", /Cat::k\w+,\s*\d+,\s*Shelf::k\w+,\s*(0x[0-9A-Fa-f]+)\s*\}/g, "shop item");
   need(named.length > 0, "no ESP FormIDs found in the source — parser stale?");
 
   const missing = named.filter((n) => !byLocal.has(n.id));

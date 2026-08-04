@@ -40,9 +40,27 @@ namespace Isekai::SkillTree {
         // bands whose frames would collide have to be pulled apart in the data. The
         // renderers pad in design units scaled by the same fit factor as the positions,
         // so these clearances hold at every window size:
-        //   horizontal, band to band : > 100  (have 140 / 145)
-        //   vertical, CORE to branches: > 124  (have 160)
+        //   horizontal, band to band : > 130  (have 140 / 145)
+        //   vertical, row to row      : > 125  (have 140 throughout)
         // Shrink either below that and the frames start overlapping again.
+        //
+        // What sets those numbers is the NAME, not the tile. Every node carries an
+        // always-on name below it, and the name is wider than the tile it belongs to —
+        // so a node's real footprint is the tile UNION its name box. Framing the tiles
+        // alone left the outer names hanging over their zone border, put every link in
+        // the corridor its own parent's name occupies, and left the CORE column with
+        // 6px between "System Core" and the tile beneath it. The renderers now measure
+        // from that union (see nodeBox / NodeBox), and tools/check.mjs asserts the
+        // clearances above, which is why the rows are a uniform 140 apart: 104 was not
+        // enough for a tile, a name and another tile.
+        //
+        // One more constraint the numbers encode: nothing may sit on a line between two
+        // other nodes. System Analysis used to share the hub's column with the whole
+        // Shadow band, so the hub's link to Swift Blood ran straight through it and the
+        // tree appeared to claim a gate that does not exist. It now hangs below Dragon's
+        // Voice instead — out of all three fan-out corridors. The renderers can bow a
+        // link around an obstacle, but a line through a tile's centre cannot be bowed
+        // into something that reads as a detour, so the data has to keep the lanes clear.
         constexpr Node kNodes[] = {
             // --- Hub (Zone::kCore) ---
             // The hub sits centred above all three bands; its two satellites flank it.
@@ -62,46 +80,46 @@ namespace Isekai::SkillTree {
             // a named constant rather than duplicated as a magic number in both files).
             { kAnalyzeNodeKey, Zone::kCore, "System Analysis",
               "Unlocks the System's analytical eye.\nPress the Analyze hotkey to appraise whatever you are looking at.",
-              "spells_02_frame.png", 615.0f, 200.0f, 10, kN, { 1, 0 }, Effect::kAttributes, {} },
+              "spells_02_frame.png", 880.0f, 236.0f, 10, kN, { 1, 0 }, Effect::kAttributes, {} },
 
             // --- Might (left band) ---
             { 3, Zone::kMight, "Vital Surge", "+100 Health.",
-              "spells_25_frame.png", 300.0f, 360.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
+              "spells_25_frame.png", 300.0f, 400.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
               { { AV::kHealth, 100.0f } } },
             { 4, Zone::kMight, "Thu'um Omniscience",
               "The System pours every dragon's voice into you.\nAll shouts and words of power unlocked.",
-              "spells_39_frame.png", 210.0f, 500.0f, 25, kH, { 3, 0 }, Effect::kAllShouts, {},
+              "spells_39_frame.png", 210.0f, 540.0f, 25, kH, { 3, 0 }, Effect::kAllShouts, {},
               false, 0, 0.0f, 1.2f },
             { 5, Zone::kMight, "Emberguard", "+25% Fire Resist.",
-              "spells_12_frame.png", 390.0f, 500.0f, 15, kN, { 3, 0 }, Effect::kAttributes,
+              "spells_12_frame.png", 390.0f, 540.0f, 15, kN, { 3, 0 }, Effect::kAttributes,
               { { AV::kResistFire, 25.0f } } },
 
             // --- Arcana (right band) ---
             { 6, Zone::kArcana, "Mana Well", "+100 Magicka.",
-              "spells_15_frame.png", 930.0f, 360.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
+              "spells_15_frame.png", 930.0f, 400.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
               { { AV::kMagicka, 100.0f } } },
             { 7, Zone::kArcana, "Arcane Omniscience",
               "Every enchantment laid bare.\nAll enchantments known without disenchanting.",
-              "spells_36_frame.png", 845.0f, 500.0f, 25, kH, { 6, 0 }, Effect::kAllEnchantments, {},
+              "spells_36_frame.png", 845.0f, 540.0f, 25, kH, { 6, 0 }, Effect::kAllEnchantments, {},
               false, 0, 0.0f, 1.2f },
             { 8, Zone::kArcana, "Frostguard", "+25% Frost Resist.",
-              "spells_16_frame.png", 1015.0f, 500.0f, 15, kN, { 6, 0 }, Effect::kAttributes,
+              "spells_16_frame.png", 1015.0f, 540.0f, 15, kN, { 6, 0 }, Effect::kAttributes,
               { { AV::kResistFrost, 25.0f } } },
             { 9, Zone::kArcana, "Spell Omniscience",
               "The System reads every tome ever written.\nAll spells with a spell tome learned.",
-              "spells_37_frame.png", 845.0f, 640.0f, 40, kH, { 7, 0 }, Effect::kAllSpells, {},
+              "spells_37_frame.png", 845.0f, 680.0f, 40, kH, { 7, 0 }, Effect::kAllSpells, {},
               false, 0, 0.0f, 1.2f },
 
             // --- Shadow (centre band) ---
             { 10, Zone::kShadow, "Swift Blood", "+100 Stamina.",
-              "spells_32_frame.png", 615.0f, 360.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
+              "spells_32_frame.png", 615.0f, 400.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
               { { AV::kStamina, 100.0f } } },
             { 11, Zone::kShadow, "Alchemical Insight",
               "Every ingredient gives up its secrets.\nAll ingredient effects known.",
-              "spells_31_frame.png", 530.0f, 500.0f, 25, kH, { 10, 0 }, Effect::kAllIngredients, {},
+              "spells_31_frame.png", 530.0f, 540.0f, 25, kH, { 10, 0 }, Effect::kAllIngredients, {},
               false, 0, 0.0f, 1.2f },
             { 12, Zone::kShadow, "Plagueward", "+25% Disease Resist.",
-              "spells_34_frame.png", 700.0f, 500.0f, 15, kN, { 10, 0 }, Effect::kAttributes,
+              "spells_34_frame.png", 700.0f, 540.0f, 15, kN, { 10, 0 }, Effect::kAttributes,
               { { AV::kResistDisease, 25.0f } } },
 
             // --- Capstone (bottom of the Shadow band) ---
@@ -110,7 +128,7 @@ namespace Isekai::SkillTree {
             // grazed every node on the way. Short V-lines, zero crossings — and a
             // deeper gate for the capstone as a side effect. ASCENDED-only.
             { 13, Zone::kShadow, "World Tree", "The System blossoms through your soul.\n+100 Health, Magicka and Stamina.",
-              "spells_09_frame.png", 615.0f, 650.0f, 50, kA, { 11, 12 }, Effect::kAttributes,
+              "spells_09_frame.png", 615.0f, 690.0f, 50, kA, { 11, 12 }, Effect::kAttributes,
               { { AV::kHealth, 100.0f }, { AV::kMagicka, 100.0f }, { AV::kStamina, 100.0f } },
               false, 0, 0.0f, 1.45f },
 

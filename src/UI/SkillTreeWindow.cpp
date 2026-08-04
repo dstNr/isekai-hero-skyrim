@@ -298,6 +298,29 @@ namespace Isekai::UI {
                 return kNodeSize * 0.5f * n.scale * fit;
             };
 
+            // The always-on name under a tile, as geometry rather than as an afterthought.
+            // A name is WIDER than the tile it belongs to, so a node's real footprint is
+            // the tile union its name box — and that union, not the tile, is what the zone
+            // frames and the link endpoints have to respect. Framing tiles alone left the
+            // outer names hanging over their zone border and started every link inside its
+            // own parent's name. Must stay in step with the label drawn in drawNode.
+            const float kLabelWrap = 108.0f * fit;   // design units, mirrors the web view's 88px
+            const float kLabelSize = std::max(10.0f * s, 15.0f * fit);
+            const float kLabelGap = 7.0f * s;
+            const float kLabelH = kLabelGap + kLabelSize * 2.0f;  // room for two lines
+
+            // Node footprint: centre, tile half-size, and how far the name reaches.
+            struct NodeBox {
+                ImVec2 mn, mx;
+            };
+            const auto boxOf = [&](const SkillTree::Node& n) {
+                const ImVec2 c = centerOf(n);
+                const float  h = halfOf(n);
+                const float  hw = std::max(h, kLabelWrap * 0.5f);
+                return NodeBox{ ImVec2{ c.x - hw, c.y - h },
+                                ImVec2{ c.x + hw, c.y + h + kLabelH } };
+            };
+
             // --- Zone frames: a tinted box and a header behind each branch, so CORE /
             // MIGHT / SHADOW / ARCANA read as deliberate groups rather than one web of
             // lines. Drawn first, so lines and nodes sit on top.
@@ -316,9 +339,11 @@ namespace Isekai::UI {
                 // the gaps between bands shrink with the fit while a fixed pad does not,
                 // so below fit ~0.9 the frames grew into each other. See the layout note
                 // in SkillTree.cpp for the clearances this relies on.
-                const float zpX = 16.0f * fit;
+                // The bottom pad is small because the box below already contains the
+                // node's name; it used to have to guess room for one.
+                const float zpX = 10.0f * fit;
                 const float zpT = 18.0f * fit;
-                const float zpB = 44.0f * fit;  // clears a two-line node name
+                const float zpB = 12.0f * fit;
 
                 struct Box {
                     ImVec2 mn, mx;
@@ -333,12 +358,11 @@ namespace Isekai::UI {
                         if (nd.zone != kZoneStyles[z].zone || IsUtilityNode(nd) || NodeHidden(nd)) {
                             continue;
                         }
-                        const ImVec2 c = centerOf(nd);
-                        const float  h = halfOf(nd);
-                        zMin.x = std::min(zMin.x, c.x - h);
-                        zMin.y = std::min(zMin.y, c.y - h);
-                        zMax.x = std::max(zMax.x, c.x + h);
-                        zMax.y = std::max(zMax.y, c.y + h);
+                        const NodeBox nb = boxOf(nd);
+                        zMin.x = std::min(zMin.x, nb.mn.x);
+                        zMin.y = std::min(zMin.y, nb.mn.y);
+                        zMax.x = std::max(zMax.x, nb.mx.x);
+                        zMax.y = std::max(zMax.y, nb.mx.y);
                         ++members;
                     }
                     boxes[z] = { zMin, zMax, members > 0 };
@@ -408,6 +432,77 @@ namespace Isekai::UI {
                 return ImVec2{ a_from.x + nx * edge, a_from.y + ny * edge };
             };
 
+            // Where a link leaves its PARENT: the point at which it exits the parent's
+            // footprint, name included. Clipping to the tile alone drew the first stretch
+            // of every link straight through the parent's own name, because the name is
+            // wider than the tile and sits exactly where the children fan out. Children
+            // need no equivalent — their name is below them, links arrive from above.
+            const auto linkStart = [&](const SkillTree::Node& a_from, const SkillTree::Node& a_to) {
+                const ImVec2  a = centerOf(a_from);
+                const ImVec2  b = centerOf(a_to);
+                const NodeBox nb = boxOf(a_from);
+                const float   dx = b.x - a.x;
+                const float   dy = b.y - a.y;
+                const float   len = std::sqrt(dx * dx + dy * dy);
+                if (len < 1.0f) {
+                    return a;
+                }
+                // Nearest wall the ray leaves through.
+                float t = FLT_MAX;
+                if (dx > 0.0f) t = std::min(t, (nb.mx.x - a.x) / dx);
+                if (dx < 0.0f) t = std::min(t, (nb.mn.x - a.x) / dx);
+                if (dy > 0.0f) t = std::min(t, (nb.mx.y - a.y) / dy);
+                if (dy < 0.0f) t = std::min(t, (nb.mn.y - a.y) / dy);
+                const float want = (t == FLT_MAX ? 0.0f : t * len) + 4.0f * s;
+                const float room = len - halfOf(a_to) - 4.0f * s;
+                const float d = std::min(want, std::max(room, 0.0f));
+                return ImVec2{ a.x + dx / len * d, a.y + dy / len * d };
+            };
+
+            // A link is straight unless a third node stands in the way, in which case it
+            // bows around it. Only one link needs this today — the hub reaches Swift Blood
+            // straight through System Analysis, which made the tree claim a gate that does
+            // not exist. Done by geometry rather than as a special case, so the next node
+            // placed below the hub cannot quietly reintroduce the lie. Returns the
+            // quadratic control point, or the segment midpoint when the line is clear.
+            const auto bowAround = [&](ImVec2 a, ImVec2 b, const SkillTree::Node& a_from,
+                                       const SkillTree::Node& a_to, bool& a_bowed) {
+                const float dx = b.x - a.x;
+                const float dy = b.y - a.y;
+                const float len = std::sqrt(dx * dx + dy * dy);
+                a_bowed = false;
+                const ImVec2 mid{ (a.x + b.x) * 0.5f, (a.y + b.y) * 0.5f };
+                if (len < 1.0f) {
+                    return mid;
+                }
+                float worst = 0.0f;
+                float side = 1.0f;
+                for (std::size_t j = 0; j < count; ++j) {
+                    const auto& other = nodes[j];
+                    if (&other == &a_from || &other == &a_to || IsUtilityNode(other) ||
+                        NodeHidden(other)) {
+                        continue;
+                    }
+                    const ImVec2 p = centerOf(other);
+                    const float  t = std::clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / (len * len),
+                                                0.0f, 1.0f);
+                    const float  cx = p.x - (a.x + dx * t);
+                    const float  cy = p.y - (a.y + dy * t);
+                    const float  need = halfOf(other) + 8.0f * s - std::sqrt(cx * cx + cy * cy);
+                    if (need > worst) {
+                        worst = need;
+                        side = (dx * (p.y - a.y) - dy * (p.x - a.x)) > 0.0f ? -1.0f : 1.0f;
+                    }
+                }
+                if (worst <= 0.0f) {
+                    return mid;
+                }
+                a_bowed = true;
+                // A quadratic peaks at half its control offset, hence the doubling.
+                const float off = (worst + 12.0f * s) * 2.0f * side;
+                return ImVec2{ mid.x + (-dy / len) * off, mid.y + (dx / len) * off };
+            };
+
             // Mastery nodes never carry a prereq (that is their definition), so this
             // loop only ever draws branch-graph connections — nothing to skip.
             for (std::size_t i = 0; i < count; ++i) {
@@ -431,18 +526,26 @@ namespace Isekai::UI {
                     }
                     const bool   litFrom = SkillTree::IsUnlocked(from->key);
                     const bool   litBoth = litFrom && SkillTree::IsUnlocked(node.key);
-                    const ImVec2 a = centerOf(*from);
-                    const ImVec2 b = centerOf(node);
-                    const ImVec2 p = clipToBox(a, b, halfOf(*from));
-                    const ImVec2 q = clipToBox(b, a, halfOf(node));
+                    const ImVec2 p = linkStart(*from, node);
+                    const ImVec2 q = clipToBox(centerOf(node), centerOf(*from), halfOf(node));
+
+                    bool         bowed = false;
+                    const ImVec2 ctrl = bowAround(p, q, *from, node, bowed);
+                    const auto   stroke = [&](ImU32 col, float thick) {
+                        if (bowed) {
+                            dl->AddBezierQuadratic(p, ctrl, q, col, thick);
+                        } else {
+                            dl->AddLine(p, q, col, thick);
+                        }
+                    };
+
                     if (litBoth) {
                         // A fully-unlocked path: a wide faint halo under a bright core,
                         // so active connections read as glowing energy.
-                        dl->AddLine(p, q, Style::Col(Style::kAccent, 0.18f * fade), 6.0f * s);
-                        dl->AddLine(p, q, Style::Col(Style::kAccent, 0.95f * fade), 2.4f * s);
+                        stroke(Style::Col(Style::kAccent, 0.18f * fade), 6.0f * s);
+                        stroke(Style::Col(Style::kAccent, 0.95f * fade), 2.4f * s);
                     } else {
-                        dl->AddLine(p, q, Style::Col(Style::kAccent, (litFrom ? 0.4f : 0.15f) * fade),
-                                    1.5f * s);
+                        stroke(Style::Col(Style::kAccent, (litFrom ? 0.4f : 0.15f) * fade), 1.5f * s);
                     }
                 }
             }
@@ -502,13 +605,18 @@ namespace Isekai::UI {
                     // the closest same-row neighbours are 170 design units apart, so at
                     // fit 0.68 they sat 116px apart while a label was allowed to grow to
                     // 124px — which is exactly why "Thu'um Omniscience" ran into
-                    // "Emberguard". 140 units of wrap always stays under that 170.
-                    const float lblSize = std::max(10.0f * s, 15.0f * fit);
-                    const float wrapW = 140.0f * fit;
-                    const ImVec2 ls = font->CalcTextSizeA(lblSize, FLT_MAX, wrapW, node.name);
-                    a_dl->AddText(font, lblSize,
-                                  ImVec2{ (nMin.x + nMax.x) * 0.5f - ls.x * 0.5f, nMax.y + 7.0f * s },
-                                  visual.label, node.name, nullptr, wrapW);
+                    // "Emberguard".
+                    //
+                    // These MUST match kLabelWrap / kLabelSize / kLabelGap above: those
+                    // are what the zone frames and the link endpoints reserve room for,
+                    // and a label drawn wider than what was reserved is exactly the bug
+                    // that reservation exists to prevent.
+                    const ImVec2 ls =
+                        font->CalcTextSizeA(kLabelSize, FLT_MAX, kLabelWrap, node.name);
+                    a_dl->AddText(font, kLabelSize,
+                                  ImVec2{ (nMin.x + nMax.x) * 0.5f - ls.x * 0.5f,
+                                          nMax.y + kLabelGap },
+                                  visual.label, node.name, nullptr, kLabelWrap);
                 }
 
                 // Mastery-tier pip, bottom-right corner — the ImGui equivalent of the web

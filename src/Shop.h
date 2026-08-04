@@ -23,7 +23,14 @@ namespace Isekai::Shop {
         std::string  qty;    // "x1" — shown next to the name, never parsed
         std::int32_t cost;   // System Points
         std::string  icon;   // file name under the icons folder
+        std::string  shelf;  // display group, e.g. "ELIXIRS" — see Shelves()
     };
+
+    // The display groups, in the order they should be offered. Both renderers build
+    // their category list from this rather than collecting the distinct shelf names
+    // themselves, so an empty group (every potion still awaiting its ESP record) keeps
+    // its place instead of silently reordering the ones around it.
+    [[nodiscard]] std::vector<std::string> Shelves();
 
     // Resolve the catalog's soul-gem forms out of Skyrim.esm. Call at kDataLoaded, after
     // Storage::Install() (independent of it, but keeps load-order intent obvious).

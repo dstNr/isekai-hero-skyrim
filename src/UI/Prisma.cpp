@@ -164,7 +164,17 @@ namespace Isekai::UI::Prisma {
         // The shop catalog + the current balance. Reads game state — MAIN THREAD ONLY.
         [[nodiscard]] std::string BuildShopJson() {
             std::string j = "{\"points\":" + std::to_string(GetState().systemPoints) + ",";
-            j += "\"items\":[";
+
+            // The shelves come over as their own list, in order, so an empty category
+            // (potions before their ESP records exist) still holds its place in the rail
+            // instead of vanishing and reordering the ones around it.
+            j += "\"shelves\":[";
+            const auto shelves = Isekai::Shop::Shelves();
+            for (std::size_t i = 0; i < shelves.size(); ++i) {
+                j += (i ? "," : "") + ("\"" + Esc(shelves[i].c_str()) + "\"");
+            }
+            j += "],\"items\":[";
+
             const auto items = Isekai::Shop::Catalog();
             for (std::size_t i = 0; i < items.size(); ++i) {
                 if (i != 0) {
@@ -173,6 +183,7 @@ namespace Isekai::UI::Prisma {
                 j += "{\"name\":\"" + Esc(items[i].name.c_str()) + "\",";
                 j += "\"qty\":\"" + Esc(items[i].qty.c_str()) + "\",";
                 j += "\"cost\":" + std::to_string(items[i].cost) + ",";
+                j += "\"shelf\":\"" + Esc(items[i].shelf.c_str()) + "\",";
                 j += "\"icon\":\"" + Esc(IconFile(items[i].icon).c_str()) + "\"}";
             }
             j += "]}";
