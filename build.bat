@@ -50,7 +50,18 @@ if not exist "%SKSE_PLUGINS%\IsekaiHero\icons" mkdir "%SKSE_PLUGINS%\IsekaiHero\
 copy /Y "%~dp0icons\*.png" "%SKSE_PLUGINS%\IsekaiHero\icons\" >nul
 if errorlevel 1 goto :copy_failed
 
-echo Deployed IsekaiHeroSKSE.dll + .pdb -^> %SKSE_PLUGINS%
+REM Settings ini: seed it ONLY when the game folder has none. Never /Y - this is the
+REM one deployed file a tester edits by hand (hotkeys, the self-test key), and copying
+REM over it would silently reset those on every build. Without this the game folder had
+REM no ini at all, so a setting changed in the repo appeared to do nothing there.
+set "INI_NOTE=ini kept"
+if not exist "%SKSE_PLUGINS%\IsekaiHero.ini" (
+  copy "%~dp0IsekaiHero.ini" "%SKSE_PLUGINS%\" >nul
+  if errorlevel 1 goto :copy_failed
+  set "INI_NOTE=ini seeded"
+)
+
+echo Deployed IsekaiHeroSKSE.dll + .pdb + icons ^(%INI_NOTE%^) -^> %SKSE_PLUGINS%
 echo BUILD_OK
 exit /b 0
 
