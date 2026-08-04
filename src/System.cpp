@@ -883,6 +883,9 @@ namespace Isekai {
                 // Hand out a standing objective — including to characters from before
                 // System Quests existed, whose save simply carries none.
                 Quests::EnsureObjective();
+                // Last, once everything above has settled: write the diagnostic report.
+                // It runs on a task, so it does not sit inside the engine's post-load pass.
+                SelfTest::RunOnLoad();
                 break;
 
             default:

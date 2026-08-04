@@ -338,6 +338,14 @@ namespace Isekai::UI {
 
     void RegisterHotkey(std::uint32_t a_scanCode, std::function<void()> a_fn,
                         std::uint32_t a_modifier) {
+        // Scan code 0 is not a key. Callers use 0 to mean "this feature is switched off"
+        // (SelfTestKey), and registering it left a dead entry in the map that looked, in
+        // the log and in this table, exactly like an armed hotkey.
+        if (a_scanCode == 0) {
+            logger::warn("UI: ignoring a hotkey registered on scan code 0 — that is never "
+                         "a key, and 0 is how the ini spells \"off\"");
+            return;
+        }
         std::scoped_lock lock(g_hotkeyMutex);
         g_hotkeys[a_scanCode] = Hotkey{ std::move(a_fn), a_modifier };
     }

@@ -448,7 +448,7 @@ namespace Isekai::SelfTest {
         }
     }
 
-    void Run() {
+    void Run(bool a_notify) {
         std::vector<Result> out;
         CheckPlugin(out);
         CheckEnvironment(out);
@@ -481,16 +481,38 @@ namespace Isekai::SelfTest {
         logger::info("=======================================================");
 
         // The in-game half of the report: enough to know whether to go read the log.
-        const std::string msg =
-            failed == 0
-                ? "[ SYSTEM ] Self-test: all " + std::to_string(out.size()) + " checks passed."
-                : "[ SYSTEM ] Self-test: " + std::to_string(failed) + " of " +
-                      std::to_string(out.size()) + " failed — see IsekaiHeroSKSE.log.";
-        RE::DebugNotification(msg.c_str());
+        // The automatic run stays quiet unless something is actually broken — a
+        // notification on every load would just train the player to ignore it.
+        if (a_notify || fatal > 0) {
+            const std::string msg =
+                failed == 0
+                    ? "[ SYSTEM ] Self-test: all " + std::to_string(out.size()) + " checks passed."
+                    : "[ SYSTEM ] Self-test: " + std::to_string(failed) + " of " +
+                          std::to_string(out.size()) + " failed — see IsekaiHeroSKSE.log.";
+            RE::DebugNotification(msg.c_str());
+        }
+    }
+
+    void RunOnLoad() {
+        // Off the load handler and onto the next frame: the sweeps walk every recipe and
+        // every ingredient in the load order, which has no business sitting inside the
+        // engine's post-load pass.
+        if (auto* task = SKSE::GetTaskInterface()) {
+            task->AddTask([]() { Run(/*a_notify=*/false); });
+        }
     }
 
     void Install() {
-        UI::RegisterHotkey(Config::SelfTestKey(), Run);
-        logger::info("SelfTest: hotkey {:#04x} runs the self-test", Config::SelfTestKey());
+        // Scan code 0 means "off" — registering it armed a hotkey no key can ever produce
+        // and then logged "hotkey 0x00 runs the self-test", which reads as if it were
+        // ready. That line is the first thing anyone checks when the key does nothing.
+        const auto key = Config::SelfTestKey();
+        if (key == 0) {
+            logger::info("SelfTest: no hotkey (SelfTestKey = 0). The report is written "
+                         "automatically after every game load anyway.");
+            return;
+        }
+        UI::RegisterHotkey(key, []() { Run(/*a_notify=*/true); });
+        logger::info("SelfTest: hotkey {:#04x} runs the self-test", key);
     }
 }

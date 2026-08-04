@@ -20,5 +20,15 @@ namespace Isekai::SelfTest {
 
     // Run every check and write the report to the log. Main thread only.
     // Safe at any time: it only reads state, never changes it.
-    void Run();
+    //
+    // a_notify controls the on-screen half. The hotkey wants it (you pressed a key and
+    // deserve an answer); the automatic run on load does not, or every load would pop a
+    // notification — there it speaks up only when something actually failed.
+    void Run(bool a_notify = true);
+
+    // Run once, shortly after a game finishes loading, so every log carries a report of a
+    // REAL character without anyone having to set a diagnostic key first. That step was
+    // the whole friction: a bug report needs this report, and it needed an ini edit and a
+    // restart to get one.
+    void RunOnLoad();
 }
