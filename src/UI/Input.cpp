@@ -1,5 +1,6 @@
 #include "UI/Input.h"
 
+#include "Config.h"
 #include "UI/Overlay.h"
 #include "UI/ShopWindow.h"
 #include "UI/SkillTreeWindow.h"
@@ -38,9 +39,8 @@ namespace Isekai::UI {
             std::vector<std::pair<int, bool>>        buttons;  // (ImGui button, down)
         };
 
-        // Flip to true to log every key press with its device and scan code — the fast
-        // way to find out what the game actually sends when a hotkey does not land.
-        constexpr bool kLogKeyPresses = false;
+        // (The old compile-time kLogKeyPresses lived here. It is Config::LogKeyPresses()
+        // now — a build switch is useless for diagnosing someone else's machine.)
 
         std::mutex g_mutex;
         Pending    g_pending;
@@ -101,12 +101,29 @@ namespace Isekai::UI {
                 // Hotkeys work whether or not a panel is open, so they are handled
                 // before the capture check below.
                 for (auto* event = *a_event; event; event = event->next) {
-                    if (event->GetEventType() != RE::INPUT_EVENT_TYPE::kButton ||
-                        event->GetDevice() != RE::INPUT_DEVICE::kKeyboard) {
+                    if (event->GetEventType() != RE::INPUT_EVENT_TYPE::kButton) {
                         continue;
                     }
                     auto* button = event->AsButtonEvent();
                     if (!button) {
+                        continue;
+                    }
+
+                    // DIAGNOSTIC, before the device filter on purpose. When a hotkey does
+                    // not fire, the log otherwise cannot separate "no input event arrives
+                    // at all" from "one arrives under a device we ignore" — and the second
+                    // is real: Skyrim VR delivers controller buttons as kVRRight (5) /
+                    // kVRLeft (6), which the keyboard-only path below drops silently.
+                    // Switched from the ini so a tester needs no special build.
+                    if (button->IsDown() && Config::LogKeyPresses()) {
+                        logger::info("input: device={} scanCode={:#x} ({})",
+                                     static_cast<int>(event->GetDevice()), button->GetIDCode(),
+                                     event->GetDevice() == RE::INPUT_DEVICE::kKeyboard
+                                         ? "keyboard — hotkeys see this"
+                                         : "NOT keyboard — hotkeys ignore this");
+                    }
+
+                    if (event->GetDevice() != RE::INPUT_DEVICE::kKeyboard) {
                         continue;
                     }
 
@@ -119,15 +136,6 @@ namespace Isekai::UI {
 
                     if (!button->IsDown()) {
                         continue;
-                    }
-
-                    // DIAGNOSTIC: F11 never reached the handler and the log could not
-                    // say why — whether no key events arrive at all, or they arrive
-                    // under a device or scan code we did not expect. So print what
-                    // actually shows up.
-                    if constexpr (kLogKeyPresses) {
-                        logger::info("key down: device={} scanCode={:#x}",
-                                     static_cast<int>(event->GetDevice()), button->GetIDCode());
                     }
 
                     FireHotkey(button->GetIDCode());

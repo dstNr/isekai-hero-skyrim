@@ -44,4 +44,14 @@ namespace Isekai::Config {
     // is the default — it is a diagnostic to be switched on when reporting a problem,
     // not something a normal playthrough should be able to trigger by accident.
     [[nodiscard]] std::uint32_t SelfTestKey();
+
+    // Log every button press with its input device and scan code. Off by default; it is
+    // noisy, and only useful when a hotkey does not fire.
+    //
+    // The point is that it needs no special build: when a tester reports a dead hotkey,
+    // the log otherwise cannot distinguish "no input event arrives at all" from "one
+    // arrives under a device or scan code we do not accept". That second case is real —
+    // Skyrim VR delivers controller buttons as kVRRight/kVRLeft, which the hotkey path
+    // ignores.
+    [[nodiscard]] bool LogKeyPresses();
 }

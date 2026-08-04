@@ -98,6 +98,48 @@ is there.
    yet verified in VR**, but empirically grounded (DumpForms found the forms in the same
    log). On a VR test, watch for `Passives: 8 of 8` and `Sounds: 4 of 4` in the log.
 
+## Addendum 3 — the 0.6.1 tester's log (Aug 2026)
+
+The log settled two things and left one open.
+
+**PrismaUI is fine.** `Prisma: web UI active (view …)` followed by `Prisma: view DOM ready`
+— the framework loaded, our patch is installed, the view was created. The "missing patch"
+theory, which was the most likely cause, is wrong.
+
+**The hotkey never reaches the handler.** `System hotkey fired — opening status (…)` does
+not appear anywhere in the log, so the problem is upstream of everything the UI does. The
+input sinks *are* installed (`UI: hooked Skyrim's input event stream`,
+`menu guard armed at the front of the chain (9 handlers)`), so it is not the ordering bug
+Addendum 1 fixed.
+
+**Still open: what the game actually sends.** `InputSink::ProcessEvent` only considers
+`INPUT_DEVICE::kKeyboard`. CommonLibSSE-NG additionally defines `kVRRight = 5` and
+`kVRLeft = 6` under `ENABLE_SKYRIM_VR`, and those are dropped before any hotkey is
+matched. Whether that is the cause depends on what device the tester's key arrives under —
+which nothing in the log said, because the key-press diagnostic was a compile-time
+constant set to `false`.
+
+It is `LogKeyPresses` in the ini now, so it can be switched on without a special build.
+Ask the tester to set it, press the menu key, and send the log. Every button press then
+logs as:
+
+```
+input: device=0 scanCode=0x2f (keyboard — hotkeys see this)
+input: device=5 scanCode=0x…  (NOT keyboard — hotkeys ignore this)
+```
+
+- **Nothing logged at all** → no input event reaches the plugin; the sink is installed but
+  the VR runtime is not routing through it.
+- **device=0 with the configured scan code** → the event arrives and is accepted, so the
+  fault is downstream, inside `FireHotkey` or the handler.
+- **device=5 or 6** → confirmed: VR controller input, currently dropped. The fix is then to
+  accept those devices, which needs care because their button IDs are a different
+  namespace from keyboard scan codes and could collide.
+
+> That tester's ini has `SystemMenuKey=0x2f, SystemMenuModifier=0x0` — V with no modifier,
+> not the default RShift+S. Worth confirming they are pressing V on a physical keyboard,
+> since that is the only thing the current code can act on.
+
 ## Reading a VR log
 
 Ask for `Documents\My Games\Skyrim VR\SKSE\IsekaiHeroSKSE.log`. **No special build is
