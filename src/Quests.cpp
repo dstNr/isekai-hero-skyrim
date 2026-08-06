@@ -29,14 +29,25 @@ namespace Isekai::Quests {
         // background of normal play, not to become the main way points are earned. The
         // common quarries are cheap and quick; the rare ones pay more because you cannot
         // go and farm them on demand.
+        // Key 3 is RETIRED, not reused: it was "Falmer" on "ActorTypeFalmer", a keyword
+        // that does not exist. Skyrim tags exactly fourteen ActorType* keywords and Falmer
+        // is not one of them — they are ActorTypeNPC like any other humanoid, which is
+        // useless here (it would count townspeople). The objective could therefore never
+        // be completed by anyone who drew it. A save still holding key 3 finds no quarry,
+        // and EnsureObjective rolls a fresh one on the next load.
+        //
+        // Every keyword below was read out of the masters themselves (see the allowed set
+        // in tools/check.mjs, which now fails on an invented one). Do not add one from
+        // memory: a wrong keyword is invisible until someone draws that objective and
+        // then quietly never finishes it.
         constexpr Quarry kQuarries[] = {
             { 1, "Draugr",          "ActorTypeUndead",  25, 4 },
             { 2, "wild beasts",     "ActorTypeAnimal",  20, 3 },
-            { 3, "Falmer",          "ActorTypeFalmer",  15, 5 },
             { 4, "Dwarven automata","ActorTypeDwarven", 12, 5 },
             { 5, "Daedra",          "ActorTypeDaedra",  10, 6 },
             { 6, "giants",          "ActorTypeGiant",    5, 8 },
             { 7, "dragons",         "ActorTypeDragon",   3, 12 },
+            { 8, "trolls",          "ActorTypeTroll",    8, 5 },
         };
 
         [[nodiscard]] const Quarry* Find(std::uint32_t a_key) {

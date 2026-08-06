@@ -502,6 +502,48 @@ check("icons: every shipped PNG is 512x512", () => {
   return `${readdirSync(join(ROOT, "icons")).filter((f) => f.endsWith(".png")).length} PNGs`;
 });
 
+check("quests: every quarry names a keyword the game actually has", () => {
+  // "ActorTypeFalmer" shipped in the quarry table and does not exist. Nothing catches
+  // that from the outside: the objective is handed out, reads perfectly, and simply
+  // never counts a kill — the in-game self-test found it only because someone ran it.
+  //
+  // The allowed set below was read out of the masters themselves, not from memory:
+  //   Skyrim.esm     14   (the full ActorType* set)
+  //   Dawnguard.esm   3
+  //   Dragonborn.esm  1
+  //   HearthFires.esm 0
+  // Falmer are ActorTypeNPC like any other humanoid, which is why no Falmer-specific
+  // keyword exists — and why that quarry could not simply be re-pointed.
+  const KNOWN = new Set([
+    "ActorTypeAnimal", "ActorTypeCow", "ActorTypeCreature", "ActorTypeDaedra",
+    "ActorTypeDragon", "ActorTypeDwarven", "ActorTypeFamiliar", "ActorTypeGhost",
+    "ActorTypeGiant", "ActorTypeHorse", "ActorTypeNPC", "ActorTypePrisoner",
+    "ActorTypeTroll", "ActorTypeUndead",
+    "ActorTypeDLC1Boss", "ActorTypeMount", "ActorTypeVampireBrute",  // Dawnguard
+    "DLC2ActorTypeMiraak",                                          // Dragonborn
+  ]);
+
+  const cpp = read("src/Quests.cpp");
+  const from = cpp.indexOf("constexpr Quarry kQuarries[] = {");
+  need(from >= 0, "kQuarries not found in Quests.cpp");
+  const body = cpp.slice(from, cpp.indexOf("\n        };", from));
+  const rows = [...body.matchAll(/\{\s*(\d+),\s*"([^"]+)",\s*"([^"]+)",\s*(\d+),\s*(\d+)\s*\}/g)]
+    .map((m) => ({ key: +m[1], name: m[2], keyword: m[3] }));
+  need(rows.length > 0, "no quarries parsed — parser stale?");
+
+  for (const q of rows) {
+    need(KNOWN.has(q.keyword),
+         `quarry ${q.key} ("${q.name}") hunts "${q.keyword}", which no master defines — ` +
+         `that objective can be handed out but never completed`);
+  }
+
+  // Keys are promised never to be reused: a live objective in someone's save is just
+  // this number, so re-pointing one silently changes what they were sent to kill.
+  const keys = rows.map((q) => q.key);
+  need(new Set(keys).size === keys.length, `duplicate quarry keys: ${keys.join(", ")}`);
+  return `${rows.length} quarries, keys ${keys.join("/")}`;
+});
+
 check("shop: every entry names a shelf that exists", () => {
   const names = new Set(parseShelfNames());
   const cpp = parseShopCatalog();

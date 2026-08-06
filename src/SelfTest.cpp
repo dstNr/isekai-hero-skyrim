@@ -13,6 +13,7 @@
 #include "System.h"
 #include "UI/Input.h"
 #include "UI/Prisma.h"
+#include "UI/SystemWindow.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -480,35 +481,36 @@ namespace Isekai::SelfTest {
                      fatal > 0 ? " — SOMETHING IS BROKEN, see FAIL above" : "");
         logger::info("=======================================================");
 
-        // The in-game half of the report.
+        // The in-game half of the report, on OUR panel rather than the engine's message
+        // box. DebugMessageBox goes through Skyrim's menu queue, and in gameplay that
+        // queue is not drained until some menu opens — so the report appeared minutes
+        // later, when ESC was pressed. Our panel draws straight onto the overlay in the
+        // next frame, which is the only way a diagnostic key can answer immediately.
         //
-        // The hotkey run gets a MESSAGE BOX, not a notification. A corner notification
-        // fades in a couple of seconds and is trivially missed, which is indistinguishable
-        // from the key not working at all — and that is exactly what a diagnostic key must
-        // never be ambiguous about. It also carries the failures themselves, so the
-        // common cases need no log at all.
-        //
-        // The automatic run on load draws nothing at all — see the note below it.
-        if (a_notify) {
-            std::string box = "[ SYSTEM ] SELF-TEST\n\n" + std::to_string(out.size() - failed) +
-                              " of " + std::to_string(out.size()) + " checks passed.";
-            if (failed > 0) {
-                box += "\n";
-                for (const auto& r : out) {
-                    if (!r.pass) {
-                        box += "\n" + std::string(r.fatal ? "FAIL  " : "warn  ") + r.name + ": " +
-                               r.detail;
-                    }
+        // The automatic run on load draws NOTHING, not even on a failure: it fires while
+        // the loading screen is still up, and anything it posts surfaces at whatever
+        // unrelated moment the screen next frees up. That was the same ESC symptom.
+        if (!a_notify) {
+            return;
+        }
+
+        std::string body = std::to_string(out.size() - failed) + " of " +
+                           std::to_string(out.size()) + " checks passed.\n";
+        if (failed > 0) {
+            body += "\n";
+            for (const auto& r : out) {
+                if (!r.pass) {
+                    body += std::string(r.fatal ? "FAIL  " : "warn  ") + r.name + "\n        " +
+                            r.detail + "\n";
                 }
             }
-            box += "\n\nFull report: IsekaiHeroSKSE.log";
-            RE::DebugMessageBox(box.c_str());
         }
-        // The automatic run draws NOTHING on screen, not even on a failure. It fires
-        // while the loading screen is still up, so anything it posts is queued by the UI
-        // and flushed at whatever unrelated moment the screen next frees up — which read
-        // as "the self-test runs when I press ESC". A diagnostic that surfaces at a
-        // random moment is worse than one that only writes to the log.
+        body += "\nFull report: IsekaiHeroSKSE.log";
+
+        // Instant reveal and a wide panel, same as the status ledger: this is a table, and
+        // nobody wants to watch a typewriter spell out a diagnostic.
+        UI::ShowSystemWindow("[ SYSTEM ] SELF-TEST", std::move(body),
+                             std::vector<std::string>{ "CLOSE" }, [](int) {}, 100000.0f, 900.0f);
     }
 
     void RunOnLoad() {
