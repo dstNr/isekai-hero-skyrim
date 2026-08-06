@@ -447,9 +447,12 @@
                object-fit: contain; flex: none;
                filter: drop-shadow(0 0 10px rgba(90,210,255,0.4)); }
   #sRankText { min-width: 0; }
+  /* Type only — no colour. The rank ramp below is class-based, and an id selector beats
+     a class every time: `color: #fff` here meant every rank rendered white however
+     carefully the ramp was tuned. The .rank-* class always gets set (renderStatus falls
+     back to rank-e), so nothing here has to carry a default. */
   #sRankLetter { font-size: clamp(22px, 2.6vw, 34px); font-weight: 700; line-height: 1.1;
-                 letter-spacing: 0.12em; color: #fff;
-                 text-shadow: 0 0 18px rgba(90,210,255,0.45); }
+                 letter-spacing: 0.12em; }
 
   /* The rank ramp: steel through the System's cyan to gold, the order every ranked game
      has trained people to read without a legend. White for all six said only "here is a

@@ -568,6 +568,18 @@ check("ui: both renderers colour a System Rank the same", () => {
   need(Object.keys(cpp).length === 6, `RankColor names ${Object.keys(cpp).length} ranks, not 6`);
 
   const view = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+
+  // The ramp is applied as a CLASS to #sRankLetter, and an id selector outranks a class.
+  // This shipped once: the six colours below were correct, agreed with the C++ to the
+  // byte, and every rank still rendered white because #sRankLetter also said `color:
+  // #fff`. Comparing the values alone cannot see that — so check that the id rule sets
+  // no colour of its own.
+  const idRule = view.match(/#sRankLetter\s*\{([^}]*)\}/);
+  need(idRule, "#sRankLetter rule not found — parser stale?");
+  need(!/(^|[;\s])color\s*:/.test(idRule[1]),
+       "#sRankLetter sets its own colour, which outranks the .rank-* classes — " +
+       "every rank will render in that colour whatever the ramp says");
+
   for (const [rank, rgb] of Object.entries(cpp)) {
     const css = view.match(new RegExp(`\\.rank-${rank.toLowerCase()}\\s*\\{\\s*color:\\s*#([0-9a-f]{6})`, "i"));
     need(css, `the view has no .rank-${rank.toLowerCase()} colour`);
