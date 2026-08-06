@@ -30,21 +30,77 @@ Log lines to keep an eye on throughout: the mod writes what it does, so a test t
 
 ### 1.1 System Quests (new, and it touched the save format)
 
+**Setting up.** You cannot choose which quarry you draw, which makes this awkward to
+test — so the status panel has a **NEW TASK** button. It is free and instant, so press it
+until you get a quarry you can reach, and use it again between the steps below.
+
+The seven quarries and where to find one quickly:
+
+| Objective | Kill | Where |
+|---|---|---|
+| Draugr | `ActorTypeUndead` | any barrow — Bleak Falls Barrow is next to Riverwood. Skeletons and vampires count too. |
+| wild beasts | `ActorTypeAnimal` | wolves on any road |
+| Dwarven automata | `ActorTypeDwarven` | any Dwemer ruin |
+| Daedra | `ActorTypeDaedra` | **fastest of all: conjure an atronach and kill it.** It is your summon, so it is a teammate, and it is Daedra. |
+| giants | `ActorTypeGiant` | the camps around Whiterun |
+| trolls | `ActorTypeTroll` | mountain passes; the road to High Hrothgar |
+| dragons | `ActorTypeDragon` | the slowest one to test; leave it |
+
+To spawn one instead, open the console, click nothing, and use a leveled list — e.g.
+`player.placeatme 0003BCBC 1` for a draugr. `help "troll" 4` lists what your load order
+has if you want a different one.
+
 | Step | Expected |
 |---|---|
 | Load a save. Open the status panel (`RShift+S`). | An **Objective** row: a target, a progress bar, `0 / N`, and `+X SP`. |
+| Press **NEW TASK**. | Panel comes straight back with a **different** objective at `0 / N`, and a notification names it. |
 | Kill one matching creature (the objective names which). | Counter goes up by exactly **1**. |
 | Let a follower land the killing blow on one. | Counter still goes up — teammates count on purpose. |
+| Kill it with a poison, a rune or a summon instead of in melee. | Counter still goes up. Anything the player or a teammate causes counts; that is deliberate, since a mage or a sneak lands few direct blows. |
 | Kill something that does *not* match. | Counter does **not** move. |
-| Finish the objective. | Notification, System Points increase by the advertised amount, and a **different** objective appears immediately. |
+| Finish the objective. | Level-up sting, System Points increase by the advertised amount, and a **different** objective appears immediately. |
 | Save, quit to desktop, reload. | Same objective, same progress. |
 
 **This last row is the important one** — it is the first change to the co-save format
 (v11). If progress resets to 0 on reload, the state is not persisting.
 
 > A counter that never moves at all, on every quarry, points at the kill detection.
-> A counter that never moves for **one specific** quarry points at that keyword — the
-> self-test would already have flagged it.
+> A counter that never moves for **one specific** quarry points at that keyword. That is
+> not hypothetical: "Falmer" hunted `ActorTypeFalmer`, which does not exist, and the
+> objective could never be finished. `node tools/check.mjs` now fails on an invented
+> keyword, and the in-game self-test reports one that is missing from your load order.
+
+### 1.1b Mob danger level (System Analysis)
+
+Gated behind a skill-tree node, so the first two rows are the gate itself.
+
+| Step | Expected |
+|---|---|
+| Before buying the node, press `V` while looking at anything. | Notification: analysis not unlocked. Nothing opens. |
+| Buy **System Analysis** in the skill tree (CORE zone, 10 SP, needs System Core). | — |
+| Press `V` looking at a wolf. | Panel: name, level, health `now / max`, and a **THREAT** verdict. |
+| Press `V` looking at a barrel or a door. | "An inanimate object." — the analysis still opens, it just has nothing to say. |
+| Press `V` looking at nothing (the sky). | Notification: nothing in view. |
+| Press `V` while the status panel is already open, or while the game is paused. | Nothing happens — it must not fire into another menu. |
+
+The four verdicts come from **target level minus your level**, nothing else:
+
+| Difference | Verdict |
+|---|---|
+| +20 or more | `LETHAL` |
+| +5 to +19 | `DANGEROUS` |
+| −14 to +4 | `MANAGEABLE` |
+| −15 or less | `TRIVIAL` |
+
+> Most Skyrim enemies are **level-scaled**, so they track your level and land in
+> `MANAGEABLE` almost every time. That is correct behaviour, not a bug — but it means you
+> have to seek out the other three deliberately. Reliable checks: a chicken or a rabbit
+> for `TRIVIAL`; a Giant (level 32) or a Dragon Priest for `DANGEROUS`/`LETHAL` at a low
+> level. `player.setlevel 5` before looking at a giant makes both extremes reachable in
+> one go.
+>
+> Analysis is **switched off in Skyrim VR** — the crosshair lookup it needs resolves
+> through an SE/AE-only address. It says so rather than guessing.
 
 ### 1.2 The storage no longer arrives stocked
 

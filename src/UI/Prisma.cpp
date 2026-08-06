@@ -1,6 +1,8 @@
 #include "UI/Prisma.h"
 
 #include "PrismaUI_API.h"
+#include "Progression.h"  // OpenStatusPanel, to come back after a reroll
+#include "Quests.h"       // Quests::Reroll from the status screen's "new task" button
 #include "Shop.h"  // Shop::Open from the status screen's shop button
 #include "SkillTree.h"
 #include "Sounds.h"
@@ -289,7 +291,7 @@ namespace Isekai::UI::Prisma {
         }
 
         // The status screen's footer buttons. One listener, an action string — tree /
-        // storage / shop / reboot / close.
+        // storage / shop / reroll / reboot / close.
         void OnStatusAction(const char* a_arg) {
             const std::string action = a_arg ? a_arg : "";
             if (auto* task = SKSE::GetTaskInterface()) {
@@ -305,6 +307,12 @@ namespace Isekai::UI::Prisma {
                         // Switches to our own kShop screen from here; like "tree" above it
                         // stays inside the view, so no HideView and no game menu involved.
                         Isekai::Shop::Open();
+                    } else if (action == "reroll") {
+                        // Stays inside the view: swap the objective, then reopen the same
+                        // status screen so the new one is simply there. Progression owns
+                        // the status JSON, so the reopen goes back through it.
+                        Quests::Reroll();
+                        Progression::OpenStatusPanel();
                     } else if (action == "reboot") {
                         // Re-opens the blessing choice, which brings up its own panel
                         // (ShowPanel takes the view over from here) — no HideView needed.

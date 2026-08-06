@@ -31,6 +31,13 @@ namespace Isekai::Progression {
     // Register the quest watcher. Call once, at kDataLoaded.
     void Install();
 
+    // Open the System status screen — exactly what the hotkey does, including the choice
+    // between the web view and the built-in panel. Exported so another entry point (the
+    // status screen's own "new task" button, which has to come back to a refreshed panel)
+    // does not have to rebuild the status JSON or re-decide which renderer to use.
+    // Main thread only.
+    void OpenStatusPanel();
+
     // Pay out anything the player already earned before the mod was installed (or
     // while it was disabled). Call on kPostLoadGame / kNewGame, after the co-save
     // state has been read back.

@@ -590,6 +590,18 @@ namespace Isekai::Progression {
                                     /*iconOnly=*/true });
                 actions.emplace_back([]() { Shop::Open(); });
             }
+            // Trade the standing objective for a different one. Quests::Reroll has been
+            // there since the feature landed and nothing ever called it — the header
+            // promises "costs nothing, being stuck with a bad draw would just make the
+            // feature annoying", which only holds if there is a way to ask. Reopens the
+            // panel so the new objective is visible immediately.
+            if (Quests::Active()) {
+                choices.push_back({ "NEW TASK", {} });
+                actions.emplace_back([]() {
+                    Quests::Reroll();
+                    ShowStatusPanel();
+                });
+            }
             // Reboot: re-open the blessing choice on this character (e.g. HERO -> a
             // Shattered Dormant run) without the fragile uninstall/reinstall dance that
             // drops the co-save's milestone list. Guarded behind a confirm; earned
@@ -702,6 +714,10 @@ namespace Isekai::Progression {
         text += a_passive.percent ? "% " : " ";
         text += a_passive.stat;
         return text;
+    }
+
+    void OpenStatusPanel() {
+        ShowStatusPanel();
     }
 
     void Install() {
