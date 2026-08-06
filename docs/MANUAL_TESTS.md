@@ -53,8 +53,13 @@ has if you want a different one.
 | Step | Expected |
 |---|---|
 | Load a save. Open the status panel (`RShift+S`). | An **Objective** row: a target, a progress bar, `0 / N`, and `+X SP`. |
-| Press **NEW TASK**. | Panel comes straight back with a **different** objective at `0 / N`, and a notification names it. |
-| Kill one matching creature (the objective names which). | Counter goes up by exactly **1**. |
+| Press **NEW TASK**. | Panel comes straight back with a **different** objective at `0 / N`, and a **banner appears top-centre** naming it. |
+| Kill one matching creature (the objective names which). | Counter goes up by exactly **1**, and a line fades in top-centre: `Draugr   1 / 25`. |
+| Kill several in a row. | **One** line counting up, not one per kill — progress toasts replace each other. |
+| Finish it, then check the status panel. | No objective. Instead: `none — the System is quiet for another Nh`. |
+| Wait or sleep a full day. | The next objective arrives **on its own**, with a banner, without opening any menu. |
+| Compare the target count at level 5 and at level 50. | The higher-level character is sent after noticeably more, and paid proportionally more. |
+| At a low level, press NEW TASK repeatedly. | Never dragons or giants — those need level 25 / 20. |
 | Let a follower land the killing blow on one. | Counter still goes up — teammates count on purpose. |
 | Kill it with a poison, a rune or a summon instead of in melee. | Counter still goes up. Anything the player or a teammate causes counts; that is deliberate, since a mage or a sneak lands few direct blows. |
 | Kill something that does *not* match. | Counter does **not** move. |
@@ -70,18 +75,23 @@ has if you want a different one.
 > objective could never be finished. `node tools/check.mjs` now fails on an invented
 > keyword, and the in-game self-test reports one that is missing from your load order.
 
-### 1.1b Mob danger level (System Analysis)
+### 1.1b Mob danger level (threat labels)
 
-Gated behind a skill-tree node, so the first two rows are the gate itself.
+No longer a hotkey and no longer a purchase — the verdict floats over the actor, always.
+The old `V` key, the `System Analysis` skill-tree node and the `AnalyzeKey` setting are
+all gone; a save that bought the node gets its **10 SP refunded on the next load** (the log
+says so).
 
 | Step | Expected |
 |---|---|
-| Before buying the node, press `V` while looking at anything. | Notification: analysis not unlocked. Nothing opens. |
-| Buy **System Analysis** in the skill tree (CORE zone, 10 SP, needs System Core). | — |
-| Press `V` looking at a wolf. | Panel: name, level, health `now / max`, and a **THREAT** verdict. |
-| Press `V` looking at a barrel or a door. | "An inanimate object." — the analysis still opens, it just has nothing to say. |
-| Press `V` looking at nothing (the sky). | Notification: nothing in view. |
-| Press `V` while the status panel is already open, or while the game is paused. | Nothing happens — it must not fire into another menu. |
+| Load a save that had bought System Analysis. | Log: `'System Analysis' was removed from the tree — refunding 10 SP`, and the points are there. |
+| Walk up to a wolf. | A coloured verdict floats above it. |
+| Back away from it. | The label shrinks and dims with distance, then disappears past the range. |
+| Stand in a market square. | **No labels on townspeople** — the default only marks enemies. |
+| Set `ThreatLabelTargets = all`, reload. | Now everyone has one, shopkeepers included. |
+| Set `ThreatLabelTargets = crosshair`, reload. | Only what you are looking at. |
+| Set `ThreatLabels = 0`, reload. | None at all. |
+| Open the inventory or a menu. | Labels vanish while it is up — they are world-anchored and the camera is elsewhere. |
 
 The four verdicts come from **target level minus your level**, nothing else:
 

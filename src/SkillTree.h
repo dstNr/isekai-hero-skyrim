@@ -80,11 +80,26 @@ namespace Isekai::SkillTree {
         float scale = 1.0f;
     };
 
-    // The node that gates the Analyze hotkey (src/Analyze.cpp) — a named constant rather
-    // than a magic number duplicated in both files. A plain Effect::kAttributes node with
-    // an empty bonus array: it grants no stat, IsUnlocked(kAnalyzeNodeKey) is itself the
-    // capability gate.
-    inline constexpr std::uint32_t kAnalyzeNodeKey = 23;
+    // RETIRED node keys — removed from the tree, never to be reused. A save may still
+    // list one as bought, so the loader has to recognise it, refund what it cost and drop
+    // it; leaving it in place would fail the "saved nodes still exist" self-test and, more
+    // to the point, leave points spent on something that no longer exists.
+    //
+    // 23 was "System Analysis", which gated a threat readout behind a purchase and a key
+    // press. That reading is now simply visible over the actor (src/UI/ThreatLabels.cpp),
+    // so there is nothing left to sell.
+    struct RetiredNode {
+        std::uint32_t key;
+        std::int32_t  refund;  // what it cost, handed back on load
+        const char*   name;
+    };
+    inline constexpr RetiredNode kRetiredNodes[] = {
+        { 23, 10, "System Analysis" },
+    };
+
+    // Drop any retired node a save still carries and refund it. Call on load, before
+    // anything reads the unlocked list. Returns how many were refunded.
+    std::size_t RetireRemovedNodes();
 
     // The whole tree, for the window to draw.
     [[nodiscard]] const Node* Nodes(std::size_t& a_count);

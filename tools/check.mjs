@@ -174,15 +174,55 @@ check("skill tree: every prerequisite names a real node", () => {
   return `${refs} references`;
 });
 
-check("skill tree: kAnalyzeNodeKey names a real node", () => {
+check("skill tree: a retired node key is never reused", () => {
+  // The save stores bare numbers. Putting a retired key back in the table would hand
+  // whoever still has it a node they never bought, with no way to tell the difference.
   const hdr = read("src/SkillTree.h");
-  const m = hdr.match(/kAnalyzeNodeKey = (\d+)/);
-  need(m, "kAnalyzeNodeKey not found in SkillTree.h");
-  const keys = new Set(parseSkillTreeNodes().map((n) => n.key));
-  need(keys.has(+m[1]),
-       `kAnalyzeNodeKey is ${m[1]} but no node has that key — the Analyze hotkey ` +
-       `could never be unlocked`);
-  return `#${m[1]}`;
+  const from = hdr.indexOf("kRetiredNodes[] = {");
+  need(from >= 0, "kRetiredNodes not found in SkillTree.h");
+  const body = hdr.slice(from, hdr.indexOf("};", from));
+  const retired = [...body.matchAll(/\{\s*(\d+),\s*(\d+),\s*"([^"]+)"\s*\}/g)]
+    .map((m) => ({ key: +m[1], refund: +m[2], name: m[3] }));
+  need(retired.length > 0, "no retired nodes parsed — parser stale?");
+
+  const live = new Set(parseSkillTreeNodes().map((n) => n.key));
+  for (const r of retired) {
+    need(!live.has(r.key),
+         `key ${r.key} is retired ("${r.name}") but the tree uses it again`);
+  }
+  return retired.map((r) => `${r.name} #${r.key} (+${r.refund} SP)`).join(", ");
+});
+
+check("source: no path literal has an unescaped backslash", () => {
+  // "Data\SKSE\..." compiles. MSVC warns C4129 and then drops the backslash, so the
+  // path becomes "DataSKSEPlugins..." and every file under it silently fails to load.
+  // That shipped in BlessingIcon and cost the blessing screen all seven of its icons;
+  // the warning was printed on every build and read as noise.
+  const bad = [];
+  for (const f of cppSources().concat(["src/Config.h", "src/SkillTree.h"])) {
+    const src = read(f);
+    src.split("\n").forEach((line, i) => {
+      for (const m of line.matchAll(/"((?:[^"\\\n]|\\.)*)"/g)) {
+        // Walk the literal rather than pattern-matching it: a backslash consumes the
+        // character after it, so `\\S` is a legal escape followed by an S, while `\S`
+        // is the bug. A regex that tests every position cannot tell those apart — the
+        // first version of this check flagged every correctly-escaped path in the repo.
+        const body = m[1];
+        const legal = "\\ntrfvab0'\"?xu";
+        for (let k = 0; k < body.length; k++) {
+          if (body[k] !== "\\") continue;
+          const next = body[k + 1];
+          if (next === undefined || !legal.includes(next)) {
+            bad.push(`${f}:${i + 1}  ${line.trim()}`);
+            break;
+          }
+          k++;  // the escape consumed it
+        }
+      }
+    });
+  }
+  need(bad.length === 0, `unescaped backslash:\n    ${bad.join("\n    ")}`);
+  return "all path literals escaped";
 });
 
 /* -- 2. zone geometry ------------------------------------------------------
@@ -527,9 +567,16 @@ check("quests: every quarry names a keyword the game actually has", () => {
   const from = cpp.indexOf("constexpr Quarry kQuarries[] = {");
   need(from >= 0, "kQuarries not found in Quests.cpp");
   const body = cpp.slice(from, cpp.indexOf("\n        };", from));
-  const rows = [...body.matchAll(/\{\s*(\d+),\s*"([^"]+)",\s*"([^"]+)",\s*(\d+),\s*(\d+)\s*\}/g)]
-    .map((m) => ({ key: +m[1], name: m[2], keyword: m[3] }));
+  const rows =
+    [...body.matchAll(/\{\s*(\d+),\s*"([^"]+)",\s*"([^"]+)",\s*(\d+),\s*(\d+),\s*(\d+)\s*\}/g)]
+      .map((m) => ({ key: +m[1], name: m[2], keyword: m[3], count: +m[4], reward: +m[5],
+                     minLevel: +m[6] }));
   need(rows.length > 0, "no quarries parsed — parser stale?");
+
+  // At least one quarry has to be reachable from level 1, or a fresh character is
+  // handed nothing and the feature looks dead exactly when it is first met.
+  need(rows.some((q) => q.minLevel <= 1),
+       "every quarry is gated above level 1 — a new character would never get an objective");
 
   for (const q of rows) {
     need(KNOWN.has(q.keyword),

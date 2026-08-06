@@ -38,7 +38,6 @@
     { key: 1,  zone: "CORE",   scale: 1.4, name: "System Core",         icon: "spells_01_frame.png", x: 615, y: 96,  cost: 5,  req: TIER.Normal,   prereq: [0, 0],   desc: "The System takes root.\n+25 Health, Magicka and Stamina." },
     { key: 2,  zone: "CORE",   name: "Dragon's Voice",      icon: "spells_10_frame.png", x: 880, y: 96,  cost: 15, req: TIER.Normal,   prereq: [1, 0],   desc: "Your Thu'um recovers faster.\n-20% shout cooldown." },
     { key: 14, zone: "CORE",   name: "Perk Synthesis",      icon: "spells_21_frame.png", x: 350, y: 96,  cost: 1,  req: TIER.Normal,   prereq: [1, 0],   rep: true, maxRank: 0, desc: "Condense a System Point into raw potential.\n+5 perk points per purchase. REPEATABLE." },
-    { key: 23, zone: "CORE",   name: "System Analysis",     icon: "spells_02_frame.png", x: 880, y: 236, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "Unlocks the System's analytical eye.\nPress the Analyze hotkey to appraise whatever you are looking at." },
     // might (left band)
     { key: 3,  zone: "MIGHT",  name: "Vital Surge",         icon: "spells_25_frame.png", x: 300, y: 400, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Health." },
     { key: 4,  zone: "MIGHT",  scale: 1.2, name: "Thu'um Omniscience",  icon: "spells_39_frame.png", x: 210, y: 540, cost: 25, req: TIER.Hero,     prereq: [3, 0],   desc: "The System pours every dragon's voice into you.\nAll shouts and words of power unlocked." },

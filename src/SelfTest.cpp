@@ -375,12 +375,22 @@ namespace Isekai::SelfTest {
             }
             Add(out, orphans.empty(), true, "saved nodes still exist", std::move(saveDetail));
 
-            // The Analyze hotkey is gated on one specific node key; if that constant and
-            // the table ever part ways, the hotkey can never be unlocked.
-            Add(out, known(SkillTree::kAnalyzeNodeKey), true, "analyze node key",
-                known(SkillTree::kAnalyzeNodeKey)
-                    ? "#" + std::to_string(SkillTree::kAnalyzeNodeKey) + " present"
-                    : "kAnalyzeNodeKey names no node — the Analyze hotkey is unreachable");
+            // A retired key must NOT be back in the table. Reusing one would hand whoever
+            // still has it in their save a node they never bought — the saved list stores
+            // bare numbers, so a recycled key is indistinguishable from a purchase.
+            std::string retired;
+            bool        clash = false;
+            for (const auto& r : SkillTree::kRetiredNodes) {
+                if (known(r.key)) {
+                    clash = true;
+                    retired += (retired.empty() ? "" : ", ") + std::string(r.name) + " (#" +
+                               std::to_string(r.key) + ")";
+                }
+            }
+            Add(out, !clash, true, "retired node keys stay retired",
+                clash ? "REUSED: " + retired
+                      : std::to_string(std::size(SkillTree::kRetiredNodes)) +
+                            " retired key(s), none back in the tree");
         }
 
         void CheckCrafting(std::vector<Result>& out) {

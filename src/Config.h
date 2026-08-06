@@ -48,10 +48,21 @@ namespace Isekai::Config {
     // who run SkyrimNet yet want no System context in it. See src/SkyrimNet.cpp.
     [[nodiscard]] bool SkyrimNetIntegration();
 
-    // The key that runs a System Analysis scan (once the matching skill-tree node is
-    // bought), as a DirectInput scan code. Default 0x2F (V) — no modifier; distinct from
-    // the System-menu key so it can fire without opening a menu. See src/Analyze.cpp.
-    [[nodiscard]] std::uint32_t AnalyzeKey();
+    // Floating threat verdicts over actors (src/UI/ThreatLabels.cpp). Default on.
+    // SE/AE only — they are drawn by the ImGui overlay, which Skyrim VR does not get.
+    [[nodiscard]] bool ThreatLabels();
+
+    // Which actors carry one.
+    enum class ThreatTargets {
+        kHostile,    // enemies only: hostile to you, or already fighting you (default)
+        kAll,        // every actor that is not you or a follower — includes townspeople
+        kCrosshair,  // only what you are looking at
+    };
+    [[nodiscard]] ThreatTargets ThreatLabelTargets();
+
+    // How far a labelled actor may be, in game units (~70 per metre). Beyond this the
+    // label is dropped entirely rather than shrunk to an unreadable smudge.
+    [[nodiscard]] std::uint32_t ThreatLabelRange();
 
     // Scan code that runs the in-game self-test (src/SelfTest.cpp), or 0 for off, which
     // is the default — it is a diagnostic to be switched on when reporting a problem,

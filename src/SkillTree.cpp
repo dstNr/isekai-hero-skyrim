@@ -73,14 +73,10 @@ namespace Isekai::SkillTree {
             { 14, Zone::kCore, "Perk Synthesis",
               "Condense a System Point into raw potential.\n+5 perk points per purchase. REPEATABLE.",
               "spells_21_frame.png", 350.0f, 96.0f, 1, kN, { 1, 0 }, Effect::kPerkPoint, {} },
-            // A pure capability gate — no stat bonus (empty bonus array), so nothing
-            // needs to change in ApplyEffect/AccumulateBonuses. IsUnlocked(kAnalyzeNodeKey)
-            // is read directly by src/Analyze.cpp to decide whether the hotkey does
-            // anything (see the kAnalyzeNodeKey comment in the header for why the key is
-            // a named constant rather than duplicated as a magic number in both files).
-            { kAnalyzeNodeKey, Zone::kCore, "System Analysis",
-              "Unlocks the System's analytical eye.\nPress the Analyze hotkey to appraise whatever you are looking at.",
-              "spells_02_frame.png", 880.0f, 236.0f, 10, kN, { 1, 0 }, Effect::kAttributes, {} },
+            // (Key 23, "System Analysis", used to sit here at 880,236. It bought a threat
+            // readout on a hotkey; that readout is now always on, over the actor itself —
+            // see kRetiredNodes and src/UI/ThreatLabels.cpp. The key is retired, never
+            // reused, and refunded to saves that bought it.)
 
             // --- Might (left band) ---
             { 3, Zone::kMight, "Vital Surge", "+100 Health.",
@@ -648,6 +644,42 @@ namespace Isekai::SkillTree {
                      node->repeatable ? (" -> rank " + std::to_string(rankAfter)) : std::string{},
                      purchaseCost);
         return true;
+    }
+
+    std::size_t RetireRemovedNodes() {
+        std::size_t  refunded = 0;
+        std::int32_t points = 0;
+        {
+            std::scoped_lock lock(g_mutex);
+            auto&            state = GetState();
+            for (const auto& retired : kRetiredNodes) {
+                auto& unlocked = state.unlockedNodes;
+                const auto it = std::find(unlocked.begin(), unlocked.end(), retired.key);
+                if (it == unlocked.end()) {
+                    continue;
+                }
+                unlocked.erase(it);
+                points += retired.refund;
+                ++refunded;
+                logger::info("SkillTree: '{}' was removed from the tree — refunding {} SP",
+                             retired.name, retired.refund);
+            }
+            // Repeatables keep their count in a second list; a retired one has to leave
+            // both or the rank would survive its node.
+            auto& ranks = state.nodeRanks;
+            ranks.erase(std::remove_if(ranks.begin(), ranks.end(),
+                                       [](const auto& entry) {
+                                           for (const auto& r : kRetiredNodes) {
+                                               if (entry.first == r.key) {
+                                                   return true;
+                                               }
+                                           }
+                                           return false;
+                                       }),
+                        ranks.end());
+            state.systemPoints += points;
+        }
+        return refunded;
     }
 
     void ApplyOnLoad() {

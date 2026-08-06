@@ -102,6 +102,18 @@ namespace Isekai {
         // objective into a different one.
         std::uint32_t questKey = 0;
         std::int32_t  questProgress = 0;
+
+        // How many the CURRENT objective needs, and what it pays. Snapshotted when the
+        // objective is handed out rather than recomputed from the quarry table, because
+        // both scale with character level: without this, levelling mid-hunt would move
+        // the finish line you were already walking towards.
+        std::int32_t questTarget = 0;
+        std::int32_t questReward = 0;
+
+        // Game time (in days, as Skyrim counts them) at which the System offers the next
+        // objective. Objectives are no longer permanent: one is completed, a while
+        // passes, and the next arrives on its own. 0 = offer one immediately.
+        float questNextDue = 0.0f;
     };
 
     [[nodiscard]] State& GetState();

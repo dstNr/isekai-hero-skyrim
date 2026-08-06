@@ -1,5 +1,6 @@
 #include "UI/Overlay.h"
 
+#include "Quests.h"
 #include "SkillTree.h"
 #include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
@@ -8,6 +9,8 @@
 #include "UI/Style.h"
 #include "UI/SystemWindow.h"
 #include "UI/Textures.h"
+#include "UI/ThreatLabels.h"
+#include "UI/Toast.h"
 
 #include <d3d11.h>
 #include <dxgi.h>
@@ -156,6 +159,22 @@ namespace Isekai::UI {
             return true;
         }
 
+        // Ask the quest system whether anything is due, once a second, from the main
+        // thread. Everything it might touch is game state, so the render thread only ever
+        // decides WHEN — never what.
+        void PollGameClock() {
+            using namespace std::chrono;
+            static steady_clock::time_point last{};
+            const auto                      now = steady_clock::now();
+            if (now - last < seconds(1)) {
+                return;
+            }
+            last = now;
+            if (auto* task = SKSE::GetTaskInterface()) {
+                task->AddTask([]() { Quests::Tick(); });
+            }
+        }
+
         HRESULT WINAPI HookedPresent(IDXGISwapChain* a_swapChain, UINT a_syncInterval, UINT a_flags) {
             static bool initTried = false;
             if (!initTried) {
@@ -179,6 +198,17 @@ namespace Isekai::UI {
                 DrawSkillTree();
                 DrawShopWindow();
 
+                // HUD layers: they draw over gameplay and over our own panels, take no
+                // input, and pause nothing.
+                DrawThreatLabels();
+                DrawToasts();
+
+                // An SKSE plugin has no per-frame MAIN-thread hook, and "the System offers
+                // work on its own schedule" needs one. This is the render thread, so the
+                // poll only reads a clock here and does the work on a task. Throttled hard:
+                // once a second is far finer than a cadence measured in game days.
+                PollGameClock();
+
                 // Only while we own the input, and above everything else — otherwise
                 // it would sit on screen next to Skyrim's own cursor whenever the game
                 // opens a menu of its own (a Survival Mode prompt, say).
@@ -194,6 +224,10 @@ namespace Isekai::UI {
 
             return g_originalPresent(a_swapChain, a_syncInterval, a_flags);
         }
+    }
+
+    bool OverlayReady() {
+        return g_ready.load(std::memory_order_acquire);
     }
 
     bool IsCapturingInput() {

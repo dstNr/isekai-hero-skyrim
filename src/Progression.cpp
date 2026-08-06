@@ -438,6 +438,11 @@ namespace Isekai::Progression {
             j += "\"questProgress\":" + std::to_string(Quests::Progress()) + ",";
             j += "\"questTarget\":" + std::to_string(Quests::Target()) + ",";
             j += "\"questReward\":" + std::to_string(Quests::Reward()) + ",";
+            // Hours until the next one, 0 while an objective is running. Lets the view say
+            // "the System is quiet" instead of showing nothing at all.
+            j += "\"questWaitHours\":" +
+                 std::to_string(static_cast<int>(std::lround(Quests::DaysUntilNext() * 24.0f))) +
+                 ",";
 
             j += "\"attunements\":[";
             bool first = true;
@@ -523,6 +528,12 @@ namespace Isekai::Progression {
                         std::to_string(Quests::Progress()) + " / " +
                         std::to_string(Quests::Target()) + "   (+" +
                         std::to_string(Quests::Reward()) + " SP)\n";
+            } else if (const float wait = Quests::DaysUntilNext(); wait > 0.0f) {
+                // An idle System should read as waiting, not broken. Hours rather than a
+                // fraction of a day, because "0.4 days" is not something anyone thinks in.
+                const int hours = std::max(1, static_cast<int>(std::lround(wait * 24.0f)));
+                body += "OBJECTIVE     none — the System is quiet for another " +
+                        std::to_string(hours) + "h\n";
             }
 
             // The aggregated totals — the same numbers the abilities carry in the

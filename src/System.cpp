@@ -1,6 +1,5 @@
 #include "System.h"
 
-#include "Analyze.h"
 #include "Config.h"
 #include "CraftHooks.h"
 #include "Passives.h"
@@ -37,8 +36,9 @@ namespace Isekai {
         constexpr std::uint32_t kRecState = 'STAT';  // record tag
         // 7: shattered flag; 8: repeatable node ranks; 9: dormant flag;
         // 10: grantTier / treeTier / custom (the decoupled CUSTOM axes);
-        // 11: the standing System objective (questKey / questProgress)
-        constexpr std::uint32_t kVersion = 11;
+        // 11: the standing System objective (questKey / questProgress);
+        // 12: its snapshotted target/reward, and when the next one is due
+        constexpr std::uint32_t kVersion = 12;
 
         void SystemMsg(const char* a_text) {
             RE::DebugNotification(a_text);
@@ -48,7 +48,7 @@ namespace Isekai {
         // icon renders as no icon, exactly as these buttons looked before, so wiring the
         // names ahead of the art costs nothing. See docs/UI_ART_PROMPTS.md.
         [[nodiscard]] std::string BlessingIcon(const char* a_name) {
-            return std::string("Data\SKSE\Plugins\IsekaiHero\icons\\") + a_name;
+            return std::string("Data\\SKSE\\Plugins\\IsekaiHero\\icons\\") + a_name;
         }
 
         // ---- Reincarnation flow (choice captured into g_state) ----
@@ -675,6 +675,10 @@ namespace Isekai {
             a_intf->WriteRecordData(g_state.questKey);  // v11
             a_intf->WriteRecordData(g_state.questProgress);
 
+            a_intf->WriteRecordData(g_state.questTarget);  // v12
+            a_intf->WriteRecordData(g_state.questReward);
+            a_intf->WriteRecordData(g_state.questNextDue);
+
             logger::info(
                 "State saved (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={}, "
                 "dormant={}, custom={}, grant={}, tree={})",
@@ -789,6 +793,20 @@ namespace Isekai {
                     a_intf->ReadRecordData(g_state.questKey);
                     a_intf->ReadRecordData(g_state.questProgress);
                 }
+
+                // v12: the objective's own target and payout, and the clock for the next
+                // one. A v11 save carries an objective whose numbers were read live from
+                // the quarry table; leaving them at 0 makes Quests treat it as unsized and
+                // re-size it once, which is exactly what should happen when the table's
+                // numbers have just become level-dependent.
+                g_state.questTarget = 0;
+                g_state.questReward = 0;
+                g_state.questNextDue = 0.0f;
+                if (version >= 12) {
+                    a_intf->ReadRecordData(g_state.questTarget);
+                    a_intf->ReadRecordData(g_state.questReward);
+                    a_intf->ReadRecordData(g_state.questNextDue);
+                }
             }
 
             logger::info(
@@ -836,7 +854,6 @@ namespace Isekai {
                 UI::Prisma::Install();  // optional web UI; no-op without the patch
                 SkyrimNet::Install();   // optional AI-NPC context; no-op without SkyrimNet
                 Progression::Install();
-                Analyze::Install();     // "System Analysis" hotkey (skill-tree gated)
                 Quests::Install();      // watches kills for the standing objective
                 SelfTest::Install();    // diagnostic hotkey, off unless the ini sets one
                 UI::LogHotkeys();       // the table the input handler actually consults
@@ -861,6 +878,10 @@ namespace Isekai {
                 // A dormant blessing that came due while the mod was off (or whose
                 // threshold the ini has just lowered) is settled on load.
                 CheckDormantAwakening();
+                // Before anything reads the unlocked list: drop nodes this build no longer
+                // has and hand their cost back, so a save that bought one is not left
+                // holding points spent on nothing.
+                SkillTree::RetireRemovedNodes();
                 // Knowledge unlocks and the shout-cooldown value are re-derived from
                 // the unlocked node list, same reasoning as the ability magnitudes.
                 SkillTree::ApplyOnLoad();

@@ -15,8 +15,6 @@ add_commonlibsse_plugin(
     AUTHOR "dstNr"
     SOURCES
         src/main.cpp
-        src/Analyze.cpp
-        src/Analyze.h
         src/Config.cpp
         src/Config.h
         src/System.cpp
@@ -56,6 +54,10 @@ add_commonlibsse_plugin(
         src/UI/Prisma.h
         src/UI/ShopWindow.cpp
         src/UI/ShopWindow.h
+        src/UI/ThreatLabels.cpp
+        src/UI/ThreatLabels.h
+        src/UI/Toast.cpp
+        src/UI/Toast.h
         src/UI/SkillTreeWindow.cpp
         src/UI/SkillTreeWindow.h
         src/UI/Style.h

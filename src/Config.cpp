@@ -22,7 +22,9 @@ namespace Isekai::Config {
         // feature should not be leaving items in people's inventories.
         bool          g_storageCodex = false;
         bool          g_skyrimNetIntegration = true;
-        std::uint32_t g_analyzeKey = 0x2F;  // DIK_V
+        bool          g_threatLabels = true;
+        ThreatTargets g_threatTargets = ThreatTargets::kHostile;
+        std::uint32_t g_threatRange = 4000;
         // 0 = off. Off by default: the self-test is a diagnostic for bug reports, not a
         // feature, and a stray key that pops a notification would just be noise.
         std::uint32_t g_selfTestKey = 0;
@@ -112,7 +114,9 @@ namespace Isekai::Config {
         g_dormantAscendedLevel = 80;
         g_storageCodex = false;
         g_skyrimNetIntegration = true;
-        g_analyzeKey = 0x2F;  // DIK_V
+        g_threatLabels = true;
+        g_threatTargets = ThreatTargets::kHostile;
+        g_threatRange = 4000;
         g_selfTestKey = 0;
         g_logInputDiag = false;
 
@@ -150,8 +154,21 @@ namespace Isekai::Config {
                 g_storageCodex = AsBool(val);
             } else if (key == "skyrimnetintegration") {
                 g_skyrimNetIntegration = AsBool(val);
-            } else if (key == "analyzekey") {
-                g_analyzeKey = AsScanCode(val, g_analyzeKey);
+            } else if (key == "threatlabels") {
+                g_threatLabels = AsBool(val);
+            } else if (key == "threatlabeltargets") {
+                const std::string v = Lower(val);
+                g_threatTargets = v == "all"       ? ThreatTargets::kAll
+                                  : v == "crosshair" ? ThreatTargets::kCrosshair
+                                                     : ThreatTargets::kHostile;
+            } else if (key == "threatlabelrange") {
+                // Clamped rather than trusted: 0 would switch the feature off through the
+                // back door, and a huge value would label things across a whole hold.
+                try {
+                    g_threatRange = std::clamp(
+                        static_cast<std::uint32_t>(std::stoul(val, nullptr, 0)), 500u, 20000u);
+                } catch (...) {
+                }
             } else if (key == "selftestkey") {
                 g_selfTestKey = AsScanCode(val, g_selfTestKey);
             } else if (key == "loginputdiagnostics") {
@@ -170,11 +187,15 @@ namespace Isekai::Config {
 
         logger::info("Config: HideSealedNodes={}, SystemMenuKey={:#x}, SystemMenuModifier={:#x}, "
                      "DormantHeroLevel={}, DormantAscendedLevel={}, StorageCodex={}, "
-                     "SkyrimNetIntegration={}, AnalyzeKey={:#x}, SelfTestKey={:#x}, "
-                     "LogInputDiagnostics={}",
+                     "SkyrimNetIntegration={}, ThreatLabels={} (targets={}, range={}), "
+                     "SelfTestKey={:#x}, LogInputDiagnostics={}",
                      g_hideSealedNodes, g_systemMenuKey, g_systemMenuModifier, g_dormantHeroLevel,
-                     g_dormantAscendedLevel, g_storageCodex, g_skyrimNetIntegration, g_analyzeKey,
-                     g_selfTestKey, g_logInputDiag);
+                     g_dormantAscendedLevel, g_storageCodex, g_skyrimNetIntegration,
+                     g_threatLabels,
+                     g_threatTargets == ThreatTargets::kAll         ? "all"
+                     : g_threatTargets == ThreatTargets::kCrosshair ? "crosshair"
+                                                                    : "hostile",
+                     g_threatRange, g_selfTestKey, g_logInputDiag);
     }
 
     std::string KeyName(std::uint32_t a_scanCode) {
@@ -221,8 +242,16 @@ namespace Isekai::Config {
         return g_skyrimNetIntegration;
     }
 
-    std::uint32_t AnalyzeKey() {
-        return g_analyzeKey;
+    bool ThreatLabels() {
+        return g_threatLabels;
+    }
+
+    ThreatTargets ThreatLabelTargets() {
+        return g_threatTargets;
+    }
+
+    std::uint32_t ThreatLabelRange() {
+        return g_threatRange;
     }
 
     std::uint32_t SelfTestKey() {

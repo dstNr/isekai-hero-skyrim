@@ -26,6 +26,16 @@ namespace Isekai::Quests {
     // objective has one. Call at kDataLoaded.
     void Install();
 
+    // Hand out the next objective if one is due. Cheap and idempotent — safe to call as
+    // often as convenient, which is how it gets called: the overlay polls it, and so does
+    // every load. There is no per-frame main-thread hook in an SKSE plugin, so "the
+    // System offers work on its own" has to be assembled out of the events we do get.
+    void Tick();
+
+    // Game days until the next objective, or 0 when one is already running or due now.
+    // The status panel shows it, so an idle System reads as "waiting" rather than broken.
+    [[nodiscard]] float DaysUntilNext();
+
     // Roll a fresh objective if the player is reincarnated and has none. Called after
     // the reincarnation and on every load, so a save from before this feature (or one
     // whose objective was somehow lost) picks one up without ceremony.

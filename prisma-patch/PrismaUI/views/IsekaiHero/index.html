@@ -1318,16 +1318,23 @@ function renderStatus() {
   $("sBar").style.width = (total ? Math.round(100 * earned / total) : 0) + "%";
   $("sPts").textContent = s.points || 0;
 
-  // The standing objective. An empty questText means the System has handed out no work
-  // (an un-reincarnated character), and the whole section stays hidden.
+  // The standing objective. Objectives are no longer permanent: between them the System
+  // stands down for a while, so an empty questText with hours on the clock means "waiting"
+  // and has to say so — otherwise an idle System is indistinguishable from a broken one.
+  // Both empty means no work at all (an un-reincarnated character); section stays hidden.
   const qText = s.questText || "";
-  $("sQuestSect").classList.toggle("hidden", !qText);
+  const qWait = s.questWaitHours || 0;
+  $("sQuestSect").classList.toggle("hidden", !qText && !qWait);
   if (qText) {
     const qp = s.questProgress || 0, qt = s.questTarget || 0;
     $("sQuestText").textContent = qText;
     $("sQuestCount").innerHTML = qp + " / " + qt +
                                  '<span>+' + (s.questReward || 0) + " SP</span>";
     $("sQuestBar").style.width = (qt ? Math.round(100 * Math.min(qp, qt) / qt) : 0) + "%";
+  } else if (qWait) {
+    $("sQuestText").textContent = "The System is quiet.";
+    $("sQuestCount").innerHTML = "<span>next in ~" + qWait + "h</span>";
+    $("sQuestBar").style.width = "0%";
   }
 
   const at = $("sAtt"); at.innerHTML = "";
