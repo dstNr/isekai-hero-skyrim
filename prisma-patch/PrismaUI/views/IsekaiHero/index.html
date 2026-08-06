@@ -330,7 +330,10 @@
      was a wall — the eye had nowhere to start. A rail (rather than tabs across the top)
      matches the skill tree's mastery dock and can carry each shelf's count without the
      header turning into a row of text. */
-  #shBody { display: flex; gap: clamp(14px, 1.6vw, 22px); min-height: 0; flex: 1; }
+  /* Fixed height, so switching shelf never resizes the window — the grid scrolls
+     instead. A card area that grows and shrinks under the cursor reads as a glitch. */
+  #shBody { display: flex; gap: clamp(14px, 1.6vw, 22px); min-height: 0;
+            height: clamp(320px, 52vh, 560px); }
   #shRail { display: flex; flex-direction: column; gap: 2px; flex: none;
             width: clamp(140px, 15vw, 186px);
             border-right: 1px solid rgba(90,210,255,0.14); padding-right: clamp(10px, 1.2vw, 16px); }
