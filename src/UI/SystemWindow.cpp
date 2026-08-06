@@ -163,6 +163,18 @@ namespace Isekai::UI {
             const ImVec4 label{ Style::kAccent.x, Style::kAccent.y, Style::kAccent.z, a_fade };
             const ImVec4 value{ Style::kText.x, Style::kText.y, Style::kText.z, a_fade };
 
+            // Every line is its own widget now, and ImGui puts ItemSpacing.y between
+            // consecutive widgets — so the body silently grew by four pixels per line the
+            // moment it stopped being one TextUnformatted. The panel's height is measured
+            // with CalcTextSize, which knows nothing about that, and a dozen lines of it
+            // was enough to overflow the panel and raise a scrollbar.
+            //
+            // Zeroing the vertical spacing makes the drawn block exactly as tall as the
+            // measured one again. Do not remove without giving the height calculation the
+            // same figure.
+            const ImVec2 spacing = ImGui::GetStyle().ItemSpacing;
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ spacing.x, 0.0f });
+
             std::size_t at = 0;
             while (at <= a_body.size()) {
                 const auto             eol = a_body.find('\n', at);
@@ -190,6 +202,8 @@ namespace Isekai::UI {
                 ImGui::TextColored(value, "%.*s", static_cast<int>(line.size() - split),
                                    line.data() + split);
             }
+
+            ImGui::PopStyleVar();
         }
 
         // Draws the panel and returns the clicked button index, or -1.
@@ -265,7 +279,12 @@ namespace Isekai::UI {
                 ? 16.0f * s + static_cast<float>(iconActions) * 86.0f * s
                 : 0.0f;
 
-            float height = headH + std::max(bodySize.y + 24.0f * s, iconsH) + footH;
+            // 40 rather than the old 24: slack, so a body that measures a hair taller than
+            // it draws — a font fallback, a rounding step — grows the panel instead of
+            // raising a scrollbar over a panel that was one line short. Scrolling is right
+            // for the 79-milestone ledger, which cannot fit on any screen; it is never
+            // right for a panel that missed by four pixels.
+            float height = headH + std::max(bodySize.y + 40.0f * s, iconsH) + footH;
             height = std::min(height, screen.y * 0.85f);
 
             ImGui::SetNextWindowPos(ImVec2{ screen.x * 0.5f, screen.y * 0.45f }, ImGuiCond_Always,
