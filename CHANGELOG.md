@@ -102,7 +102,7 @@ All notable changes to Isekai Hero are documented here. The format follows
   - By default the labels appear on what you are **aiming at** and on whatever is
     **actually fighting you** (`ThreatLabelTargets = aggro`). `hostile` restores the older
     behaviour of marking every enemy in range whether or not it has noticed you; `all` adds
-    townspeople; `crosshair` is aim only. `ThreatLabelKey` (default `V`) switches the whole
+    townspeople; `crosshair` is aim only. `ThreatLabelKey` (default `F10`) switches the whole
     display off and on mid-session.
   - SE/AE only — they are drawn by the same ImGui overlay as the mod's panels, which Skyrim
     VR does not get.

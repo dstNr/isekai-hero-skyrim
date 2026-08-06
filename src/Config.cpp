@@ -25,7 +25,7 @@ namespace Isekai::Config {
         bool          g_threatLabels = true;
         ThreatTargets g_threatTargets = ThreatTargets::kAggro;
         std::uint32_t g_threatRange = 4000;
-        std::uint32_t g_threatKey = 0x2F;  // DIK_V
+        std::uint32_t g_threatKey = 0x44;  // DIK_F10
         std::uint32_t g_questFirstTaskHours = 12;
         std::uint32_t g_questIntervalHours = 24;
         bool          g_questRerollButton = false;
@@ -133,7 +133,7 @@ namespace Isekai::Config {
         g_threatLabels = true;
         g_threatTargets = ThreatTargets::kAggro;
         g_threatRange = 4000;
-        g_threatKey = 0x2F;
+        g_threatKey = 0x44;
         g_questFirstTaskHours = 12;
         g_questIntervalHours = 24;
         g_questRerollButton = false;

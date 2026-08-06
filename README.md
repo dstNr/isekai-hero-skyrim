@@ -90,7 +90,7 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   The System's read on an enemy — the "Observation"/"Appraisal" move every isekai
   protagonist gets — is no longer a node here. It is simply **on**: a colour-coded
   TRIVIAL/MANAGEABLE/DANGEROUS/LETHAL floating over what you are aiming at and over
-  anything fighting you, shrinking and dimming with distance. `V` switches it off and
+  anything fighting you, shrinking and dimming with distance. `F10` switches it off and
   on, and `IsekaiHero.ini` decides who gets a label. *(SE/AE only — it is drawn by the
   same overlay as the panels, which Skyrim VR does not get.)*
 

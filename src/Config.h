@@ -63,9 +63,10 @@ namespace Isekai::Config {
     [[nodiscard]] ThreatTargets ThreatLabelTargets();
 
     // Scan code that switches the threat labels off and on again mid-session, or 0 for
-    // no key at all. Default 0x2F (V) — the key the old Analyze panel used, which this
-    // feature replaced. The ini decides whether they START on; this decides nothing
-    // permanent, and a toggle is not saved.
+    // no key at all. Default 0x44 (F10) — a function key rather than a letter, since
+    // every letter is a movement or an action in a game that has no key to spare. The ini
+    // decides whether they START on; this decides nothing permanent, and a toggle is not
+    // saved.
     [[nodiscard]] std::uint32_t ThreatLabelKey();
 
     // How far a labelled actor may be, in game units (~70 per metre). Beyond this the

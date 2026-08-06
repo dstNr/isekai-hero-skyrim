@@ -102,9 +102,9 @@ every time you load, the clock is not.
 
 No longer a purchase and no longer a panel — the verdict floats over the actor itself. The
 `System Analysis` skill-tree node and the `AnalyzeKey` setting are gone; a save that bought
-the node gets its **10 SP refunded on the next load** (the log says so). `V` still does
-something, but the opposite of what it used to: it switches the whole display off and on
-(`ThreatLabelKey`) rather than analysing one target.
+the node gets its **10 SP refunded on the next load** (the log says so). The old `V`
+binding is gone entirely — the display now has an off/on key of its own on **`F10`**
+(`ThreatLabelKey`), which is a different job from analysing one target.
 
 | Step | Expected |
 |---|---|
@@ -116,12 +116,12 @@ something, but the opposite of what it used to: it switches the whole display of
 | Back away from something that is fighting you. | The label shrinks and dims with distance, then disappears past the range — but stays **readable** the whole way. Dimming past legible is the bug this row is for. |
 | Look at one against snow, and again against a dark cave wall. | Readable on both. The text is outlined, so no glyph edge ever lies directly on the scene. |
 | Stand in a market square. | No labels on townspeople. |
-| Press **`V`** (`ThreatLabelKey`). | `Threat display OFF` top-centre, and every label goes. Press again for `ON`. |
+| Press **`F10`** (`ThreatLabelKey`). | `Threat display OFF` top-centre, and every label goes. Press again for `ON`. |
 | Save, quit, reload after switching them off. | They are back **on** — the toggle is a display switch, not part of the character. |
 | Set `ThreatLabelTargets = hostile`, reload. | Every enemy in range is marked again, noticed or not (the pre-0.6.2 behaviour). |
 | Set `ThreatLabelTargets = all`, reload. | Now everyone has one, shopkeepers included. |
 | Set `ThreatLabelTargets = crosshair`, reload. | Only what you are looking at, even mid-fight. |
-| Set `ThreatLabels = 0`, reload. | None at all — but `V` still brings them up for the session. |
+| Set `ThreatLabels = 0`, reload. | None at all — but `F10` still brings them up for the session. |
 | Open the inventory or a menu. | Labels vanish while it is up — they are world-anchored and the camera is elsewhere. |
 
 The four verdicts come from **target level minus your level**, nothing else:
