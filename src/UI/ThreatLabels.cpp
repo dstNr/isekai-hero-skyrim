@@ -148,10 +148,11 @@ namespace Isekai::UI {
 
         // A label the frame can draw: already projected, already judged.
         struct Label {
-            ImVec2      pos;
-            float       distance;
-            Verdict     verdict;
-            std::string name;
+            ImVec2       pos;
+            float        distance;
+            Verdict      verdict;
+            std::int32_t level;
+            std::string  name;
         };
 
         // The actor under the crosshair, or nullptr. Its own mode uses it alone; kAggro
@@ -244,9 +245,10 @@ namespace Isekai::UI {
             if (!Project(cam, head, display, screen)) {
                 return;
             }
-            const auto diff = static_cast<std::int32_t>(actor->GetLevel()) - playerLevel;
-            labels.push_back({ screen, distance, VerdictFor(diff),
-                               actor->GetDisplayFullName() ? actor->GetDisplayFullName() : "" });
+            const auto level = static_cast<std::int32_t>(actor->GetLevel());
+            const char* name = actor->GetDisplayFullName();
+            labels.push_back({ screen, distance, VerdictFor(level - playerLevel), level,
+                               name ? name : "" });
         };
 
         const auto consider = [&](RE::Actor* actor) { considerAs(actor, mode); };
@@ -281,27 +283,50 @@ namespace Isekai::UI {
         ImDrawList* dl = ImGui::GetBackgroundDrawList();
         ImFont*     font = Style::g_body;
 
+        // Built like an MMO nameplate rather than a label with a background: the name in
+        // the verdict's colour, the reading itself smaller and quieter underneath, and no
+        // plate at all — a drop shadow carries the contrast instead.
+        //
+        // The old version was one bold word in a 62%-opaque black box, which sat on the
+        // world rather than in it, and got heavier the more enemies were on screen. The
+        // colour is what communicates here; the box only ever competed with it.
+        const auto measure = [&](float a_size, const char* a_text) {
+            return font ? font->CalcTextSizeA(a_size, FLT_MAX, 0.0f, a_text).x
+                        : ImGui::CalcTextSize(a_text).x;
+        };
+
         for (const auto& label : labels) {
             // Distant labels shrink and dim, so the near ones stay dominant and a crowd
             // reads as depth rather than as noise.
             const float t = std::clamp(label.distance / maxRange, 0.0f, 1.0f);
-            const float size = (19.0f - 6.0f * t) * s;
-            const float alpha = 1.0f - 0.55f * t;
+            const float nameSize = (17.0f - 5.0f * t) * s;
+            const float readSize = nameSize * 0.74f;
+            const float alpha = 0.92f - 0.5f * t;
 
-            const ImVec2 dim = font ? font->CalcTextSizeA(size, FLT_MAX, 0.0f, label.verdict.tag)
-                                    : ImGui::CalcTextSize(label.verdict.tag);
-            const ImVec2 pos{ label.pos.x - dim.x * 0.5f, label.pos.y - dim.y };
+            // "Lv 12  DANGEROUS" — the verdict with the number it was derived from, so
+            // the four bands are never the whole story on a level-scaled world where
+            // almost everything lands in the middle one.
+            const std::string reading =
+                "Lv " + std::to_string(label.level) + "   " + label.verdict.tag;
 
-            const ImVec2 pad{ 7.0f * s, 3.0f * s };
-            dl->AddRectFilled(ImVec2{ pos.x - pad.x, pos.y - pad.y },
-                              ImVec2{ pos.x + dim.x + pad.x, pos.y + dim.y + pad.y },
-                              ImGui::GetColorU32(ImVec4{ 0.02f, 0.04f, 0.07f, 0.62f * alpha }));
-            if (font) {
-                dl->AddText(font, size, pos, Style::Col(label.verdict.col, alpha),
-                            label.verdict.tag);
-            } else {
-                dl->AddText(pos, Style::Col(label.verdict.col, alpha), label.verdict.tag);
+            const bool  named = !label.name.empty();
+            const float lineH = nameSize * 1.15f;
+            float       y = label.pos.y - readSize * 1.1f - (named ? lineH : 0.0f);
+
+            if (named) {
+                Style::DrawTextShadowed(
+                    dl, font, nameSize,
+                    ImVec2{ label.pos.x - measure(nameSize, label.name.c_str()) * 0.5f, y },
+                    label.verdict.col, label.name.c_str(), alpha);
+                y += lineH;
             }
+
+            // Quieter than the name on purpose: you glance at the colour, you read the
+            // name, and the numbers are there only when you actually look for them.
+            Style::DrawTextShadowed(
+                dl, font, readSize,
+                ImVec2{ label.pos.x - measure(readSize, reading.c_str()) * 0.5f, y },
+                label.verdict.col, reading.c_str(), alpha * 0.78f);
         }
     }
 }

@@ -117,23 +117,30 @@ namespace Isekai::UI {
             const float slide = (1.0f - in) * 14.0f * s;
             const ImVec2 pos{ io.DisplaySize.x * 0.5f - dim.x * 0.5f, y + slide };
 
-            // A backing plate, or the text is unreadable against a bright sky. Kept
-            // narrow and low-contrast so it reads as a HUD element, not a dialog.
-            const ImVec2 padXY{ 16.0f * s, 7.0f * s };
+            // The plate. It used to be a flat 72%-opaque rectangle with hard edges,
+            // which is a dialog box parked over the middle of the screen — the one thing
+            // a status line must not look like, since it appears while you are fighting.
+            //
+            // Now it fades out to nothing at both ends and peaks at a third of that
+            // opacity. What actually keeps the text readable is the shadow on the text
+            // itself, so the plate no longer has to carry the contrast alone and can be
+            // as faint as it likes. A plate wide enough to have visible edges is a box;
+            // one that dissolves into the scene is a HUD.
+            const ImVec2 padXY{ 28.0f * s, 7.0f * s };
             const ImVec2 bMin{ pos.x - padXY.x, pos.y - padXY.y };
             const ImVec2 bMax{ pos.x + dim.x + padXY.x, pos.y + dim.y + padXY.y };
-            dl->AddRectFilled(bMin, bMax,
-                              ImGui::GetColorU32(ImVec4{ Style::kPanelBg.x, Style::kPanelBg.y,
-                                                         Style::kPanelBg.z, 0.72f * alpha }));
-            dl->AddLine(ImVec2{ bMin.x, bMax.y }, ImVec2{ bMax.x, bMax.y },
-                        Style::Col(Style::kAccent, 0.55f * alpha), 1.0f * s);
+            Style::DrawFadingBand(dl, bMin, bMax, Style::kPanelBg, 0.34f * alpha);
+
+            // The rule under a banner fades out the same way, so nothing on the layer
+            // draws a straight edge across the view.
+            if (t.banner) {
+                Style::DrawFadingBand(dl, ImVec2{ bMin.x, bMax.y - 1.0f * s },
+                                      ImVec2{ bMax.x, bMax.y + 0.5f * s }, Style::kAccent,
+                                      0.5f * alpha);
+            }
 
             const ImVec4& col = t.banner ? Style::kAccent : Style::kText;
-            if (font) {
-                dl->AddText(font, size, pos, Style::Col(col, alpha), t.text.c_str());
-            } else {
-                dl->AddText(pos, Style::Col(col, alpha), t.text.c_str());
-            }
+            Style::DrawTextShadowed(dl, font, size, pos, col, t.text.c_str(), alpha);
 
             y += dim.y + padXY.y * 2.0f + 8.0f * s;
         }
