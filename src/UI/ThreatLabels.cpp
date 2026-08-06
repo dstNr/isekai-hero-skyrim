@@ -283,13 +283,21 @@ namespace Isekai::UI {
         ImDrawList* dl = ImGui::GetBackgroundDrawList();
         ImFont*     font = Style::g_body;
 
-        // Built like an MMO nameplate rather than a label with a background: the name in
-        // the verdict's colour, the reading itself smaller and quieter underneath, and no
-        // plate at all — a drop shadow carries the contrast instead.
+        // An MMO nameplate: the name in the verdict's colour, the reading smaller and
+        // quieter beneath it.
         //
-        // The old version was one bold word in a 62%-opaque black box, which sat on the
-        // world rather than in it, and got heavier the more enemies were on screen. The
-        // colour is what communicates here; the box only ever competed with it.
+        // Two versions of this have now been wrong in opposite directions, and the fix is
+        // in neither extreme. A bold word in a 62%-opaque black box sat ON the world
+        // instead of in it, and stacked up as clutter with every extra enemy on screen.
+        // Taking the box away and leaving a one-pixel drop shadow went the other way: at
+        // 15px and 75% opacity over grass, the text simply was not there.
+        //
+        // What legibility over a 3D scene actually needs is an OUTLINE, not a plate and
+        // not a shadow — it traces every glyph on all sides, so no edge is ever left lying
+        // directly on the scene, and it adds no rectangle to the screen. On top of that:
+        //   - full opacity up close. Distance still dims, but never past readable.
+        //   - a barely-there dark band behind the block, fading out at both ends so it has
+        //     no edges of its own. It is the box's job without the box's shape.
         const auto measure = [&](float a_size, const char* a_text) {
             return font ? font->CalcTextSizeA(a_size, FLT_MAX, 0.0f, a_text).x
                         : ImGui::CalcTextSize(a_text).x;
@@ -299,9 +307,9 @@ namespace Isekai::UI {
             // Distant labels shrink and dim, so the near ones stay dominant and a crowd
             // reads as depth rather than as noise.
             const float t = std::clamp(label.distance / maxRange, 0.0f, 1.0f);
-            const float nameSize = (17.0f - 5.0f * t) * s;
-            const float readSize = nameSize * 0.74f;
-            const float alpha = 0.92f - 0.5f * t;
+            const float nameSize = (20.0f - 5.0f * t) * s;
+            const float readSize = nameSize * 0.72f;
+            const float alpha = 1.0f - 0.35f * t;
 
             // "Lv 12  DANGEROUS" — the verdict with the number it was derived from, so
             // the four bands are never the whole story on a level-scaled world where
@@ -311,22 +319,31 @@ namespace Isekai::UI {
 
             const bool  named = !label.name.empty();
             const float lineH = nameSize * 1.15f;
-            float       y = label.pos.y - readSize * 1.1f - (named ? lineH : 0.0f);
+            const float nameW = named ? measure(nameSize, label.name.c_str()) : 0.0f;
+            const float readW = measure(readSize, reading.c_str());
+            const float blockH = readSize * 1.25f + (named ? lineH : 0.0f);
+            const float top = label.pos.y - blockH;
 
+            const float bandW = std::max(nameW, readW) * 0.5f + 14.0f * s;
+            Style::DrawFadingBand(dl, ImVec2{ label.pos.x - bandW, top - 3.0f * s },
+                                  ImVec2{ label.pos.x + bandW, label.pos.y + 2.0f * s },
+                                  Style::kPanelBg, 0.30f * alpha);
+
+            float y = top;
             if (named) {
-                Style::DrawTextShadowed(
-                    dl, font, nameSize,
-                    ImVec2{ label.pos.x - measure(nameSize, label.name.c_str()) * 0.5f, y },
-                    label.verdict.col, label.name.c_str(), alpha);
+                Style::DrawTextOutlined(dl, font, nameSize,
+                                        ImVec2{ label.pos.x - nameW * 0.5f, y },
+                                        label.verdict.col, label.name.c_str(), alpha);
                 y += lineH;
             }
 
             // Quieter than the name on purpose: you glance at the colour, you read the
-            // name, and the numbers are there only when you actually look for them.
-            Style::DrawTextShadowed(
-                dl, font, readSize,
-                ImVec2{ label.pos.x - measure(readSize, reading.c_str()) * 0.5f, y },
-                label.verdict.col, reading.c_str(), alpha * 0.78f);
+            // name, and the numbers are there when you actually look for them. "Quieter"
+            // is now size and weight rather than opacity — fading it was most of why the
+            // whole label disappeared.
+            Style::DrawTextOutlined(dl, font, readSize,
+                                    ImVec2{ label.pos.x - readW * 0.5f, y },
+                                    label.verdict.col, reading.c_str(), alpha * 0.92f);
         }
     }
 }

@@ -113,7 +113,8 @@ something, but the opposite of what it used to: it switches the whole display of
 | Look away from it, while it is still calm. | The label goes. The default labels what you aim at, nothing else — until something attacks. |
 | Let it attack you. | It keeps its label without being aimed at, and so does anything else fighting you. |
 | Walk past a sleeping bandit camp without waking it. | **No labels.** This is the row the default exists for — `hostile` would mark every one of them from across the valley. |
-| Back away from something that is fighting you. | The label shrinks and dims with distance, then disappears past the range. |
+| Back away from something that is fighting you. | The label shrinks and dims with distance, then disappears past the range — but stays **readable** the whole way. Dimming past legible is the bug this row is for. |
+| Look at one against snow, and again against a dark cave wall. | Readable on both. The text is outlined, so no glyph edge ever lies directly on the scene. |
 | Stand in a market square. | No labels on townspeople. |
 | Press **`V`** (`ThreatLabelKey`). | `Threat display OFF` top-centre, and every label goes. Press again for `ON`. |
 | Save, quit, reload after switching them off. | They are back **on** — the toggle is a display switch, not part of the character. |

@@ -86,6 +86,36 @@ namespace Isekai::UI::Style {
         }
     }
 
+    // Text with a full outline rather than a single drop shadow.
+    //
+    // A shadow is enough on our own panels, where we chose the background. Over the game
+    // world it is not: a one-pixel offset leaves most of every glyph edge sitting
+    // directly on whatever colour the scene happens to be, and small text dissolves into
+    // grass, snow or a cave wall. An outline traces the glyph on all eight sides, which
+    // is why every game that puts names over a 3D world uses one — it buys legibility
+    // without buying visual weight, unlike the backing plate it replaces.
+    inline void DrawTextOutlined(ImDrawList* a_dl, ImFont* a_font, float a_size, ImVec2 a_pos,
+                                 const ImVec4& a_color, const char* a_text,
+                                 float a_alphaScale = 1.0f) {
+        static const float kRing[8][2] = { { -1, -1 }, { 0, -1 }, { 1, -1 }, { -1, 0 },
+                                           { 1, 0 },   { -1, 1 }, { 0, 1 },  { 1, 1 } };
+        const float r = std::max(1.0f, a_size * 0.085f);
+        const ImU32 ink = ImGui::GetColorU32(ImVec4{ 0.0f, 0.0f, 0.0f, 0.88f * a_alphaScale });
+        for (const auto& o : kRing) {
+            const ImVec2 p{ a_pos.x + o[0] * r, a_pos.y + o[1] * r };
+            if (a_font) {
+                a_dl->AddText(a_font, a_size, p, ink, a_text);
+            } else {
+                a_dl->AddText(p, ink, a_text);
+            }
+        }
+        if (a_font) {
+            a_dl->AddText(a_font, a_size, a_pos, Col(a_color, a_alphaScale), a_text);
+        } else {
+            a_dl->AddText(a_pos, Col(a_color, a_alphaScale), a_text);
+        }
+    }
+
     // A horizontal band that fades out towards both ends instead of stopping at a hard
     // edge. Two rects, because ImGui's gradient fill has only two stops. Used for the
     // HUD's backing plates and rules: an edge is what makes a translucent panel read as
