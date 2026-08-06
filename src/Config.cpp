@@ -46,9 +46,44 @@ namespace Isekai::Config {
             return v == "1" || v == "true" || v == "yes" || v == "on";
         }
 
-        // A DirectInput scan code, hex ("0x1F") or decimal ("31"). Base 0 lets the same
-        // parse handle both. On garbage, keep whatever default was passed in.
+        // Key names, so a hotkey can be written as "F11" instead of "0x57".
+        //
+        // This exists because the numeric-only version had a trap in it. Every other
+        // setting in this file is a 0/1 switch, and "SelfTestKey = 0" looks exactly like
+        // one — so turning the self-test on by writing "1" is the natural move. Scan code
+        // 1 is ESCAPE. The result was a self-test that fired on ESC and a key that "did
+        // nothing", with nothing anywhere saying why.
+        struct KeyEntry {
+            const char*   name;
+            std::uint32_t code;
+        };
+        constexpr KeyEntry kKeyNames[] = {
+            { "esc", 0x01 },      { "escape", 0x01 },   { "tab", 0x0F },
+            { "space", 0x39 },    { "enter", 0x1C },    { "return", 0x1C },
+            { "backspace", 0x0E }, { "capslock", 0x3A }, { "grave", 0x29 },
+            { "tilde", 0x29 },    { "backslash", 0x2B },
+            { "lshift", 0x2A },   { "rshift", 0x36 },   { "lctrl", 0x1D },
+            { "rctrl", 0x9D },    { "lalt", 0x38 },     { "ralt", 0xB8 },
+            { "f1", 0x3B },  { "f2", 0x3C },  { "f3", 0x3D },  { "f4", 0x3E },
+            { "f5", 0x3F },  { "f6", 0x40 },  { "f7", 0x41 },  { "f8", 0x42 },
+            { "f9", 0x43 },  { "f10", 0x44 }, { "f11", 0x57 }, { "f12", 0x58 },
+            { "a", 0x1E }, { "b", 0x30 }, { "c", 0x2E }, { "d", 0x20 }, { "e", 0x12 },
+            { "f", 0x21 }, { "g", 0x22 }, { "h", 0x23 }, { "i", 0x17 }, { "j", 0x24 },
+            { "k", 0x25 }, { "l", 0x26 }, { "m", 0x32 }, { "n", 0x31 }, { "o", 0x18 },
+            { "p", 0x19 }, { "q", 0x10 }, { "r", 0x13 }, { "s", 0x1F }, { "t", 0x14 },
+            { "u", 0x16 }, { "v", 0x2F }, { "w", 0x11 }, { "x", 0x2D }, { "y", 0x15 },
+            { "z", 0x2C },
+        };
+
+        // A DirectInput scan code: a name ("F11"), hex ("0x1F") or decimal ("31"). Base 0
+        // lets the same parse handle the last two. On garbage, keep the default passed in.
         [[nodiscard]] std::uint32_t AsScanCode(const std::string& a_val, std::uint32_t a_def) {
+            const std::string v = Lower(Trim(a_val));
+            for (const auto& e : kKeyNames) {
+                if (v == e.name) {
+                    return e.code;
+                }
+            }
             try {
                 return static_cast<std::uint32_t>(std::stoul(a_val, nullptr, 0));
             } catch (...) {
@@ -140,6 +175,22 @@ namespace Isekai::Config {
                      g_hideSealedNodes, g_systemMenuKey, g_systemMenuModifier, g_dormantHeroLevel,
                      g_dormantAscendedLevel, g_storageCodex, g_skyrimNetIntegration, g_analyzeKey,
                      g_selfTestKey, g_logInputDiag);
+    }
+
+    std::string KeyName(std::uint32_t a_scanCode) {
+        const auto hex = std::format("{:#04x}", a_scanCode);
+        if (a_scanCode == 0) {
+            return hex + " (none)";
+        }
+        for (const auto& e : kKeyNames) {
+            if (e.code == a_scanCode) {
+                std::string name = e.name;
+                std::transform(name.begin(), name.end(), name.begin(),
+                               [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+                return hex + " (" + name + ")";
+            }
+        }
+        return hex;
     }
 
     bool HideSealedNodes() {

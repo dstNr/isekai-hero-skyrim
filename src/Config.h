@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 // Lightweight INI settings, read once at kDataLoaded from
 // Data\SKSE\Plugins\IsekaiHero.ini. Absent file / keys fall back to defaults, so
@@ -10,6 +11,11 @@ namespace Isekai::Config {
 
     // Parse the ini (idempotent). Call at kDataLoaded.
     void Load();
+
+    // A readable name for a DirectInput scan code ("0x57 (F11)"), for log lines. A hotkey
+    // that misbehaves is nearly always bound to something other than what its owner
+    // thinks, and a bare number in the log does not make that obvious.
+    [[nodiscard]] std::string KeyName(std::uint32_t a_scanCode);
 
     // Skill tree: hide nodes gated above the player's rebirth tier instead of showing
     // them greyed with a "requires HERO/ASCENDED" hint. Default false (show greyed).

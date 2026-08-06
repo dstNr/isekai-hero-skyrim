@@ -533,6 +533,6 @@ namespace Isekai::SelfTest {
             return;
         }
         UI::RegisterHotkey(key, []() { Run(/*a_notify=*/true); });
-        logger::info("SelfTest: hotkey {:#04x} runs the self-test", key);
+        logger::info("SelfTest: hotkey {} runs the self-test", Config::KeyName(key));
     }
 }

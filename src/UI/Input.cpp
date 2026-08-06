@@ -346,6 +346,21 @@ namespace Isekai::UI {
                          "a key, and 0 is how the ini spells \"off\"");
             return;
         }
+
+        // ESC and Tab belong to our own panels (MenuGuard dismisses on both), so a hotkey
+        // bound to either fires every time a panel is closed. This is not hypothetical:
+        // the ini is otherwise full of 0/1 switches, so "SelfTestKey = 1" reads as "on"
+        // and is in fact scan code 1 — ESCAPE. The self-test then ran on every ESC, and
+        // the key the player believed they had set did nothing.
+        constexpr std::uint32_t kEsc = 0x01;
+        constexpr std::uint32_t kTab = 0x0F;
+        if (a_scanCode == kEsc || a_scanCode == kTab) {
+            logger::warn("UI: refusing to bind a hotkey to {} — our panels already use it "
+                         "to close. If you meant \"switch this on\", the setting wants a KEY "
+                         "(e.g. F11), not 1.",
+                         Config::KeyName(a_scanCode));
+            return;
+        }
         std::scoped_lock lock(g_hotkeyMutex);
         g_hotkeys[a_scanCode] = Hotkey{ std::move(a_fn), a_modifier };
     }
@@ -358,9 +373,9 @@ namespace Isekai::UI {
         }
         std::string list;
         for (const auto& [code, hk] : g_hotkeys) {
-            list += (list.empty() ? "" : ", ") + std::format("{:#04x}", code);
+            list += (list.empty() ? "" : ", ") + Config::KeyName(code);
             if (hk.modifier != 0) {
-                list += std::format(" (+{:#04x})", hk.modifier);
+                list += " + " + Config::KeyName(hk.modifier);
             }
         }
         logger::info("UI: {} hotkey(s) armed: {}", g_hotkeys.size(), list);
