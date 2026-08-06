@@ -100,6 +100,40 @@ namespace Isekai::UI::Style {
         a_dl->AddRectFilledMultiColor(ImVec2{ mid, a_min.y }, a_max, solid, clear, clear, solid);
     }
 
+    // A lit plate to stand an icon on.
+    //
+    // The art is transparent-backed but DARK-BODIED: a navy silhouette with cyan edge
+    // light, averaging about a fifth of full brightness. Dropped straight onto a navy
+    // panel, only the edges survive and the icon reads as a few floating strokes — which
+    // is what it did everywhere in this UI.
+    //
+    // Lifting the art itself is not on offer here: ImGui's image tint MULTIPLIES, so it
+    // can darken a texture and never brighten one. What we can change is what sits behind
+    // it, and a plate a few shades lighter than the panel gives the dark body something
+    // to be dark against. (The web view can do both, and does.)
+    //
+    // Opaque on purpose: the tree draws links that pass near a node, and they must
+    // terminate visually at the plate rather than shimmer through the art's transparency.
+    inline void DrawIconPlate(ImDrawList* a_dl, ImVec2 a_min, ImVec2 a_max,
+                              float a_alphaScale = 1.0f, bool a_border = true) {
+        a_dl->AddRectFilled(a_min, a_max,
+                            ImGui::GetColorU32(ImVec4{ kPanelBg.x, kPanelBg.y, kPanelBg.z,
+                                                       a_alphaScale }));
+        // Brighter at the top, the way a surface catching light from above reads. Flat
+        // would look like a hole cut in the panel.
+        // Both stops stay clearly lighter than the panel — a gradient that fades back into
+        // the background at the bottom would let the lower half of the art sink again,
+        // which is the whole complaint.
+        const ImU32 top =
+            ImGui::GetColorU32(ImVec4{ 0.44f, 0.60f, 0.76f, 0.34f * a_alphaScale });
+        const ImU32 bottom =
+            ImGui::GetColorU32(ImVec4{ 0.30f, 0.42f, 0.56f, 0.26f * a_alphaScale });
+        a_dl->AddRectFilledMultiColor(a_min, a_max, top, top, bottom, bottom);
+        if (a_border) {
+            a_dl->AddRect(a_min, a_max, Col(kAccent, 0.28f * a_alphaScale), 0.0f, 0, 1.0f);
+        }
+    }
+
     // Bloom, faked: stack progressively larger rects at falling alpha. Cheap and
     // it reads exactly like the light-bleed around a hologram panel.
     inline void DrawGlowBorder(ImDrawList* a_dl, ImVec2 a_min, ImVec2 a_max,

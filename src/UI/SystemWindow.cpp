@@ -425,13 +425,20 @@ namespace Isekai::UI {
                             // chosen so this never bites for the widest label in the row —
                             // but a font fallback that measures differently from what it
                             // draws must still spill nothing into the button next door.
+                            // Plate then art, in that order. No border on it — the button
+                            // it sits in is already framed, and a box inside a box reads
+                            // as clutter rather than as structure.
+                            const auto plated = [&](ImVec2 a_min, ImVec2 a_max) {
+                                Style::DrawIconPlate(dl, a_min, a_max, 1.0f, /*a_border=*/false);
+                                dl->AddImage(icon, a_min, a_max);
+                            };
+
                             dl->PushClipRect(bMin, bMax, true);
                             if (row.stacked) {
                                 const float blockH = row.iconSize + iconGap + textSize.y;
                                 const float top = (bMin.y + bMax.y) * 0.5f - blockH * 0.5f;
-                                dl->AddImage(icon, ImVec2{ cx - row.iconSize * 0.5f, top },
-                                             ImVec2{ cx + row.iconSize * 0.5f,
-                                                     top + row.iconSize });
+                                plated(ImVec2{ cx - row.iconSize * 0.5f, top },
+                                       ImVec2{ cx + row.iconSize * 0.5f, top + row.iconSize });
                                 dl->AddText(ImVec2{ cx - textSize.x * 0.5f,
                                                     top + row.iconSize + iconGap },
                                             Style::Col(Style::kText), choice.label.c_str());
@@ -439,8 +446,8 @@ namespace Isekai::UI {
                                 const float totalW = row.iconSize + iconGap + textSize.x;
                                 const float x = cx - totalW * 0.5f;
                                 const float cy = (bMin.y + bMax.y) * 0.5f;
-                                dl->AddImage(icon, ImVec2{ x, cy - row.iconSize * 0.5f },
-                                             ImVec2{ x + row.iconSize, cy + row.iconSize * 0.5f });
+                                plated(ImVec2{ x, cy - row.iconSize * 0.5f },
+                                       ImVec2{ x + row.iconSize, cy + row.iconSize * 0.5f });
                                 dl->AddText(
                                     ImVec2{ x + row.iconSize + iconGap, cy - textSize.y * 0.5f },
                                     Style::Col(Style::kText), choice.label.c_str());
@@ -489,6 +496,16 @@ namespace Isekai::UI {
                                               ImVec4{ Style::kAccent.x, Style::kAccent.y,
                                                       Style::kAccent.z, 0.28f });
                         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2{ 2.0f * s, 2.0f * s });
+
+                        // The plate goes down BEFORE the button, so the art lands on top
+                        // of it. Its rect is the button's: the cursor is the item's
+                        // top-left, and the frame padding above is added on each side.
+                        {
+                            const ImVec2 pMin = ImGui::GetCursorScreenPos();
+                            const float  side = iconSize + 4.0f * s;
+                            Style::DrawIconPlate(dl, pMin, ImVec2{ pMin.x + side, pMin.y + side },
+                                                 fade);
+                        }
 
                         if (ImGui::ImageButton("##iconAction", icon,
                                                ImVec2{ iconSize, iconSize })) {

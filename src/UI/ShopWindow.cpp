@@ -268,6 +268,10 @@ namespace Isekai::UI {
                 const ImVec2 iMax{ iMin.x + iconSize, iMin.y + iconSize };
                 if (const auto tex = GetTexture(std::string(kIconDir) + item.icon)) {
                     const int a = static_cast<int>(255 * fade * dim);
+                    // The card is already framed, so the plate under the art carries no
+                    // border of its own — it is there to lift a dark-bodied icon off a
+                    // dark card, nothing more.
+                    Style::DrawIconPlate(dl, iMin, iMax, fade * dim, /*a_border=*/false);
                     dl->AddImage(tex, iMin, iMax, ImVec2{ 0, 0 }, ImVec2{ 1, 1 },
                                  IM_COL32(255, 255, 255, a));
                 }

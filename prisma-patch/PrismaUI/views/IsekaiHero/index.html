@@ -19,6 +19,22 @@
     --line:      rgba(90, 210, 255, 0.28);
 
     --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+    /* The icon problem, and its two halves.
+       The art is transparent-backed but DARK-BODIED — a navy silhouette with cyan edge
+       light, averaging about a fifth of full brightness. On a navy panel only the edges
+       survived and every icon read as a few floating strokes.
+       --icon-plate is what goes BEHIND: a few shades lighter than the panel, so the dark
+       body has something to be dark against. It is the only half the built-in renderer
+       can do (ImGui's image tint multiplies — it darkens, never lifts), so both renderers
+       use it and stay recognisably the same UI.
+       --icon-lift is the half only a browser can do: contrast() pulls the near-blacks up
+       off the floor, brightness() carries the whole thing, and the cyan drop-shadow traces
+       the silhouette in light. Applied on top of the plate, not instead of it. */
+    --icon-plate: linear-gradient(165deg, rgba(108,158,205,0.30), rgba(38,62,94,0.18));
+    --icon-lift:  contrast(0.86) brightness(1.30)
+                  drop-shadow(0 0 5px rgba(90,210,255,0.45))
+                  drop-shadow(0 1px 1px rgba(0,0,0,0.55));
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; user-select: none;
@@ -192,7 +208,7 @@
   .node { position: absolute; width: var(--ns, 62px); height: var(--ns, 62px);
           margin: calc(var(--ns, 62px) / -2) 0 0 calc(var(--ns, 62px) / -2);
           border-radius: 10px; display: flex; align-items: center; justify-content: center;
-          background: linear-gradient(160deg, rgba(20,36,58,0.95), rgba(9,17,30,0.95));
+          background: var(--icon-plate), linear-gradient(160deg, rgba(12,22,38,0.95), rgba(9,17,30,0.95));
           border: 1px solid rgba(120,150,180,0.22);
           transition: transform 0.2s var(--ease), box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
           animation: nodeIn 0.4s var(--ease) both; }
@@ -221,7 +237,7 @@
 
   .node.owned { border-color: rgba(90,210,255,0.9);
     box-shadow: 0 0 0 1px rgba(90,210,255,0.35), 0 0 26px rgba(90,210,255,0.42), inset 0 0 20px rgba(90,210,255,0.16); }
-  .node.owned img { filter: none; }
+  .node.owned img { filter: var(--icon-lift); }
   .node.owned::after { content: ""; position: absolute; inset: -1px; border-radius: 10px;
     background: linear-gradient(160deg, rgba(90,210,255,0.16), transparent 60%); pointer-events: none; }
 
@@ -234,7 +250,7 @@
      node's state class never restarts the entrance animation (no blink on purchase). */
   .node.buyable { border-color: rgba(90,210,255,0.85); cursor: pointer;
                   box-shadow: 0 0 15px rgba(90,210,255,0.32); }
-  .node.buyable img { filter: grayscale(0.05) brightness(1); }
+  .node.buyable img { filter: grayscale(0.05) contrast(0.9) brightness(1.18); }
   .node.buyable::before { content: ""; position: absolute; inset: -3px; border-radius: 13px;
     border: 1.5px solid rgba(90,210,255,0.75); pointer-events: none; }
 
@@ -344,7 +360,8 @@
           padding: clamp(14px, 1.6vw, 20px) 12px; border-radius: 4px;
           background: var(--surface-2); border: 1px solid var(--line);
           transition: border-color 0.22s var(--ease), box-shadow 0.22s var(--ease); }
-  .card img { width: 62px; height: 62px; object-fit: contain; filter: brightness(0.95); }
+  .card img { width: 62px; height: 62px; object-fit: contain; filter: var(--icon-lift);
+              background: var(--icon-plate); border-radius: 4px; padding: 4px; }
   .cName { font-size: 13px; color: var(--text); letter-spacing: 0.06em; text-align: center; }
   .cQty  { font-size: 11px; color: var(--dim); letter-spacing: 0.16em; }
   .cCost { font-size: 17px; color: var(--accent); letter-spacing: 0.04em; margin-top: 2px; }
@@ -393,7 +410,9 @@
                    font-size: clamp(11px, 0.8vw, 14px); letter-spacing: 0.12em;
                    display: flex; flex-direction: column; align-items: center;
                    justify-content: center; gap: 7px; padding: 11px 8px; }
-  #pButtons .btn img { width: 28px; height: 28px; object-fit: contain; }
+  #pButtons .btn img { width: 28px; height: 28px; object-fit: contain;
+                       filter: var(--icon-lift); background: var(--icon-plate);
+                       border-radius: 3px; padding: 2px; }
   /* Last line of defence: a label longer than any button gets an ellipsis rather than
      silently disappearing under the frame. */
   #pButtons .btn .lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis;
@@ -402,12 +421,13 @@
   #pIcons { position: absolute; top: clamp(70px, 6vw, 92px); right: clamp(16px, 1.4vw, 24px);
             display: flex; flex-direction: column; gap: 12px; }
   .iconBtn { width: 70px; height: 70px; border-radius: 12px; cursor: pointer; position: relative;
-             background: linear-gradient(160deg, rgba(20,36,58,0.9), rgba(9,17,30,0.9));
+             background: var(--icon-plate);
              border: 1px solid rgba(90,210,255,0.28); transition: all 0.22s var(--ease); }
-  .iconBtn img { width: 76%; height: 76%; object-fit: contain; filter: brightness(0.92); }
+  /* Was brightness(0.92): the art was being DIMMED on the darkest surface in the UI. */
+  .iconBtn img { width: 76%; height: 76%; object-fit: contain; filter: var(--icon-lift); }
   .iconBtn:hover { border-color: var(--accent); transform: translateX(-3px) scale(1.05);
                    box-shadow: inset 0 0 18px rgba(90,210,255,0.18); }
-  .iconBtn:hover img { filter: brightness(1.15); }
+  .iconBtn:hover img { filter: var(--icon-lift) brightness(1.12); }
   .iconBtn .lbl { position: absolute; right: 82px; top: 50%; transform: translateY(-50%) translateX(6px);
                   color: var(--accent); white-space: nowrap; opacity: 0; font-size: 12px;
                   letter-spacing: 0.2em; text-transform: uppercase; font-weight: 600;
@@ -445,7 +465,7 @@
                 margin-top: clamp(14px, 1.8vw, 24px); }
   #sRankIcon { width: clamp(44px, 4.4vw, 62px); height: clamp(44px, 4.4vw, 62px);
                object-fit: contain; flex: none;
-               filter: drop-shadow(0 0 10px rgba(90,210,255,0.4)); }
+               filter: var(--icon-lift); }
   #sRankText { min-width: 0; }
   /* Type only — no colour. The rank ramp below is class-based, and an id selector beats
      a class every time: `color: #fff` here meant every rank rendered white however

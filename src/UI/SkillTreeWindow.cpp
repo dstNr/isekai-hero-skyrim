@@ -579,10 +579,11 @@ namespace Isekai::UI {
                                           1.5f * s);
                 }
                 // Opaque backdrop: any line crossing near the node must terminate
-                // visually at the box, not shimmer through the icon's transparency.
-                a_dl->AddRectFilled(nMin, nMax,
-                                    ImGui::GetColorU32(ImVec4{ Style::kPanelBg.x, Style::kPanelBg.y,
-                                                               Style::kPanelBg.z, fade }));
+                // visually at the box, not shimmer through the icon's transparency. It is
+                // also what makes the icon visible at all — the art is dark-bodied, and
+                // this used to be the panel's own near-black navy, i.e. dark on dark. The
+                // node draws its own ring below, so the plate skips its border.
+                Style::DrawIconPlate(a_dl, nMin, nMax, fade, /*a_border=*/false);
                 const std::string icon = std::string(kIconDir) + node.icon;
                 if (const auto tex = GetTexture(icon)) {
                     a_dl->AddImage(tex, nMin, nMax, ImVec2{ 0, 0 }, ImVec2{ 1, 1 },
