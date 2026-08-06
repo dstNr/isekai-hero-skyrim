@@ -139,7 +139,9 @@ namespace Isekai::UI {
                                       0.5f * alpha);
             }
 
-            const ImVec4& col = t.banner ? Style::kAccent : Style::kText;
+            // Both lines cyan: the toast layer is the System talking, and it should read
+            // as the panels do. Banner and line still differ by size and font.
+            const ImVec4& col = Style::kAccent;
             Style::DrawTextShadowed(dl, font, size, pos, col, t.text.c_str(), alpha);
 
             y += dim.y + padXY.y * 2.0f + 8.0f * s;
