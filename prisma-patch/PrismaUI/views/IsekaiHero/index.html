@@ -1270,6 +1270,7 @@ function rebootClick(btn) {
 }
 
 function buildStatusActions() {
+  const s = STATUS;
   const icons = $("sIcons"); icons.innerHTML = "";
   const box = $("sActions"); box.innerHTML = ""; rebootArmed = 0;
 
@@ -1287,12 +1288,15 @@ function buildStatusActions() {
     b.textContent = label; b.onclick = onClick; box.appendChild(b); return b;
   };
 
-  if (STATUS.hasTree)    addIcon("Skill Tree", "ui_skilltree.png", () => statusAction("tree"));
-  if (STATUS.hasStorage) addIcon("Storage", "ui_storage.png", () => statusAction("storage"));
-  if (STATUS.hasShop)    addIcon("Shop", "ui_shop.png", () => statusAction("shop"));
-  // Trading the objective is free and reversible, so unlike Reboot it needs no arming.
-  if (STATUS.questText)  addBtn("New Task", "", () => statusAction("reroll"));
-  if (STATUS.canReboot)  { const rb = addBtn("Reboot", "amber", () => rebootClick(rb)); }
+  if (s.hasTree)    addIcon("Skill Tree", "ui_skilltree.png", () => statusAction("tree"));
+  if (s.hasStorage) addIcon("Storage", "ui_storage.png", () => statusAction("storage"));
+  if (s.hasShop)    addIcon("Shop", "ui_shop.png", () => statusAction("shop"));
+  // New Task throws the objective away and rolls another, free and instantly. That is a
+  // testing tool rather than a feature — it walks straight around the schedule the
+  // objectives are supposed to arrive on — so the plugin decides whether it exists at
+  // all (QuestRerollButton in the ini, off by default) and the view only obeys.
+  if (s.questCanReroll)  addBtn("New Task", "", () => statusAction("reroll"));
+  if (s.canReboot)  { const rb = addBtn("Reboot", "amber", () => rebootClick(rb)); }
   addBtn("Close", "", () => statusAction("close"));
 }
 

@@ -84,6 +84,16 @@ namespace Isekai::Config {
     [[nodiscard]] std::uint32_t QuestFirstTaskHours();
     [[nodiscard]] std::uint32_t QuestIntervalHours();
 
+    // Show the NEW TASK button on the status panel, which throws the standing objective
+    // away and rolls another one — free, instantly, as often as you like.
+    //
+    // A TESTING TOOL, and off by default because of what it does to the feature it
+    // tests: objectives are meant to arrive on the System's schedule, and a button that
+    // re-rolls until an easy quarry comes up is the shortest possible way around that.
+    // docs/MANUAL_TESTS.md needs it — walking the objective table otherwise means
+    // hunting whatever the dice picked, one quarry at a time.
+    [[nodiscard]] bool QuestRerollButton();
+
     // Scan code that runs the in-game self-test (src/SelfTest.cpp), or 0 for off, which
     // is the default — it is a diagnostic to be switched on when reporting a problem,
     // not something a normal playthrough should be able to trigger by accident.

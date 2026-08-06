@@ -38,15 +38,19 @@ for testing, so put this in `IsekaiHero.ini` before you start:
 [Quests]
 FirstTaskHours = 0
 TaskIntervalHours = 0
+
+[Diagnostics]
+QuestRerollButton = 1
 ```
 
-With both at 0 the next objective is handed over within a second of the last one ending,
-which is the only way to walk this table in one sitting. **Put them back afterwards** —
-with 0 you will never see the behaviour the rows below are actually about.
+With the first two at 0 the next objective is handed over within a second of the last one
+ending, which is the only way to walk this table in one sitting. The third adds a **NEW
+TASK** button to the status panel that re-rolls the objective on the spot — you cannot
+choose which quarry you draw, so without it testing a specific one means hunting whatever
+the dice picked.
 
-You cannot choose which quarry you draw either, so the status panel has a **NEW TASK**
-button. It is free and instant: press it until you get a quarry you can reach, and use it
-again between the steps below.
+**Put all three back afterwards.** They exist for this table and they undo the feature
+they test: with them on you will never see the behaviour the rows below are about.
 
 The seven quarries and where to find one quickly:
 

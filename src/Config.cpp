@@ -28,6 +28,7 @@ namespace Isekai::Config {
         std::uint32_t g_threatKey = 0x2F;  // DIK_V
         std::uint32_t g_questFirstTaskHours = 12;
         std::uint32_t g_questIntervalHours = 24;
+        bool          g_questRerollButton = false;
         // 0 = off. Off by default: the self-test is a diagnostic for bug reports, not a
         // feature, and a stray key that pops a notification would just be noise.
         std::uint32_t g_selfTestKey = 0;
@@ -135,6 +136,7 @@ namespace Isekai::Config {
         g_threatKey = 0x2F;
         g_questFirstTaskHours = 12;
         g_questIntervalHours = 24;
+        g_questRerollButton = false;
         g_selfTestKey = 0;
         g_logInputDiag = false;
 
@@ -194,6 +196,8 @@ namespace Isekai::Config {
                 g_questFirstTaskHours = AsHours(val, g_questFirstTaskHours);
             } else if (key == "taskintervalhours") {
                 g_questIntervalHours = AsHours(val, g_questIntervalHours);
+            } else if (key == "questrerollbutton") {
+                g_questRerollButton = AsBool(val);
             } else if (key == "selftestkey") {
                 g_selfTestKey = AsScanCode(val, g_selfTestKey);
             } else if (key == "loginputdiagnostics") {
@@ -213,7 +217,7 @@ namespace Isekai::Config {
         logger::info("Config: HideSealedNodes={}, SystemMenuKey={}, SystemMenuModifier={}, "
                      "DormantHeroLevel={}, DormantAscendedLevel={}, StorageCodex={}, "
                      "SkyrimNetIntegration={}, ThreatLabels={} (targets={}, range={}, key={}), "
-                     "FirstTaskHours={}, TaskIntervalHours={}, "
+                     "FirstTaskHours={}, TaskIntervalHours={}, QuestRerollButton={}, "
                      "SelfTestKey={}, LogInputDiagnostics={}",
                      g_hideSealedNodes, KeyName(g_systemMenuKey), KeyName(g_systemMenuModifier),
                      g_dormantHeroLevel, g_dormantAscendedLevel, g_storageCodex,
@@ -223,7 +227,8 @@ namespace Isekai::Config {
                      : g_threatTargets == ThreatTargets::kHostile   ? "hostile"
                                                                     : "aggro",
                      g_threatRange, KeyName(g_threatKey), g_questFirstTaskHours,
-                     g_questIntervalHours, KeyName(g_selfTestKey), g_logInputDiag);
+                     g_questIntervalHours, g_questRerollButton, KeyName(g_selfTestKey),
+                     g_logInputDiag);
     }
 
     std::string KeyName(std::uint32_t a_scanCode) {
@@ -292,6 +297,10 @@ namespace Isekai::Config {
 
     std::uint32_t QuestIntervalHours() {
         return g_questIntervalHours;
+    }
+
+    bool QuestRerollButton() {
+        return g_questRerollButton;
     }
 
     std::uint32_t SelfTestKey() {

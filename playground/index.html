@@ -208,8 +208,10 @@
         milestonesEarned: full ? 79 : 7, milestonesTotal: 79,
         points: 512, hasTree: true, hasStorage: true, hasShop: true, canReboot: true,
         // The standing System objective (src/Quests.cpp). Empty questText hides the row.
+        // questCanReroll is the ini's testing switch (QuestRerollButton), on here so the
+        // preview shows the widest possible action row — the layout worth looking at.
         questText: "Slay 25 Draugr", questProgress: full ? 25 : 9, questTarget: 25,
-        questReward: full ? 16 : 16, questWaitHours: 0,
+        questReward: full ? 16 : 16, questWaitHours: 0, questCanReroll: true,
         attunements: [
           { stat: "Health", amount: 250 }, { stat: "Magicka", amount: 150 },
           { stat: "Stamina", amount: 150 }, { stat: "Carry Weight", amount: 200 },

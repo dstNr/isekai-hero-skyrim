@@ -59,8 +59,11 @@ All notable changes to Isekai Hero are documented here. The format follows
     rune or a follower's final blow is most of a mage's or a sneak's kills.
   - Announced and tracked the way an MMO does it: a banner when one is handed over, and a
     single line top-centre counting up on each kill that replaces itself rather than
-    stacking. The status panel carries the full objective, and a **NEW TASK** button that
-    rerolls it on the spot.
+    stacking. The status panel carries the full objective.
+  - A **NEW TASK** button that re-rolls the objective on the spot exists behind
+    `QuestRerollButton` in the ini, off by default. It is a testing tool, not a feature:
+    free and instant, it walks straight around the schedule the objectives are supposed to
+    arrive on. `docs/MANUAL_TESTS.md` turns it on.
   - Co-save version 13 (the objective, its snapshotted target and payout, the clock and how
     many objectives this character has had), appended behind version gates like every field
     since v3. **Existing characters pick up an objective on the next load** — no reboot, no

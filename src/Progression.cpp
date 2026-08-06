@@ -444,6 +444,10 @@ namespace Isekai::Progression {
             j += "\"questWaitHours\":" +
                  std::to_string(static_cast<int>(std::lround(Quests::DaysUntilNext() * 24.0f))) +
                  ",";
+            // Whether the view should offer NEW TASK at all. A testing tool, off unless
+            // the ini turns it on — see the button's own comment further down.
+            j += "\"questCanReroll\":" +
+                 std::string(boolStr(Quests::Active() && Config::QuestRerollButton())) + ",";
 
             j += "\"attunements\":[";
             bool first = true;
@@ -602,12 +606,15 @@ namespace Isekai::Progression {
                                     /*iconOnly=*/true });
                 actions.emplace_back([]() { Shop::Open(); });
             }
-            // Trade the standing objective for a different one. Quests::Reroll has been
-            // there since the feature landed and nothing ever called it — the header
-            // promises "costs nothing, being stuck with a bad draw would just make the
-            // feature annoying", which only holds if there is a way to ask. Reopens the
-            // panel so the new objective is visible immediately.
-            if (Quests::Active()) {
+            // Throw the standing objective away and roll another one. A TESTING TOOL, and
+            // hidden unless the ini asks for it (Config::QuestRerollButton): it is free
+            // and instant, so it undoes the thing it is used to test — objectives are
+            // supposed to arrive when the System decides, and re-rolling until an easy
+            // quarry appears is the shortest way around that. docs/MANUAL_TESTS.md turns
+            // it on, because walking the objective table otherwise means hunting whatever
+            // the dice picked, one quarry at a time. Reopens the panel so the new
+            // objective is visible immediately.
+            if (Quests::Active() && Config::QuestRerollButton()) {
                 choices.push_back({ "NEW TASK", {} });
                 actions.emplace_back([]() {
                     Quests::Reroll();
