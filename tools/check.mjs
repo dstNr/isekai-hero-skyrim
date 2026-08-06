@@ -510,6 +510,26 @@ check("ui: every rank SystemRank can return has an insignia", () => {
   return `${letters.join("")} — ${letters.length} insignia`;
 });
 
+check("ui: the playground previews every blessing icon the game uses", () => {
+  // The blessing screen is the one panel a preview genuinely earns: five icon+label
+  // buttons in one row, and the longest body text in the mod. A preview that has
+  // drifted from the real icon set is worse than none — it would show a layout nobody
+  // ever sees.
+  const cpp = read("src/System.cpp");
+  const used = new Set([...cpp.matchAll(/BlessingIcon\("([\w.]+\.png)"\)/g)].map((m) => m[1]));
+  need(used.size > 0, "no BlessingIcon calls in System.cpp — parser stale?");
+
+  const pg = read("playground/index.html");
+  const shown = new Set([...pg.matchAll(/icon:\s*"(blessing_[\w.]+\.png)"/g)].map((m) => m[1]));
+  need(shown.size > 0, "the playground previews no blessing panel at all");
+
+  const missing = [...used].filter((i) => !shown.has(i));
+  need(missing.length === 0,
+       `the playground never shows ${missing.join(", ")} — that icon cannot be checked ` +
+       `without starting Skyrim`);
+  return `${used.size} icons, all previewable`;
+});
+
 check("ui: the web view's rank insignia is actually on screen", () => {
   // It was not, for as long as it existed. The status chip carried a bare "rank" class,
   // and the skill tree's node pip owns an unscoped `.rank { position: absolute;

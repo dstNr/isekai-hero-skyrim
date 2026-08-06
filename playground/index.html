@@ -94,6 +94,8 @@
     <button id="btnShop">Shop</button>
     <button id="btnPanel">Dialog</button>
     <button id="btnChoice">Choice</button>
+    <button id="btnBlessing" title="The reincarnation blessing choice — 5 icons, the widest button row we ship">Blessing</button>
+    <button id="btnAwakening" title="FULL / SHATTERED — the follow-up question">Awakening</button>
     <button id="btnFlourish">Level&nbsp;Up</button>
 
     <div class="sep"></div>
@@ -221,6 +223,66 @@
     // Shift-click the Status button for the full 79-title stress test.
     document.getElementById("btnStatus").onclick = function (e) {
       window.IsekaiMock.showStatus(statusData(!!e.shiftKey));
+    };
+
+    // --- The reincarnation blessing, mirroring src/System.cpp -------------------
+    // Body text and icon names are copied from ShowPowerSelection / AskAwakeningPath.
+    // The point of previewing these two specifically: the blessing row is the widest
+    // button row the mod has (five icon+label buttons side by side), and the body is
+    // the longest — so if a panel is going to run out of room, it is this one.
+    // tools/check.mjs asserts the icon names here still match the C++ ones.
+    document.getElementById("btnBlessing").onclick = function () {
+      window.IsekaiMock.showPanel({
+        title: "[ SYSTEM ]",
+        body: "You have been reincarnated.\n"
+            + "The System offers you a blessing.\n"
+            + "\n"
+            + "  NORMAL    No blessing. Pure challenge.\n"
+            + "  HERO      Awakened power.\n"
+            + "  ASCENDED  Transcend mortal limits.\n"
+            + "  DORMANT   The blessing sleeps. Begin as a mortal;\n"
+            + "            it wakes to HERO at level 25, then to\n"
+            + "            ASCENDED at level 80.\n"
+            + "  CUSTOM    Set the pieces yourself — starting gift,\n"
+            + "            reward pace and skill-tree depth, each on\n"
+            + "            its own.\n"
+            + "\n"
+            + "Choose your path:",
+        reveal: 100000,
+        width: 720,
+        buttons: [
+          { label: "NORMAL",   icon: "blessing_normal.png",   iconOnly: false },
+          { label: "HERO",     icon: "blessing_hero.png",     iconOnly: false },
+          { label: "ASCENDED", icon: "blessing_ascended.png", iconOnly: false },
+          { label: "DORMANT",  icon: "blessing_dormant.png",  iconOnly: false },
+          { label: "CUSTOM",   icon: "blessing_custom.png",   iconOnly: false }
+        ],
+        onSelect: function (i) { window.VS_LOG("blessing chosen: " + i); }
+      });
+    };
+
+    document.getElementById("btnAwakening").onclick = function () {
+      window.IsekaiMock.showPanel({
+        title: "[ SYSTEM ]",
+        body: "The ASCENDED blessing resonates.\n"
+            + "How will you receive it?\n"
+            + "\n"
+            + "  FULL       Awaken at once — skills, level and\n"
+            + "             fortune granted now.\n"
+            + "  SHATTERED  The System is fractured. Begin as any\n"
+            + "             mortal, but its rewards still flow faster\n"
+            + "             and its deepest gifts stay open to you.\n"
+            + "             Higher ceiling, same floor — earn it.\n"
+            + "\n"
+            + "Choose how you rise:",
+        reveal: 100000,
+        width: 720,
+        buttons: [
+          { label: "FULL AWAKENING", icon: "blessing_full.png",      iconOnly: false },
+          { label: "SHATTERED",      icon: "blessing_shattered.png", iconOnly: false }
+        ],
+        onSelect: function (i) { window.VS_LOG("awakening chosen: " + i); }
+      });
     };
 
     document.getElementById("btnFlourish").onclick = function () {
