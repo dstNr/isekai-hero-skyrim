@@ -552,6 +552,35 @@ check("ui: the panel's button labels are wrapped in the element their CSS styles
   return "stacked, clipped, and the span exists";
 });
 
+check("ui: both renderers colour a System Rank the same", () => {
+  // The rank ramp is written twice — once as ImVec4 in Style::RankColor, once as CSS in
+  // the view — because neither renderer can read the other's. Two screens showing the
+  // same character's rank in different colours would be worse than neither having any:
+  // the colour is the part you are meant to trust without reading the letter.
+  const style = read("src/UI/Style.h");
+  const cpp = {};
+  for (const m of style.matchAll(/case '([SABCDE])':/g)) {
+    const rest = style.slice(m.index);
+    const ret = rest.match(/return \{ ([\d.]+)f, ([\d.]+)f, ([\d.]+)f/);
+    need(ret, `no colour follows case '${m[1]}' in RankColor`);
+    cpp[m[1]] = [+ret[1], +ret[2], +ret[3]].map((v) => Math.round(v * 255));
+  }
+  need(Object.keys(cpp).length === 6, `RankColor names ${Object.keys(cpp).length} ranks, not 6`);
+
+  const view = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  for (const [rank, rgb] of Object.entries(cpp)) {
+    const css = view.match(new RegExp(`\\.rank-${rank.toLowerCase()}\\s*\\{\\s*color:\\s*#([0-9a-f]{6})`, "i"));
+    need(css, `the view has no .rank-${rank.toLowerCase()} colour`);
+    const hex = [0, 2, 4].map((i) => parseInt(css[1].slice(i, i + 2), 16));
+    // Two levels of slack for the float-to-byte rounding, and nothing more: a real
+    // divergence is never off by one.
+    const off = hex.map((v, i) => Math.abs(v - rgb[i]));
+    need(Math.max(...off) <= 2,
+         `rank ${rank}: C++ says rgb(${rgb}), the view #${css[1]} — they have drifted`);
+  }
+  return `${Object.keys(cpp).length} ranks agree`;
+});
+
 check("ui: the web view's rank insignia is actually on screen", () => {
   // It was not, for as long as it existed. The status chip carried a bare "rank" class,
   // and the skill tree's node pip owns an unscoped `.rank { position: absolute;

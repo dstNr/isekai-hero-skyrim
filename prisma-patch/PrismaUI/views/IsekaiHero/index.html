@@ -372,6 +372,11 @@
   #pRule { margin: 16px 0 20px; }
   #pBody { color: var(--text); font-size: clamp(14px, 1.02vw, 17px); line-height: 1.65;
            white-space: pre-wrap; overflow-y: auto; flex: 1; opacity: 0.94; }
+  /* Row labels and standalone headings, coloured from the text's own shape — see
+     colouriseBody(). Values keep #pBody's own colour, so the thing you opened the panel
+     to read is the bright one. */
+  #pBody .lbl { color: var(--accent); }
+  #pBody .head { color: var(--accent); letter-spacing: 0.06em; }
   #pBody::-webkit-scrollbar { width: 5px; }
   #pBody::-webkit-scrollbar-thumb { background: rgba(90,210,255,0.3); border-radius: 3px; }
   /* The panel's button row. Icon ABOVE label, not beside it.
@@ -445,6 +450,19 @@
   #sRankLetter { font-size: clamp(22px, 2.6vw, 34px); font-weight: 700; line-height: 1.1;
                  letter-spacing: 0.12em; color: #fff;
                  text-shadow: 0 0 18px rgba(90,210,255,0.45); }
+
+  /* The rank ramp: steel through the System's cyan to gold, the order every ranked game
+     has trained people to read without a legend. White for all six said only "here is a
+     letter" — the letter is a fact you have to look up, the colour is one you feel.
+     These six MUST match Style::RankColor in the built-in renderer; the two screens
+     showing the same character a different colour would be worse than neither having any,
+     so tools/check.mjs compares them. */
+  .rank-s { color: #ffd659; text-shadow: 0 0 20px rgba(255,214,89,0.45); }
+  .rank-a { color: #c78fff; text-shadow: 0 0 20px rgba(199,143,255,0.45); }
+  .rank-b { color: #73ffbd; text-shadow: 0 0 20px rgba(115,255,189,0.40); }
+  .rank-c { color: #59ccff; text-shadow: 0 0 20px rgba(89,204,255,0.40); }
+  .rank-d { color: #a3c7e6; text-shadow: 0 0 18px rgba(163,199,230,0.30); }
+  .rank-e { color: #80a6c7; text-shadow: 0 0 18px rgba(128,166,199,0.25); }
   #sAwaken { color: var(--amber); font-size: 12px; letter-spacing: 0.1em; margin-top: 6px; }
   #sCustom { color: var(--dim); font-size: 12px; letter-spacing: 0.06em; margin-top: 6px; }
   #sCustom b { color: var(--accent); font-weight: 600; }
@@ -1228,11 +1246,40 @@ function buildButtons() {
   });
   row.style.visibility = "hidden";
 }
+/* Colour the panel body from its own shape rather than from markup, the same rule the
+   built-in renderer uses (DrawBody in src/UI/SystemWindow.cpp):
+
+     - a short ALL-CAPS run followed by a column gap is a label, and takes the accent
+     - the value after it stays bright, because that is what you opened the panel to read
+     - an all-caps line standing on its own is a heading
+
+   Keeping it a rule instead of markup means the plugin's strings stay plain text — the
+   same string feeds this view and the ImGui panel, so anything else would have to be
+   understood, or stripped, by both. */
+function colouriseBody(text) {
+  return text.split("\n").map(line => {
+    const first = line.search(/\S/);
+    if (first < 0) return esc(line);
+
+    const gap = line.indexOf("  ", first);
+    const value = gap < 0 ? -1 : line.slice(gap).search(/\S/);
+    // A label is short; prose that happens to contain a double space is not a table row,
+    // and colouring half a sentence would look like a fault.
+    if (gap >= 0 && value >= 0 && (gap - first) <= 22) {
+      const at = gap + value;
+      return '<span class="lbl">' + esc(line.slice(0, at)) + "</span>" + esc(line.slice(at));
+    }
+    const caps = /[A-Za-z]/.test(line) && line === line.toUpperCase();
+    return caps ? '<span class="head">' + esc(line) + "</span>" : esc(line);
+  }).join("\n");
+}
+
 function tickPanel(now) {
   if (!panelStart) panelStart = now;
   const shown = Math.floor((now - panelStart) / 1000 * PANEL.reveal);
   const done = shown >= PANEL.body.length;
-  $("pBody").textContent = done ? PANEL.body : PANEL.body.slice(0, shown) + "▌";
+  $("pBody").innerHTML =
+    colouriseBody(done ? PANEL.body : PANEL.body.slice(0, shown)) + (done ? "" : "▌");
   if (done && !buttonsShown) { buttonsShown = true; $("pButtons").style.visibility = "visible"; }
   if (!done) panelRAF = requestAnimationFrame(tickPanel);
 }
@@ -1309,7 +1356,10 @@ function renderStatus() {
   const icon = $("sRankIcon");
   icon.style.display = "";           // a previous rank's missing PNG may have hidden it
   icon.src = "icons/rank_" + rank.toLowerCase() + ".png";
-  $("sRankLetter").textContent = "RANK " + rank;
+  const letter = $("sRankLetter");
+  letter.textContent = "RANK " + rank;
+  // "rank-c" and friends carry the ramp; anything unexpected falls back to E's steel.
+  letter.className = "mono rank-" + ("SABCDE".includes(rank) ? rank.toLowerCase() : "e");
 
   const mode = s.mode || "";
   const mb = $("sMode");

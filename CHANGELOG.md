@@ -117,17 +117,19 @@ All notable changes to Isekai Hero are documented here. The format follows
   reincarnation, and backfilled on load for saves from before this existed.
 
 ### Changed
-- **The System panels read in colour.** The status ledger was one flat wall of monospace
-  text in which the numbers you opened the panel for were no easier to find than the
+- **The System panels read in colour**, in both renderers. The panel body was one flat
+  wall of text in which the numbers you opened it for were no easier to find than the
   words around them. Row labels are now the System's cyan and their values stay bright,
   and a heading standing on its own is an accent line. The rule comes from the text's own
-  shape — a short all-caps run before a column gap is a label — so the strings stay plain,
-  nothing has to be escaped, and a panel written tomorrow is styled without anyone
-  tagging it.
-- **The System Rank is a block, not a line**: the crest in the status header now carries
-  the rank spelled out beside it, coloured on the ramp every ranked game has trained
-  people to read — steel at E, the System's cyan at C, gold at S. The ledger line stays,
-  since that is the precise readout; this is the one you register at a glance.
+  shape — a short all-caps run before a column gap is a label — rather than from markup:
+  one string feeds both renderers, so anything else would have to be understood by both.
+- **The System Rank is a block, not a line**: the crest in the built-in status header now
+  carries the rank spelled out beside it, and the web view's rank letter is no longer
+  white. Both use the same ramp, the one every ranked game has trained people to read —
+  steel at E, the System's cyan at C, gold at S. Written once per renderer because
+  neither can read the other's, and compared by `tools/check.mjs` so they cannot drift:
+  two screens showing one character's rank in different colours would be worse than
+  neither being coloured at all.
 - **Panel buttons stack their icon above the label** in both renderers when a row is too
   crowded for both side by side. Five blessing choices split the panel five ways, and an
   icon beside a letter-spaced "ASCENDED" does not fit in a fifth of it — the built-in UI

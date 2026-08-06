@@ -36,8 +36,10 @@ namespace Isekai::UI::Style {
         case 'D':
         case 'd':
             return { 0.64f, 0.78f, 0.90f, 1.00f };  // pale steel
+        case 'E':
+        case 'e':
         default:
-            return { 0.50f, 0.65f, 0.78f, 1.00f };  // E, and anything unexpected
+            return { 0.50f, 0.65f, 0.78f, 1.00f };  // steel, and anything unexpected
         }
     }
 
