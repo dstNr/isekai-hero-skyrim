@@ -114,6 +114,22 @@ All notable changes to Isekai Hero are documented here. The format follows
   reincarnation, and backfilled on load for saves from before this existed.
 
 ### Changed
+- **The System panels read in colour.** The status ledger was one flat wall of monospace
+  text in which the numbers you opened the panel for were no easier to find than the
+  words around them. Row labels are now the System's cyan and their values stay bright,
+  and a heading standing on its own is an accent line. The rule comes from the text's own
+  shape — a short all-caps run before a column gap is a label — so the strings stay plain,
+  nothing has to be escaped, and a panel written tomorrow is styled without anyone
+  tagging it.
+- **The System Rank is a block, not a line**: the crest in the status header now carries
+  the rank spelled out beside it, coloured on the ramp every ranked game has trained
+  people to read — steel at E, the System's cyan at C, gold at S. The ledger line stays,
+  since that is the precise readout; this is the one you register at a glance.
+- **Panel buttons stack their icon above the label** in both renderers when a row is too
+  crowded for both side by side. Five blessing choices split the panel five ways, and an
+  icon beside a letter-spaced "ASCENDED" does not fit in a fifth of it — the built-in UI
+  had started dropping the icons entirely, and the web view drew the label under the icon
+  and off the edge of the button.
 - **Skill tree redesigned** in both renderers, after the old one read as "23 identical
   dark tiles in a spider web":
   - **Named zones.** Nodes now declare a `SkillTree::Zone` (CORE / MIGHT / ARCANA /

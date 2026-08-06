@@ -530,6 +530,28 @@ check("ui: the playground previews every blessing icon the game uses", () => {
   return `${used.size} icons, all previewable`;
 });
 
+check("ui: the panel's button labels are wrapped in the element their CSS styles", () => {
+  // The five blessing buttons could not fit icon and label side by side, so both
+  // renderers stack them and the view clips an over-long label with an ellipsis. That
+  // clipping is a rule on a .lbl span — if buildButtons ever goes back to emitting a
+  // bare text node, the rule silently stops applying and the label runs off the button
+  // again, which is exactly the bug it was written for.
+  const view = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  need(/#pButtons \.btn \.lbl\s*\{/.test(view),
+       "no #pButtons .btn .lbl rule — the label clipping is gone");
+  need(/#pButtons \.btn\s*\{[^}]*min-width:\s*0/.test(view),
+       "#pButtons .btn no longer sets min-width: 0, so a flex button cannot shrink " +
+       "below its content and the row overflows the panel instead");
+  need(/#pButtons \.btn\s*\{[^}]*flex-direction:\s*column/.test(view),
+       "#pButtons .btn is no longer stacked; icon beside label does not fit five choices");
+  const from = view.indexOf("function buildButtons()");
+  need(from >= 0, "buildButtons not found in the view — parser stale?");
+  const build = view.slice(from, view.indexOf("\nfunction ", from + 1));
+  need(/class="lbl">'\s*\+\s*esc\(b\.label\)/.test(build),
+       "buildButtons emits a row label that is not inside a .lbl span");
+  return "stacked, clipped, and the span exists";
+});
+
 check("ui: the web view's rank insignia is actually on screen", () => {
   // It was not, for as long as it existed. The status chip carried a bare "rank" class,
   // and the skill tree's node pip owns an unscoped `.rank { position: absolute;

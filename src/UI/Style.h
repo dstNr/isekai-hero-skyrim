@@ -13,6 +13,34 @@ namespace Isekai::UI::Style {
     inline const ImVec4 kText{ 0.85f, 0.94f, 1.00f, 1.00f };
     inline const ImVec4 kTextDim{ 0.50f, 0.65f, 0.78f, 1.00f };
 
+    // The System Rank ramp, E through S. Grey through cyan to gold, the order every
+    // ranked game has trained people to read without a legend — the letter alone is a
+    // fact you have to look up, the colour is a thing you feel.
+    //
+    // Lives here rather than next to the rank maths because it is a palette decision:
+    // Progression decides WHICH rank, the UI decides what a rank looks like.
+    [[nodiscard]] inline ImVec4 RankColor(char a_rank) {
+        switch (a_rank) {
+        case 'S':
+        case 's':
+            return { 1.00f, 0.84f, 0.35f, 1.00f };  // gold
+        case 'A':
+        case 'a':
+            return { 0.78f, 0.56f, 1.00f, 1.00f };  // violet
+        case 'B':
+        case 'b':
+            return { 0.45f, 1.00f, 0.74f, 1.00f };  // jade
+        case 'C':
+        case 'c':
+            return { 0.35f, 0.80f, 1.00f, 1.00f };  // the System's own cyan
+        case 'D':
+        case 'd':
+            return { 0.64f, 0.78f, 0.90f, 1.00f };  // pale steel
+        default:
+            return { 0.50f, 0.65f, 0.78f, 1.00f };  // E, and anything unexpected
+        }
+    }
+
     // Monospace on purpose: it sells the "terminal" read, and it makes the option
     // list line up in columns, which a proportional font cannot do.
     // Set by Overlay::InitImGui. Null is fine — ImGui then keeps its built-in font.

@@ -12,6 +12,7 @@
 #include "UI/LevelUpEffect.h"
 #include "UI/Prisma.h"
 #include "UI/SkillTreeWindow.h"
+#include "UI/Style.h"
 #include "UI/SystemWindow.h"
 
 #include <algorithm>
@@ -651,11 +652,15 @@ namespace Isekai::Progression {
             // watch half a minute of typewriter before they can read their own stats.
             // Wider than the story panels: the ledger rows run to ~70 monospace
             // characters, and at the default width the quest names wrapped mid-word.
-            // The rank insignia rides in the header's left margin. It duplicates the
-            // SYSTEM RANK line on purpose: the line is the precise readout, the emblem
-            // is the thing you register at a glance (E is dull, S blazes).
+            // The rank block rides in the header's left margin: crest, and the rank
+            // spelled out beside it in the rank's own colour. It duplicates the SYSTEM
+            // RANK line on purpose — the line is the precise readout, this is the thing
+            // you register at a glance (E is dull, S blazes).
+            const std::string rank = SystemRank();
             UI::ShowSystemWindow("[ SYSTEM ] STATUS", std::move(body), std::move(choices),
-                                 std::move(onSelect), 100000.0f, 980.0f, RankIcon());
+                                 std::move(onSelect), 100000.0f, 980.0f,
+                                 UI::Emblem{ RankIcon(), "RANK " + rank,
+                                             UI::Style::RankColor(rank.empty() ? 'E' : rank[0]) });
         }
 
         // F11: pay out the next milestone still owed, exactly as a real quest would.

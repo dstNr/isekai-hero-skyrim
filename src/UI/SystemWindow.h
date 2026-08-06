@@ -1,5 +1,7 @@
 #pragma once
 
+#include <imgui.h>
+
 #include <functional>
 #include <string>
 #include <vector>
@@ -15,6 +17,19 @@ namespace Isekai::UI {
         bool        iconOnly = false;
     };
 
+    // The insignia in the header's left margin, opposite the icon actions on the right.
+    // The status panel puts the System Rank there: the crest, and the rank spelled out
+    // beside it in the rank's own colour (Style::RankColor).
+    //
+    // The caption is not decoration — a crest alone is a shape you have to have learned,
+    // and the ledger line further down is precise but easy to skim past. Together they
+    // are the one thing on that screen you should be able to read at a glance.
+    struct Emblem {
+        std::string icon;     // PNG path relative to the game folder; empty = none
+        std::string caption;  // optional text beside it ("RANK C"); empty = crest alone
+        ImVec4      captionColor{ 0.35f, 0.80f, 1.00f, 1.00f };  // Style::kAccent
+    };
+
     // Open the System panel. Call from the main thread.
     // a_onSelect receives the 0-based index of the chosen button, and is invoked
     // back on the main thread (the panel itself is drawn on the render thread).
@@ -24,14 +39,13 @@ namespace Isekai::UI {
     // a_width is in 1080p pixels (scaled with the display): the default suits story
     // panels; tabular ones like the status ledger need more room, or their columns
     // wrap and the table falls apart.
-    // a_emblem is an optional PNG drawn in the header's left margin, opposite the
-    // icon actions on the right — the status panel puts the System Rank insignia
-    // there. Ignored by the PrismaUI path, which renders its own status screen.
+    // a_emblem is the optional header insignia (see Emblem above). Ignored by the
+    // PrismaUI path, which renders its own status screen.
     void ShowSystemWindow(std::string a_title, std::string a_body,
                           std::vector<Choice> a_choices,
                           std::function<void(int)> a_onSelect,
                           float a_revealCharsPerSec = 45.0f, float a_width = 720.0f,
-                          std::string a_emblem = {});
+                          Emblem a_emblem = {});
 
     // Convenience for the common text-only case.
     void ShowSystemWindow(std::string a_title, std::string a_body,

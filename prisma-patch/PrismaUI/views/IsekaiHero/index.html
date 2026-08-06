@@ -374,10 +374,25 @@
            white-space: pre-wrap; overflow-y: auto; flex: 1; opacity: 0.94; }
   #pBody::-webkit-scrollbar { width: 5px; }
   #pBody::-webkit-scrollbar-thumb { background: rgba(90,210,255,0.3); border-radius: 3px; }
+  /* The panel's button row. Icon ABOVE label, not beside it.
+     Side by side, the widest row the mod has — the five blessing choices — could not
+     fit: at one fifth of the panel each, a 26px icon plus a letter-spaced "ASCENDED"
+     is wider than the button, and since .btn clips its overflow the label ran under
+     the icon and off the edge. Stacking gives the label the button's full width, and
+     costs nothing on the two- and three-button rows (a single child in a column is a
+     single child in a row).
+     min-width: 0 is what actually lets a flex item shrink below its content width;
+     without it the row overflows the panel instead of the button. */
   #pButtons { display: flex; gap: 12px; margin-top: clamp(18px, 2vw, 30px); }
-  #pButtons .btn { flex: 1; min-height: 48px; font-size: clamp(12px, 0.85vw, 14px);
-                   display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 14px; }
-  #pButtons .btn img { width: 26px; height: 26px; object-fit: contain; }
+  #pButtons .btn { flex: 1 1 0; min-width: 0; min-height: 48px;
+                   font-size: clamp(11px, 0.8vw, 14px); letter-spacing: 0.12em;
+                   display: flex; flex-direction: column; align-items: center;
+                   justify-content: center; gap: 7px; padding: 11px 8px; }
+  #pButtons .btn img { width: 28px; height: 28px; object-fit: contain; }
+  /* Last line of defence: a label longer than any button gets an ellipsis rather than
+     silently disappearing under the frame. */
+  #pButtons .btn .lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+                        white-space: nowrap; }
 
   #pIcons { position: absolute; top: clamp(70px, 6vw, 92px); right: clamp(16px, 1.4vw, 24px);
             display: flex; flex-direction: column; gap: 12px; }
@@ -1205,7 +1220,8 @@ function buildButtons() {
       icons.appendChild(el);
     } else {
       el.className = "btn mono";
-      el.innerHTML = (b.icon ? '<img src="icons/' + b.icon + '">' : "") + esc(b.label);
+      el.innerHTML = (b.icon ? '<img src="icons/' + b.icon + '">' : "") +
+                     '<span class="lbl">' + esc(b.label) + "</span>";
       row.appendChild(el);
     }
     el.onclick = () => choose(i);

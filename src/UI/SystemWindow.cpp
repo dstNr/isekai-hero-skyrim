@@ -25,7 +25,7 @@ namespace Isekai::UI {
             std::string              title;
             std::string              body;
             std::vector<Choice>      choices;
-            std::string              emblem;  // optional header insignia; empty = none
+            Emblem                   emblem;  // optional header insignia; empty = none
             std::function<void(int)> onSelect;
             float                    revealCharsPerSec = 45.0f;
             float                    width = 720.0f;  // at 1080p; scaled with display
@@ -65,6 +65,130 @@ namespace Isekai::UI {
                         fn(a_index);
                     }
                 });
+            }
+        }
+
+        // How the bottom button row lays itself out. Decided ONCE for the whole row and
+        // BEFORE the window opens, because the panel's height is computed up front and
+        // has to include whatever this comes back with.
+        struct ButtonRow {
+            float height = 0.0f;
+            float iconSize = 0.0f;  // 0 = draw the labels alone
+            bool  stacked = false;  // icon above the label rather than beside it
+        };
+
+        // Icon and label are drawn by hand over a blank button, and nothing used to
+        // measure that pair against the button carrying it. The blessing panel is where
+        // that shows: five choices split the row, "ASCENDED" is a long word, and a 34px
+        // icon beside it is wider than one fifth of the panel — so the content ran out
+        // over the frame into its neighbours.
+        //
+        // Side by side is tried first because it is the calmer shape. When it does not
+        // fit, the icon moves ABOVE the label instead of shrinking: stacking gives the
+        // label the button's whole width, which is exactly what it was short of. Only if
+        // even the bare label will not fit does the row go without icons — a 10px smudge
+        // over a clipped word helps nobody.
+        //
+        // One size and one arrangement for the entire row: buttons of differing shapes
+        // standing side by side read as a rendering fault, not as a fit.
+        [[nodiscard]] ButtonRow PlanButtonRow(float a_btnW, float a_widestLabel, float a_s) {
+            constexpr float kBaseH = 46.0f;
+            const float     pad = 10.0f * a_s;
+            const float     gap = 8.0f * a_s;
+            const float     lineH = ImGui::GetTextLineHeight();
+
+            ButtonRow row{ kBaseH * a_s, 0.0f, false };
+            if (a_widestLabel <= 0.0f) {
+                return row;  // nothing in this row carries an icon
+            }
+
+            const float inline_ = (kBaseH - 12.0f) * a_s;
+            if (a_widestLabel + gap + inline_ + 2.0f * pad <= a_btnW) {
+                row.iconSize = inline_;
+                return row;
+            }
+
+            const float stacked = std::min(30.0f * a_s, a_btnW - 2.0f * pad);
+            if (stacked >= 18.0f * a_s && a_widestLabel + 2.0f * pad <= a_btnW) {
+                row.stacked = true;
+                row.iconSize = stacked;
+                row.height = stacked + gap + lineH + 16.0f * a_s;
+            }
+            return row;
+        }
+
+        // --- Body colouring -------------------------------------------------------
+        //
+        // Every panel body is one monospace string built in Progression.cpp, and it was
+        // drawn in one flat colour — a wall of identical text in which the numbers you
+        // actually opened the panel for are no easier to find than the words around them.
+        //
+        // Colour comes from the text's own SHAPE rather than from markup: the strings
+        // stay plain, nothing has to be escaped, and a new panel is styled the day it is
+        // written without anyone remembering to tag it. Two rules cover everything the
+        // mod writes — a "LABEL   value" row, and an all-caps line on its own.
+
+        [[nodiscard]] bool AllCaps(std::string_view a_text) {
+            bool letter = false;
+            for (const unsigned char c : a_text) {
+                if (std::islower(c)) {
+                    return false;
+                }
+                letter = letter || std::isalpha(c) != 0;
+            }
+            return letter;
+        }
+
+        // Where a row's label ends and its value begins: the first run of two or more
+        // spaces after some content. npos when the line is not that shape.
+        [[nodiscard]] std::size_t ValueStart(std::string_view a_line) {
+            const auto first = a_line.find_first_not_of(' ');
+            if (first == std::string_view::npos) {
+                return std::string_view::npos;
+            }
+            const auto gap = a_line.find("  ", first);
+            if (gap == std::string_view::npos) {
+                return std::string_view::npos;
+            }
+            const auto value = a_line.find_first_not_of(' ', gap);
+            if (value == std::string_view::npos) {
+                return std::string_view::npos;  // trailing whitespace, not a column
+            }
+            // A label is short. Prose that happens to contain a double space is not a
+            // table row, and colouring half a sentence would look like a bug.
+            return (gap - first) > 22 ? std::string_view::npos : value;
+        }
+
+        void DrawBody(const std::string& a_body, float a_fade) {
+            const ImVec4 label{ Style::kAccent.x, Style::kAccent.y, Style::kAccent.z, a_fade };
+            const ImVec4 value{ Style::kText.x, Style::kText.y, Style::kText.z, a_fade };
+
+            std::size_t at = 0;
+            while (at <= a_body.size()) {
+                const auto             eol = a_body.find('\n', at);
+                const std::string_view line{ a_body.data() + at,
+                                             (eol == std::string::npos ? a_body.size() : eol) - at };
+                at = (eol == std::string::npos ? a_body.size() : eol) + 1;
+
+                if (line.empty()) {
+                    ImGui::NewLine();
+                    continue;
+                }
+
+                const auto split = ValueStart(line);
+                if (split == std::string_view::npos) {
+                    // A heading stands alone in accent; ordinary prose reads as text.
+                    ImGui::TextColored(AllCaps(line) ? label : value, "%.*s",
+                                       static_cast<int>(line.size()), line.data());
+                    continue;
+                }
+
+                // "%.*s" throughout: body text carries '%' (percentage bonuses) and would
+                // otherwise be eaten as a format specifier.
+                ImGui::TextColored(label, "%.*s", static_cast<int>(split), line.data());
+                ImGui::SameLine(0.0f, 0.0f);
+                ImGui::TextColored(value, "%.*s", static_cast<int>(line.size() - split),
+                                   line.data() + split);
             }
         }
 
@@ -109,8 +233,34 @@ namespace Isekai::UI {
                 ImGui::CalcTextSize(g_win.body.c_str(), nullptr, false, wrapW);
             ImGui::PopFont();
 
+            // The button row, planned before the window opens: its height feeds the
+            // panel's. Planned against the content width MINUS a scrollbar, which the
+            // ledger panels do grow — planning on the wider figure and then drawing into
+            // the narrower one is how a layout that "fits" ends up one button short.
+            // Actual widths are taken from the real content region below; those can only
+            // be wider than what was planned for, never narrower.
+            std::size_t textCount = 0;
+            for (const auto& c : g_win.choices) {
+                textCount += c.iconOnly ? 0 : 1;
+            }
+            ImGui::PushFont(Style::g_title, Style::BodySize());
+            const float rowSpacing = ImGui::GetStyle().ItemSpacing.x;
+            const float planW = wrapW - ImGui::GetStyle().ScrollbarSize;
+            const float btnW = textCount > 0
+                ? (planW - rowSpacing * (static_cast<float>(textCount) - 1.0f)) /
+                      static_cast<float>(textCount)
+                : planW;
+            float widestLabel = 0.0f;
+            for (const auto& c : g_win.choices) {
+                if (!c.iconOnly && !c.icon.empty()) {
+                    widestLabel = std::max(widestLabel, ImGui::CalcTextSize(c.label.c_str()).x);
+                }
+            }
+            const ButtonRow row = PlanButtonRow(btnW, widestLabel, s);
+            ImGui::PopFont();
+
             const float headH = 28.0f * s + Style::TitleSize() + 32.0f * s;  // pad+title+sep zone
-            const float footH = 46.0f * s + 48.0f * s;                       // buttons + padding
+            const float footH = row.height + 48.0f * s;                      // buttons + padding
             const float iconsH = iconActions > 0
                 ? 16.0f * s + static_cast<float>(iconActions) * 86.0f * s
                 : 0.0f;
@@ -165,13 +315,13 @@ namespace Isekai::UI {
                 ImGui::Spacing();
                 ImGui::Spacing();
 
-                // --- Header emblem (the System Rank insignia), in the left margin.
-                // Drawn straight onto the draw list rather than through the layout, so
-                // it cannot push the centred title off-centre or feed the panel's
-                // height calculation. Every title we use is short enough that the
+                // --- Header emblem (the System Rank insignia and its caption), in the
+                // left margin. Drawn straight onto the draw list rather than through the
+                // layout, so it cannot push the centred title off-centre or feed the
+                // panel's height calculation. Every title we use is short enough that the
                 // margin is free; a missing PNG simply draws nothing.
-                if (!g_win.emblem.empty()) {
-                    if (const ImTextureID emblem = GetTexture(g_win.emblem)) {
+                if (!g_win.emblem.icon.empty()) {
+                    if (const ImTextureID emblem = GetTexture(g_win.emblem.icon)) {
                         const float band = sepY - wMin.y;
                         const float side = std::min(56.0f * s, band - 8.0f * s);
                         if (side > 0.0f) {
@@ -181,18 +331,30 @@ namespace Isekai::UI {
                                          ImVec2{ x + side, cy + side * 0.5f }, ImVec2{ 0, 0 },
                                          ImVec2{ 1, 1 },
                                          IM_COL32(255, 255, 255, static_cast<int>(fade * 255.0f)));
+
+                            // The caption beside the crest, in the rank's own colour.
+                            if (!g_win.emblem.caption.empty()) {
+                                const float capSize = Style::BodySize() * 0.9f;
+                                ImFont*     capFont = Style::g_title;
+                                const float capH =
+                                    capFont ? capFont->CalcTextSizeA(capSize, FLT_MAX, 0.0f,
+                                                                     g_win.emblem.caption.c_str())
+                                                  .y
+                                            : ImGui::GetTextLineHeight();
+                                Style::DrawTextShadowed(
+                                    dl, capFont, capSize,
+                                    ImVec2{ x + side + 10.0f * s, cy - capH * 0.5f },
+                                    g_win.emblem.captionColor, g_win.emblem.caption.c_str(), fade);
+                            }
                         }
                     }
                 }
 
                 // --- Body, typewriter reveal ---
                 ImGui::PushFont(Style::g_body, Style::BodySize());
-                ImGui::PushStyleColor(
-                    ImGuiCol_Text, ImVec4{ Style::kText.x, Style::kText.y, Style::kText.z, fade });
                 ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + inner);
-                ImGui::TextUnformatted(shownBody.c_str());
+                DrawBody(shownBody, fade);
                 ImGui::PopTextWrapPos();
-                ImGui::PopStyleColor();
                 ImGui::PopFont();
 
                 ImGui::Spacing();
@@ -203,7 +365,7 @@ namespace Isekai::UI {
                     // Pin the row to the bottom of the (fixed-height) panel. When the
                     // content is taller than the panel and scrolls, the natural cursor
                     // is already past this point and the row simply follows the flow.
-                    const float footY = height - (46.0f + 44.0f) * s;
+                    const float footY = height - row.height - 44.0f * s;
                     ImGui::SetCursorPosY(std::max(ImGui::GetCursorPosY(), footY));
 
                     ImGui::PushFont(Style::g_title, Style::BodySize());
@@ -219,48 +381,16 @@ namespace Isekai::UI {
                     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
                     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
 
-                    // Icon-only choices live at the top-right, not in this row.
-                    std::size_t textCount = 0;
-                    for (const auto& c : g_win.choices) {
-                        textCount += c.iconOnly ? 0 : 1;
-                    }
-
-                    const float spacing = ImGui::GetStyle().ItemSpacing.x;
-                    const float btnW = textCount > 0
-                        ? (inner - spacing * (static_cast<float>(textCount) - 1.0f)) /
+                    // Icon-only choices live at the top-right, not in this row. The row's
+                    // SHAPE was settled before the window opened (PlanButtonRow) because
+                    // the panel's height depends on it; the widths come from the real
+                    // content region, which is what a scrollbar actually shrinks.
+                    const float rowW = textCount > 0
+                        ? (inner - rowSpacing * (static_cast<float>(textCount) - 1.0f)) /
                               static_cast<float>(textCount)
                         : inner;
-
-                    // How big the icon on a labelled button may be — decided ONCE, for the
-                    // whole row, before anything is drawn.
-                    //
-                    // The icon and label are drawn by hand over a blank button (ImGui has
-                    // no icon+text button), and nothing used to measure that pair against
-                    // the button it sits on. The blessing panel is where that broke: five
-                    // choices split the row, "ASCENDED" is a long word, and a fixed 34px
-                    // icon plus that label is simply wider than its share — so the content
-                    // ran out over the frame and into its neighbours.
-                    //
-                    // The size comes from the WIDEST label rather than each button's own,
-                    // because icons of differing sizes standing side by side read as a
-                    // rendering fault, not as a fit. Below a legible size we drop the icons
-                    // for the whole row instead: a 10px smudge next to a clipped word is
-                    // worse than the plain text buttons this started as.
-                    const float btnH = 46.0f * s;
+                    const float btnH = row.height;
                     const float iconGap = 8.0f * s;
-                    const float iconPad = 10.0f * s;  // breathing room inside the frame
-                    float       widestLabel = 0.0f;
-                    for (const auto& c : g_win.choices) {
-                        if (!c.iconOnly && !c.icon.empty()) {
-                            widestLabel =
-                                std::max(widestLabel, ImGui::CalcTextSize(c.label.c_str()).x);
-                        }
-                    }
-                    float rowIconSize =
-                        std::min(btnH - 12.0f * s, btnW - 2.0f * iconPad - iconGap - widestLabel);
-                    if (rowIconSize < 18.0f * s) {
-                        rowIconSize = 0.0f;
-                    }
 
                     bool first = true;
                     for (std::size_t i = 0; i < g_win.choices.size(); ++i) {
@@ -275,35 +405,48 @@ namespace Isekai::UI {
 
                         ImGui::PushID(static_cast<int>(i));
 
-                        const ImTextureID icon = (choice.icon.empty() || rowIconSize <= 0.0f)
+                        const ImTextureID icon = (choice.icon.empty() || row.iconSize <= 0.0f)
                             ? ImTextureID{}
                             : GetTexture(choice.icon);
 
                         if (icon) {
                             // ImGui has no icon+text button, so: an empty button does the
                             // hit-testing and hover colors, and icon plus label are drawn
-                            // over it by hand, centred as one unit.
-                            if (ImGui::Button("##choice", ImVec2{ btnW, btnH })) {
+                            // over it by hand.
+                            if (ImGui::Button("##choice", ImVec2{ rowW, btnH })) {
                                 chosen = static_cast<int>(i);
                             }
                             const ImVec2 bMin = ImGui::GetItemRectMin();
                             const ImVec2 bMax = ImGui::GetItemRectMax();
                             const ImVec2 textSize = ImGui::CalcTextSize(choice.label.c_str());
-                            const float  totalW = rowIconSize + iconGap + textSize.x;
-                            const float  x = bMin.x + ((bMax.x - bMin.x) - totalW) * 0.5f;
-                            const float  cy = (bMin.y + bMax.y) * 0.5f;
+                            const float  cx = (bMin.x + bMax.x) * 0.5f;
 
-                            // Clipped to the frame as a last resort. rowIconSize is chosen
-                            // so this never bites for the widest label in the row — but a
-                            // font fallback that measures differently from what it draws
-                            // should spill nothing into the button next door.
+                            // Clipped to the frame as a last resort. The layout above is
+                            // chosen so this never bites for the widest label in the row —
+                            // but a font fallback that measures differently from what it
+                            // draws must still spill nothing into the button next door.
                             dl->PushClipRect(bMin, bMax, true);
-                            dl->AddImage(icon, ImVec2{ x, cy - rowIconSize * 0.5f },
-                                         ImVec2{ x + rowIconSize, cy + rowIconSize * 0.5f });
-                            dl->AddText(ImVec2{ x + rowIconSize + iconGap, cy - textSize.y * 0.5f },
-                                        Style::Col(Style::kText), choice.label.c_str());
+                            if (row.stacked) {
+                                const float blockH = row.iconSize + iconGap + textSize.y;
+                                const float top = (bMin.y + bMax.y) * 0.5f - blockH * 0.5f;
+                                dl->AddImage(icon, ImVec2{ cx - row.iconSize * 0.5f, top },
+                                             ImVec2{ cx + row.iconSize * 0.5f,
+                                                     top + row.iconSize });
+                                dl->AddText(ImVec2{ cx - textSize.x * 0.5f,
+                                                    top + row.iconSize + iconGap },
+                                            Style::Col(Style::kText), choice.label.c_str());
+                            } else {
+                                const float totalW = row.iconSize + iconGap + textSize.x;
+                                const float x = cx - totalW * 0.5f;
+                                const float cy = (bMin.y + bMax.y) * 0.5f;
+                                dl->AddImage(icon, ImVec2{ x, cy - row.iconSize * 0.5f },
+                                             ImVec2{ x + row.iconSize, cy + row.iconSize * 0.5f });
+                                dl->AddText(
+                                    ImVec2{ x + row.iconSize + iconGap, cy - textSize.y * 0.5f },
+                                    Style::Col(Style::kText), choice.label.c_str());
+                            }
                             dl->PopClipRect();
-                        } else if (ImGui::Button(choice.label.c_str(), ImVec2{ btnW, btnH })) {
+                        } else if (ImGui::Button(choice.label.c_str(), ImVec2{ rowW, btnH })) {
                             chosen = static_cast<int>(i);
                         }
 
@@ -433,7 +576,7 @@ namespace Isekai::UI {
     void ShowSystemWindow(std::string a_title, std::string a_body,
                           std::vector<Choice> a_choices,
                           std::function<void(int)> a_onSelect, float a_revealCharsPerSec,
-                          float a_width, std::string a_emblem) {
+                          float a_width, Emblem a_emblem) {
         // Optional web renderer: hand the whole panel to PrismaUI when the patch is live.
         // It owns focus/pause and calls the selection back on the main thread — the ImGui
         // path below (state, SetGameHold, DrawPanel) is skipped entirely.
