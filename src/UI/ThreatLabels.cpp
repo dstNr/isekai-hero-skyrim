@@ -152,8 +152,21 @@ namespace Isekai::UI {
             float        distance;
             Verdict      verdict;
             std::int32_t level;
+            float        health;  // 0..1
             std::string  name;
         };
+
+        // Current health as a fraction. The frame draws a bar, and a bar without data
+        // behind it is decoration pretending to be information.
+        [[nodiscard]] float HealthFraction(RE::Actor* a_actor) {
+            auto* av = a_actor->AsActorValueOwner();
+            if (!av) {
+                return 1.0f;
+            }
+            const float now = av->GetActorValue(RE::ActorValue::kHealth);
+            const float max = av->GetPermanentActorValue(RE::ActorValue::kHealth);
+            return max > 0.0f ? std::clamp(now / max, 0.0f, 1.0f) : 1.0f;
+        }
 
         // A cap, because "all visible enemies" during a dragon attack on a city is not a
         // number anyone chose. The nearest ones are the ones that matter.
@@ -239,7 +252,7 @@ namespace Isekai::UI {
             const auto level = static_cast<std::int32_t>(actor->GetLevel());
             const char* name = actor->GetDisplayFullName();
             labels.push_back({ screen, distance, VerdictFor(level - playerLevel), level,
-                               name ? name : "" });
+                               HealthFraction(actor), name ? name : "" });
         };
 
         const auto consider = [&](RE::Actor* actor) { considerAs(actor, mode); };
@@ -302,67 +315,86 @@ namespace Isekai::UI {
         ImDrawList* dl = ImGui::GetBackgroundDrawList();
         ImFont*     font = Style::g_body;
 
-        // An MMO nameplate: the name in the verdict's colour, the reading smaller and
-        // quieter beneath it.
+        // A target frame rather than two lines of text: an angular plate leaning right,
+        // the level in a disc on the left, the name across the top and a health bar under
+        // it, with the verdict closing the right end. Same information as before — the
+        // shape is what makes it readable at a glance instead of something you parse.
         //
-        // Two versions of this have now been wrong in opposite directions, and the fix is
-        // in neither extreme. A bold word in a 62%-opaque black box sat ON the world
-        // instead of in it, and stacked up as clutter with every extra enemy on screen.
-        // Taking the box away and leaving a one-pixel drop shadow went the other way: at
-        // 15px and 75% opacity over grass, the text simply was not there.
-        //
-        // What legibility over a 3D scene actually needs is an OUTLINE, not a plate and
-        // not a shadow — it traces every glyph on all sides, so no edge is ever left lying
-        // directly on the scene, and it adds no rectangle to the screen. On top of that:
-        //   - full opacity up close. Distance still dims, but never past readable.
-        //   - a barely-there dark band behind the block, fading out at both ends so it has
-        //     no edges of its own. It is the box's job without the box's shape.
+        // All of it is draw-list geometry, no textures: the frame has to scale with
+        // distance, and stretched art at a dozen sizes looks worse than lines do.
         const auto measure = [&](float a_size, const char* a_text) {
             return font ? font->CalcTextSizeA(a_size, FLT_MAX, 0.0f, a_text).x
                         : ImGui::CalcTextSize(a_text).x;
         };
 
         for (const auto& label : labels) {
-            // Distant labels shrink and dim, so the near ones stay dominant and a crowd
+            // Distant frames shrink and dim, so the near ones stay dominant and a crowd
             // reads as depth rather than as noise.
             const float t = std::clamp(label.distance / maxRange, 0.0f, 1.0f);
-            const float nameSize = (27.0f - 7.0f * t) * s;
-            const float readSize = nameSize * 0.78f;
+            const float k = (1.0f - 0.32f * t) * s;
             const float alpha = 1.0f - 0.35f * t;
 
-            // "Lv 12  DANGEROUS" — the verdict with the number it was derived from, so
-            // the four bands are never the whole story on a level-scaled world where
-            // almost everything lands in the middle one.
-            const std::string reading =
-                "Lv " + std::to_string(label.level) + "   " + label.verdict.tag;
+            const float nameSize = 20.0f * k;
+            const float tagSize = 12.0f * k;
+            const float lvlSize = 15.0f * k;
+            const float discR = 17.0f * k;
+            const float barH = 6.0f * k;
+            const float skew = 9.0f * k;
 
-            const bool  named = !label.name.empty();
-            const float lineH = nameSize * 1.15f;
-            const float nameW = named ? measure(nameSize, label.name.c_str()) : 0.0f;
-            const float readW = measure(readSize, reading.c_str());
-            const float blockH = readSize * 1.25f + (named ? lineH : 0.0f);
-            const float top = label.pos.y - blockH;
+            const std::string lvl = std::to_string(label.level);
+            const char*       name = label.name.empty() ? "Unknown" : label.name.c_str();
+            const float       nameW = measure(nameSize, name);
+            const float       tagW = measure(tagSize, label.verdict.tag);
 
-            const float bandW = std::max(nameW, readW) * 0.5f + 14.0f * s;
-            Style::DrawFadingBand(dl, ImVec2{ label.pos.x - bandW, top - 3.0f * s },
-                                  ImVec2{ label.pos.x + bandW, label.pos.y + 2.0f * s },
-                                  Style::kPanelBg, 0.48f * alpha);
+            const float plateW =
+                discR * 2.0f + 14.0f * k + std::max(nameW, 120.0f * k) + 12.0f * k + tagW +
+                14.0f * k;
+            const float cx = label.pos.x;
+            const float y1 = label.pos.y;              // sits just above the head point
+            const float y0 = y1 - discR * 2.0f;
+            const float x0 = cx - plateW * 0.5f;
+            const float x1 = cx + plateW * 0.5f;
 
-            float y = top;
-            if (named) {
-                Style::DrawTextOutlined(dl, font, nameSize,
-                                        ImVec2{ label.pos.x - nameW * 0.5f, y },
-                                        label.verdict.col, label.name.c_str(), alpha);
-                y += lineH;
-            }
+            // The plate: a parallelogram, not a rectangle. The lean is the whole reason
+            // this reads as a banner rather than as a tooltip.
+            dl->AddQuadFilled(ImVec2{ x0 + skew, y0 }, ImVec2{ x1, y0 },
+                              ImVec2{ x1 - skew, y1 }, ImVec2{ x0, y1 },
+                              Style::Col(Style::kPanelBg, 0.72f * alpha));
+            dl->AddLine(ImVec2{ x0 + skew, y0 }, ImVec2{ x1, y0 },
+                        Style::Col(label.verdict.col, 0.55f * alpha), 1.5f * k);
+            dl->AddLine(ImVec2{ x0, y1 }, ImVec2{ x1 - skew, y1 },
+                        Style::Col(label.verdict.col, 0.35f * alpha), 1.0f * k);
 
-            // Quieter than the name on purpose: you glance at the colour, you read the
-            // name, and the numbers are there when you actually look for them. "Quieter"
-            // is now size and weight rather than opacity — fading it was most of why the
-            // whole label disappeared.
-            Style::DrawTextOutlined(dl, font, readSize,
-                                    ImVec2{ label.pos.x - readW * 0.5f, y },
-                                    label.verdict.col, reading.c_str(), alpha * 0.92f);
+            // Level disc on the left, in the verdict's colour — the one element you can
+            // identify without reading anything.
+            const ImVec2 disc{ x0 + discR + 3.0f * k, (y0 + y1) * 0.5f };
+            dl->AddCircleFilled(disc, discR, Style::Col(Style::kPanelBg, 0.95f * alpha), 24);
+            dl->AddCircle(disc, discR, Style::Col(label.verdict.col, alpha), 24, 2.0f * k);
+            const float lvlW = measure(lvlSize, lvl.c_str());
+            Style::DrawTextOutlined(dl, font, lvlSize,
+                                    ImVec2{ disc.x - lvlW * 0.5f, disc.y - lvlSize * 0.62f },
+                                    label.verdict.col, lvl.c_str(), alpha);
+
+            const float textX = disc.x + discR + 11.0f * k;
+            const float barR = x1 - 12.0f * k - tagW - 10.0f * k;
+
+            Style::DrawTextOutlined(dl, font, nameSize, ImVec2{ textX, y0 + 2.0f * k },
+                                    Style::kText, name, alpha);
+
+            // Health. Empty track first so a nearly dead target still shows the frame.
+            const float barY = y1 - 9.0f * k;
+            dl->AddRectFilled(ImVec2{ textX, barY }, ImVec2{ barR, barY + barH },
+                              Style::Col(Style::kPanelBg, 0.9f * alpha));
+            dl->AddRectFilled(
+                ImVec2{ textX, barY },
+                ImVec2{ textX + (barR - textX) * label.health, barY + barH },
+                Style::Col(label.verdict.col, 0.85f * alpha));
+            dl->AddRect(ImVec2{ textX, barY }, ImVec2{ barR, barY + barH },
+                        Style::Col(label.verdict.col, 0.45f * alpha), 0.0f, 0, 1.0f * k);
+
+            Style::DrawTextOutlined(dl, font, tagSize,
+                                    ImVec2{ barR + 10.0f * k, barY + barH * 0.5f - tagSize * 0.6f },
+                                    label.verdict.col, label.verdict.tag, alpha);
         }
     }
 }
