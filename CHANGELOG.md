@@ -4,7 +4,12 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
-## [Unreleased]
+## [0.7.0] — 2026-08-06
+
+The System starts giving you work: kill objectives on its own schedule, threat readings
+over the enemies themselves, and a HUD layer to announce both. The ten System potions go
+live, the shop grows categories, and the whole UI gets a colour and legibility pass.
+Co-save version 13 — existing characters pick everything up on the next load.
 
 ### Fixed
 - **Two milestones have never granted anything.** *Hitting the Books* (College of
@@ -104,6 +109,10 @@ All notable changes to Isekai Hero are documented here. The format follows
     behaviour of marking every enemy in range whether or not it has noticed you; `all` adds
     townspeople; `crosshair` is aim only. `ThreatLabelKey` (default `F10`) switches the whole
     display off and on mid-session.
+  - Drawn as a **target frame**: an angular plate leaning right, the level in a disc on the
+    left, the name over a health bar, the verdict closing the right end. Text is outlined
+    rather than boxed — an outline is what keeps small text readable over grass or snow
+    without putting a rectangle on the screen.
   - SE/AE only — they are drawn by the same ImGui overlay as the mod's panels, which Skyrim
     VR does not get.
 - **System Shop** — a third icon button in the status panel, next to Skill Tree and
@@ -117,6 +126,13 @@ All notable changes to Isekai Hero are documented here. The format follows
   reincarnation, and backfilled on load for saves from before this existed.
 
 ### Changed
+- **Every icon stands on a lit plate.** Measured, not guessed: the art is transparent-backed
+  but dark-bodied (average 38-60 of 255 across its opaque pixels), so on a navy panel only
+  the cyan edges survived and each icon read as a few floating strokes. The built-in
+  renderer can only change what is behind — ImGui's image tint multiplies, so it darkens and
+  never lifts — so both renderers now put a lit plate under every icon, and the web view
+  additionally lifts the art itself. Two rules were actively dimming icons on the darkest
+  surfaces in the UI and are gone.
 - **The System panels read in colour**, in both renderers. The panel body was one flat
   wall of text in which the numbers you opened it for were no easier to find than the
   words around them. Row labels are now the System's cyan and their values stay bright,
@@ -511,6 +527,7 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[0.7.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.7.0
 [0.6.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.6.1
 [0.6.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.6.0
 [0.5.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.5.1
