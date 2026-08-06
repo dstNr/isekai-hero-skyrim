@@ -44,16 +44,27 @@ All notable changes to Isekai Hero are documented here. The format follows
     `ActorTypeDaedra` and so on. A creature mod's draugr counts without the mod knowing we
     exist, the same semantic-filter approach the skill tree's knowledge unlocks use; a race
     list would go stale the moment anyone installs a creature pack.
-  - One objective at a time, no timer. It rolls a different quarry on completion, so you are
-    never left idle and never handed the same job twice in a row.
+  - One objective at a time, and the System keeps its own schedule: the first arrives 12
+    game hours into a character's life, each later one a day after the last is finished
+    (`FirstTaskHours` / `TaskIntervalHours` in the ini, 0 for "immediately"). An objective
+    that is simply there the moment you are reincarnated, and again the second you finish
+    one, is a chore list rather than something that happens to you.
+  - The **first** objective of a character's life is always the same reachable one (wild
+    beasts). Every later one is rolled, never the quarry just finished, and never one the
+    character is too low to go and find — no level-4 character is sent after dragons.
+  - Counts and payouts scale with character level and are snapshotted when the objective is
+    handed over, so levelling mid-hunt cannot move the finish line you are walking towards.
   - A kill counts when the killer is the player **or one of their teammates** (followers,
     summons, reanimated thralls). Strict "player only" reads as broken in play — a poison, a
     rune or a follower's final blow is most of a mage's or a sneak's kills.
-  - Shown in the status panel in both renderers, with the same progress bar the milestone
-    tile uses.
-  - Co-save version 11 (`questKey` / `questProgress`), appended behind a version gate like
-    every field since v3. **Existing characters pick up an objective on the next load** — no
-    reboot, no new game.
+  - Announced and tracked the way an MMO does it: a banner when one is handed over, and a
+    single line top-centre counting up on each kill that replaces itself rather than
+    stacking. The status panel carries the full objective, and a **NEW TASK** button that
+    rerolls it on the spot.
+  - Co-save version 13 (the objective, its snapshotted target and payout, the clock and how
+    many objectives this character has had), appended behind version gates like every field
+    since v3. **Existing characters pick up an objective on the next load** — no reboot, no
+    new game.
 - **Five new repeatable skill-tree nodes**, closing the resistance/regen gaps a player
   pointed out (fire and frost resist existed, shock resist didn't): **Storm Ward**
   (Shock Resist), **Warded Mind** (Magic Resist), **Arcane Absorption** (Spell
@@ -77,12 +88,21 @@ All notable changes to Isekai Hero are documented here. The format follows
   to the tier, computed from milestones earned, character level and System Points ever
   invested in the tree. No new state — a pure readout, the same isekai/tower-climbing
   "what rank am I" every save already has the numbers for.
-- **System Analysis** — a new skill-tree node unlocking a standalone hotkey (`AnalyzeKey`
-  in the ini, default `V`) that reads whatever is under the crosshair: name, level,
-  health, hostility, and a threat verdict from TRIVIAL to LETHAL. The signature
-  "Observation"/"Appraisal" isekai move. Experimental in Skyrim VR — `CrosshairPickData`
-  resolves through an address-library ID not verified to exist in VR's database, so the
-  hotkey stays inert there (with a notification) until that can be tested for real.
+- **Threat labels** — the signature "Observation"/"Appraisal" isekai move, floating over
+  the actor itself: a colour-coded TRIVIAL / MANAGEABLE / DANGEROUS / LETHAL from the level
+  difference, shrinking and dimming with distance.
+  - This replaces the **System Analysis** node and its `V` hotkey, both removed. Gating a
+    threat read behind a purchase and a key press is backwards for something you want to
+    know *before* you commit to a fight — by the time you have pressed a key and read a
+    panel, the decision has been made for you. A save that bought the node has its 10
+    System Points refunded on the next load.
+  - By default the labels appear on what you are **aiming at** and on whatever is
+    **actually fighting you** (`ThreatLabelTargets = aggro`). `hostile` restores the older
+    behaviour of marking every enemy in range whether or not it has noticed you; `all` adds
+    townspeople; `crosshair` is aim only. `ThreatLabelKey` (default `V`) switches the whole
+    display off and on mid-session.
+  - SE/AE only — they are drawn by the same ImGui overlay as the mod's panels, which Skyrim
+    VR does not get.
 - **System Shop** — a third icon button in the status panel, next to Skill Tree and
   Storage: spend System Points on filled soul gems (Grand ×1, Common ×5) or gold ×1000,
   delivered straight into the Dimensional Storage. Gives points a second place to go once

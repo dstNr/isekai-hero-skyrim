@@ -112,8 +112,15 @@ namespace Isekai {
 
         // Game time (in days, as Skyrim counts them) at which the System offers the next
         // objective. Objectives are no longer permanent: one is completed, a while
-        // passes, and the next arrives on its own. 0 = offer one immediately.
+        // passes, and the next arrives on its own. 0 = no deadline set yet, which is
+        // when the first-task clock in Quests::Tick is armed.
         float questNextDue = 0.0f;
+
+        // How many objectives this character has been handed, ever. Two jobs, both of
+        // which need to survive a reload: the very first one waits a shorter time and is
+        // always the starter quarry (see kStarterKey), and neither may happen twice
+        // because the save was reloaded.
+        std::int32_t questsGiven = 0;
     };
 
     [[nodiscard]] State& GetState();

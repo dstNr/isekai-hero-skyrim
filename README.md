@@ -87,11 +87,12 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   on stat nodes and reverts their effects; the knowledge unlocks and Perk Synthesis
   are excluded, since neither can honestly be taken back.
 
-  One node, **System Analysis**, unlocks a standalone hotkey (`V` by default,
-  remappable) rather than a stat: point it at anything and the System reports back
-  its level, health, hostility and a threat verdict (TRIVIAL/MANAGEABLE/DANGEROUS/
-  LETHAL) — the "Observation"/"Appraisal" move every isekai protagonist gets.
-  *(Experimental in Skyrim VR — see the ini/VR notes.)*
+  The System's read on an enemy — the "Observation"/"Appraisal" move every isekai
+  protagonist gets — is no longer a node here. It is simply **on**: a colour-coded
+  TRIVIAL/MANAGEABLE/DANGEROUS/LETHAL floating over what you are aiming at and over
+  anything fighting you, shrinking and dimming with distance. `V` switches it off and
+  on, and `IsekaiHero.ini` decides who gets a label. *(SE/AE only — it is drawn by the
+  same overlay as the panels, which Skyrim VR does not get.)*
 
   An **optional [PrismaUI](https://www.nexusmods.com/skyrimspecialedition/mods/148718)
   patch** renders the **whole UI**
@@ -113,11 +114,13 @@ with its own ImGui-based UI drawn straight into the game's D3D11 swap chain.
   A **storage codex** (granted on reincarnation) is a table-free physical shortcut:
   use it from the inventory and the chest opens directly, no System panel needed —
   and it never runs out.
-- **System Quests.** The System keeps a standing objective on you — "Slay 25 Draugr" —
-  and pays System Points when you finish it, then hands out the next. Targets are matched
-  by actor *keyword*, so creatures added by other mods count too. No timer, no busywork:
-  it ticks over in the background of however you were already playing, and it is what
-  keeps System Points coming in once the 79 milestones run out.
+- **System Quests.** The System hands you a kill objective — "Slay 25 Draugr" — announces
+  it, counts your kills top-centre as they happen, and pays System Points when it is done.
+  Then it goes quiet for a day and offers the next one on its own; it is never waiting for
+  you to open a menu, and never sends a low-level character after dragons. Targets are
+  matched by actor *keyword*, so creatures added by other mods count too. No quest markers
+  and no busywork: it ticks over in the background of however you were already playing, and
+  it is what keeps System Points coming in once the 79 milestones run out.
 - **System Shop** — a third button beside Skill Tree and Storage in the status panel,
   opening its own screen of item cards. Spend System Points on **material packs**
   (smithing, alchemy, soul gems — each in a small and a large size) or on gold, all

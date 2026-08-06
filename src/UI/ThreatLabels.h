@@ -13,7 +13,18 @@
 
 namespace Isekai::UI {
 
+    // Arm the on/off key (Config::ThreatLabelKey). Call at kDataLoaded, after the ini
+    // has been read. No key is armed in VR: the labels are drawn by the ImGui overlay,
+    // which VR does not get, so a key that toggled an invisible feature would be worse
+    // than no key at all.
+    void InstallThreatLabels();
+
     // Draw the labels. Called by the overlay once per frame, inside an ImGui frame.
-    // Cheap no-op when the feature is switched off in the ini.
+    // Cheap no-op when the feature is switched off in the ini or by the key.
     void DrawThreatLabels();
+
+    // Off and on again for this session. The ini decides where it starts; this is
+    // deliberately NOT saved — a display toggle is not part of a character.
+    void ToggleThreatLabels();
+    [[nodiscard]] bool ThreatLabelsVisible();
 }

@@ -54,15 +54,35 @@ namespace Isekai::Config {
 
     // Which actors carry one.
     enum class ThreatTargets {
-        kHostile,    // enemies only: hostile to you, or already fighting you (default)
+        kAggro,      // what you are looking at, plus whatever is actually fighting you
+                     // (default)
+        kHostile,    // every enemy in range, whether or not it has noticed you
         kAll,        // every actor that is not you or a follower — includes townspeople
         kCrosshair,  // only what you are looking at
     };
     [[nodiscard]] ThreatTargets ThreatLabelTargets();
 
+    // Scan code that switches the threat labels off and on again mid-session, or 0 for
+    // no key at all. Default 0x2F (V) — the key the old Analyze panel used, which this
+    // feature replaced. The ini decides whether they START on; this decides nothing
+    // permanent, and a toggle is not saved.
+    [[nodiscard]] std::uint32_t ThreatLabelKey();
+
     // How far a labelled actor may be, in game units (~70 per metre). Beyond this the
     // label is dropped entirely rather than shrunk to an unreadable smudge.
     [[nodiscard]] std::uint32_t ThreatLabelRange();
+
+    // System objectives (src/Quests.cpp), in GAME hours.
+    //
+    // FirstTask is the wait before the very first objective of a character's life;
+    // Interval is the wait after each completed one. Both exist because "the System hands
+    // out work on its own schedule" is the whole idea — an objective that is simply there
+    // the moment you are reincarnated, and again the instant you finish one, is a chore
+    // list rather than something that happens to you.
+    //
+    // 0 means "at once", which is what you want while testing. Clamped to 0..720 (30 days).
+    [[nodiscard]] std::uint32_t QuestFirstTaskHours();
+    [[nodiscard]] std::uint32_t QuestIntervalHours();
 
     // Scan code that runs the in-game self-test (src/SelfTest.cpp), or 0 for off, which
     // is the default — it is a diagnostic to be switched on when reporting a problem,

@@ -23,8 +23,11 @@ namespace Isekai::Config {
         bool          g_storageCodex = false;
         bool          g_skyrimNetIntegration = true;
         bool          g_threatLabels = true;
-        ThreatTargets g_threatTargets = ThreatTargets::kHostile;
+        ThreatTargets g_threatTargets = ThreatTargets::kAggro;
         std::uint32_t g_threatRange = 4000;
+        std::uint32_t g_threatKey = 0x2F;  // DIK_V
+        std::uint32_t g_questFirstTaskHours = 12;
+        std::uint32_t g_questIntervalHours = 24;
         // 0 = off. Off by default: the self-test is a diagnostic for bug reports, not a
         // feature, and a stray key that pops a notification would just be noise.
         std::uint32_t g_selfTestKey = 0;
@@ -93,6 +96,18 @@ namespace Isekai::Config {
             }
         }
 
+        // A wait in game hours, 0..720. 0 is legal and means "no wait" — useful for
+        // testing objectives without sleeping through a night for each one. The upper
+        // clamp is a month, past which the feature would look broken rather than slow.
+        [[nodiscard]] std::uint32_t AsHours(const std::string& a_val, std::uint32_t a_def) {
+            try {
+                const auto n = std::stoul(a_val, nullptr, 10);
+                return n <= 720 ? static_cast<std::uint32_t>(n) : a_def;
+            } catch (...) {
+                return a_def;
+            }
+        }
+
         // A character level, 1..1000. Garbage or an out-of-range number keeps the
         // default rather than producing a threshold that can never be reached.
         [[nodiscard]] std::uint16_t AsLevel(const std::string& a_val, std::uint16_t a_def) {
@@ -115,8 +130,11 @@ namespace Isekai::Config {
         g_storageCodex = false;
         g_skyrimNetIntegration = true;
         g_threatLabels = true;
-        g_threatTargets = ThreatTargets::kHostile;
+        g_threatTargets = ThreatTargets::kAggro;
         g_threatRange = 4000;
+        g_threatKey = 0x2F;
+        g_questFirstTaskHours = 12;
+        g_questIntervalHours = 24;
         g_selfTestKey = 0;
         g_logInputDiag = false;
 
@@ -158,9 +176,12 @@ namespace Isekai::Config {
                 g_threatLabels = AsBool(val);
             } else if (key == "threatlabeltargets") {
                 const std::string v = Lower(val);
-                g_threatTargets = v == "all"       ? ThreatTargets::kAll
+                g_threatTargets = v == "all"         ? ThreatTargets::kAll
                                   : v == "crosshair" ? ThreatTargets::kCrosshair
-                                                     : ThreatTargets::kHostile;
+                                  : v == "hostile"   ? ThreatTargets::kHostile
+                                                     : ThreatTargets::kAggro;
+            } else if (key == "threatlabelkey") {
+                g_threatKey = AsScanCode(val, g_threatKey);
             } else if (key == "threatlabelrange") {
                 // Clamped rather than trusted: 0 would switch the feature off through the
                 // back door, and a huge value would label things across a whole hold.
@@ -169,6 +190,10 @@ namespace Isekai::Config {
                         static_cast<std::uint32_t>(std::stoul(val, nullptr, 0)), 500u, 20000u);
                 } catch (...) {
                 }
+            } else if (key == "firsttaskhours") {
+                g_questFirstTaskHours = AsHours(val, g_questFirstTaskHours);
+            } else if (key == "taskintervalhours") {
+                g_questIntervalHours = AsHours(val, g_questIntervalHours);
             } else if (key == "selftestkey") {
                 g_selfTestKey = AsScanCode(val, g_selfTestKey);
             } else if (key == "loginputdiagnostics") {
@@ -185,17 +210,20 @@ namespace Isekai::Config {
             g_dormantAscendedLevel = static_cast<std::uint16_t>(g_dormantHeroLevel + 1);
         }
 
-        logger::info("Config: HideSealedNodes={}, SystemMenuKey={:#x}, SystemMenuModifier={:#x}, "
+        logger::info("Config: HideSealedNodes={}, SystemMenuKey={}, SystemMenuModifier={}, "
                      "DormantHeroLevel={}, DormantAscendedLevel={}, StorageCodex={}, "
-                     "SkyrimNetIntegration={}, ThreatLabels={} (targets={}, range={}), "
-                     "SelfTestKey={:#x}, LogInputDiagnostics={}",
-                     g_hideSealedNodes, g_systemMenuKey, g_systemMenuModifier, g_dormantHeroLevel,
-                     g_dormantAscendedLevel, g_storageCodex, g_skyrimNetIntegration,
-                     g_threatLabels,
+                     "SkyrimNetIntegration={}, ThreatLabels={} (targets={}, range={}, key={}), "
+                     "FirstTaskHours={}, TaskIntervalHours={}, "
+                     "SelfTestKey={}, LogInputDiagnostics={}",
+                     g_hideSealedNodes, KeyName(g_systemMenuKey), KeyName(g_systemMenuModifier),
+                     g_dormantHeroLevel, g_dormantAscendedLevel, g_storageCodex,
+                     g_skyrimNetIntegration, g_threatLabels,
                      g_threatTargets == ThreatTargets::kAll         ? "all"
                      : g_threatTargets == ThreatTargets::kCrosshair ? "crosshair"
-                                                                    : "hostile",
-                     g_threatRange, g_selfTestKey, g_logInputDiag);
+                     : g_threatTargets == ThreatTargets::kHostile   ? "hostile"
+                                                                    : "aggro",
+                     g_threatRange, KeyName(g_threatKey), g_questFirstTaskHours,
+                     g_questIntervalHours, KeyName(g_selfTestKey), g_logInputDiag);
     }
 
     std::string KeyName(std::uint32_t a_scanCode) {
@@ -250,8 +278,20 @@ namespace Isekai::Config {
         return g_threatTargets;
     }
 
+    std::uint32_t ThreatLabelKey() {
+        return g_threatKey;
+    }
+
     std::uint32_t ThreatLabelRange() {
         return g_threatRange;
+    }
+
+    std::uint32_t QuestFirstTaskHours() {
+        return g_questFirstTaskHours;
+    }
+
+    std::uint32_t QuestIntervalHours() {
+        return g_questIntervalHours;
     }
 
     std::uint32_t SelfTestKey() {

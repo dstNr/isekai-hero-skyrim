@@ -1,12 +1,15 @@
 #include "UI/ThreatLabels.h"
 
 #include "Config.h"
+#include "UI/Input.h"
 #include "UI/Overlay.h"
 #include "UI/Style.h"
+#include "UI/Toast.h"
 
 #include <imgui.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -14,6 +17,15 @@
 namespace Isekai::UI {
 
     namespace {
+        // What the on/off key has done to the ini's setting, this session only.
+        // -1 = untouched, follow the ini; 0 = forced off; 1 = forced on.
+        //
+        // A tri-state rather than a bool copied out of the ini, so the key works in both
+        // directions: someone who left ThreatLabels = 0 can still switch them on for one
+        // fight, and someone who left them on can silence them for a screenshot.
+        // Read on the render thread, written on the main thread — hence the atomic.
+        std::atomic<int> g_override{ -1 };
+
         // The verdict, and what it looks like. Four bands is enough to read as a System
         // judgement without pretending to be a combat simulator; the colours are the
         // whole point of moving this out of a text panel, so they carry the meaning
@@ -87,22 +99,51 @@ namespace Isekai::UI {
             return true;
         }
 
+        // Is this actor actually FIGHTING — and fighting us, rather than a mudcrab it
+        // found on the way?
+        //
+        // IsHostileToActor alone is not that question. It is true of every bandit,
+        // draugr and wolf in the cell the moment it loads, asleep or not, which is what
+        // made the default read as "a label over everything I walk past". Aggro is a
+        // state, not a disposition: the actor is in combat AND we (or someone of ours)
+        // are what it is in combat with.
+        [[nodiscard]] bool FightingUs(RE::Actor* a_actor, RE::PlayerCharacter* a_player) {
+            if (!a_actor->IsInCombat()) {
+                return false;
+            }
+            const auto target = a_actor->GetActorRuntimeData().currentCombatTarget.get();
+            if (!target) {
+                // In combat with something we cannot resolve. Err towards showing it if
+                // it hates us anyway — a hostile that has drawn a weapon is exactly the
+                // case this mode exists for, and losing it would be the worse mistake.
+                return a_actor->IsHostileToActor(a_player);
+            }
+            return target.get() == a_player || target->IsPlayerTeammate();
+        }
+
         // Should this actor carry a label at all?
         [[nodiscard]] bool Eligible(RE::Actor* a_actor, RE::PlayerCharacter* a_player,
-                                    bool a_hostileOnly) {
+                                    Config::ThreatTargets a_mode) {
             if (!a_actor || a_actor == a_player || a_actor->IsDead() || a_actor->IsDisabled()) {
                 return false;
             }
             if (a_actor->IsPlayerTeammate()) {
                 return false;  // your own followers are not a threat to read
             }
-            if (!a_hostileOnly) {
+            switch (a_mode) {
+            case Config::ThreatTargets::kAll:
                 return true;
+            case Config::ThreatTargets::kHostile:
+                // Every enemy in range, noticed or not — the old default, kept for anyone
+                // who wants to read a room before walking into it.
+                return a_actor->IsHostileToActor(a_player) || a_actor->IsInCombat();
+            case Config::ThreatTargets::kCrosshair:
+                return true;  // the crosshair already picked exactly one
+            default:
+                // kAggro: the crosshair contributes separately, so all this decides is
+                // whether something is worth labelling unprompted.
+                return FightingUs(a_actor, a_player);
             }
-            // "Enemies" rather than "everyone": a market square should not fill up with
-            // labels over the fishmonger. IsHostileToActor covers a faction that already
-            // hates you; IsInCombat covers the one that just decided to.
-            return a_actor->IsHostileToActor(a_player) || a_actor->IsInCombat();
         }
 
         // A label the frame can draw: already projected, already judged.
@@ -113,13 +154,50 @@ namespace Isekai::UI {
             std::string name;
         };
 
+        // The actor under the crosshair, or nullptr. Its own mode uses it alone; kAggro
+        // adds it to whatever is fighting you, because "what am I pointing at" is the
+        // other half of the question the labels answer.
+        [[nodiscard]] RE::Actor* CrosshairActor() {
+            auto* pick = RE::CrosshairPickData::GetSingleton();
+            auto* ref = pick ? pick->target.get().get() : nullptr;
+            return ref ? ref->As<RE::Actor>() : nullptr;
+        }
+
         // A cap, because "all visible enemies" during a dragon attack on a city is not a
         // number anyone chose. The nearest ones are the ones that matter.
         constexpr std::size_t kMaxLabels = 12;
     }
 
+    void InstallThreatLabels() {
+        if (REL::Module::IsVR()) {
+            logger::info("UI: no threat-label key in VR — the overlay that draws them is "
+                         "SE/AE only");
+            return;
+        }
+        const auto key = Config::ThreatLabelKey();
+        if (key == 0) {
+            logger::info("UI: no threat-label key (ThreatLabelKey = 0)");
+            return;
+        }
+        RegisterHotkey(key, []() { ToggleThreatLabels(); });
+        logger::info("UI: {} toggles the threat labels (currently {})", Config::KeyName(key),
+                     ThreatLabelsVisible() ? "on" : "off");
+    }
+
+    bool ThreatLabelsVisible() {
+        const int forced = g_override.load(std::memory_order_acquire);
+        return forced < 0 ? Config::ThreatLabels() : forced == 1;
+    }
+
+    void ToggleThreatLabels() {
+        const bool on = !ThreatLabelsVisible();
+        g_override.store(on ? 1 : 0, std::memory_order_release);
+        logger::info("UI: threat labels switched {}", on ? "on" : "off");
+        ShowToast(on ? "Threat display  ON" : "Threat display  OFF", "threat");
+    }
+
     void DrawThreatLabels() {
-        if (!Config::ThreatLabels() || !OverlayReady()) {
+        if (!ThreatLabelsVisible() || !OverlayReady()) {
             return;
         }
         auto* player = RE::PlayerCharacter::GetSingleton();
@@ -138,18 +216,22 @@ namespace Isekai::UI {
 
         const auto   mode = Config::ThreatLabelTargets();
         const bool   crosshairOnly = mode == Config::ThreatTargets::kCrosshair;
-        const bool   hostileOnly = mode == Config::ThreatTargets::kHostile;
         const float  maxRange = static_cast<float>(Config::ThreatLabelRange());
         const ImVec2 display = ImGui::GetIO().DisplaySize;
         const auto   playerLevel = static_cast<std::int32_t>(player->GetLevel());
         const auto   playerPos = player->GetPosition();
 
-        std::vector<Label> labels;
+        std::vector<Label>      labels;
+        std::vector<RE::Actor*> seen;  // the crosshair target is usually also in the sweep
 
-        const auto consider = [&](RE::Actor* actor) {
-            if (!Eligible(actor, player, hostileOnly)) {
+        const auto considerAs = [&](RE::Actor* actor, Config::ThreatTargets rule) {
+            if (!Eligible(actor, player, rule)) {
                 return;
             }
+            if (std::find(seen.begin(), seen.end(), actor) != seen.end()) {
+                return;
+            }
+            seen.push_back(actor);
             const float distance = playerPos.GetDistance(actor->GetPosition());
             if (distance > maxRange) {
                 return;
@@ -167,14 +249,20 @@ namespace Isekai::UI {
                                actor->GetDisplayFullName() ? actor->GetDisplayFullName() : "" });
         };
 
-        if (crosshairOnly) {
-            auto* pick = RE::CrosshairPickData::GetSingleton();
-            auto* ref = pick ? pick->target.get().get() : nullptr;
-            consider(ref ? ref->As<RE::Actor>() : nullptr);
-        } else if (auto* lists = RE::ProcessLists::GetSingleton()) {
-            for (const auto& handle : lists->highActorHandles) {
-                if (auto actor = handle.get()) {
-                    consider(actor.get());
+        const auto consider = [&](RE::Actor* actor) { considerAs(actor, mode); };
+
+        // What you are aiming at is labelled in both crosshair modes, and it bypasses the
+        // sweep's filter on purpose: pointing at something IS the request to read it,
+        // whether or not that thing has noticed you yet.
+        if (crosshairOnly || mode == Config::ThreatTargets::kAggro) {
+            considerAs(CrosshairActor(), Config::ThreatTargets::kCrosshair);
+        }
+        if (!crosshairOnly) {
+            if (auto* lists = RE::ProcessLists::GetSingleton()) {
+                for (const auto& handle : lists->highActorHandles) {
+                    if (auto actor = handle.get()) {
+                        consider(actor.get());
+                    }
                 }
             }
         }

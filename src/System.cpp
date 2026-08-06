@@ -18,6 +18,7 @@
 #include "UI/Prisma.h"
 #include "UI/SkillTreeWindow.h"
 #include "UI/SystemWindow.h"
+#include "UI/ThreatLabels.h"
 
 #include <algorithm>
 #include <chrono>
@@ -38,7 +39,7 @@ namespace Isekai {
         // 10: grantTier / treeTier / custom (the decoupled CUSTOM axes);
         // 11: the standing System objective (questKey / questProgress);
         // 12: its snapshotted target/reward, and when the next one is due
-        constexpr std::uint32_t kVersion = 12;
+        constexpr std::uint32_t kVersion = 13;
 
         void SystemMsg(const char* a_text) {
             RE::DebugNotification(a_text);
@@ -679,6 +680,8 @@ namespace Isekai {
             a_intf->WriteRecordData(g_state.questReward);
             a_intf->WriteRecordData(g_state.questNextDue);
 
+            a_intf->WriteRecordData(g_state.questsGiven);  // v13
+
             logger::info(
                 "State saved (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={}, "
                 "dormant={}, custom={}, grant={}, tree={})",
@@ -807,6 +810,16 @@ namespace Isekai {
                     a_intf->ReadRecordData(g_state.questReward);
                     a_intf->ReadRecordData(g_state.questNextDue);
                 }
+
+                // v13: how many objectives this character has been given. An older save
+                // that already carries one counts as having had it — otherwise the next
+                // load would treat a veteran as a beginner and hand out the starter hunt.
+                g_state.questsGiven = 0;
+                if (version >= 13) {
+                    a_intf->ReadRecordData(g_state.questsGiven);
+                } else if (g_state.questKey != 0) {
+                    g_state.questsGiven = 1;
+                }
             }
 
             logger::info(
@@ -855,6 +868,7 @@ namespace Isekai {
                 SkyrimNet::Install();   // optional AI-NPC context; no-op without SkyrimNet
                 Progression::Install();
                 Quests::Install();      // watches kills for the standing objective
+                UI::InstallThreatLabels();  // the on/off key for the floating verdicts
                 SelfTest::Install();    // diagnostic hotkey, off unless the ini sets one
                 UI::LogHotkeys();       // the table the input handler actually consults
 

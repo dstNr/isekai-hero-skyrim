@@ -30,9 +30,23 @@ Log lines to keep an eye on throughout: the mod writes what it does, so a test t
 
 ### 1.1 System Quests (new, and it touched the save format)
 
-**Setting up.** You cannot choose which quarry you draw, which makes this awkward to
-test — so the status panel has a **NEW TASK** button. It is free and instant, so press it
-until you get a quarry you can reach, and use it again between the steps below.
+**Setting up.** Objectives now arrive on a **timer** — 12 game hours for the first of a
+character's life, a day after each completed one. That is right for playing and useless
+for testing, so put this in `IsekaiHero.ini` before you start:
+
+```ini
+[Quests]
+FirstTaskHours = 0
+TaskIntervalHours = 0
+```
+
+With both at 0 the next objective is handed over within a second of the last one ending,
+which is the only way to walk this table in one sitting. **Put them back afterwards** —
+with 0 you will never see the behaviour the rows below are actually about.
+
+You cannot choose which quarry you draw either, so the status panel has a **NEW TASK**
+button. It is free and instant: press it until you get a quarry you can reach, and use it
+again between the steps below.
 
 The seven quarries and where to find one quickly:
 
@@ -52,22 +66,27 @@ has if you want a different one.
 
 | Step | Expected |
 |---|---|
+| **Leave the ini at its defaults.** Start a new character and open the status panel straight after the blessing. | **No objective**, and `none — the System is quiet for another 12h`. Nothing is handed over at rebirth. |
+| Sleep 12 game hours. | The first objective arrives on its own — a banner, no menu involved — and it is **wild beasts**, not a random draw. |
+| Now set both ini values to 0 and reload for the rest of this table. | The next objective appears within a second of the last one finishing. |
 | Load a save. Open the status panel (`RShift+S`). | An **Objective** row: a target, a progress bar, `0 / N`, and `+X SP`. |
 | Press **NEW TASK**. | Panel comes straight back with a **different** objective at `0 / N`, and a **banner appears top-centre** naming it. |
 | Kill one matching creature (the objective names which). | Counter goes up by exactly **1**, and a line fades in top-centre: `Draugr   1 / 25`. |
 | Kill several in a row. | **One** line counting up, not one per kill — progress toasts replace each other. |
 | Finish it, then check the status panel. | No objective. Instead: `none — the System is quiet for another Nh`. |
-| Wait or sleep a full day. | The next objective arrives **on its own**, with a banner, without opening any menu. |
+| Wait or sleep out that countdown. | The next objective arrives **on its own**, with a banner, without opening any menu. |
 | Compare the target count at level 5 and at level 50. | The higher-level character is sent after noticeably more, and paid proportionally more. |
 | At a low level, press NEW TASK repeatedly. | Never dragons or giants — those need level 25 / 20. |
 | Let a follower land the killing blow on one. | Counter still goes up — teammates count on purpose. |
 | Kill it with a poison, a rune or a summon instead of in melee. | Counter still goes up. Anything the player or a teammate causes counts; that is deliberate, since a mage or a sneak lands few direct blows. |
 | Kill something that does *not* match. | Counter does **not** move. |
-| Finish the objective. | Level-up sting, System Points increase by the advertised amount, and a **different** objective appears immediately. |
-| Save, quit to desktop, reload. | Same objective, same progress. |
+| Finish the objective. | Level-up sting, System Points increase by the advertised amount, and the next objective follows once the interval is up. |
+| Save, quit to desktop, reload. | Same objective, same progress — **and no second objective handed out on the way in**. |
 
-**This last row is the important one** — it is the first change to the co-save format
-(v11). If progress resets to 0 on reload, the state is not persisting.
+**This last row is the important one.** The objective, its snapshotted target and payout,
+the clock and how many objectives the character has had all live in the co-save (v13). If
+progress resets to 0 on reload, none of it is persisting; if a **fresh** objective appears
+every time you load, the clock is not.
 
 > A counter that never moves at all, on every quarry, points at the kill detection.
 > A counter that never moves for **one specific** quarry points at that keyword. That is
@@ -77,20 +96,27 @@ has if you want a different one.
 
 ### 1.1b Mob danger level (threat labels)
 
-No longer a hotkey and no longer a purchase — the verdict floats over the actor, always.
-The old `V` key, the `System Analysis` skill-tree node and the `AnalyzeKey` setting are
-all gone; a save that bought the node gets its **10 SP refunded on the next load** (the log
-says so).
+No longer a purchase and no longer a panel — the verdict floats over the actor itself. The
+`System Analysis` skill-tree node and the `AnalyzeKey` setting are gone; a save that bought
+the node gets its **10 SP refunded on the next load** (the log says so). `V` still does
+something, but the opposite of what it used to: it switches the whole display off and on
+(`ThreatLabelKey`) rather than analysing one target.
 
 | Step | Expected |
 |---|---|
 | Load a save that had bought System Analysis. | Log: `'System Analysis' was removed from the tree — refunding 10 SP`, and the points are there. |
-| Walk up to a wolf. | A coloured verdict floats above it. |
-| Back away from it. | The label shrinks and dims with distance, then disappears past the range. |
-| Stand in a market square. | **No labels on townspeople** — the default only marks enemies. |
+| Point the crosshair at a wolf. | A coloured verdict floats above it. |
+| Look away from it, while it is still calm. | The label goes. The default labels what you aim at, nothing else — until something attacks. |
+| Let it attack you. | It keeps its label without being aimed at, and so does anything else fighting you. |
+| Walk past a sleeping bandit camp without waking it. | **No labels.** This is the row the default exists for — `hostile` would mark every one of them from across the valley. |
+| Back away from something that is fighting you. | The label shrinks and dims with distance, then disappears past the range. |
+| Stand in a market square. | No labels on townspeople. |
+| Press **`V`** (`ThreatLabelKey`). | `Threat display OFF` top-centre, and every label goes. Press again for `ON`. |
+| Save, quit, reload after switching them off. | They are back **on** — the toggle is a display switch, not part of the character. |
+| Set `ThreatLabelTargets = hostile`, reload. | Every enemy in range is marked again, noticed or not (the pre-0.6.2 behaviour). |
 | Set `ThreatLabelTargets = all`, reload. | Now everyone has one, shopkeepers included. |
-| Set `ThreatLabelTargets = crosshair`, reload. | Only what you are looking at. |
-| Set `ThreatLabels = 0`, reload. | None at all. |
+| Set `ThreatLabelTargets = crosshair`, reload. | Only what you are looking at, even mid-fight. |
+| Set `ThreatLabels = 0`, reload. | None at all — but `V` still brings them up for the session. |
 | Open the inventory or a menu. | Labels vanish while it is up — they are world-anchored and the camera is elsewhere. |
 
 The four verdicts come from **target level minus your level**, nothing else:
@@ -150,7 +176,6 @@ This inverted how the Dimensional Storage works, so it is worth confirming end t
 | `kDirectStat` nodes (Fleet of Foot, Storm Ward, Iron Skin) | The value changes on the character sheet. These write the actor value directly and do **not** appear as an ability. |
 | Knowledge unlocks (the four Omniscience nodes) | Shouts appear and are usable; enchantments are listed at a table without disenchanting; every ingredient effect is known; spells are in your book. |
 | Perk Synthesis | Perk points go up by 5 per purchase, and it stops paying at 255. |
-| System Analysis | After buying it, the Analyze key (`V`) reports on whatever you look at. Before buying it, it does nothing. |
 
 **Reload after buying** and confirm everything above still holds — knowledge unlocks and
 direct stats are re-derived on load rather than stored, so a load is a real test of them.

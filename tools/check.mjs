@@ -611,6 +611,56 @@ check("quests: every quarry names a keyword the game actually has", () => {
   return `${rows.length} quarries, keys ${keys.join("/")}`;
 });
 
+check("quests: the first objective is one a new character can go and do", () => {
+  // The roll is uniform over everything the level allows, so a fresh character had an
+  // even chance of drawing "slay 25 Draugr" as their introduction to the feature — a
+  // barrow crawl, before anything has explained what the System is. The first one is
+  // therefore fixed, and this makes sure the key it is fixed to still means something.
+  const cpp = read("src/Quests.cpp");
+  const starter = cpp.match(/constexpr std::uint32_t kStarterKey = (\d+);/);
+  need(starter, "kStarterKey not found in Quests.cpp");
+
+  const from = cpp.indexOf("constexpr Quarry kQuarries[] = {");
+  const body = cpp.slice(from, cpp.indexOf("\n        };", from));
+  const rows =
+    [...body.matchAll(/\{\s*(\d+),\s*"([^"]+)",\s*"([^"]+)",\s*(\d+),\s*(\d+),\s*(\d+)\s*\}/g)]
+      .map((m) => ({ key: +m[1], name: m[2], minLevel: +m[6] }));
+  const hit = rows.find((q) => q.key === +starter[1]);
+  need(hit, `kStarterKey is ${starter[1]}, which no quarry claims — the first objective ` +
+            `would fall back to a random one`);
+  need(hit.minLevel <= 1,
+       `the starter quarry "${hit.name}" needs level ${hit.minLevel}, so a level-1 ` +
+       `character would be handed nothing at all`);
+  return `${hit.name} (key ${hit.key})`;
+});
+
+check("config: the ini and Config::Load name the same settings", () => {
+  // A setting documented in the ini that Config::Load does not parse is invisible: the
+  // player writes it, the file is read, nothing happens, and no log line says why. The
+  // reverse — a parsed key the ini never mentions — is a feature nobody can find.
+  const ini = read("IsekaiHero.ini");
+  const documented = new Set(
+    ini.split("\n")
+       .map((l) => l.replace(/[;#].*$/, "").trim())
+       .filter((l) => l.includes("="))
+       .map((l) => l.slice(0, l.indexOf("=")).trim().toLowerCase())
+       .filter(Boolean));
+  const parsed = new Set(
+    [...read("src/Config.cpp").matchAll(/key == "([a-z]+)"/g)].map((m) => m[1]));
+
+  need(documented.size > 0, "no settings parsed out of IsekaiHero.ini — parser stale?");
+  need(parsed.size > 0, "no key comparisons found in Config.cpp — parser stale?");
+
+  const dead = [...documented].filter((k) => !parsed.has(k));
+  need(dead.length === 0,
+       `the ini documents ${dead.join(", ")}, which Config::Load never reads — ` +
+       `setting it does nothing at all`);
+  const hidden = [...parsed].filter((k) => !documented.has(k));
+  need(hidden.length === 0,
+       `Config::Load reads ${hidden.join(", ")}, which the shipped ini never mentions`);
+  return `${documented.size} settings`;
+});
+
 check("shop: every entry names a shelf that exists", () => {
   const names = new Set(parseShelfNames());
   const cpp = parseShopCatalog();

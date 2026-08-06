@@ -1,5 +1,6 @@
 #include "Quests.h"
 
+#include "Config.h"
 #include "Sounds.h"
 #include "System.h"
 #include "UI/Toast.h"
@@ -57,10 +58,36 @@ namespace Isekai::Quests {
             { 7, "dragons",         "ActorTypeDragon",   3, 12, 25 },
         };
 
-        // How long the System waits after one objective before offering the next, in game
-        // days. Objectives used to be permanent — finish one, the next was already there —
-        // which made them a chore list rather than something the System hands you.
-        constexpr float kCooldownDays = 1.0f;
+        // The first objective a character is ever given.
+        //
+        // Not random, and not for flavour: the roll below is uniform over everything the
+        // level allows, so a fresh character had an even chance of being sent after 25
+        // draugr as their introduction to the feature — a barrow crawl, before they have
+        // been told what any of this is. Wild beasts is the one quarry that is reachable
+        // from wherever the game happens to start you (wolves on any road), which is what
+        // makes it the right first hunt rather than merely the easiest.
+        //
+        // Every later objective is rolled normally.
+        constexpr std::uint32_t kStarterKey = 2;  // "wild beasts"
+
+        // The waits, in game days, before the first objective of a life and between the
+        // rest. Both come from the ini (defaults there: 12 hours and 24).
+        //
+        // The first wait is shorter than the rest on purpose. It still has to be a wait —
+        // an objective handed over the moment you are reincarnated reads as a starting
+        // quest rather than as the System noticing you — but a full day before the
+        // feature shows itself at all is long enough to look broken.
+        [[nodiscard]] float Days(std::uint32_t a_hours) {
+            return static_cast<float>(a_hours) / 24.0f;
+        }
+
+        [[nodiscard]] float FirstTaskDays() {
+            return Days(Config::QuestFirstTaskHours());
+        }
+
+        [[nodiscard]] float IntervalDays() {
+            return Days(Config::QuestIntervalHours());
+        }
 
         // Count and payout grow with the character. Both come off the same factor so a
         // bigger hunt is always worth proportionally more; without that, levelling would
@@ -110,31 +137,35 @@ namespace Isekai::Quests {
         void Roll(std::uint32_t a_avoidKey) {
             static std::mt19937 rng{ std::random_device{}() };
 
-            const auto level = PlayerLevel();
+            const auto  level = PlayerLevel();
+            auto&       state = GetState();
+            const bool  isFirst = state.questsGiven <= 0;
+            const Quarry* chosen = isFirst ? Find(kStarterKey) : nullptr;
 
-            std::vector<const Quarry*> pool;
-            for (const auto& q : kQuarries) {
-                if (q.key != a_avoidKey && level >= q.minLevel) {
-                    pool.push_back(&q);
-                }
-            }
-            // Below level 10 only two quarries are open, so "not the same one twice"
-            // cannot always be honoured. Repeating beats handing out nothing.
-            if (pool.empty()) {
+            if (!chosen) {
+                std::vector<const Quarry*> pool;
                 for (const auto& q : kQuarries) {
-                    if (level >= q.minLevel) {
+                    if (q.key != a_avoidKey && level >= q.minLevel) {
                         pool.push_back(&q);
                     }
                 }
+                // Below level 10 only two quarries are open, so "not the same one twice"
+                // cannot always be honoured. Repeating beats handing out nothing.
+                if (pool.empty()) {
+                    for (const auto& q : kQuarries) {
+                        if (level >= q.minLevel) {
+                            pool.push_back(&q);
+                        }
+                    }
+                }
+                if (pool.empty()) {
+                    return;  // only possible if every quarry is gated above level 1
+                }
+                std::uniform_int_distribution<std::size_t> pick(0, pool.size() - 1);
+                chosen = pool[pick(rng)];
             }
-            if (pool.empty()) {
-                return;  // only possible if every quarry is gated above level 1
-            }
-            std::uniform_int_distribution<std::size_t> pick(0, pool.size() - 1);
-            const auto* chosen = pool[pick(rng)];
 
             const float factor = LevelFactor();
-            auto&       state = GetState();
             state.questKey = chosen->key;
             state.questProgress = 0;
             state.questTarget = std::max(
@@ -143,9 +174,11 @@ namespace Isekai::Quests {
                 1, static_cast<std::int32_t>(
                        std::lround(static_cast<float>(chosen->reward) * factor * RewardScale())));
             state.questNextDue = 0.0f;  // one is live now; the clock restarts on completion
+            ++state.questsGiven;
 
-            logger::info("Quests: new objective — slay {} {} (level {}, pays {})",
-                         state.questTarget, chosen->name, level, state.questReward);
+            logger::info("Quests: new objective #{} — slay {} {} (level {}, pays {}){}",
+                         state.questsGiven, state.questTarget, chosen->name, level,
+                         state.questReward, isFirst ? " [starter]" : "");
             UI::ShowToastBanner("[ SYSTEM ]  New objective:  slay " +
                                     std::to_string(state.questTarget) + " " + chosen->name,
                                 kToastKey);
@@ -169,7 +202,7 @@ namespace Isekai::Quests {
             state.questProgress = 0;
             state.questTarget = 0;
             state.questReward = 0;
-            state.questNextDue = GameDays() + kCooldownDays;
+            state.questNextDue = GameDays() + IntervalDays();
         }
 
         // Does this death count toward the objective?
@@ -283,9 +316,23 @@ namespace Isekai::Quests {
         if (!state.reincarnated || state.questKey != 0) {
             return;  // not bound, or one is already running
         }
-        // 0 means "the moment one is wanted" — a fresh character, or a save from before
-        // the cooldown existed. Anything else is a game-time deadline.
-        if (state.questNextDue > 0.0f && GameDays() < state.questNextDue) {
+
+        // No deadline yet: a character who has just been reincarnated, or a save from
+        // before this clock existed. Arm it rather than rolling on the spot.
+        //
+        // This is the bug that made objectives "start straight away again": 0 used to
+        // mean "hand one over now", so every such character — and every load of one that
+        // had none — produced an objective the same second. The System is supposed to
+        // decide when it has work for you.
+        if (state.questNextDue <= 0.0f) {
+            const float wait = state.questsGiven <= 0 ? FirstTaskDays() : IntervalDays();
+            state.questNextDue = GameDays() + wait;
+            logger::info("Quests: next objective due in {:.1f} game hour(s)", wait * 24.0f);
+            if (wait > 0.0f) {
+                return;
+            }
+        }
+        if (GameDays() < state.questNextDue) {
             return;
         }
         Roll(0);

@@ -231,6 +231,37 @@ namespace Isekai::UI {
                               static_cast<float>(textCount)
                         : inner;
 
+                    // How big the icon on a labelled button may be — decided ONCE, for the
+                    // whole row, before anything is drawn.
+                    //
+                    // The icon and label are drawn by hand over a blank button (ImGui has
+                    // no icon+text button), and nothing used to measure that pair against
+                    // the button it sits on. The blessing panel is where that broke: five
+                    // choices split the row, "ASCENDED" is a long word, and a fixed 34px
+                    // icon plus that label is simply wider than its share — so the content
+                    // ran out over the frame and into its neighbours.
+                    //
+                    // The size comes from the WIDEST label rather than each button's own,
+                    // because icons of differing sizes standing side by side read as a
+                    // rendering fault, not as a fit. Below a legible size we drop the icons
+                    // for the whole row instead: a 10px smudge next to a clipped word is
+                    // worse than the plain text buttons this started as.
+                    const float btnH = 46.0f * s;
+                    const float iconGap = 8.0f * s;
+                    const float iconPad = 10.0f * s;  // breathing room inside the frame
+                    float       widestLabel = 0.0f;
+                    for (const auto& c : g_win.choices) {
+                        if (!c.iconOnly && !c.icon.empty()) {
+                            widestLabel =
+                                std::max(widestLabel, ImGui::CalcTextSize(c.label.c_str()).x);
+                        }
+                    }
+                    float rowIconSize =
+                        std::min(btnH - 12.0f * s, btnW - 2.0f * iconPad - iconGap - widestLabel);
+                    if (rowIconSize < 18.0f * s) {
+                        rowIconSize = 0.0f;
+                    }
+
                     bool first = true;
                     for (std::size_t i = 0; i < g_win.choices.size(); ++i) {
                         const auto& choice = g_win.choices[i];
@@ -244,9 +275,9 @@ namespace Isekai::UI {
 
                         ImGui::PushID(static_cast<int>(i));
 
-                        const float       btnH = 46.0f * s;
-                        const ImTextureID icon =
-                            choice.icon.empty() ? ImTextureID{} : GetTexture(choice.icon);
+                        const ImTextureID icon = (choice.icon.empty() || rowIconSize <= 0.0f)
+                            ? ImTextureID{}
+                            : GetTexture(choice.icon);
 
                         if (icon) {
                             // ImGui has no icon+text button, so: an empty button does the
@@ -257,17 +288,21 @@ namespace Isekai::UI {
                             }
                             const ImVec2 bMin = ImGui::GetItemRectMin();
                             const ImVec2 bMax = ImGui::GetItemRectMax();
-                            const float  iconSize = btnH - 12.0f * s;
-                            const float  gap = 8.0f * s;
                             const ImVec2 textSize = ImGui::CalcTextSize(choice.label.c_str());
-                            const float  totalW = iconSize + gap + textSize.x;
+                            const float  totalW = rowIconSize + iconGap + textSize.x;
                             const float  x = bMin.x + ((bMax.x - bMin.x) - totalW) * 0.5f;
                             const float  cy = (bMin.y + bMax.y) * 0.5f;
 
-                            dl->AddImage(icon, ImVec2{ x, cy - iconSize * 0.5f },
-                                         ImVec2{ x + iconSize, cy + iconSize * 0.5f });
-                            dl->AddText(ImVec2{ x + iconSize + gap, cy - textSize.y * 0.5f },
+                            // Clipped to the frame as a last resort. rowIconSize is chosen
+                            // so this never bites for the widest label in the row — but a
+                            // font fallback that measures differently from what it draws
+                            // should spill nothing into the button next door.
+                            dl->PushClipRect(bMin, bMax, true);
+                            dl->AddImage(icon, ImVec2{ x, cy - rowIconSize * 0.5f },
+                                         ImVec2{ x + rowIconSize, cy + rowIconSize * 0.5f });
+                            dl->AddText(ImVec2{ x + rowIconSize + iconGap, cy - textSize.y * 0.5f },
                                         Style::Col(Style::kText), choice.label.c_str());
+                            dl->PopClipRect();
                         } else if (ImGui::Button(choice.label.c_str(), ImVec2{ btnW, btnH })) {
                             chosen = static_cast<int>(i);
                         }
