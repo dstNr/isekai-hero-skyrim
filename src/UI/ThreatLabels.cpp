@@ -155,15 +155,6 @@ namespace Isekai::UI {
             std::string  name;
         };
 
-        // The actor under the crosshair, or nullptr. Its own mode uses it alone; kAggro
-        // adds it to whatever is fighting you, because "what am I pointing at" is the
-        // other half of the question the labels answer.
-        [[nodiscard]] RE::Actor* CrosshairActor() {
-            auto* pick = RE::CrosshairPickData::GetSingleton();
-            auto* ref = pick ? pick->target.get().get() : nullptr;
-            return ref ? ref->As<RE::Actor>() : nullptr;
-        }
-
         // A cap, because "all visible enemies" during a dragon attack on a city is not a
         // number anyone chose. The nearest ones are the ones that matter.
         constexpr std::size_t kMaxLabels = 12;
@@ -256,8 +247,36 @@ namespace Isekai::UI {
         // What you are aiming at is labelled in both crosshair modes, and it bypasses the
         // sweep's filter on purpose: pointing at something IS the request to read it,
         // whether or not that thing has noticed you yet.
+        //
+        // Found by projection rather than by CrosshairPickData: that only resolves a
+        // target within ACTIVATION range, so it never sees the wolf you are lining up
+        // across a clearing — which is exactly when you want the reading.
         if (crosshairOnly || mode == Config::ThreatTargets::kAggro) {
-            considerAs(CrosshairActor(), Config::ThreatTargets::kCrosshair);
+            // ponytail: fixed screen-space cone, not a real ray. Picks the wrong actor
+            // only when two overlap near the centre; raycast if that ever matters.
+            float      best = display.y * 0.08f;
+            RE::Actor* aimed = nullptr;
+            if (auto* lists = RE::ProcessLists::GetSingleton()) {
+                for (const auto& handle : lists->highActorHandles) {
+                    auto actor = handle.get();
+                    if (!actor || !Eligible(actor.get(), player, Config::ThreatTargets::kAll) ||
+                        playerPos.GetDistance(actor->GetPosition()) > maxRange) {
+                        continue;
+                    }
+                    RE::NiPoint3 head{};
+                    ImVec2       screen{};
+                    if (!HeadPoint(actor.get(), head) || !Project(cam, head, display, screen)) {
+                        continue;
+                    }
+                    const float d = std::hypot(screen.x - display.x * 0.5f,
+                                               screen.y - display.y * 0.5f);
+                    if (d < best) {
+                        best = d;
+                        aimed = actor.get();
+                    }
+                }
+            }
+            considerAs(aimed, Config::ThreatTargets::kCrosshair);
         }
         if (!crosshairOnly) {
             if (auto* lists = RE::ProcessLists::GetSingleton()) {
