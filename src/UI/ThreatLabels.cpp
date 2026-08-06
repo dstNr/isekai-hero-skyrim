@@ -43,7 +43,7 @@ namespace Isekai::UI {
                 return { "DANGEROUS", ImVec4{ 1.00f, 0.68f, 0.25f, 1.0f } };
             }
             if (a_diff <= -15) {
-                return { "TRIVIAL", ImVec4{ 0.55f, 0.62f, 0.68f, 1.0f } };
+                return { "TRIVIAL", ImVec4{ 0.80f, 0.86f, 0.92f, 1.0f } };
             }
             return { "MANAGEABLE", ImVec4{ 0.55f, 0.85f, 1.00f, 1.0f } };
         }
@@ -307,8 +307,8 @@ namespace Isekai::UI {
             // Distant labels shrink and dim, so the near ones stay dominant and a crowd
             // reads as depth rather than as noise.
             const float t = std::clamp(label.distance / maxRange, 0.0f, 1.0f);
-            const float nameSize = (20.0f - 5.0f * t) * s;
-            const float readSize = nameSize * 0.72f;
+            const float nameSize = (27.0f - 7.0f * t) * s;
+            const float readSize = nameSize * 0.78f;
             const float alpha = 1.0f - 0.35f * t;
 
             // "Lv 12  DANGEROUS" — the verdict with the number it was derived from, so
@@ -327,7 +327,7 @@ namespace Isekai::UI {
             const float bandW = std::max(nameW, readW) * 0.5f + 14.0f * s;
             Style::DrawFadingBand(dl, ImVec2{ label.pos.x - bandW, top - 3.0f * s },
                                   ImVec2{ label.pos.x + bandW, label.pos.y + 2.0f * s },
-                                  Style::kPanelBg, 0.30f * alpha);
+                                  Style::kPanelBg, 0.48f * alpha);
 
             float y = top;
             if (named) {
