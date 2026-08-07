@@ -83,12 +83,30 @@ namespace Isekai::UI {
                    a_out.y < a_display.y + 100.0f;
         }
 
-        // Where the label floats: over the actor's head, from its own bounds rather than
-        // a guessed height — a mudcrab and a giant are not the same distance up.
+        // Where the label floats: over the actor's head, from its own height rather than
+        // a guessed one — a mudcrab and a giant are not the same distance up.
+        //
+        // The height is Actor::GetHeight (the base object's bounds times its scale), and
+        // the anchor is the 3D root, which is the actor's PLACEMENT — the pose hangs off
+        // it. Neither moves when the actor animates.
+        //
+        // What this replaced was `worldBound.center + radius * 0.9`, and worldBound is
+        // recomputed from the current pose: it swells when a bandit swings, when a wolf
+        // leaps, when anything draws a weapon, and its centre bobs with every stride. A
+        // label anchored to it hops around the head instead of sitting over it, which is
+        // the "the danger level jumps about when the mob moves" this fixes. The animated
+        // bound is kept only as a fallback for actors whose base carries no usable one.
         [[nodiscard]] bool HeadPoint(RE::Actor* a_actor, RE::NiPoint3& a_out) {
             auto* root = a_actor->Get3D();
             if (!root) {
                 return false;
+            }
+            // 8 units is roughly a knee-high crate: below that the bound is missing
+            // rather than small, and the label would sit inside the actor.
+            if (const float height = a_actor->GetHeight(); height > 8.0f) {
+                a_out = root->world.translate;
+                a_out.z += height * 1.05f;
+                return true;
             }
             const auto& bound = root->worldBound;
             if (bound.radius <= 0.0f) {

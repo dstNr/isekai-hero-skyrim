@@ -26,6 +26,16 @@ belong.
 - **Clicking a panel skips the rest of its reveal**, in both renderers. The buttons are
   hidden until the reveal finishes, so the skip click can never also press one.
 
+### Fixed
+- **Threat labels no longer hop about over a moving actor.** They were anchored to
+  `worldBound.center + radius * 0.9`, and `worldBound` is recomputed from the current
+  *pose*: it swells when a bandit swings, when a wolf leaps, when anything draws a weapon,
+  and its centre bobs with every stride — so the label danced around the head instead of
+  sitting over it. The anchor is now the 3D root (the actor's placement, which the pose
+  hangs off) plus `Actor::GetHeight` (base bounds times scale). Neither term changes with
+  animation. The animated bound stays as a fallback for actors whose base object carries
+  no usable one. This also steadies the crosshair pick, which projects the same point.
+
 ## [0.7.0] — 2026-08-06
 
 The System starts giving you work: kill objectives on its own schedule, threat readings
