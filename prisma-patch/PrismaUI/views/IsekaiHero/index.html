@@ -1309,6 +1309,15 @@ function tickPanel(now) {
   if (done && !buttonsShown) { buttonsShown = true; $("pButtons").style.visibility = "visible"; }
   if (!done) panelRAF = requestAnimationFrame(tickPanel);
 }
+/* Click anywhere on the panel while it is still typing to skip to the full text. The
+   buttons stay hidden until the reveal is done, so this click cannot also press one.
+   (The built-in renderer does the same — see DrawPanel in src/UI/SystemWindow.cpp.) */
+$("screen-panel").addEventListener("click", () => {
+  if (buttonsShown || !PANEL.body) return;
+  panelStart = performance.now() - (PANEL.body.length + 1) / PANEL.reveal * 1000;
+  tickPanel(performance.now());
+});
+
 window.isekaiShowPanel = (data) => {
   try { PANEL = (typeof data === "string") ? JSON.parse(data) : data; } catch (e) { return; }
   showScreen("panel");

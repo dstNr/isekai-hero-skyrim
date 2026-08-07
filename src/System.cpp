@@ -560,6 +560,21 @@ namespace Isekai {
                 return;
             }
 
+            // AutoStart = 0: the player boots the System with the menu hotkey instead.
+            // Alternate starts that open with a prologue elsewhere (a modern-world intro
+            // above all) put the boot sequence somewhere it does not belong, and no cell
+            // heuristic can tell that apart from a normal start — the player can.
+            if (!Config::AutoStart()) {
+                static bool logged = false;
+                if (!logged) {
+                    logged = true;
+                    logger::info("Reincarnation held: AutoStart = 0 — waiting for the System "
+                                 "hotkey (key={})",
+                                 Config::KeyName(Config::SystemMenuKey()));
+                }
+                return;
+            }
+
             // "Ready" alone is not "in the game world". Character-creation start
             // rooms (NYA, Alternate Start, ...) hand the player full control while
             // they are still picking a face — the System fired the moment the room
@@ -929,6 +944,21 @@ namespace Isekai {
                 break;
             }
         }
+    }
+
+    void TriggerReincarnation() {
+        if (g_state.reincarnated) {
+            return;
+        }
+        // No cell heuristic here, unlike TryTrigger: a player who presses the key has
+        // told us they are where they want the System to find them, which is the whole
+        // point of AutoStart = 0. Readiness is still checked — a boot sequence during
+        // character creation would be no more welcome for having been asked for.
+        if (!IsPlayerReady()) {
+            logger::info("Reincarnation requested by hotkey, but the player is not ready yet");
+            return;
+        }
+        BeginReincarnation();
     }
 
     std::string PowerName(PowerLevel a_power) {

@@ -128,6 +128,11 @@ namespace Isekai {
     // "NORMAL" / "HERO" / "ASCENDED" — for panels and logs.
     [[nodiscard]] std::string PowerName(PowerLevel a_power);
 
+    // Run the boot sequence now, on a character it has not run for yet. A no-op once
+    // the System is bound. This is what the menu hotkey does for a player who set
+    // AutoStart = 0, and the escape hatch if the automatic trigger never fires.
+    void TriggerReincarnation();
+
     // Re-open the blessing choice on an existing, already-reincarnated character —
     // the "reboot the System" the panel offers. Only the blessing is re-chosen; every
     // earned thing (milestones, skill-tree nodes/ranks, System Points, the storage

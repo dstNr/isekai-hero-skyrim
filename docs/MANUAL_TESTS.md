@@ -143,6 +143,24 @@ The four verdicts come from **target level minus your level**, nothing else:
 > Analysis is **switched off in Skyrim VR** — the crosshair lookup it needs resolves
 > through an SE/AE-only address. It says so rather than guessing.
 
+### 1.1c Manual start and text speed (new settings)
+
+Both live in `[System]` in the ini, and the deployed ini is **kept** by `build.bat` — add
+the keys to the one under `Data\SKSE\Plugins` or delete it, or you will be testing the
+defaults.
+
+| Step | Expected |
+|---|---|
+| `AutoStart = 0`, start a **new character**. | Nothing happens when you take control — no messages, no blessing menu. The log says *Reincarnation held: AutoStart = 0*. |
+| Walk somewhere else, wait, open a container. | Still nothing. |
+| Press the System hotkey (Right Shift + S). | The boot sequence runs from there: the three messages, then the blessing menu. |
+| Press the hotkey again after choosing. | Normal status panel — the boot runs once, as before. |
+| `AutoStart = 1` (or delete the key), new character. | Unchanged from 0.7.0: it fires by itself once you are in control. |
+| `TextSpeed = 3`, open any panel. | Text types out about three times as fast. |
+| `TextSpeed = 0`. | No typing at all — the full text is there the moment the panel opens. |
+| `TextSpeed = 1`, open a long panel and **click it** while it types. | Jumps to the full text, buttons appear. The click must **not** press a button. |
+| Same click test with the **PrismaUI patch** installed. | Identical behaviour. |
+
 ### 1.2 The storage no longer arrives stocked
 
 This inverted how the Dimensional Storage works, so it is worth confirming end to end.

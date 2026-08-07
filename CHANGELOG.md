@@ -4,6 +4,28 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [Unreleased]
+
+Two settings and a click, all three from the same piece of player feedback: a tester who
+runs the mod through a modlist reads the same boot sequence on every restart, and an
+alternate start with a modern-world prologue puts that sequence somewhere it does not
+belong.
+
+### Added
+- **`AutoStart`** (`[System]`, default 1). Off, the System does not bind itself when the
+  player first takes control — it waits for the menu hotkey and boots wherever the player
+  is standing when they press it. `TryTrigger`'s cell heuristic can tell a chargen room
+  from the world, but nothing can tell an intended prologue from a start gone wrong; this
+  hands that one judgement to the player rather than guessing at it per start mod.
+  The hotkey already had nothing to show before reincarnation (the status ledger of an
+  unbound character is an empty form), so it now runs the boot sequence instead — which
+  doubles as a way back in if the automatic trigger ever fails to fire.
+- **`TextSpeed`** (`[System]`, default 1.0, clamped 0..20). A multiplier on the typewriter;
+  0 types nothing and shows the whole text at once. Applied once, in `ShowSystemWindow`
+  before the renderer split, so the built-in panel and the PrismaUI view stay in step.
+- **Clicking a panel skips the rest of its reveal**, in both renderers. The buttons are
+  hidden until the reveal finishes, so the skip click can never also press one.
+
 ## [0.7.0] — 2026-08-06
 
 The System starts giving you work: kill objectives on its own schedule, threat readings

@@ -21,6 +21,23 @@ namespace Isekai::Config {
     // them greyed with a "requires HERO/ASCENDED" hint. Default false (show greyed).
     [[nodiscard]] bool HideSealedNodes();
 
+    // Let the System bind itself the first time the player is in control of the world.
+    // Default true. Off means it waits for the System hotkey instead — the answer to
+    // alternate starts that open with a prologue somewhere the boot sequence does not
+    // belong (a modern-world intro, a dream, a prison cell), which we cannot detect and
+    // the player can.
+    [[nodiscard]] bool AutoStart();
+
+    // Multiplier on the typewriter that reveals panel text. 1.0 = as written, 2.0 =
+    // twice as fast, 0 = no typing at all. Clamped to 0..20.
+    //
+    // This exists for the second playthrough and for anyone testing a modlist: the
+    // reveal is a story beat exactly once, and a tester who restarts twenty times reads
+    // the same boot sequence twenty times. A panel can also be clicked to skip its
+    // reveal, which no setting can replace — but a setting is what stops the mod from
+    // being disabled between tests.
+    [[nodiscard]] float TextSpeed();
+
     // The key that opens the [ SYSTEM ] menu, as a DirectInput scan code. Default 0x1F
     // (S). Read once at load; the hotkey is registered from it.
     [[nodiscard]] std::uint32_t SystemMenuKey();

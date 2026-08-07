@@ -1,5 +1,6 @@
 #include "UI/SystemWindow.h"
 
+#include "Config.h"
 #include "Sounds.h"
 #include "UI/Overlay.h"
 #include "UI/Prisma.h"
@@ -37,6 +38,18 @@ namespace Isekai::UI {
         std::atomic<bool> g_open{ false };
 
         constexpr float kFadeInSeconds = 0.30f;
+
+        // Fast enough that no body finishes anything but instantly, without being an
+        // infinity that arithmetic downstream has to survive.
+        constexpr float kInstantReveal = 1.0e6f;
+
+        // A caller's typing speed after Config::TextSpeed. Callers that already want an
+        // instant panel (the status ledger, the self-test report) pass a huge rate and
+        // stay instant at any multiplier.
+        [[nodiscard]] float RevealRate(float a_charsPerSec) {
+            const float speed = Config::TextSpeed();
+            return speed <= 0.0f ? kInstantReveal : a_charsPerSec * speed;
+        }
 
         // Called from the render thread once a button was clicked. Hands the answer
         // back to the main thread, where touching game state is legal.
@@ -218,6 +231,15 @@ namespace Isekai::UI {
             // The reveal starts WITH the fade, not after it: gating it on the fade
             // made even instant-reveal panels (the status ledger) sit visibly empty
             // for a third of a second before any content appeared.
+            //
+            // A click while it is still typing skips to the full text. The buttons are
+            // hidden until the reveal finishes, so that click can never also press one.
+            const float fullReveal =
+                static_cast<float>(g_win.body.size() + 1) / g_win.revealCharsPerSec;
+            if (g_win.elapsed < fullReveal && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                g_win.elapsed = fullReveal;
+            }
+
             const auto revealed =
                 static_cast<std::size_t>(g_win.elapsed * g_win.revealCharsPerSec);
             const bool  bodyComplete = revealed >= g_win.body.size();
@@ -613,6 +635,9 @@ namespace Isekai::UI {
                           std::vector<Choice> a_choices,
                           std::function<void(int)> a_onSelect, float a_revealCharsPerSec,
                           float a_width, Emblem a_emblem) {
+        // The one place the speed setting is applied, so it reaches both renderers.
+        a_revealCharsPerSec = RevealRate(a_revealCharsPerSec);
+
         // Optional web renderer: hand the whole panel to PrismaUI when the patch is live.
         // It owns focus/pause and calls the selection back on the main thread — the ImGui
         // path below (state, SetGameHold, DrawPanel) is skipped entirely.

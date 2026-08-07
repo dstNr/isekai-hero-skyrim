@@ -497,6 +497,14 @@ namespace Isekai::Progression {
                 return;
             }
 
+            // Nothing to report before the System has bound itself — the ledger would be
+            // an empty form. The key boots it instead, which is what AutoStart = 0 leans
+            // on and a way back in if the automatic trigger never fired.
+            if (!GetState().reincarnated) {
+                TriggerReincarnation();
+                return;
+            }
+
             // The dedicated, richer status screen when the PrismaUI patch is present;
             // the monospace ImGui ledger below otherwise.
             if (UI::Prisma::Active()) {

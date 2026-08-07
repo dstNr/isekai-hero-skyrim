@@ -13,6 +13,8 @@ namespace Isekai::Config {
         constexpr const char* kIniPath = "Data\\SKSE\\Plugins\\IsekaiHero.ini";
 
         bool          g_hideSealedNodes = false;
+        bool          g_autoStart = true;
+        float         g_textSpeed = 1.0f;
         std::uint32_t g_systemMenuKey = 0x1F;       // DIK_S
         std::uint32_t g_systemMenuModifier = 0x36;  // DIK_RSHIFT
         std::uint16_t g_dormantHeroLevel = 25;
@@ -109,6 +111,16 @@ namespace Isekai::Config {
             }
         }
 
+        // A speed multiplier, 0..20. 0 is legal and means "no typewriter at all".
+        [[nodiscard]] float AsSpeed(const std::string& a_val, float a_def) {
+            try {
+                const float f = std::stof(a_val);
+                return (f >= 0.0f && f <= 20.0f) ? f : a_def;
+            } catch (...) {
+                return a_def;
+            }
+        }
+
         // A character level, 1..1000. Garbage or an out-of-range number keeps the
         // default rather than producing a threshold that can never be reached.
         [[nodiscard]] std::uint16_t AsLevel(const std::string& a_val, std::uint16_t a_def) {
@@ -124,6 +136,8 @@ namespace Isekai::Config {
     void Load() {
         // Defaults, overwritten only by an explicit key below.
         g_hideSealedNodes = false;
+        g_autoStart = true;
+        g_textSpeed = 1.0f;
         g_systemMenuKey = 0x1F;       // DIK_S
         g_systemMenuModifier = 0x36;  // DIK_RSHIFT
         g_dormantHeroLevel = 25;
@@ -162,6 +176,10 @@ namespace Isekai::Config {
             const std::string val = Trim(line.substr(eq + 1));
             if (key == "hidesealednodes") {
                 g_hideSealedNodes = AsBool(val);
+            } else if (key == "autostart") {
+                g_autoStart = AsBool(val);
+            } else if (key == "textspeed") {
+                g_textSpeed = AsSpeed(val, g_textSpeed);
             } else if (key == "systemmenukey") {
                 g_systemMenuKey = AsScanCode(val, g_systemMenuKey);
             } else if (key == "systemmenumodifier") {
@@ -214,11 +232,13 @@ namespace Isekai::Config {
             g_dormantAscendedLevel = static_cast<std::uint16_t>(g_dormantHeroLevel + 1);
         }
 
-        logger::info("Config: HideSealedNodes={}, SystemMenuKey={}, SystemMenuModifier={}, "
+        logger::info("Config: AutoStart={}, TextSpeed={}, "
+                     "HideSealedNodes={}, SystemMenuKey={}, SystemMenuModifier={}, "
                      "DormantHeroLevel={}, DormantAscendedLevel={}, StorageCodex={}, "
                      "SkyrimNetIntegration={}, ThreatLabels={} (targets={}, range={}, key={}), "
                      "FirstTaskHours={}, TaskIntervalHours={}, QuestRerollButton={}, "
                      "SelfTestKey={}, LogInputDiagnostics={}",
+                     g_autoStart, g_textSpeed,
                      g_hideSealedNodes, KeyName(g_systemMenuKey), KeyName(g_systemMenuModifier),
                      g_dormantHeroLevel, g_dormantAscendedLevel, g_storageCodex,
                      g_skyrimNetIntegration, g_threatLabels,
@@ -249,6 +269,14 @@ namespace Isekai::Config {
 
     bool HideSealedNodes() {
         return g_hideSealedNodes;
+    }
+
+    bool AutoStart() {
+        return g_autoStart;
+    }
+
+    float TextSpeed() {
+        return g_textSpeed;
     }
 
     std::uint32_t SystemMenuKey() {
