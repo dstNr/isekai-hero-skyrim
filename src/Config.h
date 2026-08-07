@@ -17,6 +17,12 @@ namespace Isekai::Config {
     // thinks, and a bare number in the log does not make that obvious.
     [[nodiscard]] std::string KeyName(std::uint32_t a_scanCode);
 
+    // Language code for the translation file at
+    // Data\SKSE\Plugins\IsekaiHero\lang\<code>.txt. Default "en", which loads nothing
+    // and leaves every string as it ships. A missing file falls back to English rather
+    // than failing, and so does every key a translation does not cover.
+    [[nodiscard]] const std::string& Language();
+
     // Skill tree: hide nodes gated above the player's rebirth tier instead of showing
     // them greyed with a "requires HERO/ASCENDED" hint. Default false (show greyed).
     [[nodiscard]] bool HideSealedNodes();

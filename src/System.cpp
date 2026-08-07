@@ -1,6 +1,7 @@
 #include "System.h"
 
 #include "Config.h"
+#include "Loc.h"
 #include "CraftHooks.h"
 #include "Passives.h"
 #include "Plugin.h"
@@ -510,8 +511,9 @@ namespace Isekai {
                     warned = true;
                     logger::warn("Reincarnation held: VR without an active PrismaUI view — the "
                                  "ImGui UI is disabled in VR, so the menu needs PrismaUI.");
-                    SystemMsg("[ SYSTEM ] Isekai Hero needs PrismaUI (1.5.0 VR build) to show "
-                              "its menu in VR.");
+                    SystemMsg(L("vr.needsPrisma",
+                                "[ SYSTEM ] Isekai Hero needs PrismaUI (1.5.0 VR build) to "
+                                "show its menu in VR."));
                 }
                 return;
             }
@@ -521,9 +523,13 @@ namespace Isekai {
             logger::info("Reincarnation triggered — System boot sequence");
 
             // Solo-Leveling style boot: paced [SYSTEM] messages, then the rank menu.
-            SystemMsg("[ SYSTEM ] Soul signature detected...");
-            DelayedMainThread(1500, []() { SystemMsg("[ SYSTEM ] Analyzing dimensional residue..."); });
-            DelayedMainThread(3000, []() { SystemMsg("[ SYSTEM ] Awakening protocol ready."); });
+            SystemMsg(L("boot.1", "[ SYSTEM ] Soul signature detected..."));
+            DelayedMainThread(1500, []() {
+                SystemMsg(L("boot.2", "[ SYSTEM ] Analyzing dimensional residue..."));
+            });
+            DelayedMainThread(3000, []() {
+                SystemMsg(L("boot.3", "[ SYSTEM ] Awakening protocol ready."));
+            });
             DelayedMainThread(4500, []() { ShowPowerSelection(); });
         }
 
@@ -872,6 +878,7 @@ namespace Isekai {
             switch (a_msg->type) {
             case SKSE::MessagingInterface::kDataLoaded:
                 Config::Load();
+                Loc::Load();  // after Config: it reads Config::Language()
                 Plugin::DumpForms();
                 Passives::Install();
                 Sounds::Install();

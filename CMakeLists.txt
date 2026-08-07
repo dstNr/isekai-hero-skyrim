@@ -16,6 +16,8 @@ add_commonlibsse_plugin(
     SOURCES
         src/main.cpp
         src/Config.cpp
+        src/Loc.cpp
+        src/Loc.h
         src/Config.h
         src/System.cpp
         src/System.h

@@ -21,6 +21,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { PRESETS, build as buildPresets } from "./make-presets.mjs";
+import { collect as collectStrings, template as stringTemplate } from "./extract-strings.mjs";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = (p) => readFileSync(join(ROOT, p), "utf8");
@@ -559,6 +560,24 @@ check("ui: the panel's button labels are wrapped in the element their CSS styles
   need(/class="lbl">'\s*\+\s*esc\(b\.label\)/.test(build),
        "buildButtons emits a row label that is not inside a .lbl span");
   return "stacked, clipped, and the span exists";
+});
+
+check("loc: the translation template matches the strings in the source", () => {
+  // The template is what a translator works from, and it is generated. Ship a stale one
+  // and they translate keys that no longer exist while the new ones stay English - and
+  // nothing anywhere says so, because a missing key is DESIGNED to fall back silently.
+  // That safety is exactly why this needs checking from outside.
+  const { found, dupes } = collectStrings();
+  need(dupes.length === 0,
+       `these keys are used with different English text in different places: ` +
+       `${dupes.join(", ")} — one key must mean one string`);
+  for (const [key] of found) {
+    need(/^[a-z][a-z0-9]*(\.[a-z0-9]+)+$/i.test(key),
+         `translation key "${key}" is not in dotted lowercase form (area.thing)`);
+  }
+  need(read("lang/template.txt") === stringTemplate(found),
+       "lang/template.txt is out of date — run node tools/extract-strings.mjs and commit it");
+  return `${found.size} strings`;
 });
 
 check("fomod: the installer offers files that exist, and presets that are current", () => {

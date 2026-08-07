@@ -12,6 +12,7 @@ namespace Isekai::Config {
         // Relative to the game root (where SkyrimSE.exe runs), the standard SKSE layout.
         constexpr const char* kIniPath = "Data\\SKSE\\Plugins\\IsekaiHero.ini";
 
+        std::string   g_language = "en";
         bool          g_hideSealedNodes = false;
         bool          g_autoStart = true;
         float         g_textSpeed = 1.0f;
@@ -210,7 +211,9 @@ namespace Isekai::Config {
             }
             const std::string key = Lower(Trim(line.substr(0, eq)));
             const std::string val = Trim(line.substr(eq + 1));
-            if (key == "hidesealednodes") {
+            if (key == "language") {
+                g_language = Lower(val);
+            } else if (key == "hidesealednodes") {
                 g_hideSealedNodes = AsBool(val);
             } else if (key == "autostart") {
                 g_autoStart = AsBool(val);
@@ -272,14 +275,14 @@ namespace Isekai::Config {
             g_dormantAscendedLevel = static_cast<std::uint16_t>(g_dormantHeroLevel + 1);
         }
 
-        logger::info("Config: AutoStart={}, TextSpeed={}, "
+        logger::info("Config: Language={}, AutoStart={}, TextSpeed={}, "
                      "HideSealedNodes={}, SystemMenuKey={}, SystemMenuModifier={}, "
                      "GamepadMenuButton={}, GamepadMenuModifier={}, "
                      "DormantHeroLevel={}, DormantAscendedLevel={}, StorageCodex={}, "
                      "SkyrimNetIntegration={}, ThreatLabels={} (targets={}, range={}, key={}), "
                      "FirstTaskHours={}, TaskIntervalHours={}, QuestRerollButton={}, "
                      "SelfTestKey={}, LogInputDiagnostics={}",
-                     g_autoStart, g_textSpeed,
+                     g_language, g_autoStart, g_textSpeed,
                      g_hideSealedNodes, KeyName(g_systemMenuKey), KeyName(g_systemMenuModifier),
                      GamepadButtonName(g_padMenuButton), GamepadButtonName(g_padMenuModifier),
                      g_dormantHeroLevel, g_dormantAscendedLevel, g_storageCodex,
@@ -307,6 +310,10 @@ namespace Isekai::Config {
             }
         }
         return hex;
+    }
+
+    const std::string& Language() {
+        return g_language;
     }
 
     bool HideSealedNodes() {
