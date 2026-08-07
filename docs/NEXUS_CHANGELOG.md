@@ -7,6 +7,36 @@ are still in the older, longer style — that is how they already sit on Nexus.)
 
 ---
 
+## 0.7.0
+
+Added: **System Quests** — the System hands you a kill objective on its own schedule, announces it, counts your kills on screen and pays System Points when it is done.
+
+Added: **Threat labels** — a target frame over each enemy with its level, health and a colour-coded TRIVIAL/MANAGEABLE/DANGEROUS/LETHAL verdict; shown for what you aim at and whatever is fighting you.
+
+Added: **The ten System potions** are now buyable in the System Shop — four instant Restoratives and six one-hour Elixirs.
+
+Added: **Shop categories** — Materials, Wealth, Restoratives and Elixirs on their own shelves instead of one long grid.
+
+Added: **Five new skill-tree nodes** (Storm Ward, Warded Mind, Arcane Absorption, Iron Skin, Rapid Recovery) and **mastery tiers** — every utility stat now caps at 10 ranks across five named tiers.
+
+Added: **System Rank** (E through S) with its own insignia in the status panel.
+
+Added: **In-game self-test** that runs after every load and writes a PASS/FAIL report to the log, so a bug report only needs the log file.
+
+Fixed: two milestones (*Hitting the Books*, *Trinity Restored*) never granted their Shock Resist bonus — both now pay out retroactively on the next load.
+
+Fixed: skill-tree node names no longer overlap each other or the links between them.
+
+Fixed: panel buttons no longer draw their icon and label over the frame when a row is crowded.
+
+Changed: the Dimensional Storage now starts empty for every blessing and is filled from the shop's material packs; old saves keep what they hold.
+
+Changed: the System Analysis skill-tree node and its `V` hotkey are gone — the threat reading is always on instead. A save that bought the node gets its 10 System Points back.
+
+Changed: icons and panel text are easier to read — every icon now stands on a lit plate, and panel labels, values and headings are colour-coded.
+
+---
+
 ## 0.6.1
 
 Fixed: the System hotkey did nothing in Skyrim VR (a bug introduced by 0.6.0's own VR crash fix) — it now opens the menu as expected.
