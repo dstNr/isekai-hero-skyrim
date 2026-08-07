@@ -52,4 +52,12 @@ namespace Isekai::UI::Prisma {
 
     // --- Level-up flourish (non-interactive overlay, no pause) ---
     void Flourish(std::string a_title, std::string a_subtitle);
+
+    // Forward a controller button into the view: "a", "b", "up", "down", "left", "right".
+    // No-op unless a view exists and currently holds focus.
+    //
+    // PrismaUI hands its view the keyboard and the mouse, but not a gamepad, so this is
+    // the only way a controller reaches the web UI. Safe to call from the input thread —
+    // it marshals to the main thread itself.
+    void SendGamepad(const char* a_button);
 }

@@ -552,6 +552,28 @@ check("ui: the panel's button labels are wrapped in the element their CSS styles
   return "stacked, clipped, and the span exists";
 });
 
+check("ui: the controller's focus ring can reach every kind of target", () => {
+  // A pad has no cursor, so in the web view it navigates by moving focus between the
+  // elements named in padTargets(). Those are class selectors written by hand against
+  // markup built somewhere else in the same file — rename `.card` in renderShop and the
+  // shop silently stops being reachable by controller, with nothing failing anywhere.
+  // Nobody here plays on a pad, so nobody would notice.
+  const view = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  const sel = view.match(/querySelectorAll\("([^"]*\.btn[^"]*)"\)/);
+  need(sel, "padTargets no longer queries a selector list — controller navigation gone?");
+  const classes = sel[1].split(",").map((s) => s.trim().replace(/^\./, ""));
+  need(classes.length >= 5,
+       `padTargets is down to ${classes.length} selectors; it used to cover buttons, ` +
+       "tree nodes, shop cards, shelves and mastery rows");
+  for (const c of classes) {
+    need(new RegExp(`class(Name)?\\s*=?\\s*"${c}[ "]`).test(view),
+         `padTargets looks for .${c}, but nothing in the view ever carries that class`);
+  }
+  need(/\.padfocus\s*\{/.test(view),
+       "no .padfocus rule — the controller would move an invisible focus");
+  return `${classes.length} selectors, all present`;
+});
+
 check("ui: both renderers colour a System Rank the same", () => {
   // The rank ramp is written twice — once as ImVec4 in Style::RankColor, once as CSS in
   // the view — because neither renderer can read the other's. Two screens showing the

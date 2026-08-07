@@ -458,6 +458,18 @@ namespace Isekai::UI::Prisma {
         Sounds::Play(Sounds::Sfx::WindowOpen);
     }
 
+    void SendGamepad(const char* a_button) {
+        if (!Active() || !a_button || !g_api || !g_api->HasFocus(g_view)) {
+            return;
+        }
+        // Called from the game's input thread; every other call into the view runs on the
+        // main thread, so this one queues rather than making that assumption twice.
+        std::string call = std::string("window.isekaiPad('") + a_button + "')";
+        if (auto* task = SKSE::GetTaskInterface()) {
+            task->AddTask([call = std::move(call)]() { Invoke(call); });
+        }
+    }
+
     void Flourish(std::string a_title, std::string a_subtitle) {
         if (!Active()) {
             return;

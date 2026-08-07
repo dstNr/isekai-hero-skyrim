@@ -22,6 +22,11 @@ All notable changes to Isekai Hero are documented here. The format follows
     a gamepad button arrives as its XInput mask, and those collide head-on with keyboard
     scan codes — D-pad up is `0x0001` and so is ESCAPE, Start is `0x0010` and so is Q. A
     single map keyed by the bare code would have silently made them the same hotkey.
+  - **The PrismaUI patch is covered too**, by the opposite mechanism: PrismaUI hands its
+    view the keyboard and mouse but not a controller, so the plugin forwards the pad's
+    buttons into the page and the page moves DOM **focus** — D-pad steps through targets,
+    A activates, B closes. A page has elements to focus; an ImGui canvas does not. Each
+    renderer gets whichever is the cheap answer for it.
 
 ## [0.7.1] — 2026-08-07
 

@@ -77,6 +77,11 @@
   @keyframes riseIn { from { opacity: 0; transform: translateY(16px) scale(0.985); }
                       to   { opacity: 1; transform: none; } }
 
+  /* Where the controller currently is. Loud on purpose: on a pad there is no cursor to
+     look for, so if this is subtle the screen is unusable. */
+  .padfocus { outline: 2px solid var(--accent) !important; outline-offset: 2px;
+              box-shadow: 0 0 14px rgba(90, 210, 255, .55) !important; }
+
   .bracket { position: absolute; width: 22px; height: 22px; border: 1.5px solid var(--accent);
              opacity: 0.9; pointer-events: none; }
   .bracket.tl { top: 9px; left: 9px; border-right: 0; border-bottom: 0; }
@@ -802,7 +807,57 @@ const ZONE_ORDER = ["CORE", "MIGHT", "SHADOW", "ARCANA"];
 
 function showScreen(name) {
   ["tree", "panel", "flourish", "status", "shop"].forEach(s => $("screen-" + s).classList.toggle("active", s === name));
+  padReset();
 }
+
+/* ---------------- GAMEPAD ----------------
+   PrismaUI gives its view the keyboard and the mouse but not a controller, so the plugin
+   forwards the pad's buttons here (Prisma::SendGamepad, called from src/UI/Input.cpp).
+
+   Focus navigation, not a synthetic cursor: this is a DOM, every target is already an
+   element, and moving focus is what a page does natively. The built-in ImGui renderer
+   had to do the opposite for the opposite reason — its skill tree is a canvas with no
+   elements in it to focus. Same feature, two mechanisms, each the cheap one for its
+   renderer. */
+let padIndex = -1;
+
+function padTargets() {
+  const screen = document.querySelector(".screen.active");
+  if (!screen) return [];
+  return [...screen.querySelectorAll(".btn, .iconBtn, .node, .card, .shelf, .mrow")]
+    .filter(el => el.offsetParent !== null);
+}
+
+function padReset() {
+  padIndex = -1;
+  document.querySelectorAll(".padfocus").forEach(el => el.classList.remove("padfocus"));
+}
+
+function padMove(step) {
+  const t = padTargets();
+  if (!t.length) return;
+  padIndex = (padIndex + step + t.length) % t.length;
+  t.forEach((el, i) => el.classList.toggle("padfocus", i === padIndex));
+  t[padIndex].scrollIntoView({ block: "nearest" });
+  /* Tooltips hang off mouseenter, which a pad never sends. */
+  t[padIndex].dispatchEvent(new MouseEvent("mouseenter", { bubbles: false }));
+}
+
+window.isekaiPad = (btn) => {
+  switch (btn) {
+    case "up": case "left": padMove(-1); break;
+    case "down": case "right": padMove(1); break;
+    case "a": {
+      const t = padTargets();
+      if (padIndex < 0) { padMove(1); break; }   // first press only takes focus
+      if (t[padIndex]) t[padIndex].click();
+      break;
+    }
+    case "b":
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      break;
+  }
+};
 
 /* Scale the fixed tree canvas to the viewport — shrink freely, but never blow it up
    past a comfortable size (the old min(vw/W, vh/H) reached ~1.9x on a 1440p screen
