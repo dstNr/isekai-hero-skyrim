@@ -4,12 +4,14 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
-## [Unreleased]
+## [0.7.1] — 2026-08-07
 
-Two settings and a click, all three from the same piece of player feedback: a tester who
-runs the mod through a modlist reads the same boot sequence on every restart, and an
-alternate start with a modern-world prologue puts that sequence somewhere it does not
-belong.
+A player-feedback release, and every item in it comes from one report. A tester running
+the mod through a modlist reads the same boot sequence on every restart; an alternate
+start with a modern-world prologue puts that sequence somewhere it does not belong; and
+the threat labels danced over anything that moved.
+
+No save-format change — 0.7.0 saves load untouched.
 
 ### Added
 - **`AutoStart`** (`[System]`, default 1). Off, the System does not bind itself when the

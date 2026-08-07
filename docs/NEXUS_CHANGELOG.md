@@ -7,6 +7,18 @@ are still in the older, longer style — that is how they already sit on Nexus.)
 
 ---
 
+## 0.7.1
+
+Fixed: **threat labels no longer hop around** over a moving enemy — the frame now sits over the head instead of dancing with the animation.
+
+Added: **AutoStart** setting — set it to 0 and the System waits for your hotkey instead of booting itself, for alternate starts that begin somewhere the boot sequence does not belong.
+
+Added: **TextSpeed** setting — speed the System's typewriter up, or set it to 0 to have panels appear instantly.
+
+Added: **clicking a panel skips the rest of its text**, in both the built-in and the PrismaUI interface.
+
+---
+
 ## 0.7.0
 
 Added: **System Quests** — the System hands you a kill objective on its own schedule, announces it, counts your kills on screen and pays System Points when it is done.
