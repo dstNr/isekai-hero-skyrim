@@ -76,7 +76,26 @@ if ($leak -gt 0) { throw "Name scrub failed: '$secret' still present $leak time(
 Write-Host "Name scrub: replaced $hits occurrence(s); DLL is clean."
 
 # --- optional settings ini (ships with defaults; safe to delete in-game) ---
+# Also the FOMOD's "Standard" preset, so a manual install and the recommended
+# installer choice land on byte-identical files.
 Copy-Item (Join-Path $root "IsekaiHero.ini") $plugins
+
+# --- FOMOD installer, and the ini presets it chooses between ---
+# Regenerated here rather than trusted from the repo: the presets are derived from
+# IsekaiHero.ini, and shipping a stale copy would hand players settings that no longer
+# match the file they were generated from.
+& node (Join-Path $root "tools\make-fomod.mjs")
+if ($LASTEXITCODE -ne 0) { throw "FOMOD generation failed." }
+Copy-Item (Join-Path $root "fomod") $stage -Recurse
+Copy-Item (Join-Path $root "fomod-presets") $stage -Recurse
+
+# --- PrismaUI view, as an installer option rather than a separate download ---
+# Only the HTML: the installer points the PrismaUI option at the icon folder staged
+# above, so the 74 icons are carried once and installed to both places. That is nearly
+# the whole size of what used to be two archives.
+$prismaView = Join-Path $stage "PrismaUI\views\IsekaiHero"
+New-Item -ItemType Directory -Force $prismaView | Out-Null
+Copy-Item (Join-Path $root "prisma-patch\PrismaUI\views\IsekaiHero\index.html") $prismaView
 
 # --- panel icons ---
 $icons = Join-Path $plugins "IsekaiHero\icons"

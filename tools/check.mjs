@@ -20,6 +20,7 @@
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { PRESETS, build as buildPresets } from "./make-presets.mjs";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = (p) => readFileSync(join(ROOT, p), "utf8");
@@ -32,6 +33,14 @@ function check(name, fn) {
   checks++;
   try {
     const detail = fn();
+    // An async check would return a Promise here, its assertions would run after this
+    // file had already printed its summary, and a failing one would surface as an
+    // unhandled rejection long after "40/40 checks passed". A check that cannot fail is
+    // worse than no check, so refuse the shape outright.
+    if (detail && typeof detail.then === "function") {
+      fail("this check is async — check() runs synchronously, so nothing it asserts " +
+           "would ever be reported. Import at the top of the file instead.");
+    }
     results.push({ ok: true, name, detail: detail || "" });
   } catch (err) {
     failures++;
@@ -550,6 +559,56 @@ check("ui: the panel's button labels are wrapped in the element their CSS styles
   need(/class="lbl">'\s*\+\s*esc\(b\.label\)/.test(build),
        "buildButtons emits a row label that is not inside a .lbl span");
   return "stacked, clipped, and the span exists";
+});
+
+check("fomod: the installer offers files that exist, and presets that are current", () => {
+  // The installer can only choose files, so every preset is a whole copy of the ini.
+  // Two ways that rots: a source path in ModuleConfig that no longer exists (the manager
+  // aborts the install with an XML error, which is the worst possible first impression),
+  // and a preset generated before the ini last changed (the player picks "Modlist
+  // testing" and silently gets last version's settings). Both are checked by rebuilding
+  // the presets and comparing.
+  const xml = read("fomod/ModuleConfig.xml");
+
+  for (const p of PRESETS) {
+    need(xml.includes(`>${p.name}<`) || xml.includes(`name="${p.name}"`),
+         `preset "${p.name}" is in make-presets.mjs but not in ModuleConfig.xml — ` +
+         "regenerate with node tools/make-fomod.mjs");
+  }
+
+  // Every source path must resolve to something. The archive is staged by package.ps1,
+  // so the repo path differs — this maps the few that are staged from elsewhere and
+  // insists the rest exist as written.
+  const staged = {
+    "IsekaiHero.esp": "plugin/IsekaiHero.esp",
+    "SKSE\\Plugins\\IsekaiHeroSKSE.dll": null,   // build output
+    "SKSE\\Plugins\\IsekaiHero": "icons",        // icons, staged into that folder
+    "SKSE\\Plugins\\IsekaiHero.ini": "IsekaiHero.ini",
+    "Sound": "sounds",
+    "PrismaUI\\views\\IsekaiHero\\index.html":
+      "prisma-patch/PrismaUI/views/IsekaiHero/index.html",
+    "SKSE\\Plugins\\IsekaiHero\\icons": "icons",
+  };
+  const sources = [...new Set([...xml.matchAll(/source="([^"]+)"/g)].map((m) => m[1]))];
+  need(sources.length >= 5, "ModuleConfig lists almost nothing — generator stale?");
+  for (const src of sources) {
+    const mapped = src in staged ? staged[src] : src.replace(/\\/g, "/");
+    if (mapped === null) continue;
+    need(existsSync(join(ROOT, mapped)),
+         `ModuleConfig installs "${src}", which resolves to nothing in the repo ` +
+         `(looked for ${mapped})`);
+  }
+
+  // Regenerating must be a no-op: if it is not, the shipped presets are stale.
+  const before = PRESETS.map((p) => read(`fomod-presets/${p.dir}/IsekaiHero.ini`));
+  buildPresets();
+  const after = PRESETS.map((p) => read(`fomod-presets/${p.dir}/IsekaiHero.ini`));
+  for (let i = 0; i < PRESETS.length; i++) {
+    need(before[i] === after[i],
+         `the "${PRESETS[i].name}" preset is out of date with IsekaiHero.ini — ` +
+         "run node tools/make-fomod.mjs and commit the result");
+  }
+  return `${PRESETS.length} presets, ${sources.length} sources`;
 });
 
 check("ui: the controller's focus ring can reach every kind of target", () => {

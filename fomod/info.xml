@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<fomod>
+  <Name>Isekai Hero</Name>
+  <Author>dstNr</Author>
+  <Website>https://www.nexusmods.com/skyrimspecialedition/mods/185548</Website>
+  <Description>
+    Reincarnated into Skyrim with a System: a skill tree paid for in System Points,
+    kill objectives handed out on the System's own schedule, threat readings over your
+    enemies, a pocket-dimension storage and a shop to fill it from.
+  </Description>
+  <Groups>
+    <element>Gameplay</element>
+    <element>User Interface</element>
+  </Groups>
+</fomod>
