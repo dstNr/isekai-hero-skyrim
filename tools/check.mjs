@@ -723,10 +723,14 @@ check("config: the ini and Config::Load name the same settings", () => {
   // A setting documented in the ini that Config::Load does not parse is invisible: the
   // player writes it, the file is read, nothing happens, and no log line says why. The
   // reverse — a parsed key the ini never mentions — is a feature nobody can find.
+  // Split on either line ending and strip comments with [\s\S] rather than `.`, because
+  // `.` does not match \r: on a CRLF file "; note = x\r" left `.*$` unable to anchor, the
+  // comment survived stripping, and every commented line containing an "=" was reported
+  // as a dead setting. Editing the ini in a Windows editor was enough to trigger it.
   const ini = read("IsekaiHero.ini");
   const documented = new Set(
-    ini.split("\n")
-       .map((l) => l.replace(/[;#].*$/, "").trim())
+    ini.split(/\r?\n/)
+       .map((l) => l.replace(/[;#][\s\S]*$/, "").trim())
        .filter((l) => l.includes("="))
        .map((l) => l.slice(0, l.indexOf("=")).trim().toLowerCase())
        .filter(Boolean));

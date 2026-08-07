@@ -6,6 +6,19 @@ All notable changes to Isekai Hero are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- **The storage codex finally does something** (#6, #11). It is used from inside the
+  Inventory menu — that is where a potion is always drunk — and the old handler acted
+  right there: it called `Open()` straight out of the event, on the event thread, with the
+  inventory still on screen. A container menu cannot open over an inventory menu, so the
+  whole sequence ran, logged nothing and produced no visible result. It now marks itself
+  pending and opens on the next menu close, on the main thread.
+  - It opens the **System menu** rather than the chest. The storage is one button inside
+    it, so this is strictly more than it did before — and it is the only way in that needs
+    no key at all, which is what Skyrim VR and anyone with a colliding hotkey need (#11).
+  - Still `StorageCodex = 0` by default, but for a different reason: no longer "it does
+    nothing", now "it has not been tested in a running game yet".
+
 ### Added
 - **Controller support for the interface** (#2). Hold **LB** and tap **Back** to open the
   System menu; inside a panel the **left stick** moves the cursor, **A** clicks and **B**

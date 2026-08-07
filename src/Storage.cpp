@@ -3,10 +3,12 @@
 #include "Config.h"
 #include "CraftHooks.h"
 #include "Plugin.h"
+#include "Progression.h"
 #include "Sounds.h"
 #include "System.h"
 #include "UI/SystemWindow.h"
 
+#include <atomic>
 #include <map>
 #include <set>
 #include <string_view>
@@ -308,7 +310,37 @@ namespace Isekai::Storage {
         // undo that consumption immediately: hand back the same token, so from the
         // player's side it reads as "drink it, the chest opens, the token never runs
         // out" rather than a one-time-use item.
-        class CodexWatcher : public RE::BSTEventSink<RE::TESEquipEvent> {
+        // Set the moment the codex is used, cleared when the System menu actually opens.
+        std::atomic<bool> g_codexPending{ false };
+
+        // Open the System menu for a codex that has been used — but only once no game
+        // menu still holds the screen.
+        //
+        // THIS IS WHY THE CODEX APPEARED TO DO NOTHING. It is used from inside the
+        // Inventory menu, which is where a potion is always drunk, and the old handler
+        // acted right there: it called Open() straight out of the event, on the event
+        // thread, while the inventory was still up. A container menu cannot open over an
+        // inventory menu, so the whole sequence ran, logged nothing, and produced no
+        // visible result — the failure mode of a feature that is wired correctly and
+        // fires at the wrong moment.
+        void ServeCodexIfPending() {
+            if (!g_codexPending.load(std::memory_order_acquire)) {
+                return;
+            }
+            auto* ui = RE::UI::GetSingleton();
+            if (!ui || ui->GameIsPaused()) {
+                return;  // a menu still owns the screen; wait for the next close
+            }
+            g_codexPending.store(false, std::memory_order_release);
+            Progression::OpenStatusPanel();
+        }
+
+        // The codex opens the SYSTEM MENU, not the chest directly. The storage sits one
+        // button inside it, so this is strictly more than the chest was — and it is the
+        // only way in that needs no key at all, which is what Skyrim VR (no overlay, no
+        // usable hotkey) and anyone whose hotkey collides actually need.
+        class CodexWatcher : public RE::BSTEventSink<RE::TESEquipEvent>,
+                             public RE::BSTEventSink<RE::MenuOpenCloseEvent> {
         public:
             static CodexWatcher* GetSingleton() {
                 static CodexWatcher singleton;
@@ -318,12 +350,34 @@ namespace Isekai::Storage {
             RE::BSEventNotifyControl ProcessEvent(
                 const RE::TESEquipEvent* a_event,
                 RE::BSTEventSource<RE::TESEquipEvent>*) override {
-                if (a_event && a_event->equipped && g_codexToken &&
-                    a_event->baseObject == g_codexToken->GetFormID()) {
-                    if (auto* player = RE::PlayerCharacter::GetSingleton()) {
-                        player->AddObjectToContainer(g_codexToken, nullptr, 1, nullptr);
-                    }
-                    Open();
+                if (!a_event || !a_event->equipped || !g_codexToken ||
+                    a_event->baseObject != g_codexToken->GetFormID()) {
+                    return RE::BSEventNotifyControl::kContinue;
+                }
+                g_codexPending.store(true, std::memory_order_release);
+
+                // Everything that touches the player runs on the main thread. The old
+                // code did this inline on the event thread, which is the second half of
+                // the same bug.
+                if (auto* task = SKSE::GetTaskInterface()) {
+                    task->AddTask([]() {
+                        if (auto* player = RE::PlayerCharacter::GetSingleton();
+                            player && g_codexToken) {
+                            player->AddObjectToContainer(g_codexToken, nullptr, 1, nullptr);
+                        }
+                        // If the codex was used with no menu open at all — a hotbar mod,
+                        // a favourite — there is no close event coming. Serve it now.
+                        ServeCodexIfPending();
+                    });
+                }
+                return RE::BSEventNotifyControl::kContinue;
+            }
+
+            RE::BSEventNotifyControl ProcessEvent(
+                const RE::MenuOpenCloseEvent* a_event,
+                RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override {
+                if (a_event && !a_event->opening) {
+                    ServeCodexIfPending();
                 }
                 return RE::BSEventNotifyControl::kContinue;
             }
@@ -737,6 +791,11 @@ namespace Isekai::Storage {
         }
         if (auto* holder = RE::ScriptEventSourceHolder::GetSingleton()) {
             holder->AddEventSink<RE::TESEquipEvent>(CodexWatcher::GetSingleton());
+        }
+        // The codex is used inside the Inventory menu, so it also needs to know when a
+        // menu closes — that is the moment it can actually open anything.
+        if (auto* ui = RE::UI::GetSingleton()) {
+            ui->AddEventSink<RE::MenuOpenCloseEvent>(CodexWatcher::GetSingleton());
         }
         logger::info("Storage: reachable via the System panel; crafting borrows its inventory");
     }
