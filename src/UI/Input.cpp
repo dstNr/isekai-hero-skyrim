@@ -30,6 +30,39 @@ namespace Isekai::UI {
         // position ourselves. Feels roughly like the vanilla menu cursor.
         constexpr float kCursorSpeed = 1.6f;
 
+        // Left stick -> cursor, per event. The stick reports a position, not a motion,
+        // so this is a speed: how far the cursor travels while the stick is held all the
+        // way over. The deadzone is what stops a worn stick from drifting the cursor
+        // across the screen on its own.
+        constexpr float kStickSpeed = 13.0f;
+        constexpr float kStickDeadzone = 0.18f;
+
+        // Hotkeys are keyed by DEVICE and code, never by code alone. A gamepad button
+        // arrives as its XInput mask — D-pad up is 0x0001, Start is 0x0010 — and those
+        // collide head-on with keyboard scan codes, where 0x0001 is ESCAPE and 0x0010 is
+        // Q. One map keyed by the bare code would quietly make "D-pad up" and "ESC" the
+        // same hotkey, and whichever registered last would win.
+        [[nodiscard]] constexpr std::uint32_t HotkeyId(RE::INPUT_DEVICE a_device,
+                                                       std::uint32_t    a_code) {
+            return (static_cast<std::uint32_t>(a_device) << 16) | (a_code & 0xFFFFu);
+        }
+
+        // A gamepad button in the same encoding, for callers that speak XInput masks.
+        [[nodiscard]] constexpr std::uint32_t PadId(std::uint32_t a_button) {
+            return HotkeyId(RE::INPUT_DEVICE::kGamepad, a_button);
+        }
+
+        // B closes our panels, the way ESC and Tab do on a keyboard.
+        constexpr std::uint32_t kPadB = 0x2000;
+
+        // A HotkeyId back in words, for the log.
+        [[nodiscard]] std::string HotkeyName(std::uint32_t a_id) {
+            const auto code = a_id & 0xFFFFu;
+            return (a_id >> 16) == static_cast<std::uint32_t>(RE::INPUT_DEVICE::kGamepad)
+                       ? "pad " + Config::GamepadButtonName(code)
+                       : Config::KeyName(code);
+        }
+
         // Input events arrive on the main thread, ImGui is fed on the render
         // thread, so everything crossing that line sits behind this lock.
         struct Pending {
@@ -55,30 +88,31 @@ namespace Isekai::UI {
 
         struct Hotkey {
             std::function<void()> fn;
-            std::uint32_t         modifier = 0;  // scan code that must be held; 0 = none
+            std::uint32_t         modifier = 0;  // HotkeyId that must be held; 0 = none
         };
 
         std::mutex                               g_hotkeyMutex;
         std::unordered_map<std::uint32_t, Hotkey> g_hotkeys;
 
-        // Keyboard keys currently held down, maintained from the same event stream
-        // the hotkeys use — so modifier checks cannot drift from what the game sees.
+        // Buttons currently held down, keyboard and gamepad alike, maintained from the
+        // same event stream the hotkeys use — so modifier checks cannot drift from what
+        // the game sees. Keyed by HotkeyId for the reason given above.
         std::mutex                        g_heldMutex;
         std::unordered_map<std::uint32_t, bool> g_held;
 
-        [[nodiscard]] bool IsHeld(std::uint32_t a_scanCode) {
+        [[nodiscard]] bool IsHeld(std::uint32_t a_id) {
             std::scoped_lock lock(g_heldMutex);
-            const auto       it = g_held.find(a_scanCode);
+            const auto       it = g_held.find(a_id);
             return it != g_held.end() && it->second;
         }
 
         // Input events arrive on the game's input thread; hand the callback to the
         // main thread before it touches anything.
-        void FireHotkey(std::uint32_t a_scanCode) {
+        void FireHotkey(std::uint32_t a_id) {
             std::function<void()> fn;
             {
                 std::scoped_lock lock(g_hotkeyMutex);
-                const auto       it = g_hotkeys.find(a_scanCode);
+                const auto       it = g_hotkeys.find(a_id);
                 if (it == g_hotkeys.end()) {
                     return;
                 }
@@ -144,22 +178,25 @@ namespace Isekai::UI {
                         }
                     }
 
-                    if (event->GetDevice() != RE::INPUT_DEVICE::kKeyboard) {
+                    const auto device = event->GetDevice();
+                    if (device != RE::INPUT_DEVICE::kKeyboard &&
+                        device != RE::INPUT_DEVICE::kGamepad) {
                         continue;
                     }
+                    const std::uint32_t id = HotkeyId(device, button->GetIDCode());
 
-                    // Held-key bookkeeping first, so a modifier registers before the
-                    // key it modifies is evaluated in the same batch.
+                    // Held-button bookkeeping first, so a modifier registers before the
+                    // button it modifies is evaluated in the same batch.
                     {
                         std::scoped_lock lock(g_heldMutex);
-                        g_held[button->GetIDCode()] = button->IsPressed();
+                        g_held[id] = button->IsPressed();
                     }
 
                     if (!button->IsDown()) {
                         continue;
                     }
 
-                    FireHotkey(button->GetIDCode());
+                    FireHotkey(id);
                 }
 
                 if (!IsCapturingInput()) {
@@ -169,6 +206,36 @@ namespace Isekai::UI {
                 std::scoped_lock lock(g_mutex);
 
                 for (auto* event = *a_event; event; event = event->next) {
+                    // Gamepad: the left stick drives our cursor and A is a left click.
+                    //
+                    // Deliberately a cursor rather than ImGui's gamepad focus navigation.
+                    // Focus nav only reaches widgets, and the skill tree is a pannable
+                    // canvas with no widgets in it at all — a controller player would have
+                    // got the panels and not the tree. A cursor covers every screen we
+                    // have with one mechanism.
+                    if (event->GetDevice() == RE::INPUT_DEVICE::kGamepad) {
+                        if (event->GetEventType() == RE::INPUT_EVENT_TYPE::kThumbstick) {
+                            auto* stick = static_cast<RE::ThumbstickEvent*>(event);
+                            if (stick->IsLeft()) {
+                                const float x = stick->xValue;
+                                const float y = stick->yValue;
+                                if (std::abs(x) > kStickDeadzone) {
+                                    g_pending.dx += x * kStickSpeed;
+                                }
+                                if (std::abs(y) > kStickDeadzone) {
+                                    g_pending.dy -= y * kStickSpeed;  // stick up is +y
+                                }
+                            }
+                        } else if (event->GetEventType() == RE::INPUT_EVENT_TYPE::kButton) {
+                            if (auto* button = event->AsButtonEvent();
+                                button && button->GetIDCode() == 0x1000) {  // A
+                                g_pending.buttons.emplace_back(ImGuiMouseButton_Left,
+                                                               button->IsPressed());
+                            }
+                        }
+                        continue;
+                    }
+
                     if (event->GetDevice() != RE::INPUT_DEVICE::kMouse) {
                         continue;
                     }
@@ -297,8 +364,12 @@ namespace Isekai::UI {
                 constexpr std::uint32_t kEsc = 0x01;  // DIK_ESCAPE
                 constexpr std::uint32_t kTab = 0x0F;  // DIK_TAB
                 const bool dismissKey =
-                    a_event->GetDevice() == RE::INPUT_DEVICE::kKeyboard &&
-                    (a_event->GetIDCode() == kEsc || a_event->GetIDCode() == kTab);
+                    (a_event->GetDevice() == RE::INPUT_DEVICE::kKeyboard &&
+                     (a_event->GetIDCode() == kEsc || a_event->GetIDCode() == kTab)) ||
+                    // B is "back" everywhere else in the game; a controller player will
+                    // press it to leave our panel too.
+                    (a_event->GetDevice() == RE::INPUT_DEVICE::kGamepad &&
+                     a_event->GetIDCode() == kPadB);
 
                 if (IsCapturingInput()) {
                     if (dismissKey && a_event->IsDown()) {
@@ -362,7 +433,28 @@ namespace Isekai::UI {
             return;
         }
         std::scoped_lock lock(g_hotkeyMutex);
-        g_hotkeys[a_scanCode] = Hotkey{ std::move(a_fn), a_modifier };
+        g_hotkeys[HotkeyId(RE::INPUT_DEVICE::kKeyboard, a_scanCode)] = Hotkey{
+            std::move(a_fn),
+            a_modifier == 0 ? 0 : HotkeyId(RE::INPUT_DEVICE::kKeyboard, a_modifier)
+        };
+    }
+
+    void RegisterGamepadHotkey(std::uint32_t a_button, std::function<void()> a_fn,
+                               std::uint32_t a_modifier) {
+        if (a_button == 0) {
+            logger::info("UI: no gamepad hotkey (button = 0)");
+            return;
+        }
+        // Same reasoning as ESC and Tab on the keyboard: B closes our panels, so a
+        // hotkey on B would re-open whatever the player just closed.
+        if (a_button == kPadB) {
+            logger::warn("UI: refusing to bind a gamepad hotkey to B — our panels already "
+                         "use it to close");
+            return;
+        }
+        std::scoped_lock lock(g_hotkeyMutex);
+        g_hotkeys[PadId(a_button)] = Hotkey{ std::move(a_fn),
+                                             a_modifier == 0 ? 0 : PadId(a_modifier) };
     }
 
     void LogHotkeys() {
@@ -372,10 +464,10 @@ namespace Isekai::UI {
             return;
         }
         std::string list;
-        for (const auto& [code, hk] : g_hotkeys) {
-            list += (list.empty() ? "" : ", ") + Config::KeyName(code);
+        for (const auto& [id, hk] : g_hotkeys) {
+            list += (list.empty() ? "" : ", ") + HotkeyName(id);
             if (hk.modifier != 0) {
-                list += " + " + Config::KeyName(hk.modifier);
+                list += " + " + HotkeyName(hk.modifier);
             }
         }
         logger::info("UI: {} hotkey(s) armed: {}", g_hotkeys.size(), list);

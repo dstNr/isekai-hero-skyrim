@@ -4,6 +4,25 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [Unreleased]
+
+### Added
+- **Controller support for the interface** (#2). Hold **LB** and tap **Back** to open the
+  System menu; inside a panel the **left stick** moves the cursor, **A** clicks and **B**
+  closes. Both bindings are in the ini (`GamepadMenuButton` / `GamepadMenuModifier`, by
+  name: `A`, `LB`, `Back`, `DPadUp`, …), and `None` switches the controller off.
+  - A cursor rather than ImGui's gamepad focus navigation, deliberately. Focus nav only
+    reaches widgets, and the skill tree is a pannable canvas with no widgets in it — a
+    controller player would have got the panels and not the tree. One mechanism covers
+    every screen.
+  - A combination rather than a single button because a controller has none spare: every
+    face button, both shoulders and both sticks are bound in vanilla. Holding LB fires its
+    own action (a shout) on the way in, which is the price of not stealing a binding.
+  - **The hotkey table now keys on the input device as well as the code.** It had to:
+    a gamepad button arrives as its XInput mask, and those collide head-on with keyboard
+    scan codes — D-pad up is `0x0001` and so is ESCAPE, Start is `0x0010` and so is Q. A
+    single map keyed by the bare code would have silently made them the same hotkey.
+
 ## [0.7.1] — 2026-08-07
 
 A player-feedback release, and every item in it comes from one report. A tester running

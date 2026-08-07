@@ -17,6 +17,8 @@ namespace Isekai::Config {
         float         g_textSpeed = 1.0f;
         std::uint32_t g_systemMenuKey = 0x1F;       // DIK_S
         std::uint32_t g_systemMenuModifier = 0x36;  // DIK_RSHIFT
+        std::uint32_t g_padMenuButton = 0x0020;     // XINPUT_GAMEPAD_BACK
+        std::uint32_t g_padMenuModifier = 0x0100;   // XINPUT_GAMEPAD_LEFT_SHOULDER
         std::uint16_t g_dormantHeroLevel = 25;
         std::uint16_t g_dormantAscendedLevel = 80;
         // Off until the codex actually works: it is handed out, it carries the
@@ -83,6 +85,38 @@ namespace Isekai::Config {
             { "z", 0x2C },
         };
 
+        // XInput button masks, by the names printed on a controller. "LB"/"RB" and
+        // "L3"/"R3" are in there next to the long forms because that is what the buttons
+        // are actually called out loud.
+        constexpr KeyEntry kPadNames[] = {
+            { "a", 0x1000 },      { "b", 0x2000 },      { "x", 0x4000 },
+            { "y", 0x8000 },      { "lb", 0x0100 },     { "rb", 0x0200 },
+            { "leftshoulder", 0x0100 },                 { "rightshoulder", 0x0200 },
+            { "back", 0x0020 },   { "select", 0x0020 }, { "start", 0x0010 },
+            { "l3", 0x0040 },     { "r3", 0x0080 },     { "leftthumb", 0x0040 },
+            { "rightthumb", 0x0080 },
+            { "dpadup", 0x0001 }, { "dpaddown", 0x0002 },
+            { "dpadleft", 0x0004 }, { "dpadright", 0x0008 },
+            { "none", 0 },
+        };
+
+        // An XInput button: a name ("Back", "LB") or a raw mask ("0x0020"). Unlike a scan
+        // code, 0 is a legal answer here — it is how the ini spells "no controller
+        // binding" — so garbage keeps the default but an explicit 0 does not.
+        [[nodiscard]] std::uint32_t AsPadButton(const std::string& a_val, std::uint32_t a_def) {
+            const std::string v = Lower(Trim(a_val));
+            for (const auto& e : kPadNames) {
+                if (v == e.name) {
+                    return e.code;
+                }
+            }
+            try {
+                return static_cast<std::uint32_t>(std::stoul(a_val, nullptr, 0));
+            } catch (...) {
+                return a_def;
+            }
+        }
+
         // A DirectInput scan code: a name ("F11"), hex ("0x1F") or decimal ("31"). Base 0
         // lets the same parse handle the last two. On garbage, keep the default passed in.
         [[nodiscard]] std::uint32_t AsScanCode(const std::string& a_val, std::uint32_t a_def) {
@@ -140,6 +174,8 @@ namespace Isekai::Config {
         g_textSpeed = 1.0f;
         g_systemMenuKey = 0x1F;       // DIK_S
         g_systemMenuModifier = 0x36;  // DIK_RSHIFT
+        g_padMenuButton = 0x0020;
+        g_padMenuModifier = 0x0100;
         g_dormantHeroLevel = 25;
         g_dormantAscendedLevel = 80;
         g_storageCodex = false;
@@ -184,6 +220,10 @@ namespace Isekai::Config {
                 g_systemMenuKey = AsScanCode(val, g_systemMenuKey);
             } else if (key == "systemmenumodifier") {
                 g_systemMenuModifier = AsScanCode(val, g_systemMenuModifier);
+            } else if (key == "gamepadmenubutton") {
+                g_padMenuButton = AsPadButton(val, g_padMenuButton);
+            } else if (key == "gamepadmenumodifier") {
+                g_padMenuModifier = AsPadButton(val, g_padMenuModifier);
             } else if (key == "dormantherolevel") {
                 g_dormantHeroLevel = AsLevel(val, g_dormantHeroLevel);
             } else if (key == "dormantascendedlevel") {
@@ -234,12 +274,14 @@ namespace Isekai::Config {
 
         logger::info("Config: AutoStart={}, TextSpeed={}, "
                      "HideSealedNodes={}, SystemMenuKey={}, SystemMenuModifier={}, "
+                     "GamepadMenuButton={}, GamepadMenuModifier={}, "
                      "DormantHeroLevel={}, DormantAscendedLevel={}, StorageCodex={}, "
                      "SkyrimNetIntegration={}, ThreatLabels={} (targets={}, range={}, key={}), "
                      "FirstTaskHours={}, TaskIntervalHours={}, QuestRerollButton={}, "
                      "SelfTestKey={}, LogInputDiagnostics={}",
                      g_autoStart, g_textSpeed,
                      g_hideSealedNodes, KeyName(g_systemMenuKey), KeyName(g_systemMenuModifier),
+                     GamepadButtonName(g_padMenuButton), GamepadButtonName(g_padMenuModifier),
                      g_dormantHeroLevel, g_dormantAscendedLevel, g_storageCodex,
                      g_skyrimNetIntegration, g_threatLabels,
                      g_threatTargets == ThreatTargets::kAll         ? "all"
@@ -285,6 +327,30 @@ namespace Isekai::Config {
 
     std::uint32_t SystemMenuModifier() {
         return g_systemMenuModifier;
+    }
+
+    std::uint32_t GamepadMenuButton() {
+        return g_padMenuButton;
+    }
+
+    std::uint32_t GamepadMenuModifier() {
+        return g_padMenuModifier;
+    }
+
+    std::string GamepadButtonName(std::uint32_t a_button) {
+        const auto hex = std::format("{:#06x}", a_button);
+        if (a_button == 0) {
+            return hex + " (none)";
+        }
+        for (const auto& e : kPadNames) {
+            if (e.code == a_button) {
+                std::string name = e.name;
+                std::transform(name.begin(), name.end(), name.begin(),
+                               [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+                return hex + " (" + name + ")";
+            }
+        }
+        return hex;
     }
 
     std::uint16_t DormantHeroLevel() {

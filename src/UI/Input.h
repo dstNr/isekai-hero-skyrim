@@ -14,6 +14,15 @@ namespace Isekai::UI {
     void RegisterHotkey(std::uint32_t a_scanCode, std::function<void()> a_fn,
                         std::uint32_t a_modifier = 0);
 
+    // The same, for a controller. a_button is an XInput mask (A = 0x1000, Back = 0x0020),
+    // which is what Skyrim puts in a gamepad ButtonEvent's id code.
+    //
+    // Separate from the call above rather than an extra parameter, because the two
+    // number spaces overlap: gamepad D-pad up is 0x0001 and so is keyboard ESCAPE. The
+    // hotkey table keys on the device as well as the code for that reason.
+    void RegisterGamepadHotkey(std::uint32_t a_button, std::function<void()> a_fn,
+                               std::uint32_t a_modifier = 0);
+
     // Log every hotkey that ended up armed. Call once, after everything has registered.
     // Each module logs its own registration already, but those lines are scattered
     // through the load log and say what a module INTENDED — this is the table the input

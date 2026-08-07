@@ -46,6 +46,21 @@ namespace Isekai::Config {
     // 0 = no modifier (the key alone opens the menu).
     [[nodiscard]] std::uint32_t SystemMenuModifier();
 
+    // The same on a controller, as XInput button masks (A = 0x1000, Back = 0x0020).
+    // Default Back with Left Shoulder held, and 0 for the button switches the controller
+    // off entirely.
+    //
+    // A combination rather than one button, because a controller has no spare buttons:
+    // every face button, both shoulders and both sticks are bound in vanilla, and a mod
+    // that claims one of them outright breaks whatever it took. Holding LB and tapping
+    // Back does fire LB's own action (a shout) on the way in — harmless, and the price of
+    // not stealing a binding.
+    [[nodiscard]] std::uint32_t GamepadMenuButton();
+    [[nodiscard]] std::uint32_t GamepadMenuModifier();
+
+    // A readable name for an XInput button mask ("0x0020 (BACK)"), for log lines.
+    [[nodiscard]] std::string GamepadButtonName(std::uint32_t a_button);
+
     // Character levels at which a DORMANT blessing rises to HERO / ASCENDED.
     // Defaults 25 and 80 — 80 is where the Ebony Warrior comes knocking, i.e. the
     // point vanilla itself treats as "you are done being mortal".

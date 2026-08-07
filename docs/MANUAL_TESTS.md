@@ -161,6 +161,29 @@ defaults.
 | `TextSpeed = 1`, open a long panel and **click it** while it types. | Jumps to the full text, buttons appear. The click must **not** press a button. |
 | Same click test with the **PrismaUI patch** installed. | Identical behaviour. |
 
+### 1.1d Controller support (new, and nobody here plays on one)
+
+Needs an Xbox-layout controller. Test with the **keyboard unplugged in spirit** — do not
+touch it once the panel is open.
+
+| Step | Expected |
+|---|---|
+| Load a save, hold **LB** and tap **Back**. | The System panel opens. (LB also fires a shout — expected, see the ini.) |
+| Tap **Back** on its own. | Nothing from us — whatever Back normally does. |
+| With the panel open, push the **left stick**. | The cursor moves, at a usable speed, and stops dead when you let go. |
+| Let the stick sit still for a while. | The cursor does **not** drift. |
+| Point at a button, press **A**. | It activates, exactly like a left click. |
+| Press **B**. | The panel closes — and Skyrim's own menus do **not** open behind it. |
+| Open the **skill tree** with the controller and pan around with the stick. | Panning and node clicks both work. This is the screen the cursor approach exists for. |
+| Same for the **Shop**. | Cards are clickable, categories switch. |
+| Check the log for `hotkey(s) armed`. | The list shows both the keyboard key and `pad 0x0020 (BACK) + pad 0x0100 (LB)`. |
+| Set `GamepadMenuButton = None`, reload. | No controller binding at all; the keyboard key still works. |
+| Set `GamepadMenuButton = B`, reload. | Refused, with a line in the log saying why (B closes panels). |
+
+> The one to watch is the **device collision**: D-pad up and ESCAPE are both `0x0001`. Bind
+> `GamepadMenuButton = DPadUp` and confirm that pressing ESC does *not* open the menu, and
+> that D-pad up does.
+
 ### 1.2 The storage no longer arrives stocked
 
 This inverted how the Dimensional Storage works, so it is worth confirming end to end.
