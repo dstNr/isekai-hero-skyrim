@@ -6,7 +6,7 @@ overview" is separate, below.
 ## Brief overview (short field)
 
 ```
-You died. The System chose you. Begin your new life in Skyrim as a reincarnated hero — blessing choice, quest milestone rewards, a skill tree with game-wide knowledge unlocks, and dimensional storage. Pure SKSE, custom UI, ESL-flagged.
+You died. The System chose you. Begin your new life in Skyrim as a reincarnated hero — blessing choice, quest milestone rewards, kill objectives on the System's own schedule, threat readings over your enemies, a skill tree with game-wide knowledge unlocks, a shop and dimensional storage. Pure SKSE, custom UI, ESL-flagged.
 ```
 
 ## Description (BBCode)
@@ -44,6 +44,24 @@ Changed your mind later? The System status menu has a [b]Reboot[/b] button that 
 
 All passives aggregate into [b]System abilities visible under Active Effects[/b], and every earned title is listed in the System's status ledger. Quests you completed before installing are recognized retroactively.
 
+[size=4][b]The System gives you work[/b][/size]
+The System does not only watch — it assigns. On its own schedule it hands you a [b]kill objective[/b] ("Slay 25 Draugr"), announces it, counts your kills on screen as they happen, and pays [b]System Points[/b] when it is done. Then it goes quiet for a while and offers the next one.
+
+[list]
+[*]Targets are matched by actor [b]keyword[/b], so creatures added by other mods count — a mod's draugr is a draugr.
+[*]Objectives scale with your level and are never gated above it: no level-4 character is sent after dragons.
+[*]A kill counts when it is yours [b]or a teammate's[/b] — followers, summons, thralls, poisons and runes all land.
+[*]No quest markers, no journal entries, no busywork. It ticks over in the background of however you were already playing, and it is what keeps System Points coming in once the 79 milestones run out.
+[/list]
+
+[size=4][b]Reading the enemy[/b][/size]
+The signature isekai [b]"Observation"[/b] move, and it costs nothing to unlock. A target frame floats over an enemy with its [b]level[/b], a [b]health bar[/b] and a colour-coded verdict — [b]TRIVIAL[/b], [b]MANAGEABLE[/b], [b]DANGEROUS[/b], [b]LETHAL[/b] — measured against your own level. You see it [b]before[/b] you commit to a fight, which is the only moment it is worth anything.
+
+By default it appears on what you are aiming at and on whatever is actually fighting you; the ini offers three other policies, and a key switches the whole display off.
+
+[size=4][b]The System Shop[/b][/size]
+System Points buy more than skill nodes. A shop screen with item cards on four shelves: [b]material packs[/b] (smithing, alchemy, soul gems), [b]gold[/b], and the ten [b]System potions[/b] — four instant restoratives and six one-hour elixirs. Everything is delivered straight into your Dimensional Storage.
+
 [size=4][b]The Skill Tree[/b][/size]
 Open the System panel ([b]Right Shift + S[/b]) and enter the skill tree: a hub and three branches — might, arcana, shadow — paid with System Points. Besides stat nodes it holds the System's signature unlocks:
 
@@ -57,7 +75,11 @@ Open the System panel ([b]Right Shift + S[/b]) and enter the skill tree: a hub a
 
 The knowledge unlocks are [b]mod-aware[/b]: they cover everything your load order contains, filtered semantically (a mod spell with a tome qualifies exactly like a vanilla one).
 
-Alongside them sit [b]repeatable utility ranks[/b] — Fleet of Foot (move speed), Beast of Burden (carry weight), Enduring Vigor (Health/Magicka/Stamina) — so there is always something worth saving points for. Changed your mind? A [b]Respec[/b] button refunds the points spent on stat nodes and reverts their effects. The knowledge unlocks and Perk Synthesis stay: the System cannot un-teach a shout you already know, and those perk points are long since spent.
+Alongside them sits a [b]mastery rail[/b] of eight repeatable utility stats — Fleet of Foot (move speed), Beast of Burden (carry weight), Enduring Vigor (H/M/S), Storm Ward, Warded Mind, Arcane Absorption, Iron Skin and Rapid Recovery. Each climbs [b]10 ranks across five named tiers[/b] (Novice through Grandmaster), the price rising per tier, with a level-up flourish when you reach Grandmaster — a real, celebrated ceiling instead of an open-ended grind.
+
+Changed your mind? A [b]Respec[/b] button refunds the points spent on stat nodes and reverts their effects. The knowledge unlocks and Perk Synthesis stay: the System cannot un-teach a shout you already know, and those perk points are long since spent.
+
+Your standing in all of it is summed up as a [b]System Rank[/b], E through S, with its own insignia in the status panel — derived from the deeds you have earned, your level and everything you have invested in the tree.
 
 [size=4][b]Progression scales with your rebirth[/b][/size]
 The blessing you choose keeps mattering — everything the System pays out is multiplied for the rest of the run:
@@ -69,7 +91,9 @@ The blessing you choose keeps mattering — everything the System pays out is mu
 [/list]
 
 [size=4][b]Dimensional Storage[/b][/size]
-Every reincarnated soul receives a private pocket dimension: one chest inventory, reachable from anywhere through the System panel. Its contents are [b]automatically available at crafting stations[/b] — forge, alchemy table, enchanter — without moving a single item yourself. It [b]holds up inside a full crafting-overhaul stack[/b]: recipes a mod hides behind "do you carry this material?" still show, and pre-craft prompts like an enchanter's "empower with a flawless gem?" see the stored gems. Stock is drawn from what recipes require, so DLC materials (chitin plate, netch leather, corkbulb root…) come along. HERO and ASCENDED find it [b]pre-stocked[/b] (scaled by the blessing); NORMAL receives the same dimension [b]empty[/b], to fill as a personal stash.
+Every reincarnated soul receives a private pocket dimension: one chest inventory, reachable from anywhere through the System panel. Its contents are [b]automatically available at crafting stations[/b] — forge, alchemy table, enchanter — without moving a single item yourself. It [b]holds up inside a full crafting-overhaul stack[/b]: recipes a mod hides behind "do you carry this material?" still show, and pre-craft prompts like an enchanter's "empower with a flawless gem?" see the stored gems. Stock is drawn from what recipes require, so DLC materials (chitin plate, netch leather, corkbulb root…) come along.
+
+It [b]starts empty for every blessing[/b] — you stock it from the System Shop's material packs, so what it holds is what you chose to spend your points on. HERO and ASCENDED still get there sooner: their reward scale multiplies point income.
 
 [size=4][b]Optional: the PrismaUI patch[/b][/size]
 A separate download renders the [b]whole interface[/b] — skill tree, System panels, level-up flourish — as a modern HTML/CSS view instead of the built-in one. Same mod, same logic, different skin. The base mod detects it at load and falls back safely on its own UI when it is absent, so the patch is entirely optional and needs no new save.
@@ -79,9 +103,12 @@ Only the patch requires [url=https://www.nexusmods.com/skyrimspecialedition/mods
 [size=4][b]Settings[/b][/size]
 An optional ini at [i]Data/SKSE/Plugins/IsekaiHero.ini[/i] — ships with sane defaults, safe to delete:
 [list]
-[*][b]Remappable hotkey[/b] for the System menu (default Right Shift + S), any scan code, modifier optional
+[*][b]Remappable hotkeys[/b] — the System menu (default Right Shift + S) and the threat-display toggle (default F10). Key names or scan codes, modifier optional.
+[*][b]Threat labels[/b] — off/on, how far they reach, and which actors get one: what you aim at plus whatever is fighting you (default), every enemy in range, everyone alive, or aim only.
+[*][b]Objective schedule[/b] — how long the System waits before the first kill objective of a character's life, and between each one after.
 [*][b]Hide sealed skill-tree nodes[/b] instead of showing them greyed
 [*][b]DORMANT thresholds[/b] — the levels at which the sleeping blessing wakes
+[*][b]Self-test[/b] — a diagnostic that checks the mod against your load order and writes a PASS/FAIL report to the log. It runs by itself after every load, so a bug report never needs more than the log file.
 [/list]
 
 [size=4][b]Requirements[/b][/size]
@@ -96,7 +123,9 @@ Install with your mod manager. The plugin is [b]ESL-flagged[/b] (no load order s
 
 [b]Safe to install mid-playthrough.[/b] Add it to an existing save and the System boots on your next load: you pick your blessing, and every milestone quest you have already completed is recognized and rewarded retroactively. Blessings only ever raise your stats — an established character never loses levels, skills or perks.
 
-[b]Hotkey:[/b] Right Shift + S opens the System status panel; storage and skill tree sit behind the icon buttons in its corner. The key is remappable in the ini.
+[b]Hotkey:[/b] Right Shift + S opens the System status panel; storage, shop and skill tree sit behind the icon buttons in its corner. F10 switches the threat display off and on. Both are remappable in the ini.
+
+[b]Skyrim VR:[/b] the mod loads and runs, and its menus need the optional PrismaUI patch (VR build). The threat labels and the on-screen objective messages are drawn by the built-in overlay, which VR does not get — objectives fall back to the game's own corner notifications there.
 
 [size=4][b]Status[/b][/size]
 Early release. Feedback is very welcome, especially from heavily modded setups. If something misbehaves, attach [i]Documents\My Games\Skyrim Special Edition\SKSE\IsekaiHeroSKSE.log[/i] to your report — the mod logs everything it does.
