@@ -110,6 +110,15 @@ namespace Isekai {
         // The before/after GetLevel is logged on purpose: if the engine does not report
         // the new level here, actorData.level is not the field the player's level reads
         // from and we need the XP/AdvanceLevel path instead — the log tells a tester which.
+        // The level this character had before we ever raised it, for THIS SESSION.
+        // 0 = we have not raised anything yet.
+        //
+        // It cannot live in the co-save, which is the whole point: the save it has to be
+        // restored into is one that predates the System and therefore carries no record of
+        // ours at all. It has to be remembered process-side, because the thing that leaks
+        // is process-side (see RestoreLevelBeforeGrant).
+        std::uint16_t g_levelBeforeGrant = 0;
+
         void SetPlayerLevelAtLeast(std::uint16_t a_target) {
             if (a_target == 0) {
                 return;
@@ -123,10 +132,42 @@ namespace Isekai {
                 return;  // already at or past it — never demote
             }
             if (auto* base = player->GetActorBase()) {
+                if (g_levelBeforeGrant == 0) {
+                    g_levelBeforeGrant = before;
+                }
                 base->actorData.level = a_target;
                 logger::info("Player level: {} -> requested {} (GetLevel reads back {})", before,
                              a_target, player->GetLevel());
             }
+        }
+
+        // Put the level back where we found it, before anything else is loaded.
+        //
+        // REPORTED BUG. actorData.level lives on the player's ActorBase, and a save load
+        // does not restore it — that is the same fact ReapplyLevelOnLoad exists for, seen
+        // from the other side. Once ASCENDED has written 150 there, loading a save from
+        // BEFORE the System ever ran leaves the character at 150: the save has no record
+        // of us, nothing lowers it, and SetPlayerLevelAtLeast deliberately never demotes.
+        // The reporter watched level-gated quest mods fire in a game the System had not
+        // touched yet. Restarting Skyrim fixed it, because that reloads the form.
+        //
+        // So the level is reverted on every load, and ReapplyLevelOnLoad then raises it
+        // again to whatever the save being loaded actually earned. Down first, up second.
+        void RestoreLevelBeforeGrant() {
+            if (g_levelBeforeGrant == 0) {
+                return;
+            }
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            auto* base = player ? player->GetActorBase() : nullptr;
+            if (!base) {
+                return;
+            }
+            if (base->actorData.level != g_levelBeforeGrant) {
+                logger::info("Player level: {} -> {} (reverting our grant before load)",
+                             base->actorData.level, g_levelBeforeGrant);
+                base->actorData.level = g_levelBeforeGrant;
+            }
+            g_levelBeforeGrant = 0;
         }
 
         // a DORMANT awakening pays out the very same grant, just years of play later.
@@ -853,6 +894,10 @@ namespace Isekai {
         }
 
         void RevertCallback(SKSE::SerializationInterface*) {
+            // Before g_state is cleared: this is the one moment we still know what we
+            // granted, and the last moment before the incoming save decides what the
+            // character should be.
+            RestoreLevelBeforeGrant();
             g_state = State{};
             g_firstReadyCell = 0;  // the next game gets a fresh chargen-room detection
             logger::info("State reverted to defaults (new game / pre-load)");
