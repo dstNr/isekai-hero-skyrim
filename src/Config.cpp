@@ -18,6 +18,7 @@ namespace Isekai::Config {
         float         g_textSpeed = 1.0f;
         std::uint32_t g_systemMenuKey = 0x1F;       // DIK_S
         std::uint32_t g_systemMenuModifier = 0x36;  // DIK_RSHIFT
+        std::uint32_t g_vrMenuButton = 0;           // none; VR codes differ per headset
         std::uint32_t g_padMenuButton = 0x0020;     // XINPUT_GAMEPAD_BACK
         std::uint32_t g_padMenuModifier = 0x0100;   // XINPUT_GAMEPAD_LEFT_SHOULDER
         std::uint16_t g_dormantHeroLevel = 25;
@@ -175,6 +176,7 @@ namespace Isekai::Config {
         g_textSpeed = 1.0f;
         g_systemMenuKey = 0x1F;       // DIK_S
         g_systemMenuModifier = 0x36;  // DIK_RSHIFT
+        g_vrMenuButton = 0;
         g_padMenuButton = 0x0020;
         g_padMenuModifier = 0x0100;
         g_dormantHeroLevel = 25;
@@ -223,6 +225,8 @@ namespace Isekai::Config {
                 g_systemMenuKey = AsScanCode(val, g_systemMenuKey);
             } else if (key == "systemmenumodifier") {
                 g_systemMenuModifier = AsScanCode(val, g_systemMenuModifier);
+            } else if (key == "vrmenubutton") {
+                g_vrMenuButton = AsScanCode(val, g_vrMenuButton);
             } else if (key == "gamepadmenubutton") {
                 g_padMenuButton = AsPadButton(val, g_padMenuButton);
             } else if (key == "gamepadmenumodifier") {
@@ -277,14 +281,15 @@ namespace Isekai::Config {
 
         logger::info("Config: Language={}, AutoStart={}, TextSpeed={}, "
                      "HideSealedNodes={}, SystemMenuKey={}, SystemMenuModifier={}, "
-                     "GamepadMenuButton={}, GamepadMenuModifier={}, "
+                     "VRMenuButton={}, GamepadMenuButton={}, GamepadMenuModifier={}, "
                      "DormantHeroLevel={}, DormantAscendedLevel={}, StorageCodex={}, "
                      "SkyrimNetIntegration={}, ThreatLabels={} (targets={}, range={}, key={}), "
                      "FirstTaskHours={}, TaskIntervalHours={}, QuestRerollButton={}, "
                      "SelfTestKey={}, LogInputDiagnostics={}",
                      g_language, g_autoStart, g_textSpeed,
                      g_hideSealedNodes, KeyName(g_systemMenuKey), KeyName(g_systemMenuModifier),
-                     GamepadButtonName(g_padMenuButton), GamepadButtonName(g_padMenuModifier),
+                     KeyName(g_vrMenuButton), GamepadButtonName(g_padMenuButton),
+                     GamepadButtonName(g_padMenuModifier),
                      g_dormantHeroLevel, g_dormantAscendedLevel, g_storageCodex,
                      g_skyrimNetIntegration, g_threatLabels,
                      g_threatTargets == ThreatTargets::kAll         ? "all"
@@ -334,6 +339,10 @@ namespace Isekai::Config {
 
     std::uint32_t SystemMenuModifier() {
         return g_systemMenuModifier;
+    }
+
+    std::uint32_t VRMenuButton() {
+        return g_vrMenuButton;
     }
 
     std::uint32_t GamepadMenuButton() {

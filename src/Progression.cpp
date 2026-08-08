@@ -801,6 +801,7 @@ namespace Isekai::Progression {
                            Config::SystemMenuModifier());
         UI::RegisterGamepadHotkey(Config::GamepadMenuButton(), ShowStatusPanel,
                                   Config::GamepadMenuModifier());
+        UI::RegisterVRHotkey(Config::VRMenuButton(), ShowStatusPanel);
         if constexpr (kEnableDebugGrant) {
             UI::RegisterHotkey(kDebugGrantKey, DebugGrantNext);
         }

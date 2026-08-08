@@ -64,6 +64,15 @@ namespace Isekai::Config {
     [[nodiscard]] std::uint32_t GamepadMenuButton();
     [[nodiscard]] std::uint32_t GamepadMenuModifier();
 
+    // Button on a Skyrim VR motion controller that opens the System menu, as the code the
+    // game reports for it. Default 0 = none.
+    //
+    // No default binding on purpose: VR controller codes are not standardised the way
+    // scan codes are, they differ between headsets, and guessing one would steal a grip
+    // or a trigger from whoever is holding it. Set LogInputDiagnostics = 1, press the
+    // button you want, and read its code out of the log.
+    [[nodiscard]] std::uint32_t VRMenuButton();
+
     // A readable name for an XInput button mask ("0x0020 (BACK)"), for log lines.
     [[nodiscard]] std::string GamepadButtonName(std::uint32_t a_button);
 

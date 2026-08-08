@@ -194,7 +194,9 @@ namespace Isekai::UI {
 
                     const auto device = event->GetDevice();
                     if (device != RE::INPUT_DEVICE::kKeyboard &&
-                        device != RE::INPUT_DEVICE::kGamepad) {
+                        device != RE::INPUT_DEVICE::kGamepad &&
+                        device != RE::INPUT_DEVICE::kVRRight &&
+                        device != RE::INPUT_DEVICE::kVRLeft) {
                         continue;
                     }
                     const std::uint32_t id = HotkeyId(device, button->GetIDCode());
@@ -463,6 +465,21 @@ namespace Isekai::UI {
             std::move(a_fn),
             a_modifier == 0 ? 0 : HotkeyId(RE::INPUT_DEVICE::kKeyboard, a_modifier)
         };
+    }
+
+    void RegisterVRHotkey(std::uint32_t a_button, std::function<void()> a_fn) {
+        if (a_button == 0) {
+            logger::info("UI: no VR hotkey (VRMenuButton = 0)");
+            return;
+        }
+        // Registered on BOTH hands. Which controller an event arrives under is a detail of
+        // how the player happens to be holding the thing, not a choice anyone should have
+        // to make in an ini — and a tester reading codes out of the input diagnostic has
+        // no way of telling which hand produced which number anyway.
+        std::scoped_lock lock(g_hotkeyMutex);
+        for (auto device : { RE::INPUT_DEVICE::kVRRight, RE::INPUT_DEVICE::kVRLeft }) {
+            g_hotkeys[HotkeyId(device, a_button)] = Hotkey{ a_fn, 0 };
+        }
     }
 
     void RegisterGamepadHotkey(std::uint32_t a_button, std::function<void()> a_fn,

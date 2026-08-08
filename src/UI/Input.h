@@ -14,6 +14,16 @@ namespace Isekai::UI {
     void RegisterHotkey(std::uint32_t a_scanCode, std::function<void()> a_fn,
                         std::uint32_t a_modifier = 0);
 
+    // The same, for a Skyrim VR motion controller — registered on both hands at once.
+    //
+    // This exists because a VR tester's log settled a long-running bug: across a whole
+    // session his keyboard presses NEVER reached the mod. Every button event arrived under
+    // device 5 or 6 (kVRRight / kVRLeft) and not one under device 0, with the diagnostic
+    // logging before any device filter. The hotkey machinery was never at fault — in that
+    // setup the keyboard simply is not a route into the game. Without this, VR has no
+    // hotkey at all.
+    void RegisterVRHotkey(std::uint32_t a_button, std::function<void()> a_fn);
+
     // The same, for a controller. a_button is an XInput mask (A = 0x1000, Back = 0x0020),
     // which is what Skyrim puts in a gamepad ButtonEvent's id code.
     //
