@@ -164,6 +164,27 @@ namespace Isekai::UI {
             }
         }
 
+        // Can the player actually SEE this actor?
+        //
+        // Nothing asked this before, so a label sat happily on a bandit through a hillside
+        // — a reporter read Thadgeir's threat level through a tree and the ground, from
+        // outside Falkreath. Projection only answers "is it on screen", and a wall is on
+        // screen too.
+        //
+        // The game's own line-of-sight is the right answer rather than our own raycast: it
+        // is what the AI uses to decide whether it can see you, so the label agrees with
+        // the thing it is a label for.
+        //
+        // ponytail: one LOS call per candidate per frame. It runs last, after the mode
+        // filter, the range check and the projection have already dropped nearly
+        // everything, so in practice this is a handful of calls. If a crowded cell ever
+        // shows up in a frame profile, cache the answer for a few frames before reaching
+        // for anything cleverer — a label that lags occlusion by 50ms is unnoticeable.
+        [[nodiscard]] bool Visible(RE::PlayerCharacter* a_player, RE::Actor* a_actor) {
+            bool unused = false;
+            return a_player->HasLineOfSight(a_actor, unused);
+        }
+
         // A label the frame can draw: already projected, already judged.
         struct Label {
             ImVec2       pos;
@@ -265,6 +286,11 @@ namespace Isekai::UI {
             }
             ImVec2 screen{};
             if (!Project(cam, head, display, screen)) {
+                return;
+            }
+            // Last, because it is the most expensive question here — and it covers the
+            // aimed actor too, which arrives through this same lambda.
+            if (!Visible(player, actor)) {
                 return;
             }
             const auto level = static_cast<std::int32_t>(actor->GetLevel());
