@@ -195,11 +195,28 @@ What the API (LGPL-3.0, `alandtse/imgui-vr-helper`, `api/`) actually offers:
   which notes there is only one `ID3D11Device` in the game), and provides `RenderToPanel`,
   `RenderHud` and `BlitDrawData`.
 
-**That removes the blocker rather than working around it.** We never read
-`RE::BSGraphics::Renderer` in VR, never hook Present, never touch
-`renderWindows[0].swapChain`. The garbage read that crashes today — and that also backs
-`UI/Textures.cpp`'s icon loader — is simply not on this path. The device arrives from the
-helper.
+**That removes the DRAWING half of the blocker.** We never read
+`RE::BSGraphics::Renderer` for a device: it arrives from the panel's RTV, so the garbage
+read that crashes today — and that also backs `UI/Textures.cpp`'s icon loader — is not on
+the drawing path.
+
+**One half remains, and I overstated this at first.** `OnFrameThunk` in the client SDK only
+caches input (held buttons, stick axes, HUD depth); it does **not** render for us. The
+client is still expected to drive its own ImGui frame and call `RenderToPanel()` in place
+of `ImGui_ImplDX11_RenderDrawData()`. Our frame driver today is the Present hook, and what
+breaks there in VR is not the hooking — it is *finding* the swapchain through
+`renderWindows[0].swapChain`.
+
+So the open question is narrow and specific: **where does our ImGui frame get driven from
+in VR?** Two candidates, and this is the thing to settle before writing the rest:
+
+1. Drive the whole frame from the helper's `OnFrameFn` — it is already called once per
+   frame, and `RenderToPanel` resolves its own device context from the panel. Plausible,
+   and nothing in the SDK forbids it; equally, nothing in the SDK does it, so it needs
+   confirming rather than assuming.
+2. Keep a Present hook but obtain the swapchain some other way than the renderer struct.
+   The SDK notes hooking at Present is harmless in VR because the desktop mirror is not
+   shown in the headset — which implies clients do exactly this.
 
 - `SubmitWorldQuads(client_id, const WorldQuad*, …)` (interface 004) takes billboards
   positioned in **Skyrim world space, in game units**, and converts them itself from a

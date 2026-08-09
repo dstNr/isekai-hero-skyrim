@@ -44,6 +44,13 @@ THIRD-PARTY CODE
   licences. The PrismaUI API header (src/PrismaUI_API.h) is vendored from the
   PrismaUI SKSE example plugin, which invites exactly that use.
 
+  extern/imgui-vr-helper/ is the client API of ImGuiVRHelper by alandtse,
+  vendored verbatim and used under the LGPL-3.0-or-later. Its licence texts sit
+  beside it (COPYING.LESSER, COPYING). The MIT terms above do NOT apply to those
+  files: they keep their own licence, they are unmodified, and they are kept in
+  their own directory so they stay identifiable and replaceable — which is what
+  the LGPL asks of a work that links it.
+
   The crafting-station "zero transfer" technique is adapted from SCIE - Skyrim
   Crafting Inventory Extender by ohfor (MIT). SCIE is not a dependency; the
   approach is reimplemented here.
