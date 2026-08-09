@@ -192,19 +192,29 @@ namespace Isekai::UI {
             Verdict      verdict;
             std::int32_t level;
             float        health;  // 0..1
+            std::int32_t hpNow;
+            std::int32_t hpMax;
             std::string  name;
         };
 
         // Current health as a fraction. The frame draws a bar, and a bar without data
         // behind it is decoration pretending to be information.
-        [[nodiscard]] float HealthFraction(RE::Actor* a_actor) {
+        struct Health {
+            float        fraction;  // 0..1, for the bar
+            std::int32_t now;
+            std::int32_t max;
+        };
+
+        [[nodiscard]] Health HealthOf(RE::Actor* a_actor) {
             auto* av = a_actor->AsActorValueOwner();
             if (!av) {
-                return 1.0f;
+                return { 1.0f, 0, 0 };
             }
             const float now = av->GetActorValue(RE::ActorValue::kHealth);
             const float max = av->GetPermanentActorValue(RE::ActorValue::kHealth);
-            return max > 0.0f ? std::clamp(now / max, 0.0f, 1.0f) : 1.0f;
+            return { max > 0.0f ? std::clamp(now / max, 0.0f, 1.0f) : 1.0f,
+                     static_cast<std::int32_t>(std::lround(std::max(now, 0.0f))),
+                     static_cast<std::int32_t>(std::lround(std::max(max, 0.0f))) };
         }
 
         // A cap, because "all visible enemies" during a dragon attack on a city is not a
@@ -293,10 +303,11 @@ namespace Isekai::UI {
             if (!Visible(player, actor)) {
                 return;
             }
-            const auto level = static_cast<std::int32_t>(actor->GetLevel());
+            const auto  level = static_cast<std::int32_t>(actor->GetLevel());
             const char* name = actor->GetDisplayFullName();
+            const auto  hp = HealthOf(actor);
             labels.push_back({ screen, distance, VerdictFor(level - playerLevel), level,
-                               HealthFraction(actor), name ? name : "" });
+                               hp.fraction, hp.now, hp.max, name ? name : "" });
         };
 
         const auto consider = [&](RE::Actor* actor) { considerAs(actor, mode); };
@@ -435,6 +446,22 @@ namespace Isekai::UI {
                 Style::Col(label.verdict.col, 0.85f * alpha));
             dl->AddRect(ImVec2{ textX, barY }, ImVec2{ barR, barY + barH },
                         Style::Col(label.verdict.col, 0.45f * alpha), 0.0f, 0, 1.0f * k);
+
+            // The number on the bar. A bar answers "roughly how much is left"; a fight
+            // where it matters whether that is 40 or 400 wants the figure. Centred on the
+            // bar, which is the one place it fits without making the frame taller — and
+            // the frame was deliberately made less obtrusive earlier, so growing it back
+            // would undo somebody else's feedback to satisfy this one.
+            if (Config::ThreatLabelNumbers() && label.hpMax > 0) {
+                const std::string hp =
+                    std::to_string(label.hpNow) + " / " + std::to_string(label.hpMax);
+                const float hpSize = 11.0f * k;
+                const float hpW = measure(hpSize, hp.c_str());
+                Style::DrawTextOutlined(
+                    dl, font, hpSize,
+                    ImVec2{ (textX + barR) * 0.5f - hpW * 0.5f, barY + barH * 0.5f - hpSize * 0.62f },
+                    Style::kText, hp.c_str(), alpha);
+            }
 
             Style::DrawTextOutlined(dl, font, tagSize,
                                     ImVec2{ barR + 10.0f * k, barY + barH * 0.5f - tagSize * 0.6f },

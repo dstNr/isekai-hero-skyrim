@@ -124,6 +124,11 @@ namespace Isekai::Config {
     // saved.
     [[nodiscard]] std::uint32_t ThreatLabelKey();
 
+    // Draw the actual health figure on the threat label's bar ("312 / 480"). Default on.
+    // A bar answers "roughly how much is left"; a fight where it matters whether that is
+    // 40 or 400 wants the number.
+    [[nodiscard]] bool ThreatLabelNumbers();
+
     // How far a labelled actor may be, in game units (~70 per metre). Beyond this the
     // label is dropped entirely rather than shrunk to an unreadable smudge.
     [[nodiscard]] std::uint32_t ThreatLabelRange();
