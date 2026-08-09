@@ -75,6 +75,9 @@ for ($i = 0; $i -le $after.Length - $find.Length; $i++) {
 if ($leak -gt 0) { throw "Name scrub failed: '$secret' still present $leak time(s) in the DLL." }
 Write-Host "Name scrub: replaced $hits occurrence(s); DLL is clean."
 
+# --- licence ---
+Copy-Item (Join-Path $root "LICENSE") $stage
+
 # --- optional settings ini (ships with defaults; safe to delete in-game) ---
 # Also the FOMOD's "Standard" preset, so a manual install and the recommended
 # installer choice land on byte-identical files.

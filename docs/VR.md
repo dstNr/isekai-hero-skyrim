@@ -176,8 +176,7 @@ pull `api/` via CMake FetchContent, `Connect()` in `kPostPostLoad`, `Update(menu
 frame, and `RenderFrame()` in place of `ImGui_ImplDX11_RenderDrawData`. It is a runtime
 dependency, but `Connect()` returns false when absent, so the soft-dependency pattern we
 already use for PrismaUI and SkyrimNet applies. API headers are LGPL-3.0-or-later; the
-helper itself GPL-3.0 with modding exceptions. **This repo currently has no LICENSE file
-at all — settle that before taking an LGPL dependency.**
+helper itself GPL-3.0 with modding exceptions. **This repo is MIT (see LICENSE), which can link an LGPL library without becoming LGPL — but read the helper's own terms before depending on it.**
 
 **What makes it bigger than four steps for us**, from reading the client SDK header:
 

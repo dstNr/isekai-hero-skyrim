@@ -43,6 +43,7 @@ const xml = `<?xml version="1.0" encoding="utf-8"?>
        opinion about; it is chosen below. -->
   <requiredInstallFiles>
     <file   source="IsekaiHero.esp"                    destination="IsekaiHero.esp"/>
+    <file   source="LICENSE"                           destination="LICENSE"/>
     <file   source="SKSE\\Plugins\\IsekaiHeroSKSE.dll"   destination="SKSE\\Plugins\\IsekaiHeroSKSE.dll"/>
     <folder source="SKSE\\Plugins\\IsekaiHero"           destination="SKSE\\Plugins\\IsekaiHero"/>
     <folder source="Sound"                             destination="Sound"/>

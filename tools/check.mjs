@@ -603,6 +603,7 @@ check("fomod: the installer offers files that exist, and presets that are curren
     "SKSE\\Plugins\\IsekaiHeroSKSE.dll": null,   // build output
     "SKSE\\Plugins\\IsekaiHero": "icons",        // icons, staged into that folder
     "SKSE\\Plugins\\IsekaiHero.ini": "IsekaiHero.ini",
+    "LICENSE": "LICENSE",
     "Sound": "sounds",
     "PrismaUI\\views\\IsekaiHero\\index.html":
       "prisma-patch/PrismaUI/views/IsekaiHero/index.html",

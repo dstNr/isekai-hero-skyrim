@@ -247,3 +247,15 @@ when something misbehaves.
 🧪 **Pre-release** (v0.6.1). Feature-complete for full-modlist test runs;
 balance values (starting System Points, node costs) are explicitly in a
 testing configuration. Version history in [CHANGELOG.md](CHANGELOG.md).
+
+## Licence
+
+MIT — see [LICENSE](LICENSE). Fork it, port it, patch it, translate it.
+
+Two carve-outs, both spelled out in that file: the **sound effects are licensed
+third-party assets** and are used here under their own terms, which do not allow
+relicensing them — replace them or licence them yourself if you fork. The **icons are
+AI-generated artwork** made for this mod and come along with the code.
+
+The licence covers this repository. What may be done with the *packaged mod on Nexus* is
+set separately in that page's permission fields.
