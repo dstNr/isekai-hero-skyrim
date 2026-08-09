@@ -32,6 +32,7 @@ namespace Isekai::Config {
         bool          g_threatLabels = true;
         ThreatTargets g_threatTargets = ThreatTargets::kAggro;
         bool          g_threatNumbers = true;
+        bool          g_threatResources = false;
         std::uint32_t g_threatRange = 4000;
         std::uint32_t g_threatKey = 0x44;  // DIK_F10
         std::uint32_t g_questFirstTaskHours = 12;
@@ -189,6 +190,7 @@ namespace Isekai::Config {
         g_threatLabels = true;
         g_threatTargets = ThreatTargets::kAggro;
         g_threatNumbers = true;
+        g_threatResources = false;
         g_threatRange = 4000;
         g_threatKey = 0x44;
         g_questFirstTaskHours = 12;
@@ -260,6 +262,8 @@ namespace Isekai::Config {
                                                      : ThreatTargets::kAggro;
             } else if (key == "threatlabelnumbers") {
                 g_threatNumbers = AsBool(val);
+            } else if (key == "threatlabelresources") {
+                g_threatResources = AsBool(val);
             } else if (key == "threatlabelkey") {
                 g_threatKey = AsScanCode(val, g_threatKey);
             } else if (key == "threatlabelrange") {
@@ -408,6 +412,10 @@ namespace Isekai::Config {
 
     bool ThreatLabelNumbers() {
         return g_threatNumbers;
+    }
+
+    bool ThreatLabelResources() {
+        return g_threatResources;
     }
 
     ThreatTargets ThreatLabelTargets() {

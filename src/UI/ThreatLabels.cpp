@@ -185,37 +185,43 @@ namespace Isekai::UI {
             return a_player->HasLineOfSight(a_actor, unused);
         }
 
+        // One resource bar's worth of numbers.
+        struct Pool {
+            float        fraction;  // 0..1, for the bar
+            std::int32_t now;
+            std::int32_t max;      // 0 = this actor has none, so draw no bar
+        };
+
         // A label the frame can draw: already projected, already judged.
         struct Label {
             ImVec2       pos;
             float        distance;
             Verdict      verdict;
             std::int32_t level;
-            float        health;  // 0..1
-            std::int32_t hpNow;
-            std::int32_t hpMax;
+            Pool         hp;
+            Pool         mp;
+            Pool         sp;
             std::string  name;
         };
 
         // Current health as a fraction. The frame draws a bar, and a bar without data
         // behind it is decoration pretending to be information.
-        struct Health {
-            float        fraction;  // 0..1, for the bar
-            std::int32_t now;
-            std::int32_t max;
-        };
-
-        [[nodiscard]] Health HealthOf(RE::Actor* a_actor) {
-            auto* av = a_actor->AsActorValueOwner();
-            if (!av) {
+        [[nodiscard]] Pool PoolOf(RE::ActorValueOwner* a_av, RE::ActorValue a_stat) {
+            if (!a_av) {
                 return { 1.0f, 0, 0 };
             }
-            const float now = av->GetActorValue(RE::ActorValue::kHealth);
-            const float max = av->GetPermanentActorValue(RE::ActorValue::kHealth);
+            const float now = a_av->GetActorValue(a_stat);
+            const float max = a_av->GetPermanentActorValue(a_stat);
             return { max > 0.0f ? std::clamp(now / max, 0.0f, 1.0f) : 1.0f,
                      static_cast<std::int32_t>(std::lround(std::max(now, 0.0f))),
                      static_cast<std::int32_t>(std::lround(std::max(max, 0.0f))) };
         }
+
+        // Magicka and stamina, in the colours every MMO uses for them — blue and green.
+        // Muted on purpose: the verdict colour has to stay the loudest thing on the frame,
+        // because it is the one that says whether to walk away.
+        constexpr ImVec4 kMagickaCol{ 0.36f, 0.58f, 1.00f, 1.0f };
+        constexpr ImVec4 kStaminaCol{ 0.45f, 0.85f, 0.48f, 1.0f };
 
         // A cap, because "all visible enemies" during a dragon attack on a city is not a
         // number anyone chose. The nearest ones are the ones that matter.
@@ -305,9 +311,11 @@ namespace Isekai::UI {
             }
             const auto  level = static_cast<std::int32_t>(actor->GetLevel());
             const char* name = actor->GetDisplayFullName();
-            const auto  hp = HealthOf(actor);
+            auto*       av = actor->AsActorValueOwner();
             labels.push_back({ screen, distance, VerdictFor(level - playerLevel), level,
-                               hp.fraction, hp.now, hp.max, name ? name : "" });
+                               PoolOf(av, RE::ActorValue::kHealth),
+                               PoolOf(av, RE::ActorValue::kMagicka),
+                               PoolOf(av, RE::ActorValue::kStamina), name ? name : "" });
         };
 
         const auto consider = [&](RE::Actor* actor) { considerAs(actor, mode); };
@@ -404,9 +412,22 @@ namespace Isekai::UI {
             const float plateW =
                 discR * 2.0f + 14.0f * k + std::max(nameW, 120.0f * k) + 12.0f * k + tagW +
                 14.0f * k;
+            // MMO target frame: the health bar, and under it the thinner resource bars.
+            // Only for actors that HAVE the pool — most animals carry no magicka, and an
+            // empty bar reads as "drained" rather than "not applicable".
+            const bool  wantRes = Config::ThreatLabelResources();
+            const bool  showMp = wantRes && label.mp.max > 0;
+            const bool  showSp = wantRes && label.sp.max > 0;
+            const int   resBars = (showMp ? 1 : 0) + (showSp ? 1 : 0);
+            const float resH = 5.0f * k;
+            const float resGap = 2.0f * k;
+            const float extra = static_cast<float>(resBars) * (resH + resGap);
+
             const float cx = label.pos.x;
             const float y1 = label.pos.y;              // sits just above the head point
-            const float y0 = y1 - discR * 2.0f;
+            // The frame grows UPWARD. y1 is pinned to the head, so extra rows must never
+            // push the frame down over the actor's face.
+            const float y0 = y1 - discR * 2.0f - extra;
             const float x0 = cx - plateW * 0.5f;
             const float x1 = cx + plateW * 0.5f;
 
@@ -437,12 +458,12 @@ namespace Isekai::UI {
                                     Style::kText, name, alpha);
 
             // Health. Empty track first so a nearly dead target still shows the frame.
-            const float barY = y1 - 9.0f * k;
+            const float barY = y1 - 9.0f * k - extra;
             dl->AddRectFilled(ImVec2{ textX, barY }, ImVec2{ barR, barY + barH },
                               Style::Col(Style::kPanelBg, 0.9f * alpha));
             dl->AddRectFilled(
                 ImVec2{ textX, barY },
-                ImVec2{ textX + (barR - textX) * label.health, barY + barH },
+                ImVec2{ textX + (barR - textX) * label.hp.fraction, barY + barH },
                 Style::Col(label.verdict.col, 0.85f * alpha));
             dl->AddRect(ImVec2{ textX, barY }, ImVec2{ barR, barY + barH },
                         Style::Col(label.verdict.col, 0.45f * alpha), 0.0f, 0, 1.0f * k);
@@ -452,15 +473,45 @@ namespace Isekai::UI {
             // bar, which is the one place it fits without making the frame taller — and
             // the frame was deliberately made less obtrusive earlier, so growing it back
             // would undo somebody else's feedback to satisfy this one.
-            if (Config::ThreatLabelNumbers() && label.hpMax > 0) {
-                const std::string hp =
-                    std::to_string(label.hpNow) + " / " + std::to_string(label.hpMax);
-                const float hpSize = 11.0f * k;
-                const float hpW = measure(hpSize, hp.c_str());
+            const bool numbers = Config::ThreatLabelNumbers();
+
+            // One bar's worth of figures, centred on it — the MMO convention, and the
+            // reason the text may sit taller than the bar it is on.
+            const auto drawFigures = [&](const Pool& pool, float a_y, float a_h,
+                                         float a_size) {
+                if (!numbers || pool.max <= 0) {
+                    return;
+                }
+                const std::string text =
+                    std::to_string(pool.now) + " / " + std::to_string(pool.max);
+                const float w = measure(a_size, text.c_str());
                 Style::DrawTextOutlined(
-                    dl, font, hpSize,
-                    ImVec2{ (textX + barR) * 0.5f - hpW * 0.5f, barY + barH * 0.5f - hpSize * 0.62f },
-                    Style::kText, hp.c_str(), alpha);
+                    dl, font, a_size,
+                    ImVec2{ (textX + barR) * 0.5f - w * 0.5f, a_y + a_h * 0.5f - a_size * 0.62f },
+                    Style::kText, text.c_str(), alpha);
+            };
+
+            drawFigures(label.hp, barY, barH, 11.0f * k);
+
+            // The resource bars, stacked under health, thinner than it — health is the
+            // number that decides the fight and has to stay the one the eye lands on.
+            float resY = barY + barH + resGap;
+            const auto drawResource = [&](const Pool& pool, const ImVec4& col) {
+                dl->AddRectFilled(ImVec2{ textX, resY }, ImVec2{ barR, resY + resH },
+                                  Style::Col(Style::kPanelBg, 0.9f * alpha));
+                dl->AddRectFilled(ImVec2{ textX, resY },
+                                  ImVec2{ textX + (barR - textX) * pool.fraction, resY + resH },
+                                  Style::Col(col, 0.85f * alpha));
+                dl->AddRect(ImVec2{ textX, resY }, ImVec2{ barR, resY + resH },
+                            Style::Col(col, 0.40f * alpha), 0.0f, 0, 1.0f * k);
+                drawFigures(pool, resY, resH, 9.5f * k);
+                resY += resH + resGap;
+            };
+            if (showMp) {
+                drawResource(label.mp, kMagickaCol);
+            }
+            if (showSp) {
+                drawResource(label.sp, kStaminaCol);
             }
 
             Style::DrawTextOutlined(dl, font, tagSize,

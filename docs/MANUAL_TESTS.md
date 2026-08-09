@@ -196,6 +196,12 @@ touch it once the panel is open.
 | Load a **0.7.x save** and REBOOT. | Works as before; the confirm text says a character from before the update keeps what it was given. |
 | Load a 0.7.x save, save it, load it again. | No warnings in the log. v13 saves must still read. |
 
+| Set `ThreatLabelResources = 1`, aim at a mage. | Two thinner bars under the health bar - blue magicka, green stamina - and the frame is taller, growing UPWARD so it never covers the face. |
+| Watch the mage cast. | The blue bar drains. |
+| Aim at a wolf with the same setting on. | **One** bar only. An animal has no magicka, and an empty bar would read as "drained" rather than "not applicable". |
+| Set `ThreatLabelNumbers = 0` with resources still on. | Bars, no figures on any of them. |
+| Walk backwards until the label is small. | The extra bars shrink with everything else and never overlap the name. |
+
 ### 1.2 The storage no longer arrives stocked
 
 This inverted how the Dimensional Storage works, so it is worth confirming end to end.

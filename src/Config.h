@@ -129,6 +129,13 @@ namespace Isekai::Config {
     // 40 or 400 wants the number.
     [[nodiscard]] bool ThreatLabelNumbers();
 
+    // Add magicka and stamina bars under the health bar, the way an MMO target frame
+    // stacks its resource bars. Default OFF: it makes the frame taller over every
+    // labelled actor, and the labels were deliberately made less obtrusive in 0.7.0.
+    // A bar is skipped for an actor that has none of that pool, so most animals still
+    // show a single bar.
+    [[nodiscard]] bool ThreatLabelResources();
+
     // How far a labelled actor may be, in game units (~70 per metre). Beyond this the
     // label is dropped entirely rather than shrunk to an unreadable smudge.
     [[nodiscard]] std::uint32_t ThreatLabelRange();
