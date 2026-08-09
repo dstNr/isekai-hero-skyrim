@@ -178,27 +178,52 @@ dependency, but `Connect()` returns false when absent, so the soft-dependency pa
 already use for PrismaUI and SkyrimNet applies. API headers are LGPL-3.0-or-later; the
 helper itself GPL-3.0 with modding exceptions. **This repo is MIT (see LICENSE), which can link an LGPL library without becoming LGPL — but read the helper's own terms before depending on it.**
 
-**What makes it bigger than four steps for us**, from reading the client SDK header:
+**CORRECTED 2026-08-09, by reading the actual API instead of this document.** An earlier
+version of this section said the helper exposes no per-frame render callback and that we
+would therefore still need our own frame tick — the very thing that is broken in VR. That
+was quoted from an older SDK and **is no longer true**. It was also the entire basis for
+calling this route expensive, so the estimate below is much smaller than it used to be.
 
-> "No per-frame render callback mechanism exists. The client must actively call `Update()`
-> … from its own frame context."
+What the API (LGPL-3.0, `alandtse/imgui-vr-helper`, `api/`) actually offers:
 
-The helper owns *its* Present hook but never calls us. We would still need our own
-per-frame tick — and ours is exactly what does not work in VR (bug 2 above). The cause is
-visible in CommonLibSSE-NG's `RE/R/Renderer.h`: `RendererData` is a single flat layout with
-hard-coded offsets and a `static_assert`, with **no VR variant**. `renderWindows[0].swapChain`
-therefore reads garbage under VR. The same broken read also backs `UI/Textures.cpp` (the
-icon loader takes `renderer->data.forwarder` as its `ID3D11Device`), which is harmless only
-because the overlay never runs in VR today — under the helper it would go live.
+- `RegisterClient(name, version, OnFrameFn on_frame, void* user, flags)` — **the helper
+  calls us.** `OnFrameFn` is `void(*)(const Frame*, void*)`, delivered per frame with the
+  HMD pose, both hands, focus flags and `dt`.
+- `GetPanel(client_id, PanelHandle*)` hands back `{ width, height, ID3D11RenderTargetView* }`
+  — a render target we draw into.
+- The client SDK resolves the D3D device **from that RTV** (`ResolveImmediateContext`,
+  which notes there is only one `ID3D11Device` in the game), and provides `RenderToPanel`,
+  `RenderHud` and `BlitDrawData`.
 
-Sizing, if it comes to it: our DirectX surface is confined to **two files** —
-`UI/Overlay.cpp` and `UI/Textures.cpp`. Everything else (SystemWindow, SkillTreeWindow,
-ShopWindow, LevelUpEffect, Input, Style) is renderer-agnostic ImGui and would carry over
-untouched. The open work is a VR-valid device/swap-chain acquisition plus a frame tick,
-and controller bindings via `AddCombo()` since `RShift+S` means nothing in VR. Estimate:
-2–4 sessions of work, dominated not by the code but by the fact that **nobody on this side
-can test it** — every iteration is a round trip through a tester, on a code path that
-crashes rather than fails softly when wrong.
+**That removes the blocker rather than working around it.** We never read
+`RE::BSGraphics::Renderer` in VR, never hook Present, never touch
+`renderWindows[0].swapChain`. The garbage read that crashes today — and that also backs
+`UI/Textures.cpp`'s icon loader — is simply not on this path. The device arrives from the
+helper.
+
+- `SubmitWorldQuads(client_id, const WorldQuad*, …)` (interface 004) takes billboards
+  positioned in **Skyrim world space, in game units**, and converts them itself from a
+  fresh pose at submit time, explicitly so the client does not introduce jitter. That is
+  purpose-built for the threat labels: we already compute exactly that point
+  (`HeadPoint` in `UI/ThreatLabels.cpp`), and it is the one part of the interface PrismaUI
+  could never carry, because a per-frame world-anchored HUD through a web view is what
+  costs framerate.
+- `RegisterCombo` / `ComboFired` give VR controller bindings, which `RShift+S` cannot.
+
+Sizing: our DirectX surface is two files (`UI/Overlay.cpp`, `UI/Textures.cpp`); everything
+else is renderer-agnostic ImGui and carries over untouched. The open work is the soft
+connection, an `on_frame` that draws our existing UI into the panel, world quads for the
+labels, and combos for input.
+
+**Still nobody on this side can test it.** That stays the real cost, and it is why the
+integration should be written to disable itself and log at every check rather than assume:
+the failure mode must be "VR still has no overlay, and the log says which check failed",
+never a crash on someone else's machine.
+
+**Licensing, before any of this is vendored:** the API headers are LGPL-3.0. This repo is
+MIT, which may link them, but the headers keep their own licence and the carve-out section
+in `LICENSE` has to name them. That is a deliberate decision, not a detail to slip in with
+a commit.
 
 ### (b) PrismaUI (current strategy)
 
