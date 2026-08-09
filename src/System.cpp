@@ -41,7 +41,9 @@ namespace Isekai {
         // 10: grantTier / treeTier / custom (the decoupled CUSTOM axes);
         // 11: the standing System objective (questKey / questProgress);
         // 12: its snapshotted target/reward, and when the next one is due
-        constexpr std::uint32_t kVersion = 13;
+        // 13: how many objectives this character has been given
+        // 14: the pre-blessing baseline, so REBOOT can hand the body back
+        constexpr std::uint32_t kVersion = 14;
 
         void SystemMsg(const char* a_text) {
             RE::DebugNotification(a_text);
@@ -175,10 +177,41 @@ namespace Isekai {
         //
         // Blessings only ever RAISE — on an existing save the character may already be
         // past parts of the blessing, and neither a rebirth nor an awakening may demote.
+        // Remember the mortal before the System overwrites it. Once per character: a
+        // second blessing must restore the ORIGINAL person, not the one the first one
+        // made. Only called where a grant is actually about to be applied, so a NORMAL or
+        // SHATTERED start captures nothing and REBOOT correctly reports it has nothing to
+        // give back.
+        void CaptureBaseline() {
+            if (!g_state.preSkills.empty()) {
+                return;  // already have it
+            }
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            auto* av = player ? player->AsActorValueOwner() : nullptr;
+            if (!av) {
+                return;
+            }
+            for (int i = static_cast<int>(RE::ActorValue::kOneHanded);
+                 i <= static_cast<int>(RE::ActorValue::kEnchanting); ++i) {
+                g_state.preSkills.push_back(av->GetBaseActorValue(static_cast<RE::ActorValue>(i)));
+            }
+            g_state.preLevel = player->GetLevel();
+            g_state.preHealth = av->GetBaseActorValue(RE::ActorValue::kHealth);
+            g_state.preMagicka = av->GetBaseActorValue(RE::ActorValue::kMagicka);
+            g_state.preStamina = av->GetBaseActorValue(RE::ActorValue::kStamina);
+            logger::info("Baseline captured: level {}, {} skills, H/M/S {}/{}/{}",
+                         g_state.preLevel, g_state.preSkills.size(), g_state.preHealth,
+                         g_state.preMagicka, g_state.preStamina);
+        }
+
         float ApplyBlessing(const Blessing& b) {
             auto* player = RE::PlayerCharacter::GetSingleton();
             if (!player) {
                 return 0.0f;
+            }
+            // Before a single value is written.
+            if (b.skillLevel > 0 || b.playerLevel > 0) {
+                CaptureBaseline();
             }
             auto* avOwner = player->AsActorValueOwner();
 
@@ -745,6 +778,18 @@ namespace Isekai {
 
             a_intf->WriteRecordData(g_state.questsGiven);  // v13
 
+            // v14: the pre-blessing baseline. The skill count is written first so the
+            // reader never has to know how many skills the game had when this was saved.
+            a_intf->WriteRecordData(g_state.preLevel);
+            const auto preCount = static_cast<std::uint32_t>(g_state.preSkills.size());
+            a_intf->WriteRecordData(preCount);
+            for (float v : g_state.preSkills) {
+                a_intf->WriteRecordData(v);
+            }
+            a_intf->WriteRecordData(g_state.preHealth);
+            a_intf->WriteRecordData(g_state.preMagicka);
+            a_intf->WriteRecordData(g_state.preStamina);
+
             logger::info(
                 "State saved (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={}, "
                 "dormant={}, custom={}, grant={}, tree={})",
@@ -882,6 +927,35 @@ namespace Isekai {
                     a_intf->ReadRecordData(g_state.questsGiven);
                 } else if (g_state.questKey != 0) {
                     g_state.questsGiven = 1;
+                }
+
+                // v14: the pre-blessing baseline. An older save has none and never will —
+                // the moment it was taken is long past for that character, so REBOOT tells
+                // them it cannot hand the body back rather than guessing at one.
+                g_state.preLevel = 0;
+                g_state.preSkills.clear();
+                g_state.preHealth = 0.0f;
+                g_state.preMagicka = 0.0f;
+                g_state.preStamina = 0.0f;
+                if (version >= 14) {
+                    a_intf->ReadRecordData(g_state.preLevel);
+                    std::uint32_t preCount = 0;
+                    a_intf->ReadRecordData(preCount);
+                    // Bounded before it is used as a length: this is a number read out of
+                    // a file, and a corrupt one must not turn into an allocation.
+                    if (preCount > 64) {
+                        logger::error("Co-save: baseline claims {} skills — ignoring it",
+                                      preCount);
+                        preCount = 0;
+                    }
+                    for (std::uint32_t i = 0; i < preCount; ++i) {
+                        float v = 0.0f;
+                        a_intf->ReadRecordData(v);
+                        g_state.preSkills.push_back(v);
+                    }
+                    a_intf->ReadRecordData(g_state.preHealth);
+                    a_intf->ReadRecordData(g_state.preMagicka);
+                    a_intf->ReadRecordData(g_state.preStamina);
                 }
             }
 
@@ -1048,6 +1122,35 @@ namespace Isekai {
         AwakenTo(earned);
     }
 
+    // Put the character back to the baseline captured at the first grant, if there is one.
+    // Reports what it did so REBOOT can say it plainly rather than promising a clean slate
+    // it cannot deliver.
+    bool RestoreBaseline() {
+        if (g_state.preSkills.empty()) {
+            return false;
+        }
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        auto* av = player ? player->AsActorValueOwner() : nullptr;
+        if (!av) {
+            return false;
+        }
+        std::size_t i = 0;
+        for (int a = static_cast<int>(RE::ActorValue::kOneHanded);
+             a <= static_cast<int>(RE::ActorValue::kEnchanting) && i < g_state.preSkills.size();
+             ++a, ++i) {
+            av->SetBaseActorValue(static_cast<RE::ActorValue>(a), g_state.preSkills[i]);
+        }
+        av->SetBaseActorValue(RE::ActorValue::kHealth, g_state.preHealth);
+        av->SetBaseActorValue(RE::ActorValue::kMagicka, g_state.preMagicka);
+        av->SetBaseActorValue(RE::ActorValue::kStamina, g_state.preStamina);
+        if (auto* base = player->GetActorBase(); base && g_state.preLevel > 0) {
+            base->actorData.level = g_state.preLevel;
+        }
+        logger::info("Baseline restored: level {}, {} skills", g_state.preLevel,
+                     g_state.preSkills.size());
+        return true;
+    }
+
     void RebootSystem() {
         // Just re-run the blessing selection. ShowPowerSelection overwrites the blessing
         // fields (power / shattered / dormant) from the new choice and re-applies, while
@@ -1055,7 +1158,17 @@ namespace Isekai {
         // so nothing earned is lost and the milestone catch-up cannot double-grant. No
         // need to reset the one-shot flag: we deliberately bypass the boot trigger and
         // open the menu directly.
-        logger::info("System reboot — re-opening blessing choice (earned progress kept)");
+        //
+        // Since v14 it also hands the body back. A FULL blessing used to be permanent in
+        // practice — the level, skills and attributes it granted stayed whatever the
+        // blessing made them, so "reboot to a Shattered run" left an ASCENDED physique
+        // behind and the choice meant very little. The baseline captured at the first
+        // grant is restored first, so the new blessing applies to the mortal the character
+        // actually was.
+        const bool restored = RestoreBaseline();
+        logger::info("System reboot — re-opening blessing choice (earned progress kept, "
+                     "baseline {})",
+                     restored ? "restored" : "not available");
         ShowPowerSelection();
     }
 

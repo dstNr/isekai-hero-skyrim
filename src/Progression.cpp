@@ -643,10 +643,13 @@ namespace Isekai::Progression {
                         "Re-opens the blessing choice, so you can pick a different path\n"
                         "(tier, Full/Shattered, Dormant).\n"
                         "\n"
-                        "KEPT:  milestones, skill tree, System Points, storage.\n"
-                        "NOTE:  stats a previous FULL blessing already granted\n"
-                        "       (skills, level, gold) cannot be taken back — only a\n"
-                        "       brand-new game truly starts from zero.",
+                        "KEPT:    milestones, skill tree, System Points, storage.\n"
+                        "UNDONE:  the skills, level and attributes a previous\n"
+                        "         blessing granted — you return to the mortal you\n"
+                        "         were when the System first bound itself.\n"
+                        "NOTE:    gold and perk points already spent stay spent.\n"
+                        "         A character from before this update has no such\n"
+                        "         record, and keeps what it was given.",
                         std::vector<std::string>{ "CANCEL", "REBOOT" },
                         [](int a_confirm) {
                             if (a_confirm == 1) {

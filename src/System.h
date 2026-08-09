@@ -39,6 +39,20 @@ namespace Isekai {
 
     // Player choices + runtime flags. One instance per game.
     struct State {
+        // v14: what this character was before any blessing touched it, so a REBOOT can
+        // put it back. Captured once, at the moment the first grant is applied, and never
+        // overwritten — a second reboot must restore the ORIGINAL mortal, not the person
+        // the last blessing made.
+        //
+        // Empty / 0 means never captured: a save from before v14, or a character no grant
+        // was ever handed to (NORMAL, SHATTERED, a gift-less CUSTOM). REBOOT then says so
+        // instead of pretending it can undo something it never saw.
+        std::uint16_t      preLevel = 0;
+        std::vector<float> preSkills;  // the 18 skill AVs, kOneHanded..kEnchanting
+        float              preHealth = 0.0f;
+        float              preMagicka = 0.0f;
+        float              preStamina = 0.0f;
+
         bool       reincarnated = false;
         PowerLevel power = PowerLevel::Normal;
         SkillFocus skills = SkillFocus::Balanced;

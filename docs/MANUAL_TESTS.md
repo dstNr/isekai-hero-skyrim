@@ -184,6 +184,18 @@ touch it once the panel is open.
 > `GamepadMenuButton = DPadUp` and confirm that pressing ESC does *not* open the menu, and
 > that D-pad up does.
 
+### 1.1e REBOOT hands the body back (co-save v14, so test old saves too)
+
+| Step | Expected |
+|---|---|
+| New character, take **ASCENDED / Full**. | Level 150, skills 100, the usual grant. |
+| Press **REBOOT**, read the confirm text. | It says what is undone and what is not - no promise of a clean slate. |
+| Confirm, then take **NORMAL**. | Level, skills and Health/Magicka/Stamina are back to what they were before the first blessing. Milestones, skill tree and System Points are untouched. |
+| REBOOT a second time, take ASCENDED again, then REBOOT again. | Still returns to the ORIGINAL mortal, not to the ASCENDED body. The baseline is captured once and never overwritten. |
+| Take NORMAL on a fresh character, then REBOOT. | Nothing to restore, and the panel says so - no grant was ever applied. |
+| Load a **0.7.x save** and REBOOT. | Works as before; the confirm text says a character from before the update keeps what it was given. |
+| Load a 0.7.x save, save it, load it again. | No warnings in the log. v13 saves must still read. |
+
 ### 1.2 The storage no longer arrives stocked
 
 This inverted how the Dimensional Storage works, so it is worth confirming end to end.
