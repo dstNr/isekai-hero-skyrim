@@ -46,6 +46,16 @@
   .screen { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; }
   .screen.active { display: flex; }
 
+  /* UiScale from the ini, pushed in by the plugin (window.isekaiScale).
+     A transform rather than a font-size, because this stylesheet is px-based throughout —
+     rem would have meant rewriting every rule and would still have missed the borders,
+     the brackets and the tree geometry. A transform takes all of it at once.
+     Every screen already centres its content in a full-viewport flex box, so scaling from
+     the default centre origin leaves everything exactly where it was, only larger.
+     The backdrop is excluded on purpose: it is the full-screen vignette, and scaling it
+     would pull its edges into view. */
+  .screen > *:not(.backdrop) { transform: scale(var(--ui-scale, 1)); }
+
   /* Backdrop: vignette + faint scanlines, so the game reads as "behind glass". */
   /* Lighter centre so the scene shows through the (now translucent) panel; the vignette
      still darkens the edges to keep focus on the window. */
@@ -804,6 +814,14 @@ const ROMAN = ["", "I", "II", "III", "IV", "V"];
 /* Zone -> css modifier, for the tinted frame behind each branch. */
 const ZONE_CLASS = { CORE: "z-core", MIGHT: "z-might", ARCANA: "z-arcana", SHADOW: "z-shadow" };
 const ZONE_ORDER = ["CORE", "MIGHT", "SHADOW", "ARCANA"];
+
+/* Set by the plugin from UiScale in the ini. Clamped here as well as in C++ - this is a
+   value arriving from outside the page, and a 0 would make the whole interface vanish
+   with no way left to reach the setting that did it. */
+window.isekaiScale = (s) => {
+  const v = Math.min(Math.max(parseFloat(s) || 1, 0.5), 3);
+  document.documentElement.style.setProperty("--ui-scale", v);
+};
 
 function showScreen(name) {
   ["tree", "panel", "flourish", "status", "shop"].forEach(s => $("screen-" + s).classList.toggle("active", s === name));

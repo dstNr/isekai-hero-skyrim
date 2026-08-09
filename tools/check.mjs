@@ -630,6 +630,25 @@ check("fomod: the installer offers files that exist, and presets that are curren
   return `${PRESETS.length} presets, ${sources.length} sources`;
 });
 
+check("ui: UiScale reaches both renderers", () => {
+  // The setting is one number that has to arrive in two places by two different routes:
+  // Style::g_userScale for the built-in interface, and a CSS variable pushed into the web
+  // view. Either half can rot on its own without anything failing - the interface simply
+  // stops resizing for half the players, and only the half using that renderer notice.
+  // This is an accessibility setting, so silent half-coverage is the wrong failure.
+  const view = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  need(/window\.isekaiScale\s*=/.test(view), "the view no longer defines window.isekaiScale");
+  need(/--ui-scale/.test(view), "the view no longer uses the --ui-scale variable");
+  need(/transform:\s*scale\(var\(--ui-scale/.test(view),
+       "nothing in the view applies --ui-scale, so the plugin would push a number nowhere");
+  need(/isekaiScale/.test(read("src/UI/Prisma.cpp")),
+       "the plugin no longer pushes the scale into the view");
+  need(/g_userScale/.test(read("src/UI/Style.h")) &&
+       /g_userScale\s*=\s*Config::UiScale\(\)/.test(read("src/System.cpp")),
+       "the built-in renderer no longer picks up Config::UiScale");
+  return "built-in and web view";
+});
+
 check("ui: the controller's focus ring can reach every kind of target", () => {
   // A pad has no cursor, so in the web view it navigates by moving focus between the
   // elements named in padTargets(). Those are class selectors written by hand against

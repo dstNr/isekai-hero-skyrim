@@ -8,10 +8,12 @@
 #include "Sounds.h"
 #include "Storage.h"  // Storage::Open from the status screen's storage button
 #include "System.h"   // PowerName, kMaxPerkPoints, DelayedMainThread, RebootSystem
+#include "UI/Style.h"  // g_userScale, pushed into the view as its UI scale
 
 #include <algorithm>
 #include <atomic>
 #include <filesystem>
+#include <format>
 #include <mutex>
 #include <string>
 
@@ -211,6 +213,17 @@ namespace Isekai::UI::Prisma {
             logger::info("Prisma: view DOM ready");
             if (auto* task = SKSE::GetTaskInterface()) {
                 task->AddTask([]() {
+                    // The interface size, before anything is drawn. Pushed here rather
+                    // than at Install because Invoke only remembers ONE pending call
+                    // before the DOM is ready, and a panel opening early would have
+                    // replaced it — the scale would then have applied on the second
+                    // screen the player ever saw.
+                    if (g_api) {
+                        g_api->Invoke(g_view,
+                                      std::format("window.isekaiScale({})",
+                                                  Style::g_userScale)
+                                          .c_str());
+                    }
                     std::string call;
                     {
                         std::scoped_lock lock(g_panelMutex);
