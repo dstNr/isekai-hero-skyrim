@@ -23,13 +23,25 @@ function sources(dir, out = []) {
   return out;
 }
 
-// L("key", "text") — the text may contain escapes and adjacent "a" "b" concatenation,
-// which is how a long panel body is written in C++.
-const CALL = /\bL\(\s*"([^"]+)"\s*,\s*((?:"(?:[^"\\]|\\.)*"\s*)+)\)/g;
+// L("key", "text") and LF("key", "text with {}", value) — the text may contain escapes
+// and adjacent "a" "b" concatenation, which is how a long panel body is written in C++.
+// The trailing [,)] is what admits LF: its English text is followed by the arguments
+// rather than by the closing bracket.
+//
+// The first version of this matched `\bL\(` only and silently skipped every LF call. The
+// template came out short, and the check that compares template to source compared a
+// stale template against the same stale collector and passed. Hence COUNT below.
+const CALL = /\bLF?\(\s*"([^"]+)"\s*,\s*((?:"(?:[^"\\]|\\.)*"\s*)+)[,)]/g;
+
+// Every call site, however malformed, just to count them. If this and CALL disagree the
+// regex above has stopped matching something it should — which is a silent failure, so
+// it is made loud.
+const COUNT = /\bLF?\(\s*"/g;
 
 export function collect() {
   const found = new Map();
   const dupes = [];
+  let callSites = 0;
   for (const file of sources(join(ROOT, "src"))) {
     // Comments first: Loc.h documents the macro by showing a call, and without this the
     // example ends up in the template as a string every translator has to wonder about.
@@ -46,8 +58,9 @@ export function collect() {
       }
       found.set(key, { text, file: relative(ROOT, file).replace(/\\/g, "/") });
     }
+    callSites += (code.match(COUNT) || []).length;
   }
-  return { found, dupes };
+  return { found, dupes, callSites };
 }
 
 export function template(found) {

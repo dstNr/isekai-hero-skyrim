@@ -14,6 +14,7 @@
 ; which keys are new.
 
 ; --- src/System.cpp ---
+blessing.choose = You have been reincarnated.\nThe System offers you a blessing.\n\n  NORMAL    No blessing. Pure challenge.\n  HERO      Awakened power.\n  ASCENDED  Transcend mortal limits.\n  DORMANT   The blessing sleeps. Begin as a mortal;\n            it wakes to HERO at level {}, then to\n            ASCENDED at level {}.\n  CUSTOM    Set the pieces yourself — starting gift,\n            reward pace and skill-tree depth, each on\n            its own.\n\nChoose your path:
 boot.1 = [ SYSTEM ] Soul signature detected...
 boot.2 = [ SYSTEM ] Analyzing dimensional residue...
 boot.3 = [ SYSTEM ] Awakening protocol ready.

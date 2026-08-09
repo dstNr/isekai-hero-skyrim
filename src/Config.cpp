@@ -16,6 +16,7 @@ namespace Isekai::Config {
         bool          g_hideSealedNodes = false;
         bool          g_autoStart = true;
         float         g_textSpeed = 1.0f;
+        float         g_uiScale = 1.0f;
         std::uint32_t g_systemMenuKey = 0x1F;       // DIK_S
         std::uint32_t g_systemMenuModifier = 0x36;  // DIK_RSHIFT
         std::uint32_t g_vrMenuButton = 0;           // none; VR codes differ per headset
@@ -174,6 +175,7 @@ namespace Isekai::Config {
         g_hideSealedNodes = false;
         g_autoStart = true;
         g_textSpeed = 1.0f;
+        g_uiScale = 1.0f;
         g_systemMenuKey = 0x1F;       // DIK_S
         g_systemMenuModifier = 0x36;  // DIK_RSHIFT
         g_vrMenuButton = 0;
@@ -221,6 +223,13 @@ namespace Isekai::Config {
                 g_autoStart = AsBool(val);
             } else if (key == "textspeed") {
                 g_textSpeed = AsSpeed(val, g_textSpeed);
+            } else if (key == "uiscale") {
+                // Clamped, not trusted: 0 would make the interface invisible and there
+                // would be no way left to reach the setting that did it.
+                try {
+                    g_uiScale = std::clamp(std::stof(val), 0.5f, 3.0f);
+                } catch (...) {
+                }
             } else if (key == "systemmenukey") {
                 g_systemMenuKey = AsScanCode(val, g_systemMenuKey);
             } else if (key == "systemmenumodifier") {
@@ -331,6 +340,10 @@ namespace Isekai::Config {
 
     float TextSpeed() {
         return g_textSpeed;
+    }
+
+    float UiScale() {
+        return g_uiScale;
     }
 
     std::uint32_t SystemMenuKey() {

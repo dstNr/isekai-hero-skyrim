@@ -53,8 +53,12 @@ namespace Isekai::UI::Style {
     // not shrink into a postage stamp on a 4K screen.
     inline float g_scale = 1.0f;
 
+    // The player's own multiplier on top of the resolution scaling, from the ini.
+    // 1.0 = as authored. Set once at load so the render thread never reads Config.
+    inline float g_userScale = 1.0f;
+
     inline void UpdateScale(float a_displayHeight) {
-        g_scale = std::max(a_displayHeight / 1080.0f, 0.5f);
+        g_scale = std::max(a_displayHeight / 1080.0f, 0.5f) * g_userScale;
     }
 
     [[nodiscard]] inline float BodySize() { return 20.0f * g_scale; }

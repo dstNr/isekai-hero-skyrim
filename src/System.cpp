@@ -18,6 +18,7 @@
 #include "UI/Overlay.h"
 #include "UI/Prisma.h"
 #include "UI/SkillTreeWindow.h"
+#include "UI/Style.h"
 #include "UI/SystemWindow.h"
 #include "UI/ThreatLabels.h"
 
@@ -417,22 +418,22 @@ namespace Isekai {
         void ShowPowerSelection() {
             UI::ShowSystemWindow(
                 "[ SYSTEM ]",
-                "You have been reincarnated.\n"
-                "The System offers you a blessing.\n"
-                "\n"
-                "  NORMAL    No blessing. Pure challenge.\n"
-                "  HERO      Awakened power.\n"
-                "  ASCENDED  Transcend mortal limits.\n"
-                "  DORMANT   The blessing sleeps. Begin as a mortal;\n"
-                "            it wakes to HERO at level " +
-                    std::to_string(Config::DormantHeroLevel()) + ", then to\n"
-                "            ASCENDED at level " +
-                    std::to_string(Config::DormantAscendedLevel()) + ".\n"
-                "  CUSTOM    Set the pieces yourself — starting gift,\n"
-                "            reward pace and skill-tree depth, each on\n"
-                "            its own.\n"
-                "\n"
-                "Choose your path:",
+                LF("blessing.choose",
+                   "You have been reincarnated.\n"
+                   "The System offers you a blessing.\n"
+                   "\n"
+                   "  NORMAL    No blessing. Pure challenge.\n"
+                   "  HERO      Awakened power.\n"
+                   "  ASCENDED  Transcend mortal limits.\n"
+                   "  DORMANT   The blessing sleeps. Begin as a mortal;\n"
+                   "            it wakes to HERO at level {}, then to\n"
+                   "            ASCENDED at level {}.\n"
+                   "  CUSTOM    Set the pieces yourself — starting gift,\n"
+                   "            reward pace and skill-tree depth, each on\n"
+                   "            its own.\n"
+                   "\n"
+                   "Choose your path:",
+                   Config::DormantHeroLevel(), Config::DormantAscendedLevel()),
                 std::vector<UI::Choice>{
                     { "NORMAL", BlessingIcon("blessing_normal.png"), false },
                     { "HERO", BlessingIcon("blessing_hero.png"), false },
@@ -924,6 +925,8 @@ namespace Isekai {
             case SKSE::MessagingInterface::kDataLoaded:
                 Config::Load();
                 Loc::Load();  // after Config: it reads Config::Language()
+                // Copied out once, so the render thread never touches Config.
+                ::Isekai::UI::Style::g_userScale = Config::UiScale();
                 Plugin::DumpForms();
                 Passives::Install();
                 Sounds::Install();

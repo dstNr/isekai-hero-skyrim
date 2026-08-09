@@ -64,6 +64,14 @@ namespace Isekai::Config {
     [[nodiscard]] std::uint32_t GamepadMenuButton();
     [[nodiscard]] std::uint32_t GamepadMenuModifier();
 
+    // Multiplier on the size of everything the mod draws: panels, text, the skill tree,
+    // the threat labels. 1.0 = as authored, 1.5 = half again as large. Clamped to 0.5..3.
+    //
+    // The interface already scales with resolution, which keeps it the same *apparent*
+    // size on a 4K screen — that is not the same question as "can you read it", and a
+    // player who asked for this told me plainly which question they had.
+    [[nodiscard]] float UiScale();
+
     // Button on a Skyrim VR motion controller that opens the System menu, as the code the
     // game reports for it. Default 0 = none.
     //
