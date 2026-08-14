@@ -62,18 +62,7 @@ for ($i = 0; $i -le $bytes.Length - $find.Length; $i++) {
     }
 }
 [System.IO.File]::WriteAllBytes($stagedDll, $bytes)
-# Fail loudly if the name still survives anywhere — never ship on a silent miss.
-$after = [System.IO.File]::ReadAllBytes($stagedDll)
-$leak = 0
-for ($i = 0; $i -le $after.Length - $find.Length; $i++) {
-    $match = $true
-    for ($j = 0; $j -lt $find.Length; $j++) {
-        if ($after[$i + $j] -ne $find[$j]) { $match = $false; break }
-    }
-    if ($match) { $leak++ }
-}
-if ($leak -gt 0) { throw "Name scrub failed: '$secret' still present $leak time(s) in the DLL." }
-Write-Host "Name scrub: replaced $hits occurrence(s); DLL is clean."
+Write-Host "Name scrub: replaced $hits occurrence(s) in the DLL."
 
 # --- licence ---
 Copy-Item (Join-Path $root "LICENSE") $stage
@@ -111,6 +100,27 @@ New-Item -ItemType Directory -Force $sound | Out-Null
 foreach ($wav in "Cinematic_6_1.wav", "Cinematic_7_2.wav", "Modern_2_2.wav", "Modern_5_2.wav") {
     Copy-Item (Join-Path $root "sounds\$wav") $sound
 }
+
+# --- privacy gate: nothing leaves this folder with the author's name in it ---
+# This used to check the DLL only, which is how v0.5.0 shipped a 130 MB .pdb with the
+# name in thousands of records: the scrub ran, reported "clean", and never looked at the
+# file next to it. The check now walks everything that is about to be packed, so it
+# cannot be outgrown by adding a file to the archive.
+$leaks = @()
+foreach ($f in Get-ChildItem $stage -Recurse -File) {
+    $b = [System.IO.File]::ReadAllBytes($f.FullName)
+    for ($i = 0; $i -le $b.Length - $find.Length; $i++) {
+        $match = $true
+        for ($j = 0; $j -lt $find.Length; $j++) {
+            if ($b[$i + $j] -ne $find[$j]) { $match = $false; break }
+        }
+        if ($match) { $leaks += $f.FullName; break }
+    }
+}
+if ($leaks.Count -gt 0) {
+    throw "Privacy gate: '$secret' is still present in:`n  " + ($leaks -join "`n  ")
+}
+Write-Host "Privacy gate: $((Get-ChildItem $stage -Recurse -File).Count) staged file(s) checked, all clean."
 
 # --- pack ---
 if (Test-Path $archive) { Remove-Item $archive -Force }
