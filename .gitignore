@@ -26,3 +26,6 @@ icons/Shop/
 *.tmp
 Thumbs.db
 .DS_Store
+
+# A stray folder some tool created from a mis-parsed -o flag. Not ours, not shipped.
+/-o/
