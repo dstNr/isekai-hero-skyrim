@@ -193,9 +193,12 @@ namespace Isekai::UI {
             std::int32_t max;      // 0 = this actor has none, so draw no bar
         };
 
-        // A label the frame can draw: already projected, already judged.
+        // A label the frame can draw: already judged, and carrying both anchors — the
+        // screen point the flat overlay draws at, and the world point VR needs, because
+        // there the helper does the projection and wants game units.
         struct Label {
-            ImVec2       pos;
+            ImVec2       pos;    // screen pixels; unset (and unused) on the VR path
+            RE::NiPoint3 world;  // the head point itself, for a world-anchored billboard
             float        distance;
             Verdict      verdict;
             std::int32_t level;
@@ -230,11 +233,10 @@ namespace Isekai::UI {
     }
 
     void InstallThreatLabels() {
-        if (REL::Module::IsVR()) {
-            logger::info("UI: no threat-label key in VR — the overlay that draws them is "
-                         "SE/AE only");
-            return;
-        }
+        // The key is armed in VR too now. It used to be skipped because VR had no overlay
+        // to draw on at all; the labels exist there as world billboards, so the toggle has
+        // something to toggle. A VR player without a keyboard simply never presses it —
+        // that is a reason to also offer a controller binding, not to withhold the key.
         const auto key = Config::ThreatLabelKey();
         if (key == 0) {
             logger::info("UI: no threat-label key (ThreatLabelKey = 0)");
@@ -259,30 +261,23 @@ namespace Isekai::UI {
                   "threat");
     }
 
-    void DrawThreatLabels() {
-        if (!ThreatLabelsVisible() || !OverlayReady()) {
-            return;
-        }
-        auto* player = RE::PlayerCharacter::GetSingleton();
-        if (!player || !player->Is3DLoaded()) {
-            return;
-        }
-        // Nothing to read while a menu owns the screen, and drawing world-anchored labels
-        // over an inventory would be nonsense — the camera is elsewhere.
-        if (auto* ui = RE::UI::GetSingleton(); !ui || ui->GameIsPaused()) {
-            return;
-        }
-        auto* cam = SceneCamera();
-        if (!cam) {
-            return;
-        }
-
+    namespace {
+        // Everything up to "which actors get a label, and what does each one say".
+        //
+        // Split out because VR needs the same answer through a different lens: there the
+        // helper projects the billboards itself, so a_cam is null and the screen-space
+        // steps — the projection filter and the crosshair cone that depends on it — are
+        // skipped rather than fed a single eye's matrix, which would be neither eye.
+        [[nodiscard]] std::vector<Label> Collect(RE::PlayerCharacter* a_player,
+                                                 RE::NiCamera* a_cam, const ImVec2& a_display) {
         const auto   mode = Config::ThreatLabelTargets();
         const bool   crosshairOnly = mode == Config::ThreatTargets::kCrosshair;
         const float  maxRange = static_cast<float>(Config::ThreatLabelRange());
-        const ImVec2 display = ImGui::GetIO().DisplaySize;
-        const auto   playerLevel = static_cast<std::int32_t>(player->GetLevel());
-        const auto   playerPos = player->GetPosition();
+        const ImVec2 display = a_display;
+        const auto   playerLevel = static_cast<std::int32_t>(a_player->GetLevel());
+        const auto   playerPos = a_player->GetPosition();
+        auto*        player = a_player;
+        auto*        cam = a_cam;
 
         std::vector<Label>      labels;
         std::vector<RE::Actor*> seen;  // the crosshair target is usually also in the sweep
@@ -304,7 +299,9 @@ namespace Isekai::UI {
                 return;
             }
             ImVec2 screen{};
-            if (!Project(cam, head, display, screen)) {
+            // No camera means VR: the helper owns the projection, so "is it on screen"
+            // is not ours to answer and range plus line of sight are the whole filter.
+            if (cam && !Project(cam, head, display, screen)) {
                 return;
             }
             // Last, because it is the most expensive question here — and it covers the
@@ -315,7 +312,7 @@ namespace Isekai::UI {
             const auto  level = static_cast<std::int32_t>(actor->GetLevel());
             const char* name = actor->GetDisplayFullName();
             auto*       av = actor->AsActorValueOwner();
-            labels.push_back({ screen, distance, VerdictFor(level - playerLevel), level,
+            labels.push_back({ screen, head, distance, VerdictFor(level - playerLevel), level,
                                PoolOf(av, RE::ActorValue::kHealth),
                                PoolOf(av, RE::ActorValue::kMagicka),
                                PoolOf(av, RE::ActorValue::kStamina), name ? name : "" });
@@ -330,7 +327,12 @@ namespace Isekai::UI {
         // Found by projection rather than by CrosshairPickData: that only resolves a
         // target within ACTIVATION range, so it never sees the wolf you are lining up
         // across a clearing — which is exactly when you want the reading.
-        if (crosshairOnly || mode == Config::ThreatTargets::kAggro) {
+        //
+        // Skipped entirely without a camera (VR): the cone is measured in screen pixels
+        // around the centre of one flat viewport, and there is no such thing in a headset.
+        // kCrosshair alone would then produce nothing at all, so it falls through to the
+        // sweep below instead of leaving the player with no labels.
+        if (cam && (crosshairOnly || mode == Config::ThreatTargets::kAggro)) {
             // ponytail: fixed screen-space cone, not a real ray. Picks the wrong actor
             // only when two overlap near the centre; raycast if that ever matters.
             float      best = display.y * 0.08f;
@@ -357,7 +359,7 @@ namespace Isekai::UI {
             }
             considerAs(aimed, Config::ThreatTargets::kCrosshair);
         }
-        if (!crosshairOnly) {
+        if (!crosshairOnly || !cam) {
             if (auto* lists = RE::ProcessLists::GetSingleton()) {
                 for (const auto& handle : lists->highActorHandles) {
                     if (auto actor = handle.get()) {
@@ -367,19 +369,27 @@ namespace Isekai::UI {
             }
         }
 
-        if (labels.empty()) {
-            return;
-        }
         // Nearest first, then cut — under a crowd the far ones are the ones to lose.
         std::sort(labels.begin(), labels.end(),
                   [](const Label& a, const Label& b) { return a.distance < b.distance; });
         if (labels.size() > kMaxLabels) {
             labels.resize(kMaxLabels);
         }
+        return labels;
+        }
 
-        const float s = Style::g_scale;
-        ImDrawList* dl = ImGui::GetBackgroundDrawList();
-        ImFont*     font = Style::g_body;
+        // One target frame, drawn with its BOTTOM CENTRE at a_anchor. Returns the size it
+        // occupied, which the VR path needs: the billboard's sub-rect has to be the frame
+        // rather than the cell it was drawn in, or every label would be stretched to the
+        // cell's aspect ratio.
+        //
+        // a_k scales the whole frame and a_alpha fades it. The flat overlay derives both
+        // from distance so a crowd reads as depth; VR passes them fixed, because there the
+        // billboard itself shrinks with distance and doing it twice would make anything
+        // more than a few metres away unreadable.
+        ImVec2 DrawFrame(ImDrawList* dl, const Label& label, const ImVec2& a_anchor, float k,
+                         float alpha) {
+        ImFont* font = Style::g_body;
 
         // A target frame rather than two lines of text: an angular plate leaning right,
         // the level in a disc on the left, the name across the top and a health bar under
@@ -393,13 +403,7 @@ namespace Isekai::UI {
                         : ImGui::CalcTextSize(a_text).x;
         };
 
-        for (const auto& label : labels) {
-            // Distant frames shrink and dim, so the near ones stay dominant and a crowd
-            // reads as depth rather than as noise.
-            const float t = std::clamp(label.distance / maxRange, 0.0f, 1.0f);
-            const float k = (1.0f - 0.32f * t) * s;
-            const float alpha = 1.0f - 0.35f * t;
-
+        {
             const float nameSize = 20.0f * k;
             const float tagSize = 12.0f * k;
             const float lvlSize = 15.0f * k;
@@ -427,8 +431,8 @@ namespace Isekai::UI {
             const float resGap = 2.0f * k;
             const float extra = static_cast<float>(resBars) * (resH + resGap);
 
-            const float cx = label.pos.x;
-            const float y1 = label.pos.y;              // sits just above the head point
+            const float cx = a_anchor.x;
+            const float y1 = a_anchor.y;               // sits just above the head point
             // The frame grows UPWARD. y1 is pinned to the head, so extra rows must never
             // push the frame down over the actor's face.
             const float y0 = y1 - discR * 2.0f - extra;
@@ -521,6 +525,105 @@ namespace Isekai::UI {
             Style::DrawTextOutlined(dl, font, tagSize,
                                     ImVec2{ barR + 10.0f * k, barY + barH * 0.5f - tagSize * 0.6f },
                                     label.verdict.col, label.verdict.tag, alpha);
+
+            return ImVec2{ plateW, y1 - y0 };
+        }
+        }
+    }
+
+    void DrawThreatLabels() {
+        if (!ThreatLabelsVisible() || !OverlayReady()) {
+            return;
+        }
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        if (!player || !player->Is3DLoaded()) {
+            return;
+        }
+        // Nothing to read while a menu owns the screen, and drawing world-anchored labels
+        // over an inventory would be nonsense — the camera is elsewhere.
+        if (auto* ui = RE::UI::GetSingleton(); !ui || ui->GameIsPaused()) {
+            return;
+        }
+        auto* cam = SceneCamera();
+        if (!cam) {
+            return;
+        }
+
+        const ImVec2 display = ImGui::GetIO().DisplaySize;
+        const auto   labels = Collect(player, cam, display);
+        if (labels.empty()) {
+            return;
+        }
+
+        const float maxRange = static_cast<float>(Config::ThreatLabelRange());
+        const float s = Style::g_scale;
+        ImDrawList* dl = ImGui::GetBackgroundDrawList();
+
+        for (const auto& label : labels) {
+            // Distant frames shrink and dim, so the near ones stay dominant and a crowd
+            // reads as depth rather than as noise.
+            const float t = std::clamp(label.distance / maxRange, 0.0f, 1.0f);
+            static_cast<void>(DrawFrame(dl, label, label.pos, (1.0f - 0.32f * t) * s,
+                                        1.0f - 0.35f * t));
+        }
+    }
+
+    void DrawThreatLabelsVR(const ImVec2&                                   a_panel,
+                            std::vector<ImGuiVRHelperPluginAPI::WorldQuad>& a_out) {
+        // Cleared unconditionally, and the caller submits the result even when it is
+        // empty: SubmitWorldQuads replaces the previous list wholesale, and a frame that
+        // simply does not call it keeps the last one on screen. "No labels" has to be
+        // said out loud, or switching the feature off would leave the last set floating.
+        a_out.clear();
+
+        if (!ThreatLabelsVisible() || a_panel.x <= 0.0f || a_panel.y <= 0.0f) {
+            return;
+        }
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        if (!player || !player->Is3DLoaded()) {
+            return;
+        }
+        if (auto* ui = RE::UI::GetSingleton(); !ui || ui->GameIsPaused()) {
+            return;
+        }
+
+        // No camera: in VR the helper projects the billboards itself.
+        const auto labels = Collect(player, nullptr, a_panel);
+        if (labels.empty()) {
+            return;
+        }
+
+        const float bandH = a_panel.y / static_cast<float>(kMaxLabels);
+        const float height = Config::VRThreatLabelHeight();
+        ImDrawList* dl = ImGui::GetBackgroundDrawList();
+
+        for (std::size_t i = 0; i < labels.size(); ++i) {
+            // Bottom-centre of this label's band, a couple of pixels clear of the edge so
+            // the frame's lower border is not clipped by the sub-rect.
+            const float  baseline = static_cast<float>(i + 1) * bandH - 4.0f;
+            const ImVec2 anchor{ a_panel.x * 0.5f, baseline };
+
+            // Fixed scale and full opacity, unlike the flat path: the billboard already
+            // shrinks with distance because it is a fixed size in the world, and fading
+            // it as well would make anything past a few metres unreadable.
+            const ImVec2 size = DrawFrame(dl, labels[i], anchor, 1.0f, 1.0f);
+            if (size.x <= 0.0f || size.y <= 0.0f) {
+                continue;
+            }
+
+            ImGuiVRHelperPluginAPI::WorldQuad quad{};
+            quad.u0 = std::clamp((anchor.x - size.x * 0.5f) / a_panel.x, 0.0f, 1.0f);
+            quad.u1 = std::clamp((anchor.x + size.x * 0.5f) / a_panel.x, 0.0f, 1.0f);
+            quad.v0 = std::clamp((baseline - size.y) / a_panel.y, 0.0f, 1.0f);
+            quad.v1 = std::clamp(baseline / a_panel.y, 0.0f, 1.0f);
+            // Skyrim world units, NOT tracking space: the helper converts at submit time
+            // from the same pose it builds the eye projection with, and converting here
+            // instead is what makes a billboard jitter while the player is moving.
+            quad.pos[0] = labels[i].world.x;
+            quad.pos[1] = labels[i].world.y;
+            quad.pos[2] = labels[i].world.z;
+            quad.height_m = height;
+            a_out.push_back(quad);
         }
     }
 }

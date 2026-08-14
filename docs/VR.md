@@ -23,6 +23,11 @@ The logic layer is runtime-neutral:
 `src/main.cpp` logs the detected edition (SE/AE/VR) at load — the first line to check on a
 VR bring-up.
 
+> **Superseded in part, 2026-08-14.** The section below is the strategy as it stood before
+> ImGuiVRHelper was integrated. It still holds for the MENUS — those go through PrismaUI.
+> It no longer holds for the HUD: threat labels and toasts are drawn by ImGui in the
+> headset now. See "Phase 2" at the bottom.
+
 ## Strategy: the VR UI goes entirely through PrismaUI
 
 Decision (July 2026): in VR there is **no UI of our own**. The ImGui overlay is off in VR
@@ -200,23 +205,46 @@ What the API (LGPL-3.0, `alandtse/imgui-vr-helper`, `api/`) actually offers:
 read that crashes today — and that also backs `UI/Textures.cpp`'s icon loader — is not on
 the drawing path.
 
-**One half remains, and I overstated this at first.** `OnFrameThunk` in the client SDK only
-caches input (held buttons, stick axes, HUD depth); it does **not** render for us. The
-client is still expected to drive its own ImGui frame and call `RenderToPanel()` in place
-of `ImGui_ImplDX11_RenderDrawData()`. Our frame driver today is the Present hook, and what
-breaks there in VR is not the hooking — it is *finding* the swapchain through
-`renderWindows[0].swapChain`.
+**One half remained, and it is now settled — BUILT 2026-08-14, `src/UI/VROverlay.cpp`.**
+`OnFrameThunk` in the client SDK only caches input (held buttons, stick axes, HUD depth);
+it does **not** render for us. The client still drives its own ImGui frame. Of the two
+candidates that were open here:
 
-So the open question is narrow and specific: **where does our ImGui frame get driven from
-in VR?** Two candidates, and this is the thing to settle before writing the rest:
+1. ~~Drive the frame from `OnFrameFn`~~ — **rejected.** The SDK says outright that the
+   callback runs on the helper's frame thread and that `PumpInput` / `RenderToPanel` belong
+   on *your render thread*. A D3D11 immediate context is not thread-safe, and "probably the
+   same thread" is not something to ship on a machine nobody here can test.
+2. **Keep a Present hook, find the swapchain another way — chosen.** The SDK notes hooking
+   at Present is harmless in VR because the desktop mirror is not shown in the headset,
+   which is exactly what we need: a per-frame tick on the render thread, drawing nothing
+   into that mirror.
 
-1. Drive the whole frame from the helper's `OnFrameFn` — it is already called once per
-   frame, and `RenderToPanel` resolves its own device context from the panel. Plausible,
-   and nothing in the SDK forbids it; equally, nothing in the SDK does it, so it needs
-   confirming rather than assuming.
-2. Keep a Present hook but obtain the swapchain some other way than the renderer struct.
-   The SDK notes hooking at Present is harmless in VR because the desktop mirror is not
-   shown in the headset — which implies clients do exactly this.
+The swapchain is found without asking Skyrim for it at all. `ProbeSwapChainVTable()` in
+`UI/Overlay.cpp` creates a throwaway swapchain on a hidden 1×1 window and reads the vtable
+off that. Every `IDXGISwapChain` from the same `dxgi.dll` shares one vtable, so patching
+`Present` there patches the game's swapchain too — **without touching a single byte of a
+game struct**, which is what made the old path crash. The flat path is deliberately
+unchanged: it works, and neither can be tested here.
+
+**What is actually drawn.** Two clients, because the helper's compositing modes are
+one-per-client and the two surfaces want different ones:
+
+| Client | Flag | Carries |
+|---|---|---|
+| `Isekai Hero` | `kClientFlag_WorldQuad` | threat labels, anchored at the actor's head |
+| `Isekai Hero HUD` | `kClientFlag_HUDMode` | toasts, locked to the head |
+
+The menus stay with PrismaUI. This layer is exactly the per-frame HUD a web view cannot
+carry without costing framerate, which was the whole reason to want it.
+
+Two things fell out of building it that were not obvious from the API:
+
+- Each private ImGui context owns its **own font atlas**, so a single `Style::g_body`
+  cannot serve both clients — the pointer is only valid inside the context that built it.
+  `ScopedStyle` swaps fonts and scale around each draw.
+- `RenderHud` pins its context's `DeltaTime` to a flat **1/60**. Anything that ages on it
+  (the toast queue) would run at 60 Hz's pace on a 90 Hz headset, so the real delta is
+  measured and passed in.
 
 - `SubmitWorldQuads(client_id, const WorldQuad*, …)` (interface 004) takes billboards
   positioned in **Skyrim world space, in game units**, and converts them itself from a
@@ -257,7 +285,19 @@ so it only ever covers part of the UI.
 ## Phases
 
 - **Phase 1 (done):** VR-loadable build, runtime logging, docs, requirements. The overlay
-  crash is fixed (the hook is skipped in VR) — the mod loads and the logic runs, but VR has
-  no UI of its own.
-- **Phase 2 (open):** see the three routes above. Still gated on a VR test environment, or
-  at least on a responsive tester.
+  crash is fixed — the mod loads and the logic runs.
+- **Phase 2 (built, untested):** route (a). Threat labels as world quads, toasts on the HUD
+  plane, both through ImGuiVRHelper; menus still through PrismaUI. Written to disable
+  itself and log at every check — the failure mode is "no in-headset layer, and the log
+  says which check failed", never a crash. **Nobody on this side has run it.** What a
+  tester has to confirm, in order:
+  1. `IsekaiHeroSKSE.log` says `swap-chain vtable found by probe`. If not, the Present
+     hook never armed and nothing below can work.
+  2. It says `world-quad client registered` / `HUD client registered`. If it says
+     `ImGuiVRHelper is not installed` instead, that is the whole answer.
+  3. `D3D device resolved from the helper's panel target` — this appears on the first
+     frame the helper issues a panel, not at load.
+  4. Labels sit **on** the actors and stay there when the head turns (that is the world
+     quad working), rather than swimming with the view.
+  5. Size: `VRThreatLabelHeight` in the ini, metres. 0.15 is a guess made without a
+     headset and is the single most likely thing to need changing.

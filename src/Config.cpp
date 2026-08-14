@@ -34,6 +34,7 @@ namespace Isekai::Config {
         bool          g_threatNumbers = true;
         bool          g_threatResources = false;
         std::uint32_t g_threatRange = 4000;
+        float         g_vrThreatHeight = 0.15f;
         std::uint32_t g_threatKey = 0x44;  // DIK_F10
         std::uint32_t g_questFirstTaskHours = 12;
         std::uint32_t g_questIntervalHours = 24;
@@ -192,6 +193,7 @@ namespace Isekai::Config {
         g_threatNumbers = true;
         g_threatResources = false;
         g_threatRange = 4000;
+        g_vrThreatHeight = 0.15f;
         g_threatKey = 0x44;
         g_questFirstTaskHours = 12;
         g_questIntervalHours = 24;
@@ -272,6 +274,14 @@ namespace Isekai::Config {
                 try {
                     g_threatRange = std::clamp(
                         static_cast<std::uint32_t>(std::stoul(val, nullptr, 0)), 500u, 20000u);
+                } catch (...) {
+                }
+            } else if (key == "vrthreatlabelheight") {
+                // Metres, clamped: this is a physical size in the world, and a 0 would
+                // make every billboard degenerate while a large value would put a
+                // house-sized banner over a mudcrab.
+                try {
+                    g_vrThreatHeight = std::clamp(std::stof(val), 0.03f, 1.0f);
                 } catch (...) {
                 }
             } else if (key == "firsttaskhours") {
@@ -424,6 +434,10 @@ namespace Isekai::Config {
 
     std::uint32_t ThreatLabelKey() {
         return g_threatKey;
+    }
+
+    float VRThreatLabelHeight() {
+        return g_vrThreatHeight;
     }
 
     std::uint32_t ThreatLabelRange() {

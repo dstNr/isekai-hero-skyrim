@@ -21,6 +21,7 @@
 #include "UI/Style.h"
 #include "UI/SystemWindow.h"
 #include "UI/ThreatLabels.h"
+#include "UI/VROverlay.h"
 
 #include <algorithm>
 #include <chrono>
@@ -1016,6 +1017,15 @@ namespace Isekai {
 
         void OnSKSEMessage(SKSE::MessagingInterface::Message* a_msg) {
             switch (a_msg->type) {
+            // The ImGuiVRHelper handshake, and it has to be THIS message rather than
+            // kDataLoaded or kPostLoad: kPostPostLoad fires after every plugin's
+            // kPostLoad, so the helper's own messaging listener is registered by then no
+            // matter which order the two DLLs happen to load in. No-op outside VR, and
+            // no-op in VR without the helper installed.
+            case SKSE::MessagingInterface::kPostPostLoad:
+                UI::InstallVROverlay();
+                break;
+
             case SKSE::MessagingInterface::kDataLoaded:
                 Config::Load();
                 Loc::Load();  // after Config: it reads Config::Language()

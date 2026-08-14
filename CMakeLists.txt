@@ -9,6 +9,9 @@ project(
 find_package(CommonLibSSE CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(minhook CONFIG REQUIRED)
+# Required by the vendored ImGuiVRHelper client API: its InputCombo serialises through
+# nlohmann_json so clients can persist bindings.
+find_package(nlohmann_json CONFIG REQUIRED)
 
 add_commonlibsse_plugin(
     ${PROJECT_NAME}
@@ -67,20 +70,33 @@ add_commonlibsse_plugin(
         src/UI/SystemWindow.h
         src/UI/Textures.cpp
         src/UI/Textures.h
+        src/UI/VROverlay.cpp
+        src/UI/VROverlay.h
+        # Vendored, LGPL-3.0-or-later, unmodified — see extern/imgui-vr-helper/README.md.
+        # Only the handshake needs compiling; everything else in there is header-only.
+        extern/imgui-vr-helper/ImGuiVRHelperAPI.cpp
+        extern/imgui-vr-helper/ImGuiVRHelperAPI.h
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
 
 # ImGui renders straight into the game's D3D11 swap chain (see src/UI/Overlay.cpp).
 # MinHook detours the crafting inventory-count functions (see src/CraftHooks.cpp).
-target_link_libraries(${PROJECT_NAME} PRIVATE imgui::imgui d3d11.lib dxgi.lib minhook::minhook)
+target_link_libraries(${PROJECT_NAME} PRIVATE imgui::imgui d3d11.lib dxgi.lib minhook::minhook
+                                             nlohmann_json::nlohmann_json)
 
 # stb_image decodes the panel icon PNGs (header-only; vcpkg ships no CMake config).
 find_path(STB_INCLUDE_DIRS "stb_image.h" REQUIRED)
 target_include_directories(${PROJECT_NAME} PRIVATE ${STB_INCLUDE_DIRS})
 
-# So sources can say #include "UI/Overlay.h".
-target_include_directories(${PROJECT_NAME} PRIVATE src)
+# So sources can say #include "UI/Overlay.h", and #include "ImGuiVRHelperClientSDK.h"
+# without spelling out the vendor path at every call site.
+target_include_directories(${PROJECT_NAME} PRIVATE src extern/imgui-vr-helper)
+
+# The mod version, as the VR helper surfaces it in its "Registered Clients" table — so a
+# tester's screenshot of that table says which build they are on. Taken from the project
+# version above rather than written out again.
+target_compile_definitions(${PROJECT_NAME} PRIVATE ISEKAI_VERSION="${PROJECT_VERSION}")
 
 # Pulling in d3d11.h drags in windows.h; keep its macros from colliding with
 # CommonLibSSE (which deliberately avoids including it).

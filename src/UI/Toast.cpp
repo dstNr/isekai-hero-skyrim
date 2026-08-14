@@ -2,6 +2,7 @@
 
 #include "UI/Overlay.h"
 #include "UI/Style.h"
+#include "UI/VROverlay.h"
 
 #include <imgui.h>
 
@@ -37,9 +38,13 @@ namespace Isekai::UI {
                 return;
             }
 
-            // No overlay to draw on (Skyrim VR): fall back to the engine's own corner
-            // queue rather than silently dropping the message. Worse, but not nothing.
-            if (!OverlayReady()) {
+            // Nowhere to draw: fall back to the engine's own corner queue rather than
+            // silently dropping the message. Worse, but not nothing.
+            //
+            // Two surfaces now, and either one is enough — the flat overlay on SE/AE, or
+            // the helper's HUD plane in VR. VR reaches this fallback only when
+            // ImGuiVRHelper is absent, which is exactly where it was before.
+            if (!OverlayReady() && !VROverlayReady()) {
                 RE::DebugNotification(a_text.c_str());
                 return;
             }
@@ -76,14 +81,14 @@ namespace Isekai::UI {
         Post(std::move(a_text), std::move(a_key), /*a_banner=*/true);
     }
 
-    void DrawToasts() {
+    void DrawToasts(float a_dt) {
         std::vector<Toast> shown;
         {
             std::scoped_lock lock(g_mutex);
             if (g_toasts.empty()) {
                 return;
             }
-            const float dt = ImGui::GetIO().DeltaTime;
+            const float dt = a_dt >= 0.0f ? a_dt : ImGui::GetIO().DeltaTime;
             for (auto& t : g_toasts) {
                 t.life -= dt;
             }

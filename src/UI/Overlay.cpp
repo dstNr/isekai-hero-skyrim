@@ -11,6 +11,7 @@
 #include "UI/Textures.h"
 #include "UI/ThreatLabels.h"
 #include "UI/Toast.h"
+#include "UI/VROverlay.h"
 
 #include <d3d11.h>
 #include <dxgi.h>
@@ -175,7 +176,23 @@ namespace Isekai::UI {
             }
         }
 
+        // Set once at Install. In VR the same hook fires (on the desktop mirror's
+        // swap chain) but nothing is drawn into that back buffer: the mirror is not what
+        // the player is looking at. It is used purely as a per-frame tick on the render
+        // thread, which is the one thread a D3D11 immediate context may be touched from —
+        // and the helper's own frame callback is explicitly not it.
+        bool g_vrMode = false;
+
         HRESULT WINAPI HookedPresent(IDXGISwapChain* a_swapChain, UINT a_syncInterval, UINT a_flags) {
+            if (g_vrMode) {
+                DrawVRFrame();
+                // Quests never ticked in VR before, because the only caller sat inside the
+                // flat overlay's frame. The System handing out work on its own schedule is
+                // not a flat-screen feature.
+                PollGameClock();
+                return g_originalPresent(a_swapChain, a_syncInterval, a_flags);
+            }
+
             static bool initTried = false;
             if (!initTried) {
                 initTried = true;
@@ -258,6 +275,80 @@ namespace Isekai::UI {
         }
     }
 
+    namespace {
+        // The swap-chain vtable, obtained WITHOUT asking Skyrim for its swap chain.
+        //
+        // This exists because the normal route does not work in VR. RE::BSGraphics::
+        // Renderer's layout is the flat-screen one; under Skyrim VR the same read yields a
+        // non-null but meaningless renderWindows[0].swapChain, and dereferencing it is the
+        // access violation a player reported as a crash on load.
+        //
+        // So: create a throwaway swap chain of our own on a hidden 1x1 window and read the
+        // vtable off THAT. Every IDXGISwapChain made by the same dxgi.dll shares one
+        // vtable, so patching Present here patches the game's swap chain too, whichever
+        // one it is and wherever it lives in a struct we cannot read. Nothing about the
+        // game's memory layout is involved, which is precisely the point.
+        //
+        // The device and window are released immediately; the vtable belongs to dxgi.dll
+        // and outlives them both.
+        [[nodiscard]] void** ProbeSwapChainVTable() {
+            WNDCLASSEXA wc{};
+            wc.cbSize = sizeof(wc);
+            wc.lpfnWndProc = DefWindowProcA;
+            wc.hInstance = GetModuleHandleA(nullptr);
+            wc.lpszClassName = "IsekaiHeroSwapChainProbe";
+            if (!RegisterClassExA(&wc)) {
+                logger::error("UI: could not register the probe window class");
+                return nullptr;
+            }
+
+            HWND window = CreateWindowExA(0, wc.lpszClassName, "", WS_OVERLAPPEDWINDOW, 0, 0, 1, 1,
+                                          nullptr, nullptr, wc.hInstance, nullptr);
+            if (!window) {
+                UnregisterClassA(wc.lpszClassName, wc.hInstance);
+                logger::error("UI: could not create the probe window");
+                return nullptr;
+            }
+
+            DXGI_SWAP_CHAIN_DESC desc{};
+            desc.BufferCount = 1;
+            desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+            desc.OutputWindow = window;
+            desc.SampleDesc.Count = 1;
+            desc.Windowed = TRUE;
+            desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+
+            IDXGISwapChain*      swapChain = nullptr;
+            ID3D11Device*        device = nullptr;
+            ID3D11DeviceContext* context = nullptr;
+            const HRESULT        hr = D3D11CreateDeviceAndSwapChain(
+                nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION,
+                &desc, &swapChain, &device, nullptr, &context);
+
+            void** vtable = nullptr;
+            if (SUCCEEDED(hr) && swapChain) {
+                vtable = SafeVTable(swapChain);
+            } else {
+                logger::error("UI: the probe swap chain could not be created ({:#x})",
+                              static_cast<std::uint32_t>(hr));
+            }
+
+            if (swapChain) {
+                swapChain->Release();
+            }
+            if (context) {
+                context->Release();
+            }
+            if (device) {
+                device->Release();
+            }
+            DestroyWindow(window);
+            UnregisterClassA(wc.lpszClassName, wc.hInstance);
+            return vtable;
+        }
+    }
+
     bool OverlayReady() {
         return g_ready.load(std::memory_order_acquire);
     }
@@ -299,51 +390,59 @@ namespace Isekai::UI {
         // did nothing (reported: "menu not displaying on the keybind" in VR).
         InstallInput();
 
-        // The swap-chain Present hook, on the other hand, crashes in VR. RE::BSGraphics::
-        // Renderer's layout is only valid for the flat-screen editions; under Skyrim VR
-        // the same struct read yields a bogus (non-null) renderWindows[0].swapChain, and
-        // dereferencing its vtable to grab Present is an access violation on load (reported
-        // CTD, EXCEPTION_ACCESS_VIOLATION). The ImGui overlay would only have drawn on the
-        // desktop mirror in VR anyway, never in the headset — a proper in-HMD path is
-        // future work (see docs/VR.md). So in VR we skip only the hook; the mod's UI goes
-        // through the PrismaUI patch instead.
-        if (REL::Module::IsVR()) {
-            logger::warn("UI: Skyrim VR detected — skipping the ImGui overlay hook "
-                         "(in-headset UI not implemented; would otherwise crash on the "
-                         "VR renderer layout). UI runs through PrismaUI. See docs/VR.md.");
-            return;
-        }
-
-        auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
-        if (!renderer) {
-            logger::error("UI: no renderer — overlay not installed");
-            return;
-        }
-
-        auto* swapChain = reinterpret_cast<IDXGISwapChain*>(renderer->data.renderWindows[0].swapChain);
-        if (!swapChain) {
-            logger::error("UI: no swap chain — overlay not installed");
-            return;
-        }
-
-        // The null check above is not enough, and a crash report proved it. On Skyrim VR
-        // `renderWindows[0].swapChain` reads out of a struct whose layout does not apply
-        // there, so what comes back is not null — it is garbage. Dereferencing it is an
-        // access violation before a single line of ours has run: the reported crash was
-        // exactly this statement, with rax = 0x0000042700000410.
+        // Two ways to the same vtable, because the flat-screen route does not exist in VR.
         //
-        // The VR guard above is supposed to make that unreachable. This is here because
-        // "supposed to" is not a guarantee on someone else's machine: an older build, a
-        // runtime IsVR() cannot identify, or a future edition would each land here again,
-        // and the failure would be a CTD rather than a line in a log. Probing under SEH
-        // turns the worst case into "no overlay, and the log says why".
-        auto** vtable = SafeVTable(swapChain);
-        if (!vtable) {
-            logger::error("UI: swap chain {:p} is not a readable object — overlay not "
-                          "installed (runtime: {})",
-                          static_cast<void*>(swapChain),
-                          REL::Module::IsVR() ? "VR" : "SE/AE");
-            return;
+        // SE/AE: read the game's own swap chain out of RE::BSGraphics::Renderer. That
+        // struct's layout is the flat-screen one and this has shipped for months.
+        //
+        // VR: the same read yields a non-null but meaningless pointer, and dereferencing
+        // it is the access violation a player reported as a crash on load. So VR does not
+        // ask the game at all — it makes a throwaway swap chain of its own and reads the
+        // vtable off that (see ProbeSwapChainVTable). Both editions end up patching the
+        // same shared dxgi.dll vtable, so the hook is identical; only the way to find it
+        // differs. The flat path is deliberately left exactly as it was rather than
+        // switched over: it works, and nobody here can test either of them.
+        void** vtable = nullptr;
+
+        if (REL::Module::IsVR()) {
+            g_vrMode = true;
+            vtable = ProbeSwapChainVTable();
+            if (!vtable) {
+                logger::error("UI: no swap-chain vtable in VR — the in-headset layer has no "
+                              "per-frame tick and will not draw. Menus still run through "
+                              "PrismaUI.");
+                return;
+            }
+            logger::info("UI: Skyrim VR — swap-chain vtable found by probe, drawing goes to "
+                         "ImGuiVRHelper rather than the desktop mirror");
+        } else {
+            auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
+            if (!renderer) {
+                logger::error("UI: no renderer — overlay not installed");
+                return;
+            }
+
+            auto* swapChain =
+                reinterpret_cast<IDXGISwapChain*>(renderer->data.renderWindows[0].swapChain);
+            if (!swapChain) {
+                logger::error("UI: no swap chain — overlay not installed");
+                return;
+            }
+
+            // The null check above is not enough, and a crash report proved it: a player
+            // on an old build reached this line under VR, where the struct read yields
+            // garbage rather than null, and dereferencing it crashed before a line of ours
+            // had run (rax = 0x0000042700000410). VR no longer comes through here at all,
+            // but "no longer" is not a guarantee on someone else's machine — a runtime
+            // IsVR() cannot identify would land here again. Probing under SEH turns the
+            // worst case into "no overlay, and the log says why".
+            vtable = SafeVTable(swapChain);
+            if (!vtable) {
+                logger::error("UI: swap chain {:p} is not a readable object — overlay not "
+                              "installed",
+                              static_cast<void*>(swapChain));
+                return;
+            }
         }
         void* present = SafeVTableEntry(vtable, kPresentVTableIndex);
         if (!present) {

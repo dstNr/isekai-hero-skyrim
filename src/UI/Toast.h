@@ -10,7 +10,8 @@
 // several lines at once, and is easy to miss entirely — the same property that made the
 // self-test look broken. Kill progress needs to be seen the moment it happens.
 //
-// Drawn by the ImGui overlay, so this is SE/AE only; in VR (no overlay) the calls fall
+// Drawn by the ImGui overlay on SE/AE, and on ImGuiVRHelper's head-locked HUD plane in
+// VR. With neither surface available — VR without the helper installed — the calls fall
 // back to DebugNotification rather than going silent.
 
 namespace Isekai::UI {
@@ -29,5 +30,10 @@ namespace Isekai::UI {
     void ShowToastBanner(std::string a_text, std::string a_key = {});
 
     // Draw and expire. Called by the overlay once per frame, inside an ImGui frame.
-    void DrawToasts();
+    //
+    // a_dt is how much time to age the queue by, in seconds; negative means "ask ImGui".
+    // The VR path has to pass a real one: the helper SDK's RenderHud pins its private
+    // context's DeltaTime to a flat 1/60, so on a 90 Hz headset every toast would sit
+    // there half again as long as it was asked to.
+    void DrawToasts(float a_dt = -1.0f);
 }

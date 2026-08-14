@@ -140,6 +140,14 @@ namespace Isekai::Config {
     // label is dropped entirely rather than shrunk to an unreadable smudge.
     [[nodiscard]] std::uint32_t ThreatLabelRange();
 
+    // VR only: how tall a threat label stands in the world, in METRES.
+    //
+    // On a flat screen the frame is measured in pixels and shrunk with distance by hand.
+    // In VR it is a billboard of a fixed physical size, so distance shrinks it for free —
+    // this is the one number that decides whether it reads as a nameplate over the actor
+    // or as a signboard hanging in front of it.
+    [[nodiscard]] float VRThreatLabelHeight();
+
     // System objectives (src/Quests.cpp), in GAME hours.
     //
     // FirstTask is the wait before the very first objective of a character's life;
