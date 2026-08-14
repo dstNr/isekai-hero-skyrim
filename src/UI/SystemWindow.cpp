@@ -1,6 +1,7 @@
 #include "UI/SystemWindow.h"
 
 #include "Config.h"
+#include "Loc.h"
 #include "Sounds.h"
 #include "UI/Overlay.h"
 #include "UI/Prisma.h"
@@ -605,8 +606,9 @@ namespace Isekai::UI {
                          "would have appeared. Needs the Isekai PrismaUI patch AND "
                          "PrismaUI's 1.5.0 VR build.");
         }
-        RE::DebugNotification("[ SYSTEM ] Needs the PrismaUI patch (1.5.0 VR build) to show "
-                              "its menu in VR.");
+        RE::DebugNotification(L("vr.needsPrismaShort",
+                                "[ SYSTEM ] Needs the PrismaUI patch (1.5.0 VR build) to show "
+                                "its menu in VR."));
         return false;
     }
 

@@ -253,6 +253,10 @@ zone.mastery = MASTERY
 zone.might = MIGHT
 zone.shadow = SHADOW
 
+; --- src/Storage.cpp ---
+storage.denied = [ SYSTEM ] ACCESS DENIED — the System is not yet bound to you.
+storage.reanchoring = [ SYSTEM ] storage is re-anchoring — try again in a moment.
+
 ; --- src/System.cpp ---
 awaken.awakening = AWAKENING\n\n  Power level   {}{}\n
 awaken.awakensAt =   Awakens at    level {}\n
@@ -306,6 +310,9 @@ tree.sealedLevel = SEALED — awakens at level {}
 tree.sealedRebirth = SEALED — requires {} rebirth
 tree.tierTag =   [{}]
 tree.unlocked = UNLOCKED
+
+; --- src/UI/SystemWindow.cpp ---
+vr.needsPrismaShort = [ SYSTEM ] Needs the PrismaUI patch (1.5.0 VR build) to show its menu in VR.
 
 ; --- src/UI/ThreatLabels.cpp ---
 threat.dangerous = DANGEROUS
