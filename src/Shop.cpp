@@ -1,5 +1,6 @@
 #include "Shop.h"
 
+#include "Loc.h"
 #include "Plugin.h"
 #include "Sounds.h"
 #include "Storage.h"
@@ -46,6 +47,13 @@ namespace Isekai::Shop {
         // quantities are per material TYPE, not per pack — the alchemy packs alone cover
         // every official ingredient in the load order.
         struct Entry {
+            // Translation key, spelled out rather than derived from the name. The other
+            // tables in this mod key their strings off a stable number they already had;
+            // these rows have none, and a slug of the English name would mean the same
+            // transformation implemented twice - here and in tools/extract-strings.mjs -
+            // with a silent dead translation the day the two disagree. A literal cannot
+            // disagree with itself. ".qty" is appended for the quantity line.
+            const char*               key;
             const char*               name;
             const char*               qty;
             std::int32_t              cost;
@@ -76,22 +84,27 @@ namespace Isekai::Shop {
         // blessing, which is the "the System just hands you the world" feeling this is
         // supposed to produce. Still a testing configuration (see README).
         constexpr Entry kCatalog[] = {
-            { "Smithing Materials", "100 of each", 5, "shop_smithing_small.png",
+            { "shop.smithingMaterials", "Smithing Materials", "100 of each", 5,
+              "shop_smithing_small.png",
               Kind::kPack, Cat::kSmithing, 100, Shelf::kMaterials },
-            { "Smithing Crate", "500 of each", 15, "shop_smithing_large.png",
+            { "shop.smithingCrate", "Smithing Crate", "500 of each", 15,
+              "shop_smithing_large.png",
               Kind::kPack, Cat::kSmithing, 500, Shelf::kMaterials },
-            { "Alchemy Ingredients", "100 of each", 5, "shop_alchemy_small.png",
+            { "shop.alchemyIngredients", "Alchemy Ingredients", "100 of each", 5,
+              "shop_alchemy_small.png",
               Kind::kPack, Cat::kAlchemy, 100, Shelf::kMaterials },
-            { "Alchemy Crate", "500 of each", 15, "shop_alchemy_large.png",
+            { "shop.alchemyCrate", "Alchemy Crate", "500 of each", 15,
+              "shop_alchemy_large.png",
               Kind::kPack, Cat::kAlchemy, 500, Shelf::kMaterials },
-            { "Soul Gems", "50 of each", 5, "shop_souls_small.png",
+            { "shop.soulGems", "Soul Gems", "50 of each", 5, "shop_souls_small.png",
               Kind::kPack, Cat::kEnchanting, 50, Shelf::kMaterials },
-            { "Soul Gem Crate", "250 of each", 15, "shop_souls_large.png",
+            { "shop.soulGemCrate", "Soul Gem Crate", "250 of each", 15,
+              "shop_souls_large.png",
               Kind::kPack, Cat::kEnchanting, 250, Shelf::kMaterials },
-            { "Gold", "x100,000", 5, "shop_gold_small.png", Kind::kGold, Cat::kSmithing,
-              100'000, Shelf::kWealth },
-            { "Gold Hoard", "x1,000,000", 20, "shop_gold_large.png", Kind::kGold,
-              Cat::kSmithing, 1'000'000, Shelf::kWealth },
+            { "shop.gold", "Gold", "x100,000", 5, "shop_gold_small.png", Kind::kGold,
+              Cat::kSmithing, 100'000, Shelf::kWealth },
+            { "shop.goldHoard", "Gold Hoard", "x1,000,000", 20, "shop_gold_large.png",
+              Kind::kGold, Cat::kSmithing, 1'000'000, Shelf::kWealth },
 
             // --- System potions (docs/CREATION_KIT_ESP.md, Part H) ---
             // localID is the record's ESP-local FormID. It is 0 until the record exists:
@@ -103,25 +116,32 @@ namespace Isekai::Shop {
             // hour-long elixirs cost a little more but are still inside a starting
             // blessing, matching the material packs' "the System hands you the world"
             // pricing.
-            { "Restorative: Vigor", "x10", 3, "shop_potion_vigor.png",
+            { "shop.restorativeVigor", "Restorative: Vigor", "x10", 3,
+              "shop_potion_vigor.png",
               Kind::kOurItem, Cat::kSmithing, 10, Shelf::kRestoratives, 0x000D81 },
-            { "Restorative: Focus", "x10", 3, "shop_potion_focus.png",
+            { "shop.restorativeFocus", "Restorative: Focus", "x10", 3,
+              "shop_potion_focus.png",
               Kind::kOurItem, Cat::kSmithing, 10, Shelf::kRestoratives, 0x000D82 },
-            { "Restorative: Vitality", "x10", 3, "shop_potion_vitality.png",
+            { "shop.restorativeVitality", "Restorative: Vitality", "x10", 3,
+              "shop_potion_vitality.png",
               Kind::kOurItem, Cat::kSmithing, 10, Shelf::kRestoratives, 0x000D83 },
-            { "Panacea", "x10", 3, "shop_potion_panacea.png",
+            { "shop.panacea", "Panacea", "x10", 3, "shop_potion_panacea.png",
               Kind::kOurItem, Cat::kSmithing, 10, Shelf::kRestoratives, 0x000D84 },
-            { "Elixir of the System", "x10", 6, "shop_elixir_system.png",
+            { "shop.elixirSystem", "Elixir of the System", "x10", 6,
+              "shop_elixir_system.png",
               Kind::kOurItem, Cat::kSmithing, 10, Shelf::kElixirs, 0x000D85 },
-            { "Draught of the Ascended", "x10", 6, "shop_elixir_ascended.png",
+            { "shop.draughtAscended", "Draught of the Ascended", "x10", 6,
+              "shop_elixir_ascended.png",
               Kind::kOurItem, Cat::kSmithing, 10, Shelf::kElixirs, 0x000D86 },
-            { "Aegis Elixir", "x10", 6, "shop_elixir_aegis.png",
+            { "shop.aegisElixir", "Aegis Elixir", "x10", 6, "shop_elixir_aegis.png",
               Kind::kOurItem, Cat::kSmithing, 10, Shelf::kElixirs, 0x000D87 },
-            { "Phantom Draught", "x10", 6, "shop_elixir_phantom.png",
+            { "shop.phantomDraught", "Phantom Draught", "x10", 6,
+              "shop_elixir_phantom.png",
               Kind::kOurItem, Cat::kSmithing, 10, Shelf::kElixirs, 0x000D88 },
-            { "Elixir of Endless Casting", "x10", 6, "shop_elixir_casting.png",
+            { "shop.elixirEndlessCasting", "Elixir of Endless Casting", "x10", 6,
+              "shop_elixir_casting.png",
               Kind::kOurItem, Cat::kSmithing, 10, Shelf::kElixirs, 0x000D89 },
-            { "Titan's Draught", "x10", 6, "shop_elixir_titan.png",
+            { "shop.titansDraught", "Titan's Draught", "x10", 6, "shop_elixir_titan.png",
               Kind::kOurItem, Cat::kSmithing, 10, Shelf::kElixirs, 0x000D8A },
         };
 
@@ -170,8 +190,20 @@ namespace Isekai::Shop {
         return Storage::Available();
     }
 
+    // A shelf needs no key field: its English name is a single word, which is already a
+    // valid key segment. "shelf." + "WEALTH" is a rule that cannot be implemented two
+    // different ways. The catalog entries could not do that — their names have spaces and
+    // colons in them — which is why those carry a written-out key instead.
+    [[nodiscard]] const char* ShelfName(const char* a_english) {
+        return Loc::Get(std::string("shelf.") + a_english, a_english);
+    }
+
     std::vector<std::string> Shelves() {
-        return { std::begin(kShelfNames), std::end(kShelfNames) };
+        std::vector<std::string> out;
+        for (const char* name : kShelfNames) {
+            out.emplace_back(ShelfName(name));
+        }
+        return out;
     }
 
     std::vector<std::pair<std::string, RE::TESBoundObject*>> OurGoods() {
@@ -187,8 +219,9 @@ namespace Isekai::Shop {
     std::vector<Item> Catalog() {
         std::vector<Item> out;
         for (const auto* e : LiveEntries()) {
-            out.push_back({ e->name, e->qty, e->cost, e->icon,
-                            kShelfNames[static_cast<std::size_t>(e->shelf)] });
+            out.push_back({ Loc::Get(e->key, e->name),
+                            Loc::Get(std::string(e->key) + ".qty", e->qty), e->cost, e->icon,
+                            ShelfName(kShelfNames[static_cast<std::size_t>(e->shelf)]) });
         }
         return out;
     }
@@ -202,7 +235,7 @@ namespace Isekai::Shop {
 
         auto& state = GetState();
         if (state.systemPoints < entry->cost) {
-            RE::DebugNotification("[ SYSTEM ] Not enough System Points.");
+            RE::DebugNotification(L("shop.notEnoughPoints", "[ SYSTEM ] Not enough System Points."));
             return false;
         }
 
@@ -216,7 +249,8 @@ namespace Isekai::Shop {
             delivered = Storage::Deliver(EntryForm(*entry), entry->amount);
         }
         if (!delivered) {
-            RE::DebugNotification("[ SYSTEM ] The Dimensional Storage is not ready yet.");
+            RE::DebugNotification(
+                L("shop.storageNotReady", "[ SYSTEM ] The Dimensional Storage is not ready yet."));
             return false;
         }
 
@@ -229,8 +263,9 @@ namespace Isekai::Shop {
         // Say so on screen. Nothing confirmed a purchase before: the card stayed put, the
         // goods land in a chest that is not open, and the only trace was a log line — so
         // a successful buy was indistinguishable from a click that never registered.
-        RE::DebugNotification((std::string("[ SYSTEM ] ") + entry->name + " " + entry->qty +
-                               " -> Dimensional Storage")
+        RE::DebugNotification(LF("shop.delivered", "[ SYSTEM ] {} {} -> Dimensional Storage",
+                                 Loc::Get(entry->key, entry->name),
+                                 Loc::Get(std::string(entry->key) + ".qty", entry->qty))
                                   .c_str());
 
         logger::info("Shop: bought '{}' ({}) for {} System Point(s)", entry->name, entry->qty,

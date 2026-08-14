@@ -102,10 +102,11 @@ function parseShopCatalog() {
   const from = cpp.indexOf("constexpr Entry kCatalog[] = {");
   need(from >= 0, "kCatalog not found in Shop.cpp");
   const body = cpp.slice(from, cpp.indexOf("\n        };", from));
-  const re = /\{\s*"([^"]+)",\s*"([^"]+)",\s*(\d+),\s*"([^"]+)",\s*\n?\s*Kind::k(\w+),\s*Cat::k\w+,\s*([\d']+),\s*Shelf::k(\w+)\s*(?:,\s*(0x[0-9A-Fa-f]+))?\s*\}/g;
+  // Field 1 is the translation key (see Entry in Shop.cpp); the display name follows it.
+  const re = /\{\s*"([\w.]+)",\s*"([^"]+)",\s*"([^"]+)",\s*(\d+),\s*\n?\s*"([^"]+)",\s*\n?\s*Kind::k(\w+),\s*Cat::k\w+,\s*([\d']+),\s*Shelf::k(\w+)\s*(?:,\s*(0x[0-9A-Fa-f]+))?\s*\}/g;
   const out = [...body.matchAll(re)].map((m) => ({
-    name: m[1], qty: m[2], cost: +m[3], icon: m[4],
-    kind: m[5], amount: m[6], shelf: m[7], localID: m[8] ? parseInt(m[8], 16) : null,
+    key: m[1], name: m[2], qty: m[3], cost: +m[4], icon: m[5],
+    kind: m[6], amount: m[7], shelf: m[8], localID: m[9] ? parseInt(m[9], 16) : null,
   }));
   need(out.length > 0, "no catalog entries parsed from Shop.cpp");
   return out;

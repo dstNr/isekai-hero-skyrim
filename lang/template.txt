@@ -134,6 +134,53 @@ status.rankEmblem = RANK {}
 status.systemRank = SYSTEM RANK   {}\n
 window.status = [ SYSTEM ] STATUS
 
+; --- src/Shop.cpp (catalog) ---
+shelf.ELIXIRS = ELIXIRS
+shelf.MATERIALS = MATERIALS
+shelf.RESTORATIVES = RESTORATIVES
+shelf.WEALTH = WEALTH
+shop.aegisElixir = Aegis Elixir
+shop.aegisElixir.qty = x10
+shop.alchemyCrate = Alchemy Crate
+shop.alchemyCrate.qty = 500 of each
+shop.alchemyIngredients = Alchemy Ingredients
+shop.alchemyIngredients.qty = 100 of each
+shop.draughtAscended = Draught of the Ascended
+shop.draughtAscended.qty = x10
+shop.elixirEndlessCasting = Elixir of Endless Casting
+shop.elixirEndlessCasting.qty = x10
+shop.elixirSystem = Elixir of the System
+shop.elixirSystem.qty = x10
+shop.gold = Gold
+shop.gold.qty = x100,000
+shop.goldHoard = Gold Hoard
+shop.goldHoard.qty = x1,000,000
+shop.panacea = Panacea
+shop.panacea.qty = x10
+shop.phantomDraught = Phantom Draught
+shop.phantomDraught.qty = x10
+shop.restorativeFocus = Restorative: Focus
+shop.restorativeFocus.qty = x10
+shop.restorativeVigor = Restorative: Vigor
+shop.restorativeVigor.qty = x10
+shop.restorativeVitality = Restorative: Vitality
+shop.restorativeVitality.qty = x10
+shop.smithingCrate = Smithing Crate
+shop.smithingCrate.qty = 500 of each
+shop.smithingMaterials = Smithing Materials
+shop.smithingMaterials.qty = 100 of each
+shop.soulGemCrate = Soul Gem Crate
+shop.soulGemCrate.qty = 250 of each
+shop.soulGems = Soul Gems
+shop.soulGems.qty = 50 of each
+shop.titansDraught = Titan's Draught
+shop.titansDraught.qty = x10
+
+; --- src/Shop.cpp ---
+shop.delivered = [ SYSTEM ] {} {} -> Dimensional Storage
+shop.notEnoughPoints = [ SYSTEM ] Not enough System Points.
+shop.storageNotReady = [ SYSTEM ] The Dimensional Storage is not ready yet.
+
 ; --- src/SkillTree.cpp (skill tree) ---
 node.1 = System Core
 node.1.desc = The System takes root.\n+25 Health, Magicka and Stamina.

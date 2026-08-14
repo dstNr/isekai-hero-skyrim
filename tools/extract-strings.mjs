@@ -92,6 +92,37 @@ function nodes() {
   return out;
 }
 
+// The shop catalog and its shelves. The entries carry their translation key as a field —
+// see the comment on Entry in Shop.cpp — so nothing is derived here: the key is read, not
+// built. A shelf needs no field, its English name is already a valid key segment.
+const SHOP = /\{\s*"([\w.]+)",\s*"((?:[^"\\]|\\.)*)",\s*"((?:[^"\\]|\\.)*)",\s*\d+,/g;
+const LOOSE_SHOP = /\{\s*"shop\.\w+",/g;
+
+function shop() {
+  const code = readFileSync(join(ROOT, "src", "Shop.cpp"), "utf8");
+  const from = code.indexOf("constexpr Entry kCatalog[] = {");
+  if (from < 0) throw new Error("shop: kCatalog not found in Shop.cpp");
+  const body = code.slice(from, code.indexOf("\n        };", from));
+  const rows = [...body.matchAll(SHOP)];
+  const loose = (body.match(LOOSE_SHOP) || []).length;
+  if (rows.length !== loose) {
+    throw new Error(
+      `shop: ${loose} rows look like rows but ${rows.length} parsed — ` +
+        "the catalog regex in tools/extract-strings.mjs has gone stale",
+    );
+  }
+  const out = [];
+  for (const [, key, name, qty] of rows) {
+    out.push([key, name], [key + ".qty", qty]);
+  }
+  const shelves = code.match(/kShelfNames\[\]\s*=\s*\{([\s\S]*?)\};/);
+  if (!shelves) throw new Error("shop: kShelfNames not found in Shop.cpp");
+  for (const [, s] of shelves[1].matchAll(/"([^"]+)"/g)) {
+    out.push(["shelf." + s, s]);
+  }
+  return out;
+}
+
 export function collect() {
   const found = new Map();
   const dupes = [];
@@ -131,6 +162,9 @@ export function collect() {
   }
   for (const [key, text] of nodes()) {
     found.set(key, { text, file: "src/SkillTree.cpp (skill tree)" });
+  }
+  for (const [key, text] of shop()) {
+    found.set(key, { text, file: "src/Shop.cpp (catalog)" });
   }
   return { found, dupes, callSites };
 }
