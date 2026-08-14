@@ -1,6 +1,7 @@
 #include "Progression.h"
 
 #include "Config.h"
+#include "Loc.h"
 #include "Passives.h"
 #include "Quests.h"
 #include "SkillTree.h"
@@ -67,112 +68,112 @@ namespace Isekai::Progression {
         // against the wrong quests. Starting fresh means those stale keys match
         // nothing and simply lapse, rather than silently suppressing a real reward.
         //
-        //  key    editor ID          quest name                       { passive: name, stat, actor value, base amount, is % }  souls  endpoint
+        //  key    editor ID          quest name                       { passive: name, actor value, base amount, is % }  souls  endpoint
         constexpr Milestone kMilestones[] = {
             // --- Main quest (names verified against the game's own quest table) ---
-            { 1101, "MQ101",          "Unbound",                       { "Survivor", "Health", AV::kHealth, 25.0f, false },  0, false },
-            { 1102, "MQ102",          "Before the Storm",              { "Wayfarer", "Carry Weight", AV::kCarryWeight, 25.0f, false },  0, false },
-            { 1103, "MQ103",          "Bleak Falls Barrow",            { "Tomb Raider", "Stamina", AV::kStamina, 25.0f, false },  0, false },
-            { 1104, "MQ104",          "Dragon Rising",                 { "Dragon Slayer", "Magic Resist", AV::kResistMagic, 5.0f, true },  1, false },
-            { 1105, "MQ105",          "The Way of the Voice",          { "Voice Wielder", "Magicka", AV::kMagicka, 25.0f, false },  1, false },
-            { 1106, "MQ105Ustengrav", "The Horn of Jurgen Windcaller", { "Horn Bearer", "Stamina", AV::kStamina, 25.0f, false },  0, false },
-            { 1107, "MQ106",          "A Blade in the Dark",           { "Blade in the Dark", "Health", AV::kHealth, 25.0f, false },  1, false },
-            { 1108, "MQ201",          "Diplomatic Immunity",           { "Infiltrator", "Stamina", AV::kStamina, 25.0f, false },  0, false },
-            { 1109, "MQ202",          "A Cornered Rat",                { "Shadow Walker", "Carry Weight", AV::kCarryWeight, 25.0f, false },  0, false },
-            { 1110, "MQ203",          "Alduin's Wall",                 { "Loremaster", "Magicka", AV::kMagicka, 25.0f, false },  1, false },
-            { 1111, "MQ204",          "The Throat of the World",       { "Skyborn", "Magic Resist", AV::kResistMagic, 5.0f, true },  1, false },
-            { 1112, "MQ205",          "Elder Knowledge",               { "Time Reader", "Magicka", AV::kMagicka, 25.0f, false },  1, false },
-            { 1113, "MQ206",          "Alduin's Bane",                 { "Time Walker", "Magic Resist", AV::kResistMagic, 5.0f, true },  2, false },
-            { 1114, "MQ301",          "The Fallen",                    { "Dragon Trapper", "Health", AV::kHealth, 25.0f, false },  2, false },
-            { 1115, "MQ302",          "Season Unending",               { "Peacemaker", "Carry Weight", AV::kCarryWeight, 25.0f, false },  0, false },
-            { 1116, "MQ303",          "The World-Eater's Eyrie",       { "Sky Breaker", "Health", AV::kHealth, 25.0f, false },  3, false },
-            { 1117, "MQ304",          "Sovngarde",                     { "Soul Walker", "Health", AV::kHealth, 50.0f, false },  3, false },
+            { 1101, "MQ101",          "Unbound",                       { "Survivor", AV::kHealth, 25.0f, false },  0, false },
+            { 1102, "MQ102",          "Before the Storm",              { "Wayfarer", AV::kCarryWeight, 25.0f, false },  0, false },
+            { 1103, "MQ103",          "Bleak Falls Barrow",            { "Tomb Raider", AV::kStamina, 25.0f, false },  0, false },
+            { 1104, "MQ104",          "Dragon Rising",                 { "Dragon Slayer", AV::kResistMagic, 5.0f, true },  1, false },
+            { 1105, "MQ105",          "The Way of the Voice",          { "Voice Wielder", AV::kMagicka, 25.0f, false },  1, false },
+            { 1106, "MQ105Ustengrav", "The Horn of Jurgen Windcaller", { "Horn Bearer", AV::kStamina, 25.0f, false },  0, false },
+            { 1107, "MQ106",          "A Blade in the Dark",           { "Blade in the Dark", AV::kHealth, 25.0f, false },  1, false },
+            { 1108, "MQ201",          "Diplomatic Immunity",           { "Infiltrator", AV::kStamina, 25.0f, false },  0, false },
+            { 1109, "MQ202",          "A Cornered Rat",                { "Shadow Walker", AV::kCarryWeight, 25.0f, false },  0, false },
+            { 1110, "MQ203",          "Alduin's Wall",                 { "Loremaster", AV::kMagicka, 25.0f, false },  1, false },
+            { 1111, "MQ204",          "The Throat of the World",       { "Skyborn", AV::kResistMagic, 5.0f, true },  1, false },
+            { 1112, "MQ205",          "Elder Knowledge",               { "Time Reader", AV::kMagicka, 25.0f, false },  1, false },
+            { 1113, "MQ206",          "Alduin's Bane",                 { "Time Walker", AV::kResistMagic, 5.0f, true },  2, false },
+            { 1114, "MQ301",          "The Fallen",                    { "Dragon Trapper", AV::kHealth, 25.0f, false },  2, false },
+            { 1115, "MQ302",          "Season Unending",               { "Peacemaker", AV::kCarryWeight, 25.0f, false },  0, false },
+            { 1116, "MQ303",          "The World-Eater's Eyrie",       { "Sky Breaker", AV::kHealth, 25.0f, false },  3, false },
+            { 1117, "MQ304",          "Sovngarde",                     { "Soul Walker", AV::kHealth, 50.0f, false },  3, false },
 
             // --- Endpoint: the main quest ---
-            { 1118, "MQ305",          "Dragonslayer",                  { "World Savior", "Health", AV::kHealth, 100.0f, false }, 10, true },
+            { 1118, "MQ305",          "Dragonslayer",                  { "World Savior", AV::kHealth, 100.0f, false }, 10, true },
 
             // --- Dawnguard ---
-            { 2201, "DLC1VQ01",        "Awakening",                    { "Dawnguard Recruit", "Health", AV::kHealth, 15.0f, false },  0, false },
-            { 2202, "DLC1VQ02",        "Bloodline",                    { "Bloodline", "Health", AV::kHealth, 15.0f, false },  0, false },
+            { 2201, "DLC1VQ01",        "Awakening",                    { "Dawnguard Recruit", AV::kHealth, 15.0f, false },  0, false },
+            { 2202, "DLC1VQ02",        "Bloodline",                    { "Bloodline", AV::kHealth, 15.0f, false },  0, false },
             // The Prophet branches by allegiance; whichever the player walks, only one fires.
-            { 2203, "DLC1VQ03Hunter",  "Prophet",                      { "Prophet's Ally", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
-            { 2204, "DLC1VQ03Vampire", "Prophet",                      { "Prophet's Ally", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
-            { 2205, "DLC1VQ04",        "Chasing Echoes",               { "Echo Chaser", "Stamina", AV::kStamina, 15.0f, false },  0, false },
-            { 2206, "DLC1VQ05",        "Beyond Death",                 { "Soul Cairn Walker", "Magicka", AV::kMagicka, 25.0f, false },  1, false },
-            { 2207, "DLC1VQ06",        "Unseen Visions",               { "Seer", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
-            { 2208, "DLC1VQ07",        "Touching the Sky",             { "Sky Toucher", "Health", AV::kHealth, 25.0f, false },  1, false },
-            { 2209, "DLC1VQDragon",    "Durnehviir",                   { "Soul Binder", "Magicka", AV::kMagicka, 15.0f, false },  2, false },
+            { 2203, "DLC1VQ03Hunter",  "Prophet",                      { "Prophet's Ally", AV::kMagicka, 15.0f, false },  0, false },
+            { 2204, "DLC1VQ03Vampire", "Prophet",                      { "Prophet's Ally", AV::kMagicka, 15.0f, false },  0, false },
+            { 2205, "DLC1VQ04",        "Chasing Echoes",               { "Echo Chaser", AV::kStamina, 15.0f, false },  0, false },
+            { 2206, "DLC1VQ05",        "Beyond Death",                 { "Soul Cairn Walker", AV::kMagicka, 25.0f, false },  1, false },
+            { 2207, "DLC1VQ06",        "Unseen Visions",               { "Seer", AV::kMagicka, 15.0f, false },  0, false },
+            { 2208, "DLC1VQ07",        "Touching the Sky",             { "Sky Toucher", AV::kHealth, 25.0f, false },  1, false },
+            { 2209, "DLC1VQDragon",    "Durnehviir",                   { "Soul Binder", AV::kMagicka, 15.0f, false },  2, false },
 
             // --- Endpoint: Dawnguard ---
-            { 2101, "DLC1VQ08",        "Kindred Judgment",             { "Vampire's Bane", "Magic Resist", AV::kResistMagic, 15.0f, true },  5, true },
+            { 2101, "DLC1VQ08",        "Kindred Judgment",             { "Vampire's Bane", AV::kResistMagic, 15.0f, true },  5, true },
 
             // --- Dragonborn ---
-            { 2301, "DLC2MQ01",        "Dragonborn",                   { "Marked", "Health", AV::kHealth, 15.0f, false },  0, false },
-            { 2302, "DLC2MQ02",        "The Temple of Miraak",         { "Temple Delver", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
-            { 2303, "DLC2MQ03",        "The Fate of the Skaal",        { "Skaal-Friend", "Health", AV::kHealth, 15.0f, false },  0, false },
-            { 2304, "DLC2MQ03B",       "Cleansing the Stones",         { "Stone Cleanser", "Stamina", AV::kStamina, 15.0f, false },  0, false },
-            { 2305, "DLC2MQ04",        "The Path of Knowledge",        { "Knowledge Seeker", "Magicka", AV::kMagicka, 25.0f, false },  1, false },
-            { 2306, "DLC2MQ05",        "The Gardener of Men",          { "Apocrypha Walker", "Magicka", AV::kMagicka, 25.0f, false },  2, false },
+            { 2301, "DLC2MQ01",        "Dragonborn",                   { "Marked", AV::kHealth, 15.0f, false },  0, false },
+            { 2302, "DLC2MQ02",        "The Temple of Miraak",         { "Temple Delver", AV::kMagicka, 15.0f, false },  0, false },
+            { 2303, "DLC2MQ03",        "The Fate of the Skaal",        { "Skaal-Friend", AV::kHealth, 15.0f, false },  0, false },
+            { 2304, "DLC2MQ03B",       "Cleansing the Stones",         { "Stone Cleanser", AV::kStamina, 15.0f, false },  0, false },
+            { 2305, "DLC2MQ04",        "The Path of Knowledge",        { "Knowledge Seeker", AV::kMagicka, 25.0f, false },  1, false },
+            { 2306, "DLC2MQ05",        "The Gardener of Men",          { "Apocrypha Walker", AV::kMagicka, 25.0f, false },  2, false },
 
             // --- Endpoint: Dragonborn ---
-            { 2102, "DLC2MQ06",        "At the Summit of Apocrypha",   { "Miraak's Bane", "Magicka", AV::kMagicka, 100.0f, false }, 10, true },
+            { 2102, "DLC2MQ06",        "At the Summit of Apocrypha",   { "Miraak's Bane", AV::kMagicka, 100.0f, false }, 10, true },
 
             // --- The Companions ---
-            { 3101, "C00",             "Take Up Arms",                 { "Whelp", "Health", AV::kHealth, 15.0f, false },  0, false },
-            { 3102, "C01",             "Proving Honor",                { "Shield-Brother", "Stamina", AV::kStamina, 15.0f, false },  0, false },
-            { 3103, "C02",             "Brotherhood",                  { "Blood-Kin", "Frost Resist", AV::kResistFrost, 5.0f, true },  0, false },
-            { 3104, "C03",             "The Silver Hand",              { "Silver Bane", "Health", AV::kHealth, 15.0f, false },  0, false },
-            { 3105, "C04",             "Blood's Honor",                { "Oathkeeper", "Stamina", AV::kStamina, 15.0f, false },  0, false },
-            { 3106, "C05",             "Purity of Revenge",            { "Vengeance", "Fire Resist", AV::kResistFire, 5.0f, true },  0, false },
-            { 3107, "C06",             "Glory of the Dead",            { "Harbinger", "Health", AV::kHealth, 50.0f, false },  2, false },
+            { 3101, "C00",             "Take Up Arms",                 { "Whelp", AV::kHealth, 15.0f, false },  0, false },
+            { 3102, "C01",             "Proving Honor",                { "Shield-Brother", AV::kStamina, 15.0f, false },  0, false },
+            { 3103, "C02",             "Brotherhood",                  { "Blood-Kin", AV::kResistFrost, 5.0f, true },  0, false },
+            { 3104, "C03",             "The Silver Hand",              { "Silver Bane", AV::kHealth, 15.0f, false },  0, false },
+            { 3105, "C04",             "Blood's Honor",                { "Oathkeeper", AV::kStamina, 15.0f, false },  0, false },
+            { 3106, "C05",             "Purity of Revenge",            { "Vengeance", AV::kResistFire, 5.0f, true },  0, false },
+            { 3107, "C06",             "Glory of the Dead",            { "Harbinger", AV::kHealth, 50.0f, false },  2, false },
 
             // --- College of Winterhold (MG06 does not exist in the game data) ---
-            { 3201, "MG01",            "First Lessons",                { "Apprentice", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
-            { 3202, "MG02",            "Under Saarthal",               { "Delver", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
-            { 3203, "MG03",            "Hitting the Books",            { "Scholar", "Shock Resist", AV::kResistShock, 5.0f, true },  0, false },
-            { 3204, "MG04",            "Good Intentions",              { "Confidant", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
-            { 3205, "MG05",            "Containment",                  { "Warden", "Magic Resist", AV::kResistMagic, 5.0f, true },  0, false },
-            { 3206, "MG07",            "The Staff of Magnus",          { "Staffbearer", "Magicka", AV::kMagicka, 25.0f, false },  0, false },
-            { 3207, "MG08",            "The Eye of Magnus",            { "Arch-Mage", "Magicka", AV::kMagicka, 75.0f, false },  2, false },
+            { 3201, "MG01",            "First Lessons",                { "Apprentice", AV::kMagicka, 15.0f, false },  0, false },
+            { 3202, "MG02",            "Under Saarthal",               { "Delver", AV::kMagicka, 15.0f, false },  0, false },
+            { 3203, "MG03",            "Hitting the Books",            { "Scholar", AV::kResistShock, 5.0f, true },  0, false },
+            { 3204, "MG04",            "Good Intentions",              { "Confidant", AV::kMagicka, 15.0f, false },  0, false },
+            { 3205, "MG05",            "Containment",                  { "Warden", AV::kResistMagic, 5.0f, true },  0, false },
+            { 3206, "MG07",            "The Staff of Magnus",          { "Staffbearer", AV::kMagicka, 25.0f, false },  0, false },
+            { 3207, "MG08",            "The Eye of Magnus",            { "Arch-Mage", AV::kMagicka, 75.0f, false },  2, false },
 
             // --- Thieves Guild ---
-            { 3301, "TG00",            "A Chance Arrangement",         { "Cutpurse", "Carry Weight", AV::kCarryWeight, 15.0f, false },  0, false },
-            { 3302, "TG01",            "Taking Care of Business",      { "Collector", "Carry Weight", AV::kCarryWeight, 15.0f, false },  0, false },
-            { 3303, "TG02",            "Loud and Clear",               { "Saboteur", "Stamina", AV::kStamina, 15.0f, false },  0, false },
-            { 3304, "TG03",            "Dampened Spirits",             { "Meadwrecker", "Stamina", AV::kStamina, 15.0f, false },  0, false },
-            { 3305, "TG04",            "Scoundrel's Folly",            { "Scoundrel", "Carry Weight", AV::kCarryWeight, 15.0f, false },  0, false },
-            { 3306, "TG05",            "Speaking With Silence",        { "Silent Step", "Stamina", AV::kStamina, 15.0f, false },  0, false },
-            { 3307, "TG06",            "Hard Answers",                 { "Answer-Seeker", "Carry Weight", AV::kCarryWeight, 15.0f, false },  0, false },
-            { 3308, "TG07",            "The Pursuit",                  { "Pursuer", "Stamina", AV::kStamina, 15.0f, false },  0, false },
-            { 3309, "TG08A",           "Trinity Restored",             { "Nightingale", "Shock Resist", AV::kResistShock, 5.0f, true },  0, false },
-            { 3310, "TG08B",           "Blindsighted",                 { "Blindsighted", "Stamina", AV::kStamina, 25.0f, false },  0, false },
-            { 3311, "TG09",            "Darkness Returns",             { "Keeper of the Key", "Carry Weight", AV::kCarryWeight, 25.0f, false },  0, false },
-            { 3312, "TGLeadership",    "Under New Management",         { "Guild Master", "Carry Weight", AV::kCarryWeight, 50.0f, false },  2, false },
+            { 3301, "TG00",            "A Chance Arrangement",         { "Cutpurse", AV::kCarryWeight, 15.0f, false },  0, false },
+            { 3302, "TG01",            "Taking Care of Business",      { "Collector", AV::kCarryWeight, 15.0f, false },  0, false },
+            { 3303, "TG02",            "Loud and Clear",               { "Saboteur", AV::kStamina, 15.0f, false },  0, false },
+            { 3304, "TG03",            "Dampened Spirits",             { "Meadwrecker", AV::kStamina, 15.0f, false },  0, false },
+            { 3305, "TG04",            "Scoundrel's Folly",            { "Scoundrel", AV::kCarryWeight, 15.0f, false },  0, false },
+            { 3306, "TG05",            "Speaking With Silence",        { "Silent Step", AV::kStamina, 15.0f, false },  0, false },
+            { 3307, "TG06",            "Hard Answers",                 { "Answer-Seeker", AV::kCarryWeight, 15.0f, false },  0, false },
+            { 3308, "TG07",            "The Pursuit",                  { "Pursuer", AV::kStamina, 15.0f, false },  0, false },
+            { 3309, "TG08A",           "Trinity Restored",             { "Nightingale", AV::kResistShock, 5.0f, true },  0, false },
+            { 3310, "TG08B",           "Blindsighted",                 { "Blindsighted", AV::kStamina, 25.0f, false },  0, false },
+            { 3311, "TG09",            "Darkness Returns",             { "Keeper of the Key", AV::kCarryWeight, 25.0f, false },  0, false },
+            { 3312, "TGLeadership",    "Under New Management",         { "Guild Master", AV::kCarryWeight, 50.0f, false },  2, false },
 
             // --- Dark Brotherhood ---
-            { 3401, "DB01",            "Innocence Lost",               { "Initiate", "Stamina", AV::kStamina, 15.0f, false },  0, false },
-            { 3402, "DB02",            "With Friends Like These...",   { "Sworn", "Health", AV::kHealth, 15.0f, false },  0, false },
-            { 3403, "DB03",            "Mourning Never Comes",         { "Silencer", "Stamina", AV::kStamina, 15.0f, false },  0, false },
-            { 3404, "DB04",            "Whispers in the Dark",         { "Whisperer", "Magicka", AV::kMagicka, 15.0f, false },  0, false },
-            { 3405, "DB05",            "Bound Until Death",            { "Bound", "Health", AV::kHealth, 15.0f, false },  0, false },
-            { 3406, "DB06",            "Breaching Security",           { "Breacher", "Stamina", AV::kStamina, 15.0f, false },  0, false },
-            { 3407, "DB07",            "The Cure for Madness",         { "Cure-Bringer", "Health", AV::kHealth, 15.0f, false },  0, false },
-            { 3408, "DB08",            "Recipe for Disaster",          { "Poisoner", "Disease Resist", AV::kResistDisease, 5.0f, true },  0, false },
-            { 3409, "DB09",            "To Kill an Empire",            { "Emperor's End", "Health", AV::kHealth, 15.0f, false },  0, false },
-            { 3410, "DB10",            "Death Incarnate",              { "Death Incarnate", "Stamina", AV::kStamina, 25.0f, false },  0, false },
-            { 3411, "DB11",            "Hail Sithis!",                 { "Listener", "Stamina", AV::kStamina, 50.0f, false },  2, false },
+            { 3401, "DB01",            "Innocence Lost",               { "Initiate", AV::kStamina, 15.0f, false },  0, false },
+            { 3402, "DB02",            "With Friends Like These...",   { "Sworn", AV::kHealth, 15.0f, false },  0, false },
+            { 3403, "DB03",            "Mourning Never Comes",         { "Silencer", AV::kStamina, 15.0f, false },  0, false },
+            { 3404, "DB04",            "Whispers in the Dark",         { "Whisperer", AV::kMagicka, 15.0f, false },  0, false },
+            { 3405, "DB05",            "Bound Until Death",            { "Bound", AV::kHealth, 15.0f, false },  0, false },
+            { 3406, "DB06",            "Breaching Security",           { "Breacher", AV::kStamina, 15.0f, false },  0, false },
+            { 3407, "DB07",            "The Cure for Madness",         { "Cure-Bringer", AV::kHealth, 15.0f, false },  0, false },
+            { 3408, "DB08",            "Recipe for Disaster",          { "Poisoner", AV::kResistDisease, 5.0f, true },  0, false },
+            { 3409, "DB09",            "To Kill an Empire",            { "Emperor's End", AV::kHealth, 15.0f, false },  0, false },
+            { 3410, "DB10",            "Death Incarnate",              { "Death Incarnate", AV::kStamina, 25.0f, false },  0, false },
+            { 3411, "DB11",            "Hail Sithis!",                 { "Listener", AV::kStamina, 50.0f, false },  2, false },
 
             // --- Civil War ---
             // No milestone for the war's end: the finale runs through radiant siege
             // quests (CWSiegeObj fires per city), so there is no single quest that means
             // "the war is over". Only the scripted beats are tracked.
-            { 3501, "CW01A",           "Joining the Legion",           { "Legionnaire", "Health", AV::kHealth, 15.0f, false },  0, false },
-            { 3502, "CW01B",           "Joining the Stormcloaks",      { "Stormcloak", "Health", AV::kHealth, 15.0f, false },  0, false },
-            { 3503, "CW02A",           "The Jagged Crown",             { "Crown Bearer", "Stamina", AV::kStamina, 15.0f, false },  0, false },
-            { 3504, "CW02B",           "The Jagged Crown",             { "Crown Bearer", "Stamina", AV::kStamina, 15.0f, false },  0, false },
-            { 3505, "CW03",            "Message to Whiterun",          { "Herald", "Carry Weight", AV::kCarryWeight, 15.0f, false },  0, false },
-            { 3506, "CWMission03",     "A False Front",                { "False Front", "Stamina", AV::kStamina, 15.0f, false },  0, false },
-            { 3507, "CWMission07",     "Compelling Tribute",           { "Tribute Taker", "Carry Weight", AV::kCarryWeight, 15.0f, false },  0, false },
+            { 3501, "CW01A",           "Joining the Legion",           { "Legionnaire", AV::kHealth, 15.0f, false },  0, false },
+            { 3502, "CW01B",           "Joining the Stormcloaks",      { "Stormcloak", AV::kHealth, 15.0f, false },  0, false },
+            { 3503, "CW02A",           "The Jagged Crown",             { "Crown Bearer", AV::kStamina, 15.0f, false },  0, false },
+            { 3504, "CW02B",           "The Jagged Crown",             { "Crown Bearer", AV::kStamina, 15.0f, false },  0, false },
+            { 3505, "CW03",            "Message to Whiterun",          { "Herald", AV::kCarryWeight, 15.0f, false },  0, false },
+            { 3506, "CWMission03",     "A False Front",                { "False Front", AV::kStamina, 15.0f, false },  0, false },
+            { 3507, "CWMission07",     "Compelling Tribute",           { "Tribute Taker", AV::kCarryWeight, 15.0f, false },  0, false },
         };
 
         // editorID -> quest, built once. Empty until Install() runs.
@@ -217,6 +218,36 @@ namespace Isekai::Progression {
                 }
             }
             return nullptr;
+        }
+
+        // The quest's name as the player's own game spells it.
+        //
+        // No translation key for these, and deliberately: Skyrim already ships "Bleak Falls
+        // Barrow" in every language it was localised into, and a German player reading a
+        // German game should see the German quest name — not whatever a translator of this
+        // mod happened to write. So we ask the game, and the table's English name is the
+        // fallback for when the quest is not present at all (a missing DLC, a typo'd editor
+        // ID). That is 79 strings a translator never has to touch, translated better than
+        // we could do it.
+        //
+        // Logs deliberately keep the table name: a log that changes language with the
+        // player's game is a log nobody can compare against anyone else's.
+        [[nodiscard]] std::string QuestName(const Milestone& a_milestone) {
+            if (const auto it = g_quests.find(a_milestone.editorID); it != g_quests.end()) {
+                if (const char* name = it->second ? it->second->GetName() : nullptr; name && *name) {
+                    return name;
+                }
+            }
+            return a_milestone.questName;
+        }
+
+        // The passive's title, translated. Keyed by the milestone's numeric key rather
+        // than by a slug of the English name: that number is already documented as stable
+        // across releases and never reused, so there is no second naming rule to keep in
+        // step between this file and tools/extract-strings.mjs — which writes these keys
+        // into the template by reading the same table.
+        [[nodiscard]] std::string PassiveName(const Milestone& a_milestone) {
+            return Loc::Get("passive." + std::to_string(a_milestone.key), a_milestone.passive.name);
         }
 
         [[nodiscard]] std::int32_t ScaledSouls(std::int32_t a_base) {
@@ -278,7 +309,8 @@ namespace Isekai::Progression {
                 });
                 return;
             }
-            UI::ShowSystemWindow("[ SYSTEM ]", std::move(a_body), { "ACCEPT" }, [](int) {});
+            UI::ShowSystemWindow(L("window.system", "[ SYSTEM ]"), std::move(a_body),
+                                 { L("button.accept", "ACCEPT") }, [](int) {});
         }
 
         // Fire the flourish, then bring up the panel once it has played out.
@@ -291,20 +323,17 @@ namespace Isekai::Progression {
         }
 
         std::string RewardText(const Milestone& a_milestone, std::int32_t a_perks) {
-            std::string text = "QUEST COMPLETE\n\n  ";
-            text += a_milestone.questName;
-            text += "\n\nREWARDS\n\n  Passive   ";
-            text += a_milestone.passive.name;
-            text += "\n            ";
-            text += PassiveEffectText(a_milestone.passive);
+            std::string text = LF("reward.header", "QUEST COMPLETE\n\n  {}\n\n", QuestName(a_milestone));
+            text += LF("reward.passive", "REWARDS\n\n  Passive   {}\n            {}",
+                       PassiveName(a_milestone), PassiveEffectText(a_milestone.passive));
 
-            text += "\n\n  System Points +" +
-                    std::to_string(MilestoneSystemPoints(a_milestone.endpoint));
+            text += LF("reward.points", "\n\n  System Points +{}",
+                       MilestoneSystemPoints(a_milestone.endpoint));
             if (const auto souls = ScaledSouls(a_milestone.dragonSouls); souls > 0) {
-                text += "\n  Dragon Souls  +" + std::to_string(souls);
+                text += LF("reward.souls", "\n  Dragon Souls  +{}", souls);
             }
             if (a_perks > 0) {
-                text += "\n  Perk Points   +" + std::to_string(a_perks);
+                text += LF("reward.perks", "\n  Perk Points   +{}", a_perks);
             }
             return text;
         }
@@ -312,8 +341,9 @@ namespace Isekai::Progression {
         void CelebrateMilestone(const Milestone& a_milestone) {
             const std::int32_t perks = a_milestone.endpoint ? MilestonePerkPoints() : 0;
             if (Grant(a_milestone)) {
-                Celebrate(a_milestone.endpoint ? "MILESTONE" : "QUEST COMPLETE",
-                          a_milestone.questName, RewardText(a_milestone, perks));
+                Celebrate(a_milestone.endpoint ? L("flourish.milestone", "MILESTONE")
+                                               : L("flourish.questComplete", "QUEST COMPLETE"),
+                          QuestName(a_milestone), RewardText(a_milestone, perks));
             }
         }
 
@@ -360,14 +390,15 @@ namespace Isekai::Progression {
 
         [[nodiscard]] const char* StatName(RE::ActorValue a_av) {
             switch (a_av) {
-            case AV::kHealth:        return "Health";
-            case AV::kMagicka:       return "Magicka";
-            case AV::kStamina:       return "Stamina";
-            case AV::kCarryWeight:   return "Carry Weight";
-            case AV::kResistMagic:   return "Magic Resist";
-            case AV::kResistFire:    return "Fire Resist";
-            case AV::kResistFrost:   return "Frost Resist";
-            case AV::kResistDisease: return "Disease Resist";
+            case AV::kHealth:        return L("stat.health", "Health");
+            case AV::kMagicka:       return L("stat.magicka", "Magicka");
+            case AV::kStamina:       return L("stat.stamina", "Stamina");
+            case AV::kCarryWeight:   return L("stat.carryWeight", "Carry Weight");
+            case AV::kResistMagic:   return L("stat.resistMagic", "Magic Resist");
+            case AV::kResistFire:    return L("stat.resistFire", "Fire Resist");
+            case AV::kResistFrost:   return L("stat.resistFrost", "Frost Resist");
+            case AV::kResistShock:   return L("stat.resistShock", "Shock Resist");
+            case AV::kResistDisease: return L("stat.resistDisease", "Disease Resist");
             default:                 return "?";
             }
         }
@@ -465,9 +496,9 @@ namespace Isekai::Progression {
                 }
                 j += (first ? "" : ",");
                 first = false;
-                j += "{\"name\":\"" + JsonEsc(m.passive.name) + "\",\"effect\":\"" +
+                j += "{\"name\":\"" + JsonEsc(PassiveName(m)) + "\",\"effect\":\"" +
                      JsonEsc(PassiveEffectText(m.passive)) + "\",\"quest\":\"" +
-                     JsonEsc(m.questName) + "\"}";
+                     JsonEsc(QuestName(m)) + "\"}";
             }
             j += "]}";
             return j;
@@ -514,39 +545,41 @@ namespace Isekai::Progression {
 
             std::string body;
 
-            body += "POWER LEVEL   " + PowerName(GetState().power) +
-                    (GetState().custom      ? "  (CUSTOM)"
-                     : GetState().dormant   ? "  (DORMANT)"
-                     : GetState().shattered ? "  (SHATTERED)"
-                                            : "") + "\n";
-            body += "SYSTEM RANK   " + SystemRank() + "\n";
+            // The label columns are part of the translatable text, padding and all: this
+            // is a monospace ledger, so a translator has to be able to re-align it. Every
+            // one of these is measured, not wrapped.
+            body += LF("status.powerLevel", "POWER LEVEL   {}{}\n", PowerName(GetState().power),
+                       GetState().custom      ? L("status.mode.custom", "  (CUSTOM)")
+                       : GetState().dormant   ? L("status.mode.dormant", "  (DORMANT)")
+                       : GetState().shattered ? L("status.mode.shattered", "  (SHATTERED)")
+                                              : "");
+            body += LF("status.systemRank", "SYSTEM RANK   {}\n", SystemRank());
             if (GetState().custom) {
-                body += "  rewards " + PowerName(GetState().power) +
-                        " / tree " + PowerName(GetState().treeTier) +
-                        " / gift " + PowerName(GetState().grantTier) + "\n";
+                body += LF("status.customAxes", "  rewards {} / tree {} / gift {}\n",
+                           PowerName(GetState().power), PowerName(GetState().treeTier),
+                           PowerName(GetState().grantTier));
             }
             // A dormant blessing's whole point is the promise of the next rung — show
             // it, otherwise the panel just reads as a permanently weaker NORMAL.
             if (const auto next = NextAwakeningLevel(); next > 0) {
-                body += "NEXT AWAKENING at level " + std::to_string(next) + "\n";
+                body += LF("status.nextAwakening", "NEXT AWAKENING at level {}\n", next);
             }
 
             const std::size_t earned = MilestonesEarned();
-            body += "MILESTONES    " + std::to_string(earned) + " / " +
-                    std::to_string(std::size(kMilestones)) + "\n";
-            body += "SYSTEM POINTS " + std::to_string(GetState().systemPoints) + "\n";
+            body += LF("status.milestones", "MILESTONES    {} / {}\n", earned,
+                       std::size(kMilestones));
+            body += LF("status.points", "SYSTEM POINTS {}\n", GetState().systemPoints);
 
             if (Quests::Active()) {
-                body += "OBJECTIVE     " + Quests::Text() + "   " +
-                        std::to_string(Quests::Progress()) + " / " +
-                        std::to_string(Quests::Target()) + "   (+" +
-                        std::to_string(Quests::Reward()) + " SP)\n";
+                body += LF("status.objective", "OBJECTIVE     {}   {} / {}   (+{} SP)\n",
+                           Quests::Text(), Quests::Progress(), Quests::Target(),
+                           Quests::Reward());
             } else if (const float wait = Quests::DaysUntilNext(); wait > 0.0f) {
                 // An idle System should read as waiting, not broken. Hours rather than a
                 // fraction of a day, because "0.4 days" is not something anyone thinks in.
                 const int hours = std::max(1, static_cast<int>(std::lround(wait * 24.0f)));
-                body += "OBJECTIVE     none — the System is quiet for another " +
-                        std::to_string(hours) + "h\n";
+                body += LF("status.objectiveQuiet",
+                           "OBJECTIVE     none — the System is quiet for another {}h\n", hours);
             }
 
             // The aggregated totals — the same numbers the abilities carry in the
@@ -556,7 +589,7 @@ namespace Isekai::Progression {
                 totals[p->actorValue] += PassiveAmount(*p);
             }
             if (!totals.empty()) {
-                body += "\nATTUNEMENTS\n";
+                body += std::string("\n") + L("status.attunements", "ATTUNEMENTS") + "\n";
                 for (const auto& [av, total] : totals) {
                     body += "  " + PadTo(StatName(av), 16) + "+" +
                             std::to_string(static_cast<int>(total)) + "\n";
@@ -565,16 +598,16 @@ namespace Isekai::Progression {
 
             // The ledger: every earned passive with the deed it came from.
             if (earned > 0) {
-                body += "\nPASSIVES\n";
+                body += std::string("\n") + L("status.passives", "PASSIVES") + "\n";
                 for (const auto& m : kMilestones) {
                     if (!AlreadyGranted(m.key)) {
                         continue;
                     }
-                    body += "  " + PadTo(m.passive.name, 20) + PadTo(PassiveEffectText(m.passive), 22) +
-                            m.questName + "\n";
+                    body += "  " + PadTo(PassiveName(m), 20) +
+                            PadTo(PassiveEffectText(m.passive), 22) + QuestName(m) + "\n";
                 }
             } else {
-                body += "\nNo deeds recognised yet.";
+                body += std::string("\n") + L("status.noDeeds", "No deeds recognised yet.");
             }
 
             // The storage lives behind a panel button, not an inventory item. Earlier
@@ -590,7 +623,7 @@ namespace Isekai::Progression {
             std::vector<std::function<void()>> actions;
 
             if (GetState().reincarnated) {
-                choices.push_back({ "SKILL TREE",
+                choices.push_back({ L("button.skillTree", "SKILL TREE"),
                                     "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\ui_skilltree.png",
                                     /*iconOnly=*/true });
                 actions.emplace_back([]() {
@@ -603,13 +636,13 @@ namespace Isekai::Progression {
                 });
             }
             if (Storage::Available()) {
-                choices.push_back({ "STORAGE",
+                choices.push_back({ L("button.storage", "STORAGE"),
                                     "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\ui_storage.png",
                                     /*iconOnly=*/true });
                 actions.emplace_back([]() { Storage::Open(); });
             }
             if (Shop::Available()) {
-                choices.push_back({ "SHOP",
+                choices.push_back({ L("button.shop", "SHOP"),
                                     "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\ui_shop.png",
                                     /*iconOnly=*/true });
                 actions.emplace_back([]() { Shop::Open(); });
@@ -623,7 +656,7 @@ namespace Isekai::Progression {
             // the dice picked, one quarry at a time. Reopens the panel so the new
             // objective is visible immediately.
             if (Quests::Active() && Config::QuestRerollButton()) {
-                choices.push_back({ "NEW TASK", {} });
+                choices.push_back({ L("button.newTask", "NEW TASK"), {} });
                 actions.emplace_back([]() {
                     Quests::Reroll();
                     ShowStatusPanel();
@@ -634,23 +667,25 @@ namespace Isekai::Progression {
             // drops the co-save's milestone list. Guarded behind a confirm; earned
             // progress is kept (see RebootSystem).
             if (GetState().reincarnated) {
-                choices.push_back({ "REBOOT", {} });
+                choices.push_back({ L("button.reboot", "REBOOT"), {} });
                 actions.emplace_back([]() {
                     UI::ShowSystemWindow(
-                        "[ SYSTEM ]",
-                        "REBOOT THE SYSTEM?\n"
-                        "\n"
-                        "Re-opens the blessing choice, so you can pick a different path\n"
-                        "(tier, Full/Shattered, Dormant).\n"
-                        "\n"
-                        "KEPT:    milestones, skill tree, System Points, storage.\n"
-                        "UNDONE:  the skills, level and attributes a previous\n"
-                        "         blessing granted — you return to the mortal you\n"
-                        "         were when the System first bound itself.\n"
-                        "NOTE:    gold and perk points already spent stay spent.\n"
-                        "         A character from before this update has no such\n"
-                        "         record, and keeps what it was given.",
-                        std::vector<std::string>{ "CANCEL", "REBOOT" },
+                        L("window.system", "[ SYSTEM ]"),
+                        L("reboot.confirm",
+                          "REBOOT THE SYSTEM?\n"
+                          "\n"
+                          "Re-opens the blessing choice, so you can pick a different path\n"
+                          "(tier, Full/Shattered, Dormant).\n"
+                          "\n"
+                          "KEPT:    milestones, skill tree, System Points, storage.\n"
+                          "UNDONE:  the skills, level and attributes a previous\n"
+                          "         blessing granted — you return to the mortal you\n"
+                          "         were when the System first bound itself.\n"
+                          "NOTE:    gold and perk points already spent stay spent.\n"
+                          "         A character from before this update has no such\n"
+                          "         record, and keeps what it was given."),
+                        std::vector<std::string>{ L("button.cancel", "CANCEL"),
+                                                  L("button.reboot", "REBOOT") },
                         [](int a_confirm) {
                             if (a_confirm == 1) {
                                 RebootSystem();
@@ -658,7 +693,7 @@ namespace Isekai::Progression {
                         });
                 });
             }
-            choices.push_back({ "CLOSE", {} });
+            choices.push_back({ L("button.close", "CLOSE"), {} });
 
             auto onSelect = [actions = std::move(actions)](int a_idx) {
                 if (a_idx >= 0 && static_cast<std::size_t>(a_idx) < actions.size()) {
@@ -675,9 +710,9 @@ namespace Isekai::Progression {
             // RANK line on purpose — the line is the precise readout, this is the thing
             // you register at a glance (E is dull, S blazes).
             const std::string rank = SystemRank();
-            UI::ShowSystemWindow("[ SYSTEM ] STATUS", std::move(body), std::move(choices),
-                                 std::move(onSelect), 100000.0f, 980.0f,
-                                 UI::Emblem{ RankIcon(), "RANK " + rank,
+            UI::ShowSystemWindow(L("window.status", "[ SYSTEM ] STATUS"), std::move(body),
+                                 std::move(choices), std::move(onSelect), 100000.0f, 980.0f,
+                                 UI::Emblem{ RankIcon(), LF("status.rankEmblem", "RANK {}", rank),
                                              UI::Style::RankColor(rank.empty() ? 'E' : rank[0]) });
         }
 
@@ -746,7 +781,7 @@ namespace Isekai::Progression {
         std::string text = "+";
         text += std::to_string(static_cast<int>(PassiveAmount(a_passive)));
         text += a_passive.percent ? "% " : " ";
-        text += a_passive.stat;
+        text += StatName(a_passive.actorValue);
         return text;
     }
 

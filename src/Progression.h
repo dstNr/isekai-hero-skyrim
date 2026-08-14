@@ -13,9 +13,13 @@ namespace Isekai::Progression {
     // changes instead, tracked here and listed in the System's own status panel.
     // Mechanically identical; they just live in our panel rather than Skyrim's
     // "Active Effects" list.
+    // The stat's display name is NOT a field here. It used to be, spelled out once per
+    // passive, which meant 79 copies of eight strings — and two of them ("Shock Resist")
+    // disagreed with what the panel's own StatName() said about the same actor value. It
+    // is derived from actorValue now, so the two cannot drift, and a translator sees each
+    // stat name once instead of 79 times.
     struct Passive {
         const char*    name;
-        const char*    stat;        // "Health", "Magic Resist", ...
         RE::ActorValue actorValue;
         float          baseAmount;  // before the blessing's reward scale is applied
         bool           percent;     // render as "+10% Magic Resist" rather than "+10 Health"

@@ -38,6 +38,31 @@ const CALL = /\bLF?\(\s*"([^"]+)"\s*,\s*((?:"(?:[^"\\]|\\.)*"\s*)+)[,)]/g;
 // it is made loud.
 const COUNT = /\bLF?\(\s*"/g;
 
+// The 79 passive titles ("Survivor", "Dragon Slayer") are not written as L() calls: they
+// live in the kMilestones table in Progression.cpp and are looked up at runtime as
+// `passive.<milestone key>`. So they are harvested from the table instead, by the same
+// strict-vs-loose pair as above — LOOSE_ROW counts anything row-shaped, ROW parses it,
+// and a disagreement means the table's formatting has moved out from under this regex.
+//
+// Quest names are deliberately NOT harvested: they come from the player's own game at
+// runtime, already localised. See QuestName() in Progression.cpp.
+const ROW = /\{\s*(\d+),\s*"[^"]+",\s*"[^"]+",\s*\{\s*"([^"]+)"/g;
+const LOOSE_ROW = /^\s*\{\s*\d+,\s*"/gm;
+
+function milestones() {
+  const file = join(ROOT, "src", "Progression.cpp");
+  const code = readFileSync(file, "utf8");
+  const rows = [...code.matchAll(ROW)];
+  const loose = (code.match(LOOSE_ROW) || []).length;
+  if (rows.length !== loose) {
+    throw new Error(
+      `milestone table: ${loose} rows look like rows but ${rows.length} parsed — ` +
+        "the passive-title regex in tools/extract-strings.mjs has gone stale",
+    );
+  }
+  return rows.map(([, key, name]) => ["passive." + key, name]);
+}
+
 export function collect() {
   const found = new Map();
   const dupes = [];
@@ -59,6 +84,9 @@ export function collect() {
       found.set(key, { text, file: relative(ROOT, file).replace(/\\/g, "/") });
     }
     callSites += (code.match(COUNT) || []).length;
+  }
+  for (const [key, text] of milestones()) {
+    found.set(key, { text, file: "src/Progression.cpp (passive titles)" });
   }
   return { found, dupes, callSites };
 }
