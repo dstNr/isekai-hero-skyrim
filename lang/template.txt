@@ -97,7 +97,6 @@ passive.3507 = Tribute Taker
 ; --- src/Progression.cpp ---
 button.accept = ACCEPT
 button.cancel = CANCEL
-button.close = CLOSE
 button.newTask = NEW TASK
 button.reboot = REBOOT
 button.shop = SHOP
@@ -133,6 +132,21 @@ status.powerLevel = POWER LEVEL   {}{}\n
 status.rankEmblem = RANK {}
 status.systemRank = SYSTEM RANK   {}\n
 window.status = [ SYSTEM ] STATUS
+
+; --- src/Quests.cpp (quarries) ---
+quarry.1 = Draugr
+quarry.2 = wild beasts
+quarry.4 = Dwarven automata
+quarry.5 = Daedra
+quarry.6 = giants
+quarry.7 = dragons
+quarry.8 = trolls
+
+; --- src/Quests.cpp ---
+quest.complete = [ SYSTEM ]  Objective complete.  +{} System Points
+quest.newObjective = [ SYSTEM ]  New objective:  slay {} {}
+quest.slay = Slay {} {}
+quest.tally = {}   {} / {}
 
 ; --- src/Shop.cpp (catalog) ---
 shelf.ELIXIRS = ELIXIRS
@@ -268,3 +282,36 @@ status.mode.dormant =   (DORMANT)
 status.mode.shattered =   (SHATTERED)
 vr.needsPrisma = [ SYSTEM ] Isekai Hero needs PrismaUI (1.5.0 VR build) to show its menu in VR.
 window.system = [ SYSTEM ]
+
+; --- src/UI/ShopWindow.cpp ---
+shop.catalogEmpty = The catalog is empty.
+shop.footer = Delivered into your Dimensional Storage
+shop.price = {} SP
+shop.shelfEmpty = Nothing on this shelf yet.
+
+; --- src/UI/SkillTreeWindow.cpp ---
+button.close = CLOSE
+button.confirm = CONFIRM?
+button.respec = RESPEC  +{}
+tree.cost = COST   {} system point(s)
+tree.grandmaster = GRANDMASTER
+tree.locked = LOCKED — requires a connected node
+tree.maxed = MAXED
+tree.perkPoints = PERK POINTS     {} / {}
+tree.perkPoolFull = PERK POOL FULL — spend some perk points first
+tree.points = SYSTEM POINTS   {}
+tree.rank =    RANK {}
+tree.rankOf =    RANK {} / {}
+tree.sealedLevel = SEALED — awakens at level {}
+tree.sealedRebirth = SEALED — requires {} rebirth
+tree.tierTag =   [{}]
+tree.unlocked = UNLOCKED
+
+; --- src/UI/ThreatLabels.cpp ---
+threat.dangerous = DANGEROUS
+threat.lethal = LETHAL
+threat.manageable = MANAGEABLE
+threat.toggleOff = Threat display  OFF
+threat.toggleOn = Threat display  ON
+threat.trivial = TRIVIAL
+threat.unknown = Unknown

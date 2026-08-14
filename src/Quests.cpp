@@ -1,6 +1,7 @@
 #include "Quests.h"
 
 #include "Config.h"
+#include "Loc.h"
 #include "Sounds.h"
 #include "System.h"
 #include "UI/Toast.h"
@@ -77,6 +78,13 @@ namespace Isekai::Quests {
         // an objective handed over the moment you are reincarnated reads as a starting
         // quest rather than as the System noticing you — but a full day before the
         // feature shows itself at all is long enough to look broken.
+        // The quarry's name, translated. Keyed by the quarry's own stable key — the same
+        // scheme the milestones and the tree nodes use, and for the same reason: the
+        // number is already promised never to be reused, so nothing has to be derived.
+        [[nodiscard]] std::string QuarryName(const Quarry& a_quarry) {
+            return Loc::Get("quarry." + std::to_string(a_quarry.key), a_quarry.name);
+        }
+
         [[nodiscard]] float Days(std::uint32_t a_hours) {
             return static_cast<float>(a_hours) / 24.0f;
         }
@@ -179,8 +187,8 @@ namespace Isekai::Quests {
             logger::info("Quests: new objective #{} — slay {} {} (level {}, pays {}){}",
                          state.questsGiven, state.questTarget, chosen->name, level,
                          state.questReward, isFirst ? " [starter]" : "");
-            UI::ShowToastBanner("[ SYSTEM ]  New objective:  slay " +
-                                    std::to_string(state.questTarget) + " " + chosen->name,
+            UI::ShowToastBanner(LF("quest.newObjective", "[ SYSTEM ]  New objective:  slay {} {}",
+                                   state.questTarget, QuarryName(*chosen)),
                                 kToastKey);
         }
 
@@ -191,8 +199,8 @@ namespace Isekai::Quests {
             Sounds::Play(Sounds::Sfx::LevelUp);
             logger::info("Quests: objective complete ({}) — paid {} System Point(s)",
                          a_quarry.name, payout);
-            UI::ShowToastBanner("[ SYSTEM ]  Objective complete.  +" + std::to_string(payout) +
-                                    " System Points",
+            UI::ShowToastBanner(LF("quest.complete",
+                                   "[ SYSTEM ]  Objective complete.  +{} System Points", payout),
                                 kToastKey);
 
             // Stand down rather than roll straight into the next one. The System offering
@@ -263,9 +271,8 @@ namespace Isekai::Quests {
                 } else {
                     // The running tally, the way an MMO reports it: one line, top centre,
                     // replacing itself on every kill rather than stacking.
-                    UI::ShowToast(std::string(quarry->name) + "   " +
-                                      std::to_string(state.questProgress) + " / " +
-                                      std::to_string(state.questTarget),
+                    UI::ShowToast(LF("quest.tally", "{}   {} / {}", QuarryName(*quarry),
+                                     state.questProgress, state.questTarget),
                                   kToastKey);
                 }
                 return RE::BSEventNotifyControl::kContinue;
@@ -350,7 +357,7 @@ namespace Isekai::Quests {
         // Target/reward come from the snapshot, not the table: the table's numbers are
         // pre-scaling, so reading them here would advertise a different hunt from the one
         // the kill counter is actually measuring.
-        return "Slay " + std::to_string(GetState().questTarget) + " " + q->name;
+        return LF("quest.slay", "Slay {} {}", GetState().questTarget, QuarryName(*q));
     }
 
     std::int32_t Progress() {

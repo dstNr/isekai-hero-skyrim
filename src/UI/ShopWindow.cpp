@@ -1,5 +1,6 @@
 #include "UI/ShopWindow.h"
 
+#include "Loc.h"
 #include "Shop.h"
 #include "Sounds.h"
 #include "System.h"
@@ -165,7 +166,7 @@ namespace Isekai::UI {
             ImGui::PushFont(Style::g_body, Style::BodySize());
 
             const std::int32_t points = GetState().systemPoints;
-            const std::string  balance = "SYSTEM POINTS   " + std::to_string(points);
+            const std::string  balance = LF("tree.points", "SYSTEM POINTS   {}", points);
             dl->AddText(ImVec2{ wMin.x + kPad * s, sepY + 12.0f * s },
                         Style::Col(Style::kAccent, fade), balance.c_str());
 
@@ -298,7 +299,7 @@ namespace Isekai::UI {
                       6.0f * s;
                 ty += centred(item.qty, subSz, ty, Style::Col(Style::kTextDim, fade * dim)) +
                       8.0f * s;
-                centred(std::to_string(item.cost) + " SP", nameSz, ty,
+                centred(LF("shop.price", "{} SP", item.cost), nameSz, ty,
                         afford ? Style::Col(Style::kAccent, fade)
                                : IM_COL32(220, 90, 90, static_cast<int>(255 * fade)));
 
@@ -313,8 +314,9 @@ namespace Isekai::UI {
             if (shown.empty()) {
                 // A shelf can legitimately be empty: the potions only appear once their
                 // ESP records exist, so an older plugin shows MATERIALS and WEALTH only.
-                const char*  empty = count == 0 ? "The catalog is empty."
-                                                : "Nothing on this shelf yet.";
+                const char*  empty = count == 0
+                                         ? L("shop.catalogEmpty", "The catalog is empty.")
+                                         : L("shop.shelfEmpty", "Nothing on this shelf yet.");
                 const ImVec2 ts = ImGui::CalcTextSize(empty);
                 dl->AddText(ImVec2{ (gridL + wMax.x - kPad * s) * 0.5f - ts.x * 0.5f,
                                     cardsY + kCardH * 0.5f * s },
@@ -324,7 +326,7 @@ namespace Isekai::UI {
             // --- Footer ---
             dl->AddText(ImVec2{ wMin.x + kPad * s, wMax.y - 52.0f * s },
                         Style::Col(Style::kTextDim, 0.8f * fade),
-                        "Delivered into your Dimensional Storage");
+                        L("shop.footer", "Delivered into your Dimensional Storage"));
 
             {
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f });
@@ -342,7 +344,7 @@ namespace Isekai::UI {
                 const ImVec2 btnSize{ 170.0f * s, 42.0f * s };
                 ImGui::SetCursorScreenPos(ImVec2{ wMax.x - btnSize.x - kPad * s,
                                                   wMax.y - btnSize.y - 18.0f * s });
-                if (ImGui::Button("CLOSE", btnSize)) {
+                if (ImGui::Button(L("button.close", "CLOSE"), btnSize)) {
                     RequestClose();
                 }
 

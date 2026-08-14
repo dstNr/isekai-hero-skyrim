@@ -1,6 +1,7 @@
 #include "UI/SkillTreeWindow.h"
 
 #include "Config.h"
+#include "Loc.h"
 #include "SkillTree.h"
 #include "Sounds.h"
 #include "System.h"
@@ -217,11 +218,12 @@ namespace Isekai::UI {
 
             ImGui::PushFont(Style::g_body, Style::BodySize());
 
-            const std::string points = "SYSTEM POINTS   " + std::to_string(SkillTree::Points());
+            const std::string points =
+                LF("tree.points", "SYSTEM POINTS   {}", SkillTree::Points());
             dl->AddText(ImVec2{ wMin.x + 28.0f * s, sepY + 12.0f * s },
                         Style::Col(Style::kAccent, fade), points.c_str());
-            const std::string perks = "PERK POINTS     " + std::to_string(SkillTree::PerkPool()) +
-                                      " / " + std::to_string(Isekai::kMaxPerkPoints);
+            const std::string perks = LF("tree.perkPoints", "PERK POINTS     {} / {}",
+                                         SkillTree::PerkPool(), Isekai::kMaxPerkPoints);
             dl->AddText(ImVec2{ wMin.x + 28.0f * s, sepY + 38.0f * s },
                         Style::Col(Style::kTextDim, fade), perks.c_str());
 
@@ -676,7 +678,7 @@ namespace Isekai::UI {
                 const float railTop = headBottom;         // under the points block, not over it
                 const float railBot = wMax.y - 88.0f * s;  // same footer reserve as the graph
 
-                const char*  head = "MASTERY";
+                const char*  head = SkillTree::ZoneName(SkillTree::Zone::kMastery);
                 const ImVec2 hs = ImGui::CalcTextSize(head);
                 dl->AddText(ImVec2{ railL + 2.0f * s, railTop },
                             Style::Col(Style::kTextDim, 0.9f * fade), head);
@@ -766,42 +768,45 @@ namespace Isekai::UI {
                     // how far they've pushed it (max shown only when capped). Mastery
                     // nodes (capped repeatables) additionally name their tier.
                     const std::int32_t tier = SkillTree::Tier(node->key);
-                    const std::string  rankTag =
-                        node->repeatable
-                            ? "   RANK " + std::to_string(SkillTree::Rank(node->key)) +
-                                  (node->maxRank > 0 ? " / " + std::to_string(node->maxRank) : "") +
-                                  (tier > 0 ? std::string("  [") + SkillTree::TierName(tier) + "]"
-                                            : std::string{})
-                            : std::string{};
+                    std::string rankTag;
+                    if (node->repeatable) {
+                        rankTag = node->maxRank > 0
+                                      ? LF("tree.rankOf", "   RANK {} / {}",
+                                           SkillTree::Rank(node->key), node->maxRank)
+                                      : LF("tree.rank", "   RANK {}", SkillTree::Rank(node->key));
+                        if (tier > 0) {
+                            rankTag += LF("tree.tierTag", "  [{}]", SkillTree::TierName(tier));
+                        }
+                    }
                     const std::int32_t nextCost = SkillTree::NextCost(node->key);
 
                     std::string status;
                     ImU32       statusCol;
                     if (node->repeatable && NodeMaxed(*node)) {
-                        status = (tier > 0 ? "GRANDMASTER" : "MAXED") + rankTag;
+                        status = (tier > 0 ? L("tree.grandmaster", "GRANDMASTER")
+                                           : L("tree.maxed", "MAXED")) + rankTag;
                         statusCol = Style::Col(Style::kAccent, fade);
                     } else if (!node->repeatable && SkillTree::IsUnlocked(node->key)) {
-                        status = "UNLOCKED";
+                        status = L("tree.unlocked", "UNLOCKED");
                         statusCol = Style::Col(Style::kAccent, fade);
                     } else if (!SkillTree::TierMet(node->key)) {
                         // A gift of a deeper blessing than this life took — or, for a
                         // dormant one, than it has grown into YET.
                         const auto req = SkillTree::RequiredPower(node->key);
                         const auto at = Isekai::AwakeningLevelFor(req);
-                        status = at > 0
-                                     ? "SEALED — awakens at level " + std::to_string(at)
-                                     : "SEALED — requires " + Isekai::PowerName(req) + " rebirth";
+                        status = at > 0 ? LF("tree.sealedLevel", "SEALED — awakens at level {}", at)
+                                        : LF("tree.sealedRebirth", "SEALED — requires {} rebirth",
+                                             Isekai::PowerName(req));
                         statusCol = IM_COL32(200, 150, 90, static_cast<int>(255 * fade));
                     } else if (!SkillTree::PrereqsMet(node->key)) {
-                        status = "LOCKED — requires a connected node";
+                        status = L("tree.locked", "LOCKED — requires a connected node");
                         statusCol = Style::Col(Style::kTextDim, fade);
                     } else if (node->effect == SkillTree::Effect::kPerkPoint &&
                                SkillTree::PerkPool() >= Isekai::kMaxPerkPoints) {
-                        status = "PERK POOL FULL — spend some perk points first";
+                        status = L("tree.perkPoolFull", "PERK POOL FULL — spend some perk points first");
                         statusCol = Style::Col(Style::kTextDim, fade);
                     } else {
-                        status = "COST   " + std::to_string(nextCost) + " system point(s)" +
-                                 rankTag;
+                        status = LF("tree.cost", "COST   {} system point(s)", nextCost) + rankTag;
                         statusCol = SkillTree::Points() >= nextCost
                                         ? Style::Col(Style::kAccent, fade)
                                         : IM_COL32(220, 90, 90, static_cast<int>(255 * fade));
@@ -874,7 +879,7 @@ namespace Isekai::UI {
                 const ImVec2 btnSize{ 170.0f * s, 42.0f * s };
                 ImGui::SetCursorScreenPos(ImVec2{ wMax.x - btnSize.x - 24.0f * s,
                                                   wMax.y - btnSize.y - 20.0f * s });
-                if (ImGui::Button("CLOSE", btnSize)) {
+                if (ImGui::Button(L("button.close", "CLOSE"), btnSize)) {
                     RequestClose();
                 }
 
@@ -882,8 +887,9 @@ namespace Isekai::UI {
                 // the first press arms it, a second within a few seconds commits.
                 if (const std::int32_t refund = SkillTree::RespecRefund(); refund > 0) {
                     const bool        armed = g_elapsed < g_respecArmedUntil;
-                    const std::string label =
-                        armed ? "CONFIRM?" : ("RESPEC  +" + std::to_string(refund));
+                    const std::string label = armed
+                                                  ? L("button.confirm", "CONFIRM?")
+                                                  : LF("button.respec", "RESPEC  +{}", refund);
                     ImGui::SetCursorScreenPos(ImVec2{ wMax.x - btnSize.x * 2.0f - 34.0f * s,
                                                       wMax.y - btnSize.y - 20.0f * s });
                     if (ImGui::Button(label.c_str(), btnSize)) {

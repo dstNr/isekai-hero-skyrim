@@ -123,6 +123,23 @@ function shop() {
   return out;
 }
 
+// The hunt quarries, keyed by the quarry key. Same shape as the two tables above.
+function quarries() {
+  const code = readFileSync(join(ROOT, "src", "Quests.cpp"), "utf8");
+  const from = code.indexOf("constexpr Quarry kQuarries[] = {");
+  if (from < 0) throw new Error("quests: kQuarries not found in Quests.cpp");
+  const body = code.slice(from, code.indexOf("\n        };", from));
+  const rows = [...body.matchAll(/\{\s*(\d+),\s*"([^"]+)",\s*"ActorType/g)];
+  const loose = (body.match(/^\s*\{\s*\d+,/gm) || []).length;
+  if (rows.length !== loose) {
+    throw new Error(
+      `quests: ${loose} rows look like rows but ${rows.length} parsed — ` +
+        "the quarry regex in tools/extract-strings.mjs has gone stale",
+    );
+  }
+  return rows.map(([, key, name]) => ["quarry." + key, name]);
+}
+
 export function collect() {
   const found = new Map();
   const dupes = [];
@@ -165,6 +182,9 @@ export function collect() {
   }
   for (const [key, text] of shop()) {
     found.set(key, { text, file: "src/Shop.cpp (catalog)" });
+  }
+  for (const [key, text] of quarries()) {
+    found.set(key, { text, file: "src/Quests.cpp (quarries)" });
   }
   return { found, dupes, callSites };
 }

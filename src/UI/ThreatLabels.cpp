@@ -1,6 +1,7 @@
 #include "UI/ThreatLabels.h"
 
 #include "Config.h"
+#include "Loc.h"
 #include "UI/Input.h"
 #include "UI/Overlay.h"
 #include "UI/Style.h"
@@ -37,15 +38,15 @@ namespace Isekai::UI {
 
         [[nodiscard]] Verdict VerdictFor(std::int32_t a_diff) {
             if (a_diff >= 20) {
-                return { "LETHAL", ImVec4{ 1.00f, 0.28f, 0.28f, 1.0f } };
+                return { L("threat.lethal", "LETHAL"), ImVec4{ 1.00f, 0.28f, 0.28f, 1.0f } };
             }
             if (a_diff >= 5) {
-                return { "DANGEROUS", ImVec4{ 1.00f, 0.68f, 0.25f, 1.0f } };
+                return { L("threat.dangerous", "DANGEROUS"), ImVec4{ 1.00f, 0.68f, 0.25f, 1.0f } };
             }
             if (a_diff <= -15) {
-                return { "TRIVIAL", ImVec4{ 0.80f, 0.86f, 0.92f, 1.0f } };
+                return { L("threat.trivial", "TRIVIAL"), ImVec4{ 0.80f, 0.86f, 0.92f, 1.0f } };
             }
-            return { "MANAGEABLE", ImVec4{ 0.55f, 0.85f, 1.00f, 1.0f } };
+            return { L("threat.manageable", "MANAGEABLE"), ImVec4{ 0.55f, 0.85f, 1.00f, 1.0f } };
         }
 
         // The scene camera, which is a child of the camera root rather than the root
@@ -253,7 +254,9 @@ namespace Isekai::UI {
         const bool on = !ThreatLabelsVisible();
         g_override.store(on ? 1 : 0, std::memory_order_release);
         logger::info("UI: threat labels switched {}", on ? "on" : "off");
-        ShowToast(on ? "Threat display  ON" : "Threat display  OFF", "threat");
+        ShowToast(on ? L("threat.toggleOn", "Threat display  ON")
+                     : L("threat.toggleOff", "Threat display  OFF"),
+                  "threat");
     }
 
     void DrawThreatLabels() {
@@ -405,7 +408,8 @@ namespace Isekai::UI {
             const float skew = 9.0f * k;
 
             const std::string lvl = std::to_string(label.level);
-            const char*       name = label.name.empty() ? "Unknown" : label.name.c_str();
+            const char*       name =
+                label.name.empty() ? L("threat.unknown", "Unknown") : label.name.c_str();
             const float       nameW = measure(nameSize, name);
             const float       tagW = measure(tagSize, label.verdict.tag);
 
