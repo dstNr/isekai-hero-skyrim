@@ -140,6 +140,60 @@ function quarries() {
   return rows.map(([, key, name]) => ["quarry." + key, name]);
 }
 
+// The PrismaUI view's own chrome. It never passes through C++ — the plugin hands it the
+// whole table at DOM-ready and it looks strings up itself — so its keys have to be
+// harvested from the HTML, or a translator would simply never see them.
+//
+// Two shapes, matching the two in the view: data-loc="key" on a static element, whose
+// English is the element's own text, and tr()/trf() calls in the script.
+const VIEW_ATTR = /data-loc="([\w.]+)"[^>]*>([^<]*)</g;
+const VIEW_CALL = /\btrf?\(\s*"([\w.]+)"\s*,\s*((?:"(?:[^"\\]|\\.)*"\s*\+?\s*)+)[,)]/g;
+const VIEW_ANY = /\btrf?\(\s*(.)/g;
+
+// tr() and trf() call each other with a variable key — that is what they are FOR. The
+// rule is about callers, so the machinery itself is cut out before the scan rather than
+// special-cased inside it. Delimited by the two lines that open and close the block.
+const VIEW_MACHINERY_FROM = "let LOC = {};";
+const VIEW_MACHINERY_TO = 'document.addEventListener("DOMContentLoaded", applyLoc);';
+
+function view() {
+  const file = "prisma-patch/PrismaUI/views/IsekaiHero/index.html";
+  const raw = readFileSync(join(ROOT, file), "utf8");
+  // Comments first, and the same way the C++ collector does it: the block above this
+  // function's counterpart in the view documents tr() by naming it, and a prose mention
+  // of "tr()" is not a call site. Whole-line // only, so a "//" inside a string is safe.
+  const code = raw
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^[ \t]*\/\/.*$/gm, "");
+  const from = code.indexOf(VIEW_MACHINERY_FROM);
+  const to = code.indexOf(VIEW_MACHINERY_TO);
+  if (from < 0 || to < 0 || to < from) {
+    throw new Error("view: the translation block's delimiters moved — parser stale");
+  }
+  const callers = code.slice(0, from) + code.slice(to + VIEW_MACHINERY_TO.length);
+  for (const m of callers.matchAll(VIEW_ANY)) {
+    // Same rule as the C++ side: a computed key reaches no template and warns nobody.
+    if (m[1] !== '"') {
+      const line = callers.slice(0, m.index).split("\n").length;
+      throw new Error(
+        `${file}: line ~${line} of the callers: tr()/trf() needs a literal key, ` +
+          `got ${JSON.stringify(m[1])}`,
+      );
+    }
+  }
+  const out = [];
+  for (const [, key, text] of code.matchAll(VIEW_ATTR)) {
+    out.push([key, text.trim()]);
+  }
+  for (const [, key, literals] of code.matchAll(VIEW_CALL)) {
+    const text = [...literals.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((x) => x[1]).join("");
+    out.push([key, text]);
+  }
+  if (out.length === 0) throw new Error("view: no strings harvested — the parser is stale");
+  return out;
+}
+
 export function collect() {
   const found = new Map();
   const dupes = [];
@@ -185,6 +239,10 @@ export function collect() {
   }
   for (const [key, text] of quarries()) {
     found.set(key, { text, file: "src/Quests.cpp (quarries)" });
+  }
+  for (const [key, text] of view()) {
+    if (found.has(key) && found.get(key).text !== text) dupes.push(key);
+    found.set(key, { text, file: "prisma-patch (the web view's own chrome)" });
   }
   return { found, dupes, callSites };
 }

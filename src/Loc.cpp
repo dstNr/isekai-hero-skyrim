@@ -122,6 +122,34 @@ namespace Isekai::Loc {
         return a_english ? a_english : "";
     }
 
+    std::string Json() {
+        // Escaped here rather than trusted: this is a file a translator wrote, so a quote
+        // or a backslash in it is a matter of when, not if — and an unescaped one would
+        // not corrupt a string, it would break the whole Invoke() call and leave the view
+        // with no table at all.
+        std::string j = "{";
+        bool first = true;
+        for (const auto& [key, value] : g_strings) {
+            j += first ? "\"" : ",\"";
+            first = false;
+            j += key;  // keys are checked to be [a-z0-9.] by tools/check.mjs
+            j += "\":\"";
+            for (const char c : value) {
+                switch (c) {
+                case '"':  j += "\\\""; break;
+                case '\\': j += "\\\\"; break;
+                case '\n': j += "\\n"; break;
+                case '\r': break;
+                case '\t': j += "\\t"; break;
+                default:   j += c; break;
+                }
+            }
+            j += '"';
+        }
+        j += '}';
+        return j;
+    }
+
     std::size_t Count() {
         return g_strings.size();
     }

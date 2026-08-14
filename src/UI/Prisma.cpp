@@ -1,5 +1,6 @@
 #include "UI/Prisma.h"
 
+#include "Loc.h"          // Loc::Json, the string table this view translates itself with
 #include "PrismaUI_API.h"
 #include "Progression.h"  // OpenStatusPanel, to come back after a reroll
 #include "Quests.h"       // Quests::Reroll from the status screen's "new task" button
@@ -223,6 +224,12 @@ namespace Isekai::UI::Prisma {
                                       std::format("window.isekaiScale({})",
                                                   Style::g_userScale)
                                           .c_str());
+                        // The translation table, for the same reason and before the same
+                        // deadline as the scale: the view's own chrome is HTML, so it
+                        // translates itself, and it has to hold the table before the
+                        // pending call below paints the first screen.
+                        g_api->Invoke(g_view,
+                                      ("window.isekaiLoc(" + Loc::Json() + ")").c_str());
                     }
                     std::string call;
                     {

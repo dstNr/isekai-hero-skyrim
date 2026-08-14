@@ -655,16 +655,16 @@
       <div class="bracket tl"></div><div class="bracket tr"></div>
       <div class="bracket bl"></div><div class="bracket br"></div>
       <div id="tHead">
-        <div id="tTitle" class="eyebrow mono">System · Skill Tree</div>
+        <div id="tTitle" class="eyebrow mono" data-loc="view.tree.title">System · Skill Tree</div>
         <div id="tChips">
-          <div class="chip mono"><i></i>System Points <b id="hPoints">—</b></div>
-          <div class="chip mono"><i></i>Perk Points <b id="hPerks">—</b></div>
+          <div class="chip mono"><i></i><span data-loc="view.systemPoints">System Points</span> <b id="hPoints">—</b></div>
+          <div class="chip mono"><i></i><span data-loc="view.perkPoints">Perk Points</span> <b id="hPerks">—</b></div>
         </div>
       </div>
       <div id="tRule" class="rule"></div>
       <div id="canvas">
         <div id="urail">
-          <div id="urailHead" class="mono">Mastery</div>
+          <div id="urailHead" class="mono" data-loc="view.tree.mastery">Mastery</div>
           <div id="urailNodes"></div>
         </div>
         <div id="zones"></div>
@@ -672,10 +672,10 @@
         <div id="tip"><div id="tipName"></div><div id="tipDesc"></div><div id="tipStatus"></div></div>
       </div>
       <div id="tFoot">
-        <div id="tHint" class="mono">Click a glowing node to unlock · ESC to close</div>
+        <div id="tHint" class="mono" data-loc="view.tree.hint">Click a glowing node to unlock · ESC to close</div>
         <div id="tActions">
           <button id="tRespec" class="btn mono" onclick="respecClick()"></button>
-          <button id="tClose" class="btn mono" onclick="closeTree()">Close</button>
+          <button id="tClose" class="btn mono" onclick="closeTree()" data-loc="view.close">Close</button>
         </div>
       </div>
     </div>
@@ -713,7 +713,7 @@
           <div id="sRankBlock">
             <img id="sRankIcon" alt="" onerror="this.style.display='none'">
             <div id="sRankText">
-              <div class="eyebrow mono">System Rank</div>
+              <div class="eyebrow mono" data-loc="view.systemRank">System Rank</div>
               <div id="sRankLetter" class="mono">—</div>
             </div>
           </div>
@@ -723,17 +723,17 @@
       <div class="rule"></div>
       <div id="sTiles">
         <div class="tile">
-          <div class="tLabel mono">Milestones</div>
+          <div class="tLabel mono" data-loc="view.milestones">Milestones</div>
           <div class="tVal mono"><b id="sMile">—</b><span id="sMileTot"></span></div>
           <div class="bar"><i id="sBar"></i></div>
         </div>
         <div class="tile">
-          <div class="tLabel mono">System Points</div>
+          <div class="tLabel mono" data-loc="view.systemPoints">System Points</div>
           <div class="tVal mono"><b id="sPts">—</b></div>
         </div>
       </div>
       <div id="sQuestSect" class="hidden">
-        <div class="sect eyebrow mono">Objective</div>
+        <div class="sect eyebrow mono" data-loc="view.objective">Objective</div>
         <div id="sQuest">
           <div id="sQuestRow">
             <div id="sQuestText" class="mono"></div>
@@ -743,11 +743,11 @@
         </div>
       </div>
       <div id="sAttSect">
-        <div class="sect eyebrow mono">Attunements</div>
+        <div class="sect eyebrow mono" data-loc="view.attunements">Attunements</div>
         <div id="sAtt"></div>
       </div>
       <div id="sTitleSect">
-        <div class="sect eyebrow mono">Titles</div>
+        <div class="sect eyebrow mono" data-loc="view.titles">Titles</div>
         <div id="sTitles"></div>
       </div>
       <div id="sFoot"><div id="sActions"></div></div>
@@ -762,10 +762,10 @@
       <div class="bracket bl"></div><div class="bracket br"></div>
       <div id="shHead">
         <div>
-          <div class="eyebrow mono">System · Shop</div>
-          <div id="shTitle" class="mono">Exchange</div>
+          <div class="eyebrow mono" data-loc="view.shop.eyebrow">System · Shop</div>
+          <div id="shTitle" class="mono" data-loc="view.shop.title">Exchange</div>
         </div>
-        <div class="chip mono"><i></i>System Points <b id="shPoints">—</b></div>
+        <div class="chip mono"><i></i><span data-loc="view.systemPoints">System Points</span> <b id="shPoints">—</b></div>
       </div>
       <div class="rule"></div>
       <div id="shBody">
@@ -773,8 +773,8 @@
         <div id="shGrid"></div>
       </div>
       <div id="shFoot">
-        <div id="shHint" class="mono">Delivered into your Dimensional Storage · ESC to close</div>
-        <button id="shClose" class="btn mono" onclick="shopClose()">Close</button>
+        <div id="shHint" class="mono" data-loc="view.shop.hint">Delivered into your Dimensional Storage · ESC to close</div>
+        <button id="shClose" class="btn mono" onclick="shopClose()" data-loc="view.close">Close</button>
       </div>
     </div>
   </div>
@@ -822,6 +822,50 @@ window.isekaiScale = (s) => {
   const v = Math.min(Math.max(parseFloat(s) || 1, 0.5), 3);
   document.documentElement.style.setProperty("--ui-scale", v);
 };
+
+/* ---- Translation ---------------------------------------------------------
+   This view's own chrome ("Close", "Milestones", "Buy") is written here and never
+   passes through C++, so it cannot go through Loc::Get. The plugin hands over the
+   whole loaded string table instead, once, at DOM-ready; tr() does the same lookup
+   the C++ side does, with the same rule - a key that is missing stays English,
+   because the English text sits at the call site here too.
+
+   Static labels carry data-loc="key" and keep their English as their own text
+   content, so the markup stays readable and the English is written exactly once.
+   applyLoc() rewrites them when the table arrives; the ORIGINAL text is stashed
+   first, so a second call cannot translate an already-translated label.
+
+   Named tr() rather than t(): `t` is already a local variable in five functions in
+   this file, and a translator that silently resolves to a number in some of them is
+   the kind of bug that only shows up in one language. */
+let LOC = {};
+
+const tr = (key, english) => (typeof LOC[key] === "string" && LOC[key]) || english;
+
+/* The same for a string with values in it, mirroring LF() in C++: each {} is filled
+   from the arguments in order. Splitting a sentence into a prefix and a suffix around
+   a value would be the alternative, and it is the thing that cannot be translated -
+   plenty of languages need the value somewhere else in the sentence entirely. */
+function trf(key, english, ...args) {
+  let i = 0;
+  return tr(key, english).replace(/\{\}/g, () => (i < args.length ? args[i++] : "{}"));
+}
+
+function applyLoc() {
+  document.querySelectorAll("[data-loc]").forEach(el => {
+    if (el.dataset.locEn === undefined) el.dataset.locEn = el.textContent;
+    el.textContent = tr(el.dataset.loc, el.dataset.locEn);
+  });
+}
+
+window.isekaiLoc = (table) => {
+  LOC = (table && typeof table === "object") ? table : {};
+  applyLoc();
+};
+
+/* Nothing pushed the table yet on a plain browser open (the playground), and the
+   static labels still have to end up in their own dataset so a later push works. */
+document.addEventListener("DOMContentLoaded", applyLoc);
 
 function showScreen(name) {
   ["tree", "panel", "flourish", "status", "shop"].forEach(s => $("screen-" + s).classList.toggle("active", s === name));
@@ -1025,21 +1069,27 @@ function stateOf(n) {
 function statusOf(n) {
   // Mastery nodes (capped repeatables) show their named tier alongside the raw rank;
   // Perk Synthesis and one-shot nodes keep the plain "Rank N" form.
-  const tag = n.masteryTier > 0 ? " · " + n.masteryTierName + " (" + n.rank + "/" + n.maxRank + ")"
-            : n.repeatable ? " · Rank " + n.rank + (n.maxRank > 0 ? "/" + n.maxRank : "") : "";
+  const tag = n.masteryTier > 0
+            ? trf("view.tree.tierTag", " · {} ({}/{})", n.masteryTierName, n.rank, n.maxRank)
+            : n.repeatable
+            ? (n.maxRank > 0 ? trf("view.tree.rankOf", " · Rank {}/{}", n.rank, n.maxRank)
+                             : trf("view.tree.rank", " · Rank {}", n.rank))
+            : "";
   if (n.repeatable && n.maxRank > 0 && n.rank >= n.maxRank) {
-    return { t: (n.masteryTier > 0 ? "Grandmaster" : "Maxed") + tag, c: "var(--accent)" };
+    return { t: (n.masteryTier > 0 ? tr("view.tree.grandmaster", "Grandmaster")
+                                   : tr("view.tree.maxed", "Maxed")) + tag, c: "var(--accent)" };
   }
-  if (n.owned) return { t: "Unlocked", c: "var(--accent)" };
+  if (n.owned) return { t: tr("view.tree.unlocked", "Unlocked"), c: "var(--accent)" };
   if (!n.tierMet) return {
     // A dormant blessing seals by level, not by the rebirth you chose.
-    t: n.reqLevel ? "Sealed — awakens at level " + n.reqLevel
-                  : "Sealed — needs " + n.reqPower + " rebirth",
+    t: n.reqLevel ? trf("view.tree.sealedLevel", "Sealed — awakens at level {}", n.reqLevel)
+                  : trf("view.tree.sealedRebirth", "Sealed — needs {} rebirth", n.reqPower),
     c: "var(--amber)"
   };
-  if (!n.prereqMet) return { t: "Locked — needs a connected node", c: "var(--dim)" };
+  if (!n.prereqMet) return { t: tr("view.tree.locked", "Locked — needs a connected node"), c: "var(--dim)" };
   const ok = TREE.points >= n.cost;
-  return { t: n.cost + " system point(s)" + tag, c: ok ? "var(--accent)" : "var(--danger)" };
+  return { t: trf("view.tree.cost", "{} system point(s)", n.cost) + tag,
+           c: ok ? "var(--accent)" : "var(--danger)" };
 }
 
 let hoverKey = 0;
@@ -1303,10 +1353,12 @@ function renderRespec() {
   btn.classList.toggle("hidden", amount <= 0);
   if (amount <= 0) { respecArmed = 0; btn.classList.remove("armed"); return; }
   btn.classList.toggle("armed", !!respecArmed);
-  btn.textContent = respecArmed ? "Confirm?" : "Respec  +" + amount;
-  btn.title = "Refunds the System Points spent on stat nodes.\n"
-            + "Knowledge unlocks and Perk Synthesis stay — the System cannot "
-            + "un-teach what you already know.";
+  btn.textContent = respecArmed ? tr("view.confirm", "Confirm?")
+                                : trf("view.respec", "Respec  +{}", amount);
+  btn.title = tr("view.respec.tip",
+                 "Refunds the System Points spent on stat nodes.\n"
+               + "Knowledge unlocks and Perk Synthesis stay — the System cannot "
+               + "un-teach what you already know.");
 }
 function respecClick() {
   if (respecArmed) {
@@ -1418,9 +1470,10 @@ function rebootClick(btn) {
     return;
   }
   btn.classList.add("armed");
-  btn.textContent = "Confirm reboot?";
+  btn.textContent = tr("view.confirmReboot", "Confirm reboot?");
   rebootArmed = setTimeout(() => {
-    rebootArmed = 0; btn.classList.remove("armed"); btn.textContent = "Reboot";
+    rebootArmed = 0; btn.classList.remove("armed");
+    btn.textContent = tr("view.reboot", "Reboot");
   }, 3000);
 }
 
@@ -1443,16 +1496,16 @@ function buildStatusActions() {
     b.textContent = label; b.onclick = onClick; box.appendChild(b); return b;
   };
 
-  if (s.hasTree)    addIcon("Skill Tree", "ui_skilltree.png", () => statusAction("tree"));
-  if (s.hasStorage) addIcon("Storage", "ui_storage.png", () => statusAction("storage"));
-  if (s.hasShop)    addIcon("Shop", "ui_shop.png", () => statusAction("shop"));
+  if (s.hasTree)    addIcon(tr("view.skillTree", "Skill Tree"), "ui_skilltree.png", () => statusAction("tree"));
+  if (s.hasStorage) addIcon(tr("view.storage", "Storage"), "ui_storage.png", () => statusAction("storage"));
+  if (s.hasShop)    addIcon(tr("view.shop", "Shop"), "ui_shop.png", () => statusAction("shop"));
   // New Task throws the objective away and rolls another, free and instantly. That is a
   // testing tool rather than a feature — it walks straight around the schedule the
   // objectives are supposed to arrive on — so the plugin decides whether it exists at
   // all (QuestRerollButton in the ini, off by default) and the view only obeys.
-  if (s.questCanReroll)  addBtn("New Task", "", () => statusAction("reroll"));
-  if (s.canReboot)  { const rb = addBtn("Reboot", "amber", () => rebootClick(rb)); }
-  addBtn("Close", "", () => statusAction("close"));
+  if (s.questCanReroll)  addBtn(tr("view.newTask", "New Task"), "", () => statusAction("reroll"));
+  if (s.canReboot)  { const rb = addBtn(tr("view.reboot", "Reboot"), "amber", () => rebootClick(rb)); }
+  addBtn(tr("view.close", "Close"), "", () => statusAction("close"));
 }
 
 function renderStatus() {
@@ -1465,7 +1518,7 @@ function renderStatus() {
   icon.style.display = "";           // a previous rank's missing PNG may have hidden it
   icon.src = "icons/rank_" + rank.toLowerCase() + ".png";
   const letter = $("sRankLetter");
-  letter.textContent = "RANK " + rank;
+  letter.textContent = trf("view.rankEmblem", "RANK {}", rank);
   // "rank-c" and friends carry the ramp; anything unexpected falls back to E's steel.
   letter.className = "mono rank-" + ("SABCDE".includes(rank) ? rank.toLowerCase() : "e");
 
@@ -1476,15 +1529,21 @@ function renderStatus() {
   mb.classList.toggle("dormant", mode === "DORMANT");
 
   const aw = $("sAwaken");
-  if (s.nextAwakening > 0) { aw.textContent = "Awakens at level " + s.nextAwakening; aw.classList.remove("hidden"); }
+  if (s.nextAwakening > 0) {
+    aw.textContent = trf("view.awakensAt", "Awakens at level {}", s.nextAwakening);
+    aw.classList.remove("hidden");
+  }
   else aw.classList.add("hidden");
 
   // A CUSTOM build's three dials rarely agree, so spell them out under the header.
   const cu = $("sCustom");
   if (mode === "CUSTOM") {
-    cu.innerHTML = "Rewards <b>" + esc(s.rewardTier || s.tier) + "</b> · "
-                 + "Tree <b>" + esc(s.treeTier || s.tier) + "</b> · "
-                 + "Gift <b>" + esc(s.grantTier || "NORMAL") + "</b>";
+    // The three labels are translated, the markup around them is not: this goes through
+    // innerHTML, and a language file is written by someone else. Escaping the VALUES is
+    // not enough if the PATTERN itself can carry tags.
+    cu.innerHTML = esc(tr("view.custom.rewards", "Rewards")) + " <b>" + esc(s.rewardTier || s.tier) + "</b> · "
+                 + esc(tr("view.custom.tree", "Tree")) + " <b>" + esc(s.treeTier || s.tier) + "</b> · "
+                 + esc(tr("view.custom.gift", "Gift")) + " <b>" + esc(s.grantTier || "NORMAL") + "</b>";
     cu.classList.remove("hidden");
   } else {
     cu.classList.add("hidden");
@@ -1507,11 +1566,11 @@ function renderStatus() {
     const qp = s.questProgress || 0, qt = s.questTarget || 0;
     $("sQuestText").textContent = qText;
     $("sQuestCount").innerHTML = qp + " / " + qt +
-                                 '<span>+' + (s.questReward || 0) + " SP</span>";
+                                 "<span>" + esc(trf("view.questReward", "+{} SP", s.questReward || 0)) + "</span>";
     $("sQuestBar").style.width = (qt ? Math.round(100 * Math.min(qp, qt) / qt) : 0) + "%";
   } else if (qWait) {
-    $("sQuestText").textContent = "The System is quiet.";
-    $("sQuestCount").innerHTML = "<span>next in ~" + qWait + "h</span>";
+    $("sQuestText").textContent = tr("view.systemQuiet", "The System is quiet.");
+    $("sQuestCount").innerHTML = "<span>" + esc(trf("view.questNextIn", "next in ~{}h", qWait)) + "</span>";
     $("sQuestBar").style.width = "0%";
   }
 
@@ -1535,7 +1594,7 @@ function renderStatus() {
     });
   } else {
     const d = document.createElement("div"); d.className = "trow mono empty";
-    d.textContent = "No deeds recognised yet.";
+    d.textContent = tr("view.noDeeds", "No deeds recognised yet.");
     tl.appendChild(d);
   }
 
@@ -1592,8 +1651,9 @@ function renderShop() {
   if (!visible.length) {
     const msg = document.createElement("div");
     msg.className = "shEmpty mono";
-    msg.textContent = (SHOP.items || []).length ? "Nothing on this shelf yet."
-                                                : "The catalog is empty.";
+    msg.textContent = (SHOP.items || []).length
+                        ? tr("view.shelfEmpty", "Nothing on this shelf yet.")
+                        : tr("view.catalogEmpty", "The catalog is empty.");
     grid.appendChild(msg);
     return;
   }
@@ -1624,12 +1684,12 @@ function renderShop() {
 
     const cost = document.createElement("div");
     cost.className = "cCost mono";
-    cost.innerHTML = it.cost + "<span>SP</span>";
+    cost.innerHTML = it.cost + "<span>" + esc(tr("view.sp", "SP")) + "</span>";
     card.appendChild(cost);
 
     const btn = document.createElement("button");
     btn.className = "btn mono";
-    btn.textContent = afford ? "Buy" : "Locked";
+    btn.textContent = afford ? tr("view.buy", "Buy") : tr("view.locked", "Locked");
     if (afford) btn.addEventListener("click", () => shopBuy(i));
     card.appendChild(btn);
 

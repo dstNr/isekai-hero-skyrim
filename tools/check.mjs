@@ -494,9 +494,78 @@ check("ui: every icon a C++ file names by hand exists", () => {
   return `${found.size} icons (${blessings.length} blessings)`;
 });
 
+check("ui: the web view's script parses", () => {
+  // Nothing else here would notice. The view is not compiled, and a syntax error in it
+  // does not fail the build or any other check — it shows up in the game as a panel that
+  // never appears, which is an expensive way to find a typo.
+  const html = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  const blocks = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+  need(blocks.length > 0, "no <script> blocks found — parser stale?");
+  blocks.forEach((js, i) => {
+    try {
+      new Function(js);  // parses only; nothing runs
+    } catch (e) {
+      need(false, `<script> block ${i + 1} does not parse: ${e.message}`);
+    }
+  });
+  return `${blocks.length} block(s), ${blocks.reduce((n, b) => n + b.split("\n").length, 0)} lines`;
+});
+
+check("ui: the web view actually translates itself", () => {
+  // Everything else about the translation is checked by reading the source. This RUNS it:
+  // the view's own tr/trf/applyLoc, against a table shaped like Loc::Json's output and
+  // deliberately partial, which is what every real translation is.
+  const html = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  const js = html.match(/<script\b[^>]*>([\s\S]*?)<\/script>/)[1];
+  const from = js.indexOf("let LOC = {};");
+  const to = js.indexOf('document.addEventListener("DOMContentLoaded", applyLoc);');
+  need(from >= 0 && to > from, "the translation block's delimiters moved — check stale");
+
+  const els = [
+    { dataset: { loc: "view.close" }, textContent: "Close" },
+    { dataset: { loc: "view.milestones" }, textContent: "Milestones" },
+  ];
+  const win = {};
+  const api = new Function(
+    "document", "window",
+    js.slice(from, to) +
+      "\nreturn { tr, trf, get isekaiLoc() { return window.isekaiLoc; } };",
+  )({ querySelectorAll: () => els }, win);
+
+  api.isekaiLoc({ "view.close": "Schließen", "view.tree.cost": "{} Systempunkt(e)" });
+  need(els[0].textContent === "Schließen", "a covered label was not translated");
+  need(els[1].textContent === "Milestones", "an uncovered label must stay English");
+  need(api.trf("view.tree.cost", "{} system point(s)", 7) === "7 Systempunkt(e)",
+       "trf did not fill {} from the translated pattern");
+  need(api.trf("view.tree.rank", " · Rank {}", 3) === " · Rank 3",
+       "trf did not fill {} in the English fallback");
+  need(api.tr("view.buy", "Buy") === "Buy", "a missing key did not fall back to English");
+
+  // A second push must translate from the stashed English, not from the first result.
+  api.isekaiLoc({ "view.close": "Fermer" });
+  need(els[0].textContent === "Fermer", "a re-push translated an already-translated label");
+  need(els[1].textContent === "Milestones", "a re-push corrupted an uncovered label");
+  return "partial table, re-push, and both fallbacks";
+});
+
+check("ui: every translated label in the web view carries its English", () => {
+  // A data-loc element's own text IS the English fallback. Empty it, and that label
+  // disappears entirely for anyone whose translation happens not to cover that key —
+  // which is the exact case the fallback exists for.
+  const html = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  const labels = [...html.matchAll(/data-loc="([\w.]+)"[^>]*>([^<]*)</g)];
+  need(labels.length > 0, "no data-loc labels parsed — parser stale?");
+  for (const [, key, text] of labels) {
+    need(text.trim().length > 0, `data-loc="${key}" has no English text to fall back to`);
+  }
+  return `${labels.length} labels`;
+});
+
 check("ui: the web view's status buttons name real icons", () => {
   const html = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
-  const icons = [...html.matchAll(/addIcon\([^,]+,\s*"([\w.]+\.png)"/g)].map((m) => m[1]);
+  // The label argument now goes through tr("key", "English"), so it holds commas of its
+  // own — anything up to the PNG rather than "one comma-free argument".
+  const icons = [...html.matchAll(/addIcon\([\s\S]*?,\s*"([\w.]+\.png)"/g)].map((m) => m[1]);
   need(icons.length > 0, "no addIcon calls parsed — parser stale?");
   for (const i of icons) {
     need(existsSync(join(ROOT, "icons", i)), `icons/${i} is missing — that button renders bare`);

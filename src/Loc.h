@@ -69,6 +69,16 @@ namespace Isekai::Loc {
         }
     }
 
+    // The whole loaded table as a JSON object, for the PrismaUI view.
+    //
+    // The web view cannot call Get(): its chrome is written in HTML and JavaScript and
+    // never passes through C++ at all. So it gets the table itself, once, and does the
+    // same lookup on its own with the same rule — a key that is missing stays English,
+    // because the English text is written at the call site there too.
+    //
+    // "{}" while running English, which is what the view treats as "translate nothing".
+    [[nodiscard]] std::string Json();
+
     // How many strings the loaded translation actually provides, for the log and the
     // self-test. 0 means "running English".
     [[nodiscard]] std::size_t Count();
