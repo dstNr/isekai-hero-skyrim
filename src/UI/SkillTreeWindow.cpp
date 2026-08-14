@@ -612,12 +612,13 @@ namespace Isekai::UI {
                     // are what the zone frames and the link endpoints reserve room for,
                     // and a label drawn wider than what was reserved is exactly the bug
                     // that reservation exists to prevent.
+                    const char*  label = SkillTree::Name(node);
                     const ImVec2 ls =
-                        font->CalcTextSizeA(kLabelSize, FLT_MAX, kLabelWrap, node.name);
+                        font->CalcTextSizeA(kLabelSize, FLT_MAX, kLabelWrap, label);
                     a_dl->AddText(font, kLabelSize,
                                   ImVec2{ (nMin.x + nMax.x) * 0.5f - ls.x * 0.5f,
                                           nMax.y + kLabelGap },
-                                  visual.label, node.name, nullptr, kLabelWrap);
+                                  visual.label, label, nullptr, kLabelWrap);
                 }
 
                 // Mastery-tier pip, bottom-right corner — the ImGui equivalent of the web
@@ -707,7 +708,7 @@ namespace Isekai::UI {
                     const auto  visual = VisualFor(node, s);
                     const float tx = nMax.x + 10.0f * s;
                     railDl->AddText(font, nameSize, ImVec2{ tx, y + 1.0f * s }, visual.label,
-                                    node.name);
+                                    SkillTree::Name(node));
 
                     // Ten rank pips, split into the five tiers by a wider gap — the same
                     // read as the web rail's .mPips.
@@ -816,8 +817,10 @@ namespace Isekai::UI {
                     const float nameSz = fs;
                     const float bodySz = std::max(12.0f * s, fs * 0.8f);
 
-                    const ImVec2 nameDim = font->CalcTextSizeA(nameSz, FLT_MAX, wrapW, node->name);
-                    const ImVec2 descDim = font->CalcTextSizeA(bodySz, FLT_MAX, wrapW, node->desc);
+                    const char*  cardName = SkillTree::Name(*node);
+                    const char*  cardDesc = SkillTree::Desc(*node);
+                    const ImVec2 nameDim = font->CalcTextSizeA(nameSz, FLT_MAX, wrapW, cardName);
+                    const ImVec2 descDim = font->CalcTextSizeA(bodySz, FLT_MAX, wrapW, cardDesc);
                     const ImVec2 statDim =
                         font->CalcTextSizeA(bodySz, FLT_MAX, wrapW, status.c_str());
 
@@ -844,10 +847,10 @@ namespace Isekai::UI {
 
                     float ty = cMin.y + padCard;
                     dl->AddText(font, nameSz, ImVec2{ cMin.x + padCard, ty },
-                                Style::Col(Style::kAccent, fade), node->name, nullptr, wrapW);
+                                Style::Col(Style::kAccent, fade), cardName, nullptr, wrapW);
                     ty += nameDim.y + 8.0f * s;
                     dl->AddText(font, bodySz, ImVec2{ cMin.x + padCard, ty },
-                                Style::Col(Style::kText, 0.92f * fade), node->desc, nullptr, wrapW);
+                                Style::Col(Style::kText, 0.92f * fade), cardDesc, nullptr, wrapW);
                     ty += descDim.y + 8.0f * s;
                     dl->AddText(font, bodySz, ImVec2{ cMin.x + padCard, ty }, statusCol,
                                 status.c_str(), nullptr, wrapW);

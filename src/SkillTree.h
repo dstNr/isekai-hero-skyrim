@@ -44,6 +44,17 @@ namespace Isekai::SkillTree {
     // zones identically, the same reason TierName() exists.
     [[nodiscard]] const char* ZoneName(Zone a_zone);
 
+    struct Node;
+
+    // A node's title and description, translated. Both return a pointer with static
+    // lifetime — into the loaded language table, or at the literal in the node itself —
+    // because the tree window measures and draws them every frame and cannot afford a
+    // string built per node per frame. Keyed by the node's numeric key, the same scheme
+    // the milestone passives use and for the same reason: the key is already stable
+    // across releases, so there is no naming rule to keep in step with the extractor.
+    [[nodiscard]] const char* Name(const Node& a_node);
+    [[nodiscard]] const char* Desc(const Node& a_node);
+
     struct Node {
         std::uint32_t key;   // stable across releases; never reuse a value
         Zone          zone;  // display grouping only — see Zone

@@ -1,5 +1,6 @@
 #include "SkillTree.h"
 
+#include "Loc.h"
 #include "Passives.h"
 #include "Sounds.h"
 #include "System.h"
@@ -231,8 +232,8 @@ namespace Isekai::SkillTree {
 
         constexpr std::int32_t kTierCount = 5;      // Novice..Grandmaster
         constexpr std::int32_t kRanksPerTier = 2;    // -> maxRank 10 across every mastery node
-        constexpr const char*  kTierNames[kTierCount] = { "Novice", "Adept", "Expert", "Master",
-                                                           "Grandmaster" };
+        // The names themselves live in TierName() below, as L() calls — a constexpr array
+        // of literals cannot hold a translated string, and the extractor only sees calls.
 
         // 1-based tier a given rank (1..maxRank) falls in; 0 for rank <= 0.
         [[nodiscard]] std::int32_t TierOfRank(std::int32_t a_rank) {
@@ -749,18 +750,41 @@ namespace Isekai::SkillTree {
     }
 
     const char* TierName(std::int32_t a_tier) {
-        return (a_tier >= 1 && a_tier <= kTierCount) ? kTierNames[a_tier - 1] : "";
+        switch (a_tier) {
+        case 1:  return L("tier.novice", "Novice");
+        case 2:  return L("tier.adept", "Adept");
+        case 3:  return L("tier.expert", "Expert");
+        case 4:  return L("tier.master", "Master");
+        case 5:  return L("tier.grandmaster", "Grandmaster");
+        default: return "";
+        }
     }
 
     const char* ZoneName(Zone a_zone) {
         switch (a_zone) {
-        case Zone::kCore:    return "CORE";
-        case Zone::kMight:   return "MIGHT";
-        case Zone::kArcana:  return "ARCANA";
-        case Zone::kShadow:  return "SHADOW";
-        case Zone::kMastery: return "MASTERY";
+        case Zone::kCore:    return L("zone.core", "CORE");
+        case Zone::kMight:   return L("zone.might", "MIGHT");
+        case Zone::kArcana:  return L("zone.arcana", "ARCANA");
+        case Zone::kShadow:  return L("zone.shadow", "SHADOW");
+        case Zone::kMastery: return L("zone.mastery", "MASTERY");
         default:             return "";
         }
+    }
+
+    // The key is written into a stack buffer rather than a std::string: this runs once
+    // per node per frame while the tree is open, and Loc::Get's promise of allocating
+    // nothing per call is the only reason it is safe to call from there at all. The
+    // lookup's own std::string stays inside MSVC's small-string buffer at these lengths.
+    const char* Name(const Node& a_node) {
+        char key[24];
+        std::snprintf(key, sizeof(key), "node.%u", a_node.key);
+        return Loc::Get(key, a_node.name);
+    }
+
+    const char* Desc(const Node& a_node) {
+        char key[24];
+        std::snprintf(key, sizeof(key), "node.%u.desc", a_node.key);
+        return Loc::Get(key, a_node.desc);
     }
 
     std::int32_t TotalInvested() {

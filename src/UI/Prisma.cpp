@@ -89,8 +89,8 @@ namespace Isekai::UI::Prisma {
                 }
                 j += "{";
                 j += "\"key\":" + std::to_string(n.key) + ",";
-                j += "\"name\":\"" + Esc(n.name) + "\",";
-                j += "\"desc\":\"" + Esc(n.desc) + "\",";
+                j += "\"name\":\"" + Esc(SkillTree::Name(n)) + "\",";
+                j += "\"desc\":\"" + Esc(SkillTree::Desc(n)) + "\",";
                 j += "\"icon\":\"" + Esc(n.icon) + "\",";
                 j += "\"x\":" + std::to_string(static_cast<int>(n.x)) + ",";
                 j += "\"y\":" + std::to_string(static_cast<int>(n.y)) + ",";

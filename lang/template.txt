@@ -134,6 +134,64 @@ status.rankEmblem = RANK {}
 status.systemRank = SYSTEM RANK   {}\n
 window.status = [ SYSTEM ] STATUS
 
+; --- src/SkillTree.cpp (skill tree) ---
+node.1 = System Core
+node.1.desc = The System takes root.\n+25 Health, Magicka and Stamina.
+node.10 = Swift Blood
+node.10.desc = +100 Stamina.
+node.11 = Alchemical Insight
+node.11.desc = Every ingredient gives up its secrets.\nAll ingredient effects known.
+node.12 = Plagueward
+node.12.desc = +25% Disease Resist.
+node.13 = World Tree
+node.13.desc = The System blossoms through your soul.\n+100 Health, Magicka and Stamina.
+node.14 = Perk Synthesis
+node.14.desc = Condense a System Point into raw potential.\n+5 perk points per purchase. REPEATABLE.
+node.15 = Fleet of Foot
+node.15.desc = The System quickens your stride.\n+3% movement speed per rank.
+node.16 = Beast of Burden
+node.16.desc = The System shoulders your load.\n+25 Carry Weight per rank.
+node.17 = Enduring Vigor
+node.17.desc = The System deepens your reserves.\n+25 Health, Magicka and Stamina per rank.
+node.18 = Storm Ward
+node.18.desc = The System turns aside the lightning.\n+5% Shock Resist per rank.
+node.19 = Warded Mind
+node.19.desc = The System shields your soul from magic.\n+5% Magic Resist per rank.
+node.2 = Dragon's Voice
+node.2.desc = Your Thu'um recovers faster.\n-20% shout cooldown.
+node.20 = Arcane Absorption
+node.20.desc = The System drinks the spells cast against you.\n+4% Spell Absorption per rank.
+node.21 = Iron Skin
+node.21.desc = The System hardens your hide.\n+10 Armor Rating per rank.
+node.22 = Rapid Recovery
+node.22.desc = The System accelerates your body's grace.\n+10% Health, Magicka and Stamina regeneration per rank.
+node.3 = Vital Surge
+node.3.desc = +100 Health.
+node.4 = Thu'um Omniscience
+node.4.desc = The System pours every dragon's voice into you.\nAll shouts and words of power unlocked.
+node.5 = Emberguard
+node.5.desc = +25% Fire Resist.
+node.6 = Mana Well
+node.6.desc = +100 Magicka.
+node.7 = Arcane Omniscience
+node.7.desc = Every enchantment laid bare.\nAll enchantments known without disenchanting.
+node.8 = Frostguard
+node.8.desc = +25% Frost Resist.
+node.9 = Spell Omniscience
+node.9.desc = The System reads every tome ever written.\nAll spells with a spell tome learned.
+
+; --- src/SkillTree.cpp ---
+tier.adept = Adept
+tier.expert = Expert
+tier.grandmaster = Grandmaster
+tier.master = Master
+tier.novice = Novice
+zone.arcana = ARCANA
+zone.core = CORE
+zone.mastery = MASTERY
+zone.might = MIGHT
+zone.shadow = SHADOW
+
 ; --- src/System.cpp ---
 awaken.awakening = AWAKENING\n\n  Power level   {}{}\n
 awaken.awakensAt =   Awakens at    level {}\n

@@ -68,6 +68,30 @@ function milestones() {
   return rows.map(([, key, name]) => ["passive." + key, name]);
 }
 
+// The skill-tree nodes, same idea: title and description live in the kNodes table in
+// SkillTree.cpp and are looked up as `node.<key>` / `node.<key>.desc`.
+const NODE = /\{\s*(\d+),\s*Zone::\w+,\s*"((?:[^"\\]|\\.)*)",\s*((?:"(?:[^"\\]|\\.)*"\s*)+),/g;
+const LOOSE_NODE = /\{\s*\d+,\s*Zone::/g;
+
+function nodes() {
+  const file = join(ROOT, "src", "SkillTree.cpp");
+  const code = readFileSync(file, "utf8");
+  const rows = [...code.matchAll(NODE)];
+  const loose = (code.match(LOOSE_NODE) || []).length;
+  if (rows.length !== loose) {
+    throw new Error(
+      `skill tree: ${loose} rows look like rows but ${rows.length} parsed — ` +
+        "the node regex in tools/extract-strings.mjs has gone stale",
+    );
+  }
+  const out = [];
+  for (const [, key, name, descLiterals] of rows) {
+    const desc = [...descLiterals.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((x) => x[1]).join("");
+    out.push(["node." + key, name], ["node." + key + ".desc", desc]);
+  }
+  return out;
+}
+
 export function collect() {
   const found = new Map();
   const dupes = [];
@@ -104,6 +128,9 @@ export function collect() {
   }
   for (const [key, text] of milestones()) {
     found.set(key, { text, file: "src/Progression.cpp (passive titles)" });
+  }
+  for (const [key, text] of nodes()) {
+    found.set(key, { text, file: "src/SkillTree.cpp (skill tree)" });
   }
   return { found, dupes, callSites };
 }
