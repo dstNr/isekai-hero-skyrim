@@ -237,6 +237,21 @@ one-per-client and the two surfaces want different ones:
 The menus stay with PrismaUI. This layer is exactly the per-frame HUD a web view cannot
 carry without costing framerate, which was the whole reason to want it.
 
+**Getting INTO the menu, without a keyboard.** `RegisterCombo` / `ComboFired` give a real
+VR controller binding: the helper does the matching, the sequence timing and the one-shot
+edge detection, and the combo shows up in its controller-map UI where the player can
+rebind it. Default is **Y + B held together, one on each controller** — a two-hand gesture,
+because either button alone is a normal Skyrim VR action and both at once is not something
+a hand does by accident.
+
+That is also the answer to the *other* half of the VR input problem: whatever is wrong
+with key delivery in the headset, a controller chord does not travel that road at all.
+
+The rebind is persisted to `Data\SKSE\Plugins\IsekaiHero\vrbindings.json`, **not** to
+`IsekaiHero.ini`. The helper's controller map changes it at runtime and that has to survive
+a restart; the ini is read once at load and never written back, so a value the game owns
+cannot live there without giving one setting two owners.
+
 Two things fell out of building it that were not obvious from the API:
 
 - Each private ImGui context owns its **own font atlas**, so a single `Style::g_body`
@@ -299,5 +314,9 @@ so it only ever covers part of the UI.
      frame the helper issues a panel, not at load.
   4. Labels sit **on** the actors and stay there when the head turns (that is the world
      quad working), rather than swimming with the view.
-  5. Size: `VRThreatLabelHeight` in the ini, metres. 0.15 is a guess made without a
+  5. **Y + B together opens the System menu**, with no keyboard involved. The log says
+     `open-menu chord registered` at load and `open-menu chord fired` on each press — the
+     two together separate "the binding never existed" from "it fired and the menu did
+     not open", which are different bugs.
+  6. Size: `VRThreatLabelHeight` in the ini, metres. 0.15 is a guess made without a
      headset and is the single most likely thing to need changing.

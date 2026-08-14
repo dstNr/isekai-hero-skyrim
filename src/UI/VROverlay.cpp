@@ -1,5 +1,6 @@
 #include "UI/VROverlay.h"
 
+#include "Progression.h"  // OpenStatusPanel, what the VR controller chord opens
 #include "UI/Style.h"
 #include "UI/ThreatLabels.h"
 #include "UI/Toast.h"
@@ -13,6 +14,8 @@
 
 #include <algorithm>
 #include <chrono>
+#include <exception>
+#include <fstream>
 #include <vector>
 
 namespace Isekai::UI {
@@ -44,6 +47,73 @@ namespace Isekai::UI {
         // Reused across frames rather than rebuilt: this runs every frame and the list is
         // capped at a dozen entries, so the allocation is pure waste after the first one.
         std::vector<VRH::WorldQuad> g_quads;
+
+        // ---- The way into the menu that needs no keyboard --------------------
+        //
+        // A headset player reaching for RShift+S is not an answer, and whatever is wrong
+        // with key delivery in VR, a controller chord does not travel that road at all.
+        // The helper does the matching, the timing and the edge detection; we register a
+        // default and ask once a frame whether it fired.
+        VRH::ComboId g_openCombo = 0;
+
+        // Y + B held together, one on each controller. A two-hand gesture on purpose:
+        // either button alone is a normal Skyrim VR action (ready weapon, jump), and both
+        // at once is not something a hand does by accident. 1 is
+        // RE::BSOpenVRControllerDevice::Keys::kBY, which is what the helper's own key
+        // codes are.
+        constexpr std::uint32_t kKeyBY = 1;
+
+        [[nodiscard]] std::vector<VRH::InputCombo> DefaultOpenChord() {
+            return { VRH::InputCombo::Both(kKeyBY) };
+        }
+
+        // Rebinding lives here rather than in IsekaiHero.ini: the helper's own controller
+        // map can rebind it at runtime, and that has to survive a restart. The ini is read
+        // once at load and never written, so a setting the game changes does not belong in
+        // it — that would be two owners for one value.
+        constexpr const char* kBindingsPath =
+            "Data\\SKSE\\Plugins\\IsekaiHero\\vrbindings.json";
+
+        [[nodiscard]] std::vector<VRH::InputCombo> LoadOpenChord() {
+            std::ifstream in(kBindingsPath);
+            if (!in) {
+                return DefaultOpenChord();  // never bound: first run, or the file was removed
+            }
+            try {
+                nlohmann::json j;
+                in >> j;
+                std::vector<VRH::InputCombo> keys = j.value("openMenu", nlohmann::json{});
+                // An empty list is a DELIBERATE unbind (the helper's Clear button), not a
+                // parse failure — honour it rather than resurrecting the default.
+                if (j.contains("openMenu")) {
+                    logger::info("VR: open-menu chord loaded from {} ({} key(s))", kBindingsPath,
+                                 keys.size());
+                    return keys;
+                }
+            } catch (const std::exception& e) {
+                // A hand-edited or truncated file must not stop the mod loading.
+                logger::warn("VR: {} could not be read ({}) — using the default chord",
+                             kBindingsPath, e.what());
+            }
+            return DefaultOpenChord();
+        }
+
+        void SaveOpenChord(const VRH::InputCombo* a_keys, std::size_t a_count) {
+            try {
+                nlohmann::json j;
+                j["openMenu"] = std::vector<VRH::InputCombo>(a_keys, a_keys + a_count);
+                std::ofstream out(kBindingsPath, std::ios::trunc);
+                if (!out) {
+                    logger::warn("VR: could not write {} — the rebind holds for this session "
+                                 "only", kBindingsPath);
+                    return;
+                }
+                out << j.dump(2) << '\n';
+                logger::info("VR: open-menu chord rebound to {} key(s), saved", a_count);
+            } catch (const std::exception& e) {
+                logger::warn("VR: saving the rebound chord failed ({})", e.what());
+            }
+        }
 
         // Real elapsed time, measured here rather than read out of ImGui: the SDK's
         // RenderHud pins its private context's DeltaTime to a flat 1/60, so anything that
@@ -187,6 +257,24 @@ namespace Isekai::UI {
             logger::error("VR: the HUD client was rejected — no toasts in the headset");
         }
 
+        // The chord goes on whichever client registered — it is a global binding, not a
+        // panel one, and neither of ours ever takes focus, so it fires whenever the player
+        // presses it. offPanel is left false for exactly that reason: an off-panel combo
+        // is gated on a wand that is not pointing at us, and we have nothing to point at.
+        VRH::Client& owner = g_world.IsConnected() ? g_world : g_hud;
+        if (owner.IsConnected()) {
+            g_openCombo = owner.AddCombo(
+                "Open the System menu", LoadOpenChord(),
+                [](const VRH::InputCombo* keys, std::size_t n) { SaveOpenChord(keys, n); },
+                DefaultOpenChord());
+            if (g_openCombo != 0) {
+                logger::info("VR: open-menu chord registered (combo {})", g_openCombo);
+            } else {
+                logger::warn("VR: the open-menu chord was not registered — the menu still "
+                             "needs the keyboard hotkey in VR");
+            }
+        }
+
         g_ready = g_world.IsConnected() || g_hud.IsConnected();
         if (g_ready) {
             logger::info("VR: in-headset layer armed (world quads: {}, HUD: {})",
@@ -201,6 +289,23 @@ namespace Isekai::UI {
     void DrawVRFrame() {
         if (!g_ready) {
             return;
+        }
+
+        // Asked before anything is drawn, and asked every frame whether or not a panel
+        // exists yet: Fired() is edge-triggered and consumes the activation, so skipping
+        // the poll on a frame does not defer the press — it loses it.
+        //
+        // The work itself goes to the main thread. This is the render thread, and opening
+        // the System panel touches the UI singleton, the player and the co-save state,
+        // none of which are ours to read from here.
+        if (g_openCombo != 0) {
+            VRH::Client& owner = g_world.IsConnected() ? g_world : g_hud;
+            if (owner.Fired(g_openCombo)) {
+                logger::info("VR: open-menu chord fired");
+                if (auto* task = SKSE::GetTaskInterface()) {
+                    task->AddTask([]() { Progression::OpenStatusPanel(); });
+                }
+            }
         }
 
         ID3D11Device*        device = nullptr;
