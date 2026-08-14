@@ -38,6 +38,11 @@ const CALL = /\bLF?\(\s*"([^"]+)"\s*,\s*((?:"(?:[^"\\]|\\.)*"\s*)+)[,)]/g;
 // it is made loud.
 const COUNT = /\bLF?\(\s*"/g;
 
+// Every call, literal key or not. A computed key — LF(cond ? "a.x" : "a.y", ...) — is the
+// one way to write a translatable string that BOTH regexes above miss: no key in the
+// template, no count mismatch to notice, nothing in the log. So it is rejected outright.
+const ANY_CALL = /\bLF?\(\s*(.)/g;
+
 // The 79 passive titles ("Survivor", "Dragon Slayer") are not written as L() calls: they
 // live in the kMilestones table in Progression.cpp and are looked up at runtime as
 // `passive.<milestone key>`. So they are harvested from the table instead, by the same
@@ -70,9 +75,12 @@ export function collect() {
   for (const file of sources(join(ROOT, "src"))) {
     // Comments first: Loc.h documents the macro by showing a call, and without this the
     // example ends up in the template as a string every translator has to wonder about.
+    // Comments, then the #define lines that declare L and LF themselves — otherwise the
+    // macro's own parameter list reads as a call site with a computed key.
     const code = readFileSync(file, "utf8")
       .replace(/\/\*[\s\S]*?\*\//g, "")
-      .replace(/^[ \t]*\/\/.*$/gm, "");
+      .replace(/^[ \t]*\/\/.*$/gm, "")
+      .replace(/^[ \t]*#define(?:.*\\\r?\n)*.*$/gm, "");
     for (const m of code.matchAll(CALL)) {
       const key = m[1];
       // Join the adjacent literals, keeping their escapes as written: the language file
@@ -82,6 +90,15 @@ export function collect() {
         dupes.push(key);
       }
       found.set(key, { text, file: relative(ROOT, file).replace(/\\/g, "/") });
+    }
+    for (const m of code.matchAll(ANY_CALL)) {
+      if (m[1] !== '"') {
+        const line = code.slice(0, m.index).split("\n").length;
+        throw new Error(
+          `${relative(ROOT, file).replace(/\\/g, "/")}:${line}: L()/LF() needs a literal ` +
+            `key, got ${JSON.stringify(m[1])} — a computed key never reaches the template`,
+        );
+      }
     }
     callSites += (code.match(COUNT) || []).length;
   }

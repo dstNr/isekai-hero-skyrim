@@ -290,35 +290,38 @@ namespace Isekai {
                     "An otherworldly power (System tier: " + PowerName(g_state.power) +
                     ") clings to them, sensed faintly by those around them.");
 
+            // PowerName() stays English throughout: NORMAL / HERO / ASCENDED are the
+            // mod's own tier names, they appear in the log lines above as well, and a log
+            // whose tier names change with the player's language is one nobody can compare
+            // against anyone else's.
             std::string body =
-                "REINCARNATION COMPLETE\n"
-                "\n"
-                "  Power level   " + PowerName(g_state.power) +
-                (g_state.custom     ? "  (CUSTOM)"
-                 : g_state.dormant  ? "  (DORMANT)"
-                 : g_state.shattered ? "  (SHATTERED)"
-                                     : "") + "\n";
+                LF("awaken.complete", "REINCARNATION COMPLETE\n\n  Power level   {}{}\n",
+                   PowerName(g_state.power),
+                   g_state.custom      ? L("status.mode.custom", "  (CUSTOM)")
+                   : g_state.dormant   ? L("status.mode.dormant", "  (DORMANT)")
+                   : g_state.shattered ? L("status.mode.shattered", "  (SHATTERED)")
+                                       : "");
             if (g_state.dormant) {
-                body += "  Awakens at    level " +
-                        std::to_string(Config::DormantHeroLevel()) + "\n";
+                body += LF("awaken.awakensAt", "  Awakens at    level {}\n",
+                           Config::DormantHeroLevel());
             }
             // A CUSTOM build's three dials rarely agree, so spell them out.
             if (g_state.custom) {
-                body += "  Rewards       " + PowerName(g_state.power) + "\n";
-                body += "  Skill tree    " + PowerName(g_state.treeTier) + "\n";
-                body += "  Starting gift " + PowerName(g_state.grantTier) + "\n";
+                body += LF("awaken.customAxes",
+                           "  Rewards       {}\n  Skill tree    {}\n  Starting gift {}\n",
+                           PowerName(g_state.power), PowerName(g_state.treeTier),
+                           PowerName(g_state.grantTier));
             }
-            body +=
-                "\n"
-                "The System is now bound to your soul.\n"
-                "Your new life begins.";
+            body += L("awaken.bound",
+                      "\nThe System is now bound to your soul.\nYour new life begins.");
 
             // The biggest moment the mod has: let the flourish land before the panel.
             // (The sting comes with the flourish — PlayLevelUpEffect owns it.)
-            UI::PlayLevelUpEffect("AWAKENED", PowerName(g_state.power));
+            UI::PlayLevelUpEffect(L("flourish.awakened", "AWAKENED"), PowerName(g_state.power));
 
             DelayedMainThread(1600, [body]() {
-                UI::ShowSystemWindow("[ SYSTEM ]", body, { "CONTINUE" }, [](int) {
+                UI::ShowSystemWindow(L("window.system", "[ SYSTEM ]"), body,
+                                     { L("button.continue", "CONTINUE") }, [](int) {
                     // Now that the System is bound, sweep up whatever was completed
                     // before it existed — alternate starts finish the early main
                     // quests to skip the intro, and those deeds still count.
@@ -335,34 +338,39 @@ namespace Isekai {
         void ShowPathSelection() {
             const std::string intro =
                 g_state.dormant
-                    ? "The dormant blessing stirs.\n"
-                      "How will each awakening reach you?\n"
-                      "\n"
-                      "  FULL       Every awakening arrives whole —\n"
-                      "             skills, level and fortune granted\n"
-                      "             the moment it comes.\n"
-                      "  SHATTERED  Only the System's reach grows: faster\n"
-                      "             rewards and deeper gifts unlock, but\n"
-                      "             nothing is ever handed to you.\n"
-                      "\n"
-                      "Choose how you rise:"
-                    : "The " + PowerName(g_state.power) + " blessing resonates.\n"
-                      "How will you receive it?\n"
-                      "\n"
-                      "  FULL       Awaken at once — skills, level and\n"
-                      "             fortune granted now.\n"
-                      "  SHATTERED  The System is fractured. Begin as any\n"
-                      "             mortal, but its rewards still flow faster\n"
-                      "             and its deepest gifts stay open to you.\n"
-                      "             Higher ceiling, same floor — earn it.\n"
-                      "\n"
-                      "Choose how you rise:";
+                    ? L("path.dormant",
+                        "The dormant blessing stirs.\n"
+                        "How will each awakening reach you?\n"
+                        "\n"
+                        "  FULL       Every awakening arrives whole —\n"
+                        "             skills, level and fortune granted\n"
+                        "             the moment it comes.\n"
+                        "  SHATTERED  Only the System's reach grows: faster\n"
+                        "             rewards and deeper gifts unlock, but\n"
+                        "             nothing is ever handed to you.\n"
+                        "\n"
+                        "Choose how you rise:")
+                    : LF("path.choose",
+                         "The {} blessing resonates.\n"
+                         "How will you receive it?\n"
+                         "\n"
+                         "  FULL       Awaken at once — skills, level and\n"
+                         "             fortune granted now.\n"
+                         "  SHATTERED  The System is fractured. Begin as any\n"
+                         "             mortal, but its rewards still flow faster\n"
+                         "             and its deepest gifts stay open to you.\n"
+                         "             Higher ceiling, same floor — earn it.\n"
+                         "\n"
+                         "Choose how you rise:",
+                         PowerName(g_state.power));
 
             UI::ShowSystemWindow(
-                "[ SYSTEM ]", intro,
+                L("window.system", "[ SYSTEM ]"), intro,
                 std::vector<UI::Choice>{
-                    { "FULL AWAKENING", BlessingIcon("blessing_full.png"), false },
-                    { "SHATTERED", BlessingIcon("blessing_shattered.png"), false },
+                    { L("button.fullAwakening", "FULL AWAKENING"),
+                      BlessingIcon("blessing_full.png"), false },
+                    { L("button.shattered", "SHATTERED"),
+                      BlessingIcon("blessing_shattered.png"), false },
                 },
                 [](int a_idx) {
                     g_state.shattered = (a_idx == 1);
@@ -386,7 +394,7 @@ namespace Isekai {
         void AskTier(std::string a_prompt, std::function<void(PowerLevel)> a_set,
                      std::function<void()> a_next) {
             UI::ShowSystemWindow(
-                "[ SYSTEM ]", std::move(a_prompt),
+                L("window.system", "[ SYSTEM ]"), std::move(a_prompt),
                 std::vector<UI::Choice>{
                     { "NORMAL", BlessingIcon("blessing_normal.png"), false },
                     { "HERO", BlessingIcon("blessing_hero.png"), false },
@@ -402,37 +410,40 @@ namespace Isekai {
             // Three independent dials, asked in turn: starting grant, reward pace, tree
             // ceiling. Each is a plain tier pick; the last applies the build.
             AskTier(
-                "CUSTOM — 1 of 3: STARTING GIFT\n"
-                "\n"
-                "The flat head start handed over at birth — skills, level,\n"
-                "gold and seed points.\n"
-                "\n"
-                "  NORMAL    Nothing. Begin as any mortal.\n"
-                "  HERO      A hero's start.\n"
-                "  ASCENDED  A transcendent's fortune.",
+                L("custom.gift",
+                  "CUSTOM — 1 of 3: STARTING GIFT\n"
+                  "\n"
+                  "The flat head start handed over at birth — skills, level,\n"
+                  "gold and seed points.\n"
+                  "\n"
+                  "  NORMAL    Nothing. Begin as any mortal.\n"
+                  "  HERO      A hero's start.\n"
+                  "  ASCENDED  A transcendent's fortune."),
                 [](PowerLevel t) { g_state.grantTier = t; },
                 []() {
                     AskTier(
-                        "CUSTOM — 2 of 3: REWARD PACE\n"
-                        "\n"
-                        "How fast the System keeps paying out — milestone\n"
-                        "passives, System Points, dragon souls, perk points.\n"
-                        "\n"
-                        "  NORMAL    x1. The honest grind.\n"
-                        "  HERO      x2.\n"
-                        "  ASCENDED  x4.",
+                        L("custom.pace",
+                          "CUSTOM — 2 of 3: REWARD PACE\n"
+                          "\n"
+                          "How fast the System keeps paying out — milestone\n"
+                          "passives, System Points, dragon souls, perk points.\n"
+                          "\n"
+                          "  NORMAL    x1. The honest grind.\n"
+                          "  HERO      x2.\n"
+                          "  ASCENDED  x4."),
                         [](PowerLevel t) { g_state.power = t; },
                         []() {
                             AskTier(
-                                "CUSTOM — 3 of 3: SKILL TREE\n"
-                                "\n"
-                                "How deep the tree opens. You still buy each node\n"
-                                "with System Points, so a deep tree on a NORMAL\n"
-                                "pace is access, not a free ride.\n"
-                                "\n"
-                                "  NORMAL    The self-made half.\n"
-                                "  HERO      + the Omniscience gifts.\n"
-                                "  ASCENDED  + the World Tree capstone.",
+                                L("custom.tree",
+                                  "CUSTOM — 3 of 3: SKILL TREE\n"
+                                  "\n"
+                                  "How deep the tree opens. You still buy each node\n"
+                                  "with System Points, so a deep tree on a NORMAL\n"
+                                  "pace is access, not a free ride.\n"
+                                  "\n"
+                                  "  NORMAL    The self-made half.\n"
+                                  "  HERO      + the Omniscience gifts.\n"
+                                  "  ASCENDED  + the World Tree capstone."),
                                 [](PowerLevel t) { g_state.treeTier = t; },
                                 []() {
                                     g_state.custom = true;
@@ -450,7 +461,7 @@ namespace Isekai {
 
         void ShowPowerSelection() {
             UI::ShowSystemWindow(
-                "[ SYSTEM ]",
+                L("window.system", "[ SYSTEM ]"),
                 LF("blessing.choose",
                    "You have been reincarnated.\n"
                    "The System offers you a blessing.\n"
@@ -545,26 +556,35 @@ namespace Isekai {
                 "The dormant System within this hero has awakened further, rising to tier " +
                     PowerName(a_tier) + ". Their otherworldly power grows more palpable.");
 
-            const bool  ascended = (a_tier == PowerLevel::Ascended);
+            const bool ascended = (a_tier == PowerLevel::Ascended);
+            // Two spelled-out calls rather than one with a ternary key: the extractor
+            // matches on a literal key, and a computed one would be skipped without a
+            // word — the template would simply be missing a string nobody notices.
+            const char* mode =
+                g_state.shattered ? L("status.mode.shattered", "  (SHATTERED)") : "";
             std::string body =
-                (ascended ? "TRANSCENDENCE\n" : "AWAKENING\n") +
-                std::string("\n"
-                            "  Power level   ") + PowerName(a_tier) +
-                (g_state.shattered ? "  (SHATTERED)" : "") + "\n";
+                ascended
+                    ? LF("awaken.transcendence", "TRANSCENDENCE\n\n  Power level   {}{}\n",
+                         PowerName(a_tier), mode)
+                    : LF("awaken.awakening", "AWAKENING\n\n  Power level   {}{}\n",
+                         PowerName(a_tier), mode);
             if (!ascended) {
-                body += "  Transcends at level " +
-                        std::to_string(Config::DormantAscendedLevel()) + "\n";
+                body += LF("awaken.transcendsAt", "  Transcends at level {}\n",
+                           Config::DormantAscendedLevel());
             }
-            body +=
-                "\n" +
-                std::string(ascended ? "The last seal breaks. The System withholds\n"
-                                       "nothing from you now."
-                                     : "The blessing that slept in your soul opens\n"
-                                       "its eyes. The System reaches further.");
+            body += ascended ? L("awaken.lastSeal",
+                                 "\nThe last seal breaks. The System withholds\n"
+                                 "nothing from you now.")
+                             : L("awaken.opensEyes",
+                                 "\nThe blessing that slept in your soul opens\n"
+                                 "its eyes. The System reaches further.");
 
-            UI::PlayLevelUpEffect(ascended ? "TRANSCENDED" : "AWAKENED", PowerName(a_tier));
+            UI::PlayLevelUpEffect(ascended ? L("flourish.transcended", "TRANSCENDED")
+                                           : L("flourish.awakened", "AWAKENED"),
+                                  PowerName(a_tier));
             DelayedMainThread(1600, [body]() {
-                UI::ShowSystemWindow("[ SYSTEM ]", body, { "CONTINUE" }, [](int) {});
+                UI::ShowSystemWindow(L("window.system", "[ SYSTEM ]"), body,
+                                     { L("button.continue", "CONTINUE") }, [](int) {});
             });
         }
 
