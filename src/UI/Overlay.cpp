@@ -226,6 +226,38 @@ namespace Isekai::UI {
         }
     }
 
+    namespace {
+        // Read a pointer we are NOT certain points at an object, without dying if it does
+        // not. Both live alone in their own functions on purpose: MSVC will not compile
+        // __try/__except into a function that also needs C++ unwinding, and keeping them
+        // free of objects is what makes that safe.
+        //
+        // This is deliberately not IsBadReadPtr, which lies on guard pages and is
+        // discouraged for exactly that reason. SEH catches the access violation that
+        // actually happens, which is the thing we care about.
+        [[nodiscard]] void** SafeVTable(void* a_maybeObject) {
+            if (!a_maybeObject) {
+                return nullptr;
+            }
+            __try {
+                return *reinterpret_cast<void***>(a_maybeObject);
+            } __except (EXCEPTION_EXECUTE_HANDLER) {
+                return nullptr;
+            }
+        }
+
+        [[nodiscard]] void* SafeVTableEntry(void** a_vtable, std::size_t a_index) {
+            if (!a_vtable) {
+                return nullptr;
+            }
+            __try {
+                return a_vtable[a_index];
+            } __except (EXCEPTION_EXECUTE_HANDLER) {
+                return nullptr;
+            }
+        }
+    }
+
     bool OverlayReady() {
         return g_ready.load(std::memory_order_acquire);
     }
@@ -294,8 +326,33 @@ namespace Isekai::UI {
             return;
         }
 
-        auto** vtable = *reinterpret_cast<void***>(swapChain);
-        g_originalPresent = reinterpret_cast<PresentFn>(vtable[kPresentVTableIndex]);
+        // The null check above is not enough, and a crash report proved it. On Skyrim VR
+        // `renderWindows[0].swapChain` reads out of a struct whose layout does not apply
+        // there, so what comes back is not null — it is garbage. Dereferencing it is an
+        // access violation before a single line of ours has run: the reported crash was
+        // exactly this statement, with rax = 0x0000042700000410.
+        //
+        // The VR guard above is supposed to make that unreachable. This is here because
+        // "supposed to" is not a guarantee on someone else's machine: an older build, a
+        // runtime IsVR() cannot identify, or a future edition would each land here again,
+        // and the failure would be a CTD rather than a line in a log. Probing under SEH
+        // turns the worst case into "no overlay, and the log says why".
+        auto** vtable = SafeVTable(swapChain);
+        if (!vtable) {
+            logger::error("UI: swap chain {:p} is not a readable object — overlay not "
+                          "installed (runtime: {})",
+                          static_cast<void*>(swapChain),
+                          REL::Module::IsVR() ? "VR" : "SE/AE");
+            return;
+        }
+        void* present = SafeVTableEntry(vtable, kPresentVTableIndex);
+        if (!present) {
+            logger::error("UI: swap chain vtable {:p} has no readable Present at index {} — "
+                          "overlay not installed",
+                          static_cast<void*>(vtable), kPresentVTableIndex);
+            return;
+        }
+        g_originalPresent = reinterpret_cast<PresentFn>(present);
 
         REL::safe_write(reinterpret_cast<std::uintptr_t>(&vtable[kPresentVTableIndex]),
                         reinterpret_cast<std::uintptr_t>(&HookedPresent));
