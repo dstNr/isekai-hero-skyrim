@@ -7,6 +7,48 @@ are still in the older, longer style — that is how they already sit on Nexus.)
 
 ---
 
+## 0.8.0
+
+Added: **the mod can be translated** — every line of text it shows goes through a language file; drop one next to the plugin and set `Language` in the ini.
+
+Added: **controller support** — hold **LB** and tap **Back** to open the System menu, the left stick moves the cursor, **A** clicks and **B** closes; both bindings are in the ini.
+
+Added: **a Skyrim VR interface** — threat labels float over enemies in the headset, and **B + Y** on both controllers opens the System menu without a keyboard (needs the optional ImGui VR Helper).
+
+Added: **shop cards show what a potion does** — hover one and its effects are listed, read from the potion itself.
+
+Added: **magicka and stamina on the threat frame**, as a thin blue and green strip under the health bar.
+
+Added: **the health figure on the threat bar** ("312 / 480"), switchable with `ThreatLabelNumbers`.
+
+Added: **`UiScale`** — one setting that makes the whole interface larger or smaller, in both the built-in and the PrismaUI view.
+
+Added: **a FOMOD installer** — the PrismaUI patch is now an option inside the main download instead of a separate file, and the installer asks for your interface, your start and whether you want threat readings.
+
+Added: **`IsekaiPoints`** console command that grants System Points, for testing.
+
+Added: **`ThreatLabelAimRadius`** setting — how far off the crosshair an enemy may be and still be read.
+
+Fixed: **Vitality and Vigor were swapped** — Vitality now restores health and Vigor restores stamina.
+
+Fixed: **crafting materials appeared in your inventory and stayed there** after you left the workbench.
+
+Fixed: **threat readings no longer need you to aim at an enemy's head** — anywhere on them works.
+
+Fixed: **threat readings no longer show through walls, trees and terrain.**
+
+Fixed: **the skill tree closed itself** when a mastery stat reached Grandmaster (PrismaUI only).
+
+Fixed: **Skyrim VR no longer crashes on startup.**
+
+Fixed: **reloading a save from before the System no longer keeps the level a blessing gave you.**
+
+Changed: **REBOOT now hands your body back** — it restores the level, skills and attributes you had before your first blessing, instead of re-opening the choice and leaving the old physique behind.
+
+Changed: **the storage codex item is called "Storage Codex"** instead of sharing the chest's name.
+
+---
+
 ## 0.7.1
 
 Fixed: **threat labels no longer hop around** over a moving enemy — the frame now sits over the head instead of dancing with the animation.

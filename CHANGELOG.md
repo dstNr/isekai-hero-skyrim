@@ -74,7 +74,27 @@ this version cannot be read by 0.7.x.
   - `DebugPointsKey` in the ini does the same on a key, for the one case the console cannot
     cover: it will not open while one of our own panels owns the screen.
 - **`ThreatLabelAimRadius`**, how far off the crosshair an actor may be and still be read.
-- **Pictures in the FOMOD**, and the installer now asks its questions separately.
+- **A FOMOD installer**, with the **PrismaUI patch folded into it** — that used to be a
+  second download. It costs the archive nothing: the patch is one HTML file plus the same
+  74 icons the mod already ships, so the installer points both destinations at one source
+  folder. Pictures on the steps, and three questions — interface, start, threat readings.
+- **`UiScale`** (default 1.0, clamped 0.5..3.0). One multiplier over everything the mod
+  draws, on top of the resolution scaling that was already there — those answer different
+  questions. Scaling with resolution keeps the interface the same *apparent* size on a 4K
+  screen, which is not the same as whether someone can read it. Asked for by a player with
+  impaired vision, and it covers the PrismaUI patch too.
+- **REBOOT hands the body back.** It used to say outright that it could not claw back a
+  FULL blessing's stats, which made the button half a promise: it re-opened the choice and
+  left an ASCENDED physique behind, so "reboot into a Shattered run" changed the label and
+  not the character. The mortal is now captured once — level, the 18 skills, base
+  Health/Magicka/Stamina — at the moment the first grant is applied, and restored before
+  the choice re-opens. Captured once and never overwritten, so a second reboot returns to
+  the *original* person rather than to whoever the last blessing made. **This is the
+  co-save v14 change.** Nothing is captured where nothing was granted (NORMAL, Shattered, a
+  gift-less CUSTOM), and the panel says so instead of pretending.
+- **The health figure on the threat label** (#25), centred on the bar — `ThreatLabelNumbers`,
+  default on. A bar answers "roughly how much is left"; a fight where it matters whether
+  that is 40 or 400 wants the number.
 
 ### Changed
 - **The aim test measures the whole actor, not its head.** The label hangs over the head, so
@@ -93,6 +113,9 @@ this version cannot be read by 0.7.x.
     was the one preset that was not about how you want to play.
 - **The two restorative potion icons swapped**, so the red bottle is the one that restores
   health (see #24 below).
+- **The repo has a LICENSE** (#13): MIT, with the sound effects and the icons carved out —
+  those are not ours to relicense. MIT also keeps the ImGui VR Helper route open, since MIT
+  code may link an LGPL library without becoming LGPL.
 
 ### Fixed
 - **The Vigor and Vitality restoratives were the wrong way round** (#24), reported on Nexus.
@@ -113,6 +136,19 @@ this version cannot be read by 0.7.x.
   - Still `StorageCodex = 0` by default, but for a different reason: no longer "it does
     nothing", now "it has not been tested in a running game yet".
 
+- **Threat labels read through walls and terrain** (#23). Reported: a reading on Thadgeir
+  inside Falkreath, taken from the road above through both a tree and the ground. The filter
+  chain asked mode, distance and projection — and projection only ever answers "is this
+  point on screen". A wall is on screen too. It now asks the game's own
+  `Actor::HasLineOfSight`, which is what the AI uses to decide whether it can see *you*, so
+  the label agrees with the thing it is a label for.
+- **A blessing left its level in a save that predates the System** (#21). Reported: new
+  character, save before the System runs, take ASCENDED by mistake (level 150), reload the
+  earlier save to undo it — and the character is still 150 in a game the System never
+  touched, firing level-gated quest mods. The character level is set through
+  `actorData.level`, which belongs to the ActorBase and is loaded once per process; a save
+  load does not restore it, and the old save carries no record of ours to lower it from.
+  Restarting Skyrim cleared it, which was the clue.
 - **Crafting materials turned up in the inventory and never left.** Recipes that gate on a
   carried material need one real item in the inventory to become visible, so the plugin
   lends one of each and takes it back when the menu closes. The return list was cleared

@@ -6,7 +6,7 @@ overview" is separate, below.
 ## Brief overview (short field)
 
 ```
-You died. The System chose you. Begin your new life in Skyrim as a reincarnated hero — blessing choice, quest milestone rewards, kill objectives on the System's own schedule, threat readings over your enemies, a skill tree with game-wide knowledge unlocks, a shop and dimensional storage. Pure SKSE, custom UI, ESL-flagged.
+You died. The System chose you. Begin your new life in Skyrim as a reincarnated hero — blessing choice, quest milestone rewards, kill objectives on the System's own schedule, threat readings over your enemies, a skill tree with game-wide knowledge unlocks, a shop and dimensional storage. Pure SKSE, custom UI, ESL-flagged. Keyboard, controller and VR; translatable.
 ```
 
 ## Description (BBCode)
@@ -31,7 +31,7 @@ The first time you gain control of your character — regardless of how you star
 
 Taking HERO or ASCENDED — or letting them come to you as DORMANT — then asks a second question: [b]how[/b] the power reaches you. [b]Full[/b] grants the flat start above. [b]Shattered[/b] keeps only what the tier is worth over time — the reward multiplier and the deeper skill tree — and drops you at the same mortal floor as NORMAL. The higher ceiling, earned rather than handed over.
 
-Changed your mind later? The System status menu has a [b]Reboot[/b] button that re-opens this whole choice on an existing character — keeping your milestones, skill tree and System Points.
+Changed your mind later? The System status menu has a [b]Reboot[/b] button that re-opens this whole choice on an existing character — keeping your milestones, skill tree and System Points. It [b]hands your body back[/b] as well: the level, skills and attributes you had before your first blessing are restored, so rebooting from ASCENDED into a Shattered run really is a different character and not just a different label.
 
 [size=4][b]The System watches your deeds[/b][/size]
 [b]79 quest milestones[/b] across the main quest, the Companions, the College of Winterhold, the Thieves Guild, the Dark Brotherhood, the Civil War, Dawnguard and Dragonborn. Completing one triggers a level-up flourish — expanding rings, a title, custom sound — and pays out:
@@ -55,12 +55,14 @@ The System does not only watch — it assigns. On its own schedule it hands you 
 [/list]
 
 [size=4][b]Reading the enemy[/b][/size]
-The signature isekai [b]"Observation"[/b] move, and it costs nothing to unlock. A target frame floats over an enemy with its [b]level[/b], a [b]health bar[/b] and a colour-coded verdict — [b]TRIVIAL[/b], [b]MANAGEABLE[/b], [b]DANGEROUS[/b], [b]LETHAL[/b] — measured against your own level. You see it [b]before[/b] you commit to a fight, which is the only moment it is worth anything.
+The signature isekai [b]"Observation"[/b] move, and it costs nothing to unlock. A target frame floats over an enemy with its [b]level[/b], a [b]health bar with the figure on it[/b], a thin [b]magicka and stamina[/b] strip beneath, and a colour-coded verdict — [b]TRIVIAL[/b], [b]MANAGEABLE[/b], [b]DANGEROUS[/b], [b]LETHAL[/b] — measured against your own level. You see it [b]before[/b] you commit to a fight, which is the only moment it is worth anything.
 
-By default it appears on what you are aiming at and on whatever is actually fighting you; the ini offers three other policies, and a key switches the whole display off.
+By default it appears on what you are aiming at and on whatever is actually fighting you; the ini offers three other policies, and a key switches the whole display off. It reads what you can [b]see[/b] — a bandit behind a wall or a hillside stays unread — and aiming anywhere on an enemy is enough, not just at their head.
 
 [size=4][b]The System Shop[/b][/size]
 System Points buy more than skill nodes. A shop screen with item cards on four shelves: [b]material packs[/b] (smithing, alchemy, soul gems), [b]gold[/b], and the ten [b]System potions[/b] — four instant restoratives and six one-hour elixirs. Everything is delivered straight into your Dimensional Storage.
+
+Hover a card and it lists [b]exactly what that potion does[/b] — the effects are read off the potion itself, so the card cannot promise something the bottle does not deliver.
 
 [size=4][b]The Skill Tree[/b][/size]
 Open the System panel ([b]Right Shift + S[/b]) and enter the skill tree: a hub and three branches — might, arcana, shadow — paid with System Points. Besides stat nodes it holds the System's signature unlocks:
@@ -95,16 +97,30 @@ Every reincarnated soul receives a private pocket dimension: one chest inventory
 
 It [b]starts empty for every blessing[/b] — you stock it from the System Shop's material packs, so what it holds is what you chose to spend your points on. HERO and ASCENDED still get there sooner: their reward scale multiplies point income.
 
-[size=4][b]Optional: the PrismaUI patch[/b][/size]
-A separate download renders the [b]whole interface[/b] — skill tree, System panels, level-up flourish — as a modern HTML/CSS view instead of the built-in one. Same mod, same logic, different skin. The base mod detects it at load and falls back safely on its own UI when it is absent, so the patch is entirely optional and needs no new save.
+[size=4][b]Keyboard, controller or headset[/b][/size]
+[list]
+[*][b]Keyboard[/b] — Right Shift + S opens the System panel, F10 toggles the threat display. Both remappable.
+[*][b]Controller[/b] — hold [b]LB[/b] and tap [b]Back[/b] for the System menu; the left stick moves the cursor, [b]A[/b] clicks, [b]B[/b] closes. A combination rather than a single button because a controller has none spare — every face button, both shoulders and both sticks are already bound in vanilla. Both bindings are in the ini, and `None` switches the controller off.
+[*][b]Skyrim VR[/b] — with the optional [url=https://www.nexusmods.com/skyrimspecialedition/mods/149180]ImGui VR Helper[/url] the interface comes into the headset: threat labels stand in the world over the actors they belong to, notifications sit on the HUD layer, and pressing [b]B + Y[/b] on both controllers at once opens the System menu without touching a keyboard. The chord is rebindable.
+[/list]
 
-Only the patch requires [url=https://www.nexusmods.com/skyrimspecialedition/mods/148718]PrismaUI[/url] (and its own Media Keys Fix dependency). The base mod requires neither.
+[size=4][b]Translations[/b][/size]
+Every line of text the mod shows goes through a language file. Drop a `lang/<code>.txt` next to the plugin, set [b]Language[/b] in the ini, and anything a translation does not cover falls back to English rather than showing a blank or a key. The PrismaUI view translates itself the same way. A full English template ships with the mod as the starting point.
+
+[size=4][b]Two interfaces, one download[/b][/size]
+The installer asks which interface you want. [b]Built-in[/b] is the one the mod draws itself and needs nothing else. [b]PrismaUI[/b] renders the [b]whole interface[/b] — skill tree, System panels, level-up flourish — as a modern HTML/CSS view instead. Same mod, same logic, different skin.
+
+This used to be a second download; it is now an option inside this one. The mod detects PrismaUI at load and falls back safely on its own UI when it is absent, so the option is safe to pick either way and needs no new save.
+
+Only that option requires [url=https://www.nexusmods.com/skyrimspecialedition/mods/148718]PrismaUI[/url] (and its own Media Keys Fix dependency). The base mod requires neither.
 
 [size=4][b]Settings[/b][/size]
 An optional ini at [i]Data/SKSE/Plugins/IsekaiHero.ini[/i] — ships with sane defaults, safe to delete:
 [list]
-[*][b]Remappable hotkeys[/b] — the System menu (default Right Shift + S) and the threat-display toggle (default F10). Key names or scan codes, modifier optional.
-[*][b]Threat labels[/b] — off/on, how far they reach, and which actors get one: what you aim at plus whatever is fighting you (default), every enemy in range, everyone alive, or aim only.
+[*][b]Remappable hotkeys[/b] — the System menu (default Right Shift + S) and the threat-display toggle (default F10). Key names or scan codes, modifier optional. The controller and VR bindings sit next to them.
+[*][b]Interface size[/b] — one multiplier over everything the mod draws, on top of the resolution scaling that is already there. Those are different questions: scaling with resolution keeps the interface the same [i]apparent[/i] size on a 4K screen, which is not the same as whether you can read it.
+[*][b]Language[/b] — which translation file to load.
+[*][b]Threat labels[/b] — off/on, how far they reach, how close to the crosshair an enemy must be, whether the figures and the magicka/stamina strip are shown, and which actors get one: what you aim at plus whatever is fighting you (default), every enemy in range, everyone alive, or aim only.
 [*][b]Objective schedule[/b] — how long the System waits before the first kill objective of a character's life, and between each one after.
 [*][b]Hide sealed skill-tree nodes[/b] instead of showing them greyed
 [*][b]DORMANT thresholds[/b] — the levels at which the sleeping blessing wakes
@@ -119,13 +135,15 @@ An optional ini at [i]Data/SKSE/Plugins/IsekaiHero.ini[/i] — ships with sane d
 [/list]
 
 [size=4][b]Installation & Compatibility[/b][/size]
-Install with your mod manager. The plugin is [b]ESL-flagged[/b] (no load order slot), adds only new records and [b]overrides nothing[/b] — load order position does not matter. No patches needed.
+Install with your mod manager. The archive is a [b]FOMOD[/b] and asks three things — which interface, whether the System boots itself or waits for your hotkey, and whether you want the threat readings. Everything it sets is one line in the ini and can be changed afterwards.
+
+The plugin is [b]ESL-flagged[/b] (no load order slot), adds only new records and [b]overrides nothing[/b] — load order position does not matter. No patches needed.
 
 [b]Safe to install mid-playthrough.[/b] Add it to an existing save and the System boots on your next load: you pick your blessing, and every milestone quest you have already completed is recognized and rewarded retroactively. Blessings only ever raise your stats — an established character never loses levels, skills or perks.
 
 [b]Hotkey:[/b] Right Shift + S opens the System status panel; storage, shop and skill tree sit behind the icon buttons in its corner. F10 switches the threat display off and on. Both are remappable in the ini.
 
-[b]Skyrim VR:[/b] the mod loads and runs, and its menus need the optional PrismaUI patch (VR build). The threat labels and the on-screen objective messages are drawn by the built-in overlay, which VR does not get — objectives fall back to the game's own corner notifications there.
+[b]Skyrim VR:[/b] the mod loads and runs. With the optional [url=https://www.nexusmods.com/skyrimspecialedition/mods/149180]ImGui VR Helper[/url] installed you get the threat labels and notifications inside the headset and a controller chord that opens the menu; without it the mod still runs and falls back to the game's own corner notifications. The PrismaUI option (VR build) also works there. [i]The headset side is new in 0.8.0 and has not yet been confirmed by a VR player — reports very welcome.[/i]
 
 [size=4][b]Status[/b][/size]
 Early release. Feedback is very welcome, especially from heavily modded setups. If something misbehaves, attach [i]Documents\My Games\Skyrim Special Edition\SKSE\IsekaiHeroSKSE.log[/i] to your report — the mod logs everything it does.
@@ -135,6 +153,7 @@ Early release. Feedback is very welcome, especially from heavily modded setups. 
 [*][b]UI sounds[/b] by Cyrex Studios — [url=https://cyrex-studios.itch.io/ui-sound-pack]UI Sound Pack[/url]
 [*][b]Spell icons[/b] by The Higalina Vault — [url=https://higalina.itch.io/40-spell-icons-fantasy-style-png-512x512]40 Spell Icons (Fantasy Style)[/url]
 [*][b]Crafting integration[/b]: the Dimensional Storage reads and consumes the chest at a workbench without moving items, adapting the zero-transfer hooking technique from [url=https://github.com/ohfor/scie]SCIE — Skyrim Crafting Inventory Extender[/url] by ohfor (MIT License). SCIE itself is [b]not required[/b] — its approach is reimplemented here, not depended upon.
+[*][b]VR interface[/b]: drawn through [url=https://www.nexusmods.com/skyrimspecialedition/mods/149180]ImGui VR Helper[/url] (LGPL-3.0-or-later). Its client API ships with this mod unmodified; the helper itself is an optional separate install.
 [/list]
 
 [size=4][b]AI Disclaimer[/b][/size]
