@@ -735,8 +735,18 @@ namespace Isekai::UI {
                     const std::string  tag =
                         rank > 0 ? std::string(SkillTree::TierName(tier))
                                  : (std::to_string(SkillTree::NextCost(node.key)) + " SP");
-                    const ImVec2 tgs = font->CalcTextSizeA(nameSize, FLT_MAX, 0.0f, tag.c_str());
-                    railDl->AddText(font, nameSize,
+                    // Shrunk to whatever the pips leave beside them. Right-aligning it at
+                    // a fixed size let the longest tier name run back over them — and
+                    // "GRANDMASTER" is only the longest in English; the tag is
+                    // translated, so no measured-once width can hold.
+                    const float tagRoom = std::max(1.0f, hitMax.x - 2.0f * s - (px + 4.0f * s));
+                    float       tagSize = nameSize;
+                    ImVec2      tgs = font->CalcTextSizeA(tagSize, FLT_MAX, 0.0f, tag.c_str());
+                    if (tgs.x > tagRoom) {
+                        tagSize *= tagRoom / tgs.x;
+                        tgs = font->CalcTextSizeA(tagSize, FLT_MAX, 0.0f, tag.c_str());
+                    }
+                    railDl->AddText(font, tagSize,
                                     ImVec2{ hitMax.x - tgs.x - 2.0f * s, py - 3.0f * s },
                                     rank > 0 ? TierPipColor(tier, fade)
                                              : Style::Col(Style::kTextDim, 0.8f * fade),

@@ -129,16 +129,21 @@ namespace Isekai::Config {
     // 40 or 400 wants the number.
     [[nodiscard]] bool ThreatLabelNumbers();
 
-    // Add magicka and stamina bars under the health bar, the way an MMO target frame
-    // stacks its resource bars. Default OFF: it makes the frame taller over every
-    // labelled actor, and the labels were deliberately made less obtrusive in 0.7.0.
-    // A bar is skipped for an actor that has none of that pool, so most animals still
-    // show a single bar.
+    // Show magicka and stamina under the health bar — side by side in one thin strip,
+    // blue and green, no figures. Default ON: sharing a row costs the frame five pixels,
+    // which is what a row each did not (that layout is why this used to default off).
+    // A pool is skipped for an actor that does not have one, so most animals still show
+    // a bare health bar and a wolf's frame is exactly as tall as before.
     [[nodiscard]] bool ThreatLabelResources();
 
     // How far a labelled actor may be, in game units (~70 per metre). Beyond this the
     // label is dropped entirely rather than shrunk to an unreadable smudge.
     [[nodiscard]] std::uint32_t ThreatLabelRange();
+
+    // How far off the crosshair an actor may be and still count as "aimed at", as a
+    // PERCENTAGE of screen height. Sideways tolerance only — the check measures against
+    // the actor's whole body, so height is already covered. Default 15, clamped 2..50.
+    [[nodiscard]] std::uint32_t ThreatLabelAimRadius();
 
     // VR only: how tall a threat label stands in the world, in METRES.
     //
@@ -174,6 +179,12 @@ namespace Isekai::Config {
     // is the default — it is a diagnostic to be switched on when reporting a problem,
     // not something a normal playthrough should be able to trigger by accident.
     [[nodiscard]] std::uint32_t SelfTestKey();
+
+    // Scan code that grants 100 System Points, or 0 for off (the default). A debugging
+    // tool: milestones are the only source of points, so testing the skill tree or the
+    // shop — or reproducing a report about either — otherwise means playing far enough
+    // to afford the thing under test.
+    [[nodiscard]] std::uint32_t DebugPointsKey();
 
     // Log button presses with their input device and scan code, to diagnose a hotkey that
     // does nothing. Off by default, and it stops itself after a short burst (see

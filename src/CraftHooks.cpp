@@ -202,23 +202,77 @@ namespace Isekai::CraftHooks {
 
         // Hand every still-held token back to the chest. kStoreInContainer (not kRemove),
         // so Hook 4 lets it pass straight through instead of treating it as a consume.
+        //
+        // Anything that does NOT make it back stays on the list. This used to clear
+        // unconditionally — including when there was no chest to return to at all — and a
+        // token dropped from the list is stranded for good, because nothing else in the
+        // game knows the item was ever on loan. That is the leak behind "crafting
+        // materials turned up in my inventory and never left again": each station visit
+        // forgot a few more, and the next visit then skipped them as "already carried",
+        // so the lent count fell visit by visit (275 -> 207 -> 127 -> 34 in one session)
+        // while the difference sat in the player's pockets.
+        //
+        // RemoveItem reports nothing at all, so the return is VERIFIED by reading the
+        // inventory back rather than assumed.
         void ReturnTokens() {
             if (g_lentTokens.empty()) {
                 return;
             }
             auto* player = RE::PlayerCharacter::GetSingleton();
             auto* chest = Storage::ChestRef();
-            if (player && chest) {
-                const auto held = player->GetInventoryCounts();
-                for (auto* obj : g_lentTokens) {
-                    const auto it = held.find(obj);
-                    if (it != held.end() && it->second > 0) {
-                        player->RemoveItem(obj, 1, RE::ITEM_REMOVE_REASON::kStoreInContainer,
-                                           nullptr, chest);
-                    }
+            if (!player || !chest) {
+                logger::warn("CraftHooks: holding {} token(s) — no {} to return them to; "
+                             "they stay on the books for the next attempt",
+                             g_lentTokens.size(), player ? "storage chest" : "player");
+                return;  // keep the list: a lost entry can never be reclaimed
+            }
+
+            const auto before = player->GetInventoryCounts();
+            int        spent = 0;
+            for (auto* obj : g_lentTokens) {
+                const auto it = before.find(obj);
+                if (it == before.end() || it->second <= 0) {
+                    ++spent;  // crafted away while the menu was open — nothing to hand back
+                    continue;
+                }
+                player->RemoveItem(obj, 1, RE::ITEM_REMOVE_REASON::kStoreInContainer, nullptr,
+                                   chest);
+            }
+
+            const auto                       after = player->GetInventoryCounts();
+            std::vector<RE::TESBoundObject*> stuck;
+            for (auto* obj : g_lentTokens) {
+                const auto had = before.find(obj);
+                if (had == before.end() || had->second <= 0) {
+                    continue;  // counted as spent above
+                }
+                const auto now = after.find(obj);
+                if (now != after.end() && now->second >= had->second) {
+                    stuck.push_back(obj);  // the move did not take — try again next time
                 }
             }
-            g_lentTokens.clear();
+
+            const auto lent = g_lentTokens.size();
+            g_lentTokens = std::move(stuck);
+            logger::info("CraftHooks: returned {} of {} token(s) ({} spent crafting{})",
+                         lent - g_lentTokens.size() - static_cast<std::size_t>(spent), lent,
+                         spent,
+                         g_lentTokens.empty()
+                             ? ""
+                             : ", " + std::to_string(g_lentTokens.size()) + " would not move");
+            if (!g_lentTokens.empty()) {
+                // Name them: a return that silently fails for a whole class of item (an
+                // extra-data stack, a quest-flagged material) is not something a count can
+                // point at.
+                std::string names;
+                for (auto* obj : g_lentTokens) {
+                    if (!names.empty()) {
+                        names += ", ";
+                    }
+                    names += obj->GetName();
+                }
+                logger::warn("CraftHooks: still on loan: {}", names);
+            }
         }
 
         // Lend one of each stored material the player is not already carrying, so a foreign

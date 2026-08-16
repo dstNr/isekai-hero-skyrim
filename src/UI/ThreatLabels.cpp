@@ -222,10 +222,11 @@ namespace Isekai::UI {
         }
 
         // Magicka and stamina, in the colours every MMO uses for them — blue and green.
-        // Muted on purpose: the verdict colour has to stay the loudest thing on the frame,
-        // because it is the one that says whether to walk away.
-        constexpr ImVec4 kMagickaCol{ 0.36f, 0.58f, 1.00f, 1.0f };
-        constexpr ImVec4 kStaminaCol{ 0.45f, 0.85f, 0.48f, 1.0f };
+        // Saturated, because they share one five-pixel strip: a muted fill at that height
+        // is a smudge. They still lose to the verdict colour, which owns the badge, the
+        // plate's edges and the whole health bar — far more area than these two get.
+        constexpr ImVec4 kMagickaCol{ 0.30f, 0.60f, 1.00f, 1.0f };
+        constexpr ImVec4 kStaminaCol{ 0.36f, 0.90f, 0.42f, 1.0f };
 
         // A cap, because "all visible enemies" during a dragon attack on a city is not a
         // number anyone chose. The nearest ones are the ones that matter.
@@ -333,11 +334,19 @@ namespace Isekai::UI {
         // kCrosshair alone would then produce nothing at all, so it falls through to the
         // sweep below instead of leaving the player with no labels.
         if (cam && (crosshairOnly || mode == Config::ThreatTargets::kAggro)) {
-            // ponytail: fixed screen-space cone, not a real ray. Picks the wrong actor
-            // only when two overlap near the centre; raycast if that ever matters.
-            float      best = display.y * 0.08f;
+            // ponytail: screen-space cone, not a real ray. Picks the wrong actor only when
+            // two overlap near the centre; raycast if that ever matters.
+            //
+            // Measured against the actor's whole BODY — the segment from its feet to the
+            // head point — not against the head alone. Against the head, the only place
+            // that produced a reading was the head: at conversational range a person's
+            // chest is hundreds of pixels below their skull, so aiming at someone's face
+            // worked and aiming at them did not. The radius below is now the sideways
+            // tolerance it was always meant to be, and the ini owns it.
+            float      best = display.y * Config::ThreatLabelAimRadius() * 0.01f;
             RE::Actor* aimed = nullptr;
             if (auto* lists = RE::ProcessLists::GetSingleton()) {
+                const ImVec2 centre{ display.x * 0.5f, display.y * 0.5f };
                 for (const auto& handle : lists->highActorHandles) {
                     auto actor = handle.get();
                     if (!actor || !Eligible(actor.get(), player, Config::ThreatTargets::kAll) ||
@@ -345,12 +354,28 @@ namespace Isekai::UI {
                         continue;
                     }
                     RE::NiPoint3 head{};
-                    ImVec2       screen{};
-                    if (!HeadPoint(actor.get(), head) || !Project(cam, head, display, screen)) {
+                    ImVec2       top{};
+                    if (!HeadPoint(actor.get(), head) || !Project(cam, head, display, top)) {
                         continue;
                     }
-                    const float d = std::hypot(screen.x - display.x * 0.5f,
-                                               screen.y - display.y * 0.5f);
+                    // The feet: the 3D root's own placement, the same anchor HeadPoint
+                    // measures up from. Off screen (behind the camera on a steep look-down)
+                    // it simply falls back to the head, which is the old behaviour.
+                    ImVec2 bottom = top;
+                    if (auto* root = actor->Get3D()) {
+                        static_cast<void>(Project(cam, root->world.translate, display, bottom));
+                    }
+                    // Distance from the crosshair to the segment top..bottom.
+                    const float dx = bottom.x - top.x;
+                    const float dy = bottom.y - top.y;
+                    const float len2 = dx * dx + dy * dy;
+                    const float t =
+                        len2 > 1.0f ? std::clamp(((centre.x - top.x) * dx + (centre.y - top.y) * dy) /
+                                                     len2,
+                                                 0.0f, 1.0f)
+                                    : 0.0f;
+                    const float d = std::hypot(centre.x - (top.x + dx * t),
+                                               centre.y - (top.y + dy * t));
                     if (d < best) {
                         best = d;
                         aimed = actor.get();
@@ -407,7 +432,11 @@ namespace Isekai::UI {
             const float nameSize = 20.0f * k;
             const float tagSize = 12.0f * k;
             const float lvlSize = 15.0f * k;
-            const float discR = 17.0f * k;
+            // The level badge is a lozenge: as tall as the old disc (the plate's height
+            // hangs off it) but wider, because a three-digit level had to fit through the
+            // narrow middle of a diamond and a circle's width was all it had.
+            const float badgeRX = 20.0f * k;
+            const float badgeRY = 17.0f * k;
             const float barH = 6.0f * k;
             const float skew = 9.0f * k;
 
@@ -418,24 +447,28 @@ namespace Isekai::UI {
             const float       tagW = measure(tagSize, label.verdict.tag);
 
             const float plateW =
-                discR * 2.0f + 14.0f * k + std::max(nameW, 120.0f * k) + 12.0f * k + tagW +
+                badgeRX * 2.0f + 14.0f * k + std::max(nameW, 120.0f * k) + 12.0f * k + tagW +
                 14.0f * k;
-            // MMO target frame: the health bar, and under it the thinner resource bars.
+            // Magicka and stamina, side by side in ONE thin strip under the health bar.
             // Only for actors that HAVE the pool — most animals carry no magicka, and an
             // empty bar reads as "drained" rather than "not applicable".
+            //
+            // A row each was the obvious layout and the wrong one: it made the frame half
+            // again as tall over every mage in the room, which is precisely what the 0.7.0
+            // feedback asked us to stop doing (#25). Sharing a row costs four pixels, and
+            // blue against green says which is which without either being labelled.
             const bool  wantRes = Config::ThreatLabelResources();
             const bool  showMp = wantRes && label.mp.max > 0;
             const bool  showSp = wantRes && label.sp.max > 0;
-            const int   resBars = (showMp ? 1 : 0) + (showSp ? 1 : 0);
             const float resH = 5.0f * k;
-            const float resGap = 2.0f * k;
-            const float extra = static_cast<float>(resBars) * (resH + resGap);
+            const float resGap = 3.0f * k;
+            const float extra = (showMp || showSp) ? resH + resGap : 0.0f;
 
             const float cx = a_anchor.x;
             const float y1 = a_anchor.y;               // sits just above the head point
-            // The frame grows UPWARD. y1 is pinned to the head, so extra rows must never
+            // The frame grows UPWARD. y1 is pinned to the head, so the extra row must never
             // push the frame down over the actor's face.
-            const float y0 = y1 - discR * 2.0f - extra;
+            const float y0 = y1 - badgeRY * 2.0f - extra;
             const float x0 = cx - plateW * 0.5f;
             const float x1 = cx + plateW * 0.5f;
 
@@ -449,17 +482,32 @@ namespace Isekai::UI {
             dl->AddLine(ImVec2{ x0, y1 }, ImVec2{ x1 - skew, y1 },
                         Style::Col(label.verdict.col, 0.35f * alpha), 1.0f * k);
 
-            // Level disc on the left, in the verdict's colour — the one element you can
-            // identify without reading anything.
-            const ImVec2 disc{ x0 + discR + 3.0f * k, (y0 + y1) * 0.5f };
-            dl->AddCircleFilled(disc, discR, Style::Col(Style::kPanelBg, 0.95f * alpha), 24);
-            dl->AddCircle(disc, discR, Style::Col(label.verdict.col, alpha), 24, 2.0f * k);
+            // Level badge on the left, in the verdict's colour — the one element you can
+            // identify without reading anything. A diamond rather than a disc: everything
+            // else the System draws is angular (this plate's own lean, the panels' corner
+            // brackets), and the circle was the single round thing among it.
+            const ImVec2 badge{ x0 + badgeRX + 3.0f * k, (y0 + y1) * 0.5f };
+            const ImVec2 dTop{ badge.x, badge.y - badgeRY };
+            const ImVec2 dRight{ badge.x + badgeRX, badge.y };
+            const ImVec2 dBottom{ badge.x, badge.y + badgeRY };
+            const ImVec2 dLeft{ badge.x - badgeRX, badge.y };
+            dl->AddQuadFilled(dTop, dRight, dBottom, dLeft,
+                              Style::Col(Style::kPanelBg, 0.95f * alpha));
+            dl->AddQuad(dTop, dRight, dBottom, dLeft, Style::Col(label.verdict.col, alpha),
+                        2.0f * k);
+            // A second outline just inside, faint: the badge is the frame's focal point and
+            // a single stroke read as flat next to the bars' filled colour.
+            dl->AddQuad(ImVec2{ badge.x, badge.y - badgeRY + 4.0f * k },
+                        ImVec2{ badge.x + badgeRX - 4.0f * k, badge.y },
+                        ImVec2{ badge.x, badge.y + badgeRY - 4.0f * k },
+                        ImVec2{ badge.x - badgeRX + 4.0f * k, badge.y },
+                        Style::Col(label.verdict.col, 0.30f * alpha), 1.0f * k);
             const float lvlW = measure(lvlSize, lvl.c_str());
             Style::DrawTextOutlined(dl, font, lvlSize,
-                                    ImVec2{ disc.x - lvlW * 0.5f, disc.y - lvlSize * 0.62f },
+                                    ImVec2{ badge.x - lvlW * 0.5f, badge.y - lvlSize * 0.62f },
                                     label.verdict.col, lvl.c_str(), alpha);
 
-            const float textX = disc.x + discR + 11.0f * k;
+            const float textX = badge.x + badgeRX + 11.0f * k;
             const float barR = x1 - 12.0f * k - tagW - 10.0f * k;
 
             Style::DrawTextOutlined(dl, font, nameSize, ImVec2{ textX, y0 + 2.0f * k },
@@ -501,25 +549,38 @@ namespace Isekai::UI {
 
             drawFigures(label.hp, barY, barH, 11.0f * k);
 
-            // The resource bars, stacked under health, thinner than it — health is the
-            // number that decides the fight and has to stay the one the eye lands on.
-            float resY = barY + barH + resGap;
-            const auto drawResource = [&](const Pool& pool, const ImVec4& col) {
-                dl->AddRectFilled(ImVec2{ textX, resY }, ImVec2{ barR, resY + resH },
-                                  Style::Col(Style::kPanelBg, 0.9f * alpha));
-                dl->AddRectFilled(ImVec2{ textX, resY },
-                                  ImVec2{ textX + (barR - textX) * pool.fraction, resY + resH },
-                                  Style::Col(col, 0.85f * alpha));
-                dl->AddRect(ImVec2{ textX, resY }, ImVec2{ barR, resY + resH },
-                            Style::Col(col, 0.40f * alpha), 0.0f, 0, 1.0f * k);
-                drawFigures(pool, resY, resH, 9.5f * k);
-                resY += resH + resGap;
-            };
-            if (showMp) {
-                drawResource(label.mp, kMagickaCol);
-            }
-            if (showSp) {
-                drawResource(label.sp, kStaminaCol);
+            // The resource strip: magicka on the left, stamina on the right, each filling
+            // from its own edge. Colour only — no figures. At five pixels tall they would
+            // not be readable at the distances these labels are seen from, and health is
+            // the number that decides the fight anyway.
+            if (showMp || showSp) {
+                const float resY = barY + barH + resGap;
+                const auto  strip = [&](float a_x0, float a_x1, const Pool& pool,
+                                       const ImVec4& col) {
+                    if (a_x1 - a_x0 < 2.0f) {
+                        return;
+                    }
+                    dl->AddRectFilled(ImVec2{ a_x0, resY }, ImVec2{ a_x1, resY + resH },
+                                      Style::Col(Style::kPanelBg, 0.9f * alpha));
+                    dl->AddRectFilled(
+                        ImVec2{ a_x0, resY },
+                        ImVec2{ a_x0 + (a_x1 - a_x0) * pool.fraction, resY + resH },
+                        Style::Col(col, 0.9f * alpha));
+                    dl->AddRect(ImVec2{ a_x0, resY }, ImVec2{ a_x1, resY + resH },
+                                Style::Col(col, 0.45f * alpha), 0.0f, 0, 1.0f * k);
+                };
+                if (showMp && showSp) {
+                    // A gap between them, not a shared border: touching, the two fills read
+                    // as one bar that changes colour partway along.
+                    const float mid = (textX + barR) * 0.5f;
+                    const float split = 4.0f * k;
+                    strip(textX, mid - split * 0.5f, label.mp, kMagickaCol);
+                    strip(mid + split * 0.5f, barR, label.sp, kStaminaCol);
+                } else if (showMp) {
+                    strip(textX, barR, label.mp, kMagickaCol);
+                } else {
+                    strip(textX, barR, label.sp, kStaminaCol);
+                }
             }
 
             Style::DrawTextOutlined(dl, font, tagSize,

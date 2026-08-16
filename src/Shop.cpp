@@ -160,6 +160,44 @@ namespace Isekai::Shop {
             }
         }
 
+        // The effect list a card shows, straight off the resolved form. Writing it into
+        // kCatalog beside the name would be a second copy of what the ESP already states,
+        // free to drift from it — and Part H of docs/CREATION_KIT_ESP.md is *the* place
+        // that has drifted before. Empty for the material packs and for gold, which have
+        // no magic effects and whose quantity line already says everything.
+        [[nodiscard]] std::string DescribeEffects(const Entry& a_entry) {
+            auto* form = EntryForm(a_entry);
+            auto* potion = form ? form->As<RE::AlchemyItem>() : nullptr;
+            if (!potion) {
+                return {};
+            }
+            std::string out;
+            for (const auto* effect : potion->effects) {
+                if (!effect || !effect->baseEffect) {
+                    continue;
+                }
+                const char* name = effect->baseEffect->GetFullName();
+                if (!name || !*name) {
+                    continue;  // a nameless effect would render as a bare number
+                }
+                if (!out.empty()) {
+                    out += '\n';
+                }
+                out += name;
+                // Cure Disease and the like carry no magnitude, and Invisibility's is 0 —
+                // printing "Invisibility 0" would read as "does nothing".
+                if (const float mag = effect->GetMagnitude(); mag > 0.0f) {
+                    out += ' ' + std::to_string(static_cast<int>(mag));
+                }
+                // Minutes, because every elixir here runs an hour and "3600 s" is a number
+                // the player has to convert. Instant effects (duration 0) say nothing.
+                if (const std::uint32_t dur = effect->GetDuration(); dur > 0) {
+                    out += LF("shop.effectMinutes", "  ({} min)", (dur + 59) / 60);
+                }
+            }
+            return out;
+        }
+
         // Both Catalog() and Buy() filter through this, so an index means the same thing
         // to each of them. A potion whose ESP record does not exist drops out here, which
         // is what lets the catalog ship ahead of the Creation Kit work.
@@ -221,7 +259,8 @@ namespace Isekai::Shop {
         for (const auto* e : LiveEntries()) {
             out.push_back({ Loc::Get(e->key, e->name),
                             Loc::Get(std::string(e->key) + ".qty", e->qty), e->cost, e->icon,
-                            ShelfName(kShelfNames[static_cast<std::size_t>(e->shelf)]) });
+                            ShelfName(kShelfNames[static_cast<std::size_t>(e->shelf)]),
+                            DescribeEffects(*e) });
         }
         return out;
     }

@@ -20,7 +20,7 @@
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { PRESETS, build as buildPresets } from "./make-presets.mjs";
+import { PRESETS, STARTS, HUDS, build as buildPresets } from "./make-presets.mjs";
 import { collect as collectStrings, template as stringTemplate } from "./extract-strings.mjs";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -124,7 +124,10 @@ function parseShelfNames() {
 
 function parseMockShop() {
   const mock = read("playground/mock.js");
-  const re = /\{\s*name:\s*"([^"]+)",\s*qty:\s*"([^"]+)",\s*cost:\s*(\d+),\s*icon:\s*"([^"]+)",\s*shelf:\s*"([^"]+)"\s*\}/g;
+  // `fx` is optional and comes last: the material packs have no magic effects, and in
+  // game the field is read off the form rather than written down, so nothing here can be
+  // compared against C++ — it only has to not break the parse of the fields that can.
+  const re = /\{\s*name:\s*"([^"]+)",\s*qty:\s*"([^"]+)",\s*cost:\s*(\d+),\s*icon:\s*"([^"]+)",\s*shelf:\s*"([^"]+)"(?:,\s*fx:\s*"(?:[^"\\]|\\.)*")?\s*\}/g;
   const out = [...mock.matchAll(re)].map((m) => ({
     name: m[1], qty: m[2], cost: +m[3], icon: m[4], shelf: m[5],
   }));
@@ -659,11 +662,22 @@ check("fomod: the installer offers files that exist, and presets that are curren
   // the presets and comparing.
   const xml = read("fomod/ModuleConfig.xml");
 
-  for (const p of PRESETS) {
-    need(xml.includes(`>${p.name}<`) || xml.includes(`name="${p.name}"`),
-         `preset "${p.name}" is in make-presets.mjs but not in ModuleConfig.xml — ` +
-         "regenerate with node tools/make-fomod.mjs");
+  // The installer asks two questions; every ANSWER has to be offered, and every
+  // COMBINATION of answers has to resolve to an ini. A missing pattern is the worst kind
+  // of miss: that path through the installer silently ships no settings file at all.
+  for (const opt of [...STARTS, ...HUDS]) {
+    need(xml.includes(`name="${opt.name}"`),
+         `installer option "${opt.name}" is in make-presets.mjs but not in ` +
+         "ModuleConfig.xml — regenerate with node tools/make-fomod.mjs");
   }
+  for (const p of PRESETS) {
+    need(xml.includes(`flag="start" value="${p.start}"`) &&
+         xml.includes(`flag="hud" value="${p.hud || "default"}"`),
+         `no conditionalFileInstalls pattern for "${p.name}"`);
+  }
+  need((xml.match(/<pattern>/g) || []).length === PRESETS.length,
+       `${(xml.match(/<pattern>/g) || []).length} install patterns for ${PRESETS.length} ` +
+       "preset combinations — every combination needs exactly one");
 
   // Every source path must resolve to something. The archive is staged by package.ps1,
   // so the repo path differs — this maps the few that are staged from elsewhere and
@@ -687,6 +701,15 @@ check("fomod: the installer offers files that exist, and presets that are curren
     need(existsSync(join(ROOT, mapped)),
          `ModuleConfig installs "${src}", which resolves to nothing in the repo ` +
          `(looked for ${mapped})`);
+  }
+
+  // Screenshots, same rule as the files: a path that resolves to nothing gives the player
+  // an empty pane and no clue why. The generator omits the attribute when the picture is
+  // absent, so anything that IS written here has to be on disk.
+  for (const img of [...new Set([...xml.matchAll(/(?:image|moduleImage)[^>]*path="([^"]+)"/g)]
+                                  .map((m) => m[1]))]) {
+    need(existsSync(join(ROOT, img.replace(/\\/g, "/"))),
+         `ModuleConfig shows the picture "${img}", which is not in the repo`);
   }
 
   // Regenerating must be a no-op: if it is not, the shipped presets are stale.

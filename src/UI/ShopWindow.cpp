@@ -26,6 +26,9 @@ namespace Isekai::UI {
         // Design-space (1080p) metrics; everything scales with the display, same as the
         // skill tree window.
         constexpr float kCardW = 216.0f;  // wide enough that "Alchemy Ingredients" fits one line
+        // Sized for icon / name / quantity / price. The effect list briefly lived on the
+        // card and pushed this to 302 — four lines on every elixir, and a card that is
+        // mostly small grey text. It hovers instead, the same as the skill tree's nodes.
         constexpr float kCardH = 240.0f;
         constexpr float kCardGap = 18.0f;
         constexpr float kPad = 28.0f;
@@ -299,9 +302,28 @@ namespace Isekai::UI {
                       6.0f * s;
                 ty += centred(item.qty, subSz, ty, Style::Col(Style::kTextDim, fade * dim)) +
                       8.0f * s;
-                centred(LF("shop.price", "{} SP", item.cost), nameSz, ty,
+
+                // The price sits at a FIXED distance from the bottom rather than after
+                // whatever came before it, so it lines up across the grid however many
+                // effect lines the cards above it happen to carry.
+                const std::string price = LF("shop.price", "{} SP", item.cost);
+                const float priceH = font->CalcTextSizeA(nameSz, FLT_MAX, wrapW, price.c_str()).y;
+                const float priceY = cMax.y - 14.0f * s - priceH;
+                centred(price, nameSz, priceY,
                         afford ? Style::Col(Style::kAccent, fade)
                                : IM_COL32(220, 90, 90, static_cast<int>(255 * fade)));
+
+                // What the item does, on hover. ImGui sizes the tooltip to its text, so a
+                // four-effect elixir costs the card nothing — and unlike a fixed block on
+                // the card, a translation that runs longer than English cannot overflow
+                // anything. The web patch does the same on its own cards.
+                if (hovered) {
+                    ImGui::SetTooltip(
+                        "%s\n%s", item.name.c_str(),
+                        item.effects.empty()
+                            ? L("shop.noEffects", "No magical effect — goods, not a potion.")
+                            : item.effects.c_str());
+                }
 
                 if (clicked && afford) {
                     const int idx = i;

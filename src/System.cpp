@@ -1011,6 +1011,83 @@ namespace Isekai {
             SetPlayerLevelAtLeast(BlessingFor(g_state.grantTier).playerLevel);
         }
 
+        // --- Debug: getting System Points without earning them -------------------
+        // Points come from milestones and nowhere else, so anything that costs them — a
+        // skill tree node, a shop card, a bug report about either — could otherwise only
+        // be reached by playing up to it. Two ways in, because they fail in different
+        // places: the console cannot be opened while one of our panels is capturing
+        // input, and the hotkey needs an ini edit before it exists.
+
+        // Main thread only. Negative amounts are allowed on purpose — testing "not enough
+        // points" is as much a case as testing a purchase — but the balance never goes
+        // below zero, which no legitimate path can produce either.
+        void GrantDebugPoints(std::int32_t a_amount) {
+            g_state.systemPoints = std::max(0, g_state.systemPoints + a_amount);
+            RE::DebugNotification(
+                LF("debug.pointsGranted", "[ SYSTEM ] System Points: {}", g_state.systemPoints)
+                    .c_str());
+            if (auto* console = RE::ConsoleLog::GetSingleton()) {
+                console->Print("[ SYSTEM ] %+d System Points -> %d", a_amount,
+                               g_state.systemPoints);
+            }
+            logger::info("Debug: granted {} System Point(s) -> {}", a_amount,
+                         g_state.systemPoints);
+        }
+
+        // `IsekaiPoints [n]` in the console, n defaulting to 100.
+        bool ExecuteDebugPoints(const RE::SCRIPT_PARAMETER* a_paramInfo,
+                                RE::SCRIPT_FUNCTION::ScriptData* a_scriptData,
+                                RE::TESObjectREFR* a_thisObj, RE::TESObjectREFR* a_containingObj,
+                                RE::Script* a_scriptObj, RE::ScriptLocals* a_locals, double&,
+                                std::uint32_t& a_opcodeOffsetPtr) {
+            std::int32_t amount = 100;  // left alone when the argument is omitted
+            RE::Script::ParseParameters(a_paramInfo, a_scriptData, a_opcodeOffsetPtr, a_thisObj,
+                                        a_containingObj, a_scriptObj, a_locals, &amount);
+            GrantDebugPoints(amount);
+            return true;
+        }
+
+        // Skyrim's console command table is fixed at build time — there is no slot to add
+        // to, so a new command means taking over an existing one. The candidates below are
+        // developer leftovers with no gameplay use; the first that resolves is taken, and
+        // the log says which, so a collision with another plugin doing the same thing is
+        // visible rather than mysterious.
+        void InstallConsoleCommand() {
+            for (const char* victim : { "TestSeenData", "DumpNiUpdates", "ShowSceneGraph" }) {
+                auto* cmd = RE::SCRIPT_FUNCTION::LocateConsoleCommand(victim);
+                if (!cmd) {
+                    continue;
+                }
+                // Static: the table keeps the pointer, so this must outlive the call.
+                static RE::SCRIPT_PARAMETER params[] = {
+                    { "Amount", RE::SCRIPT_PARAM_TYPE::kInt, /*optional=*/true }
+                };
+                cmd->functionName = "IsekaiPoints";
+                cmd->shortName = "isp";
+                cmd->helpString = "IsekaiPoints [n] - grant n System Points (default 100)";
+                cmd->referenceFunction = false;
+                cmd->SetParameters(params);
+                cmd->executeFunction = ExecuteDebugPoints;
+                cmd->conditionFunction = nullptr;
+                logger::info("Console: 'IsekaiPoints [n]' installed (over '{}')", victim);
+                return;
+            }
+            logger::warn("Console: no command left to take over — 'IsekaiPoints' is unavailable");
+        }
+
+        // The same grant on a key, for when a panel of ours owns the screen: the console
+        // cannot be opened then, but hotkeys still arrive (the input sink dispatches them
+        // before it checks whether a panel is capturing). Off unless the ini names a key.
+        void InstallDebugPointsKey() {
+            const auto key = Config::DebugPointsKey();
+            if (key == 0) {
+                return;
+            }
+            constexpr std::int32_t kGrant = 100;
+            UI::RegisterHotkey(key, []() { GrantDebugPoints(kGrant); });
+            logger::info("Debug: hotkey {} grants {} System Points", Config::KeyName(key), kGrant);
+        }
+
         // ------------------------------------------------------------------
         // SKSE lifecycle
         // ------------------------------------------------------------------
@@ -1044,6 +1121,8 @@ namespace Isekai {
                 Quests::Install();      // watches kills for the standing objective
                 UI::InstallThreatLabels();  // the on/off key for the floating verdicts
                 SelfTest::Install();    // diagnostic hotkey, off unless the ini sets one
+                InstallConsoleCommand();  // IsekaiPoints [n]
+                InstallDebugPointsKey();  // the same grant on a key, off unless the ini sets one
                 UI::LogHotkeys();       // the table the input handler actually consults
 
                 if (auto* ui = RE::UI::GetSingleton()) {

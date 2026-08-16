@@ -5,9 +5,17 @@
 // forgotten in the other three — so they are generated: same file, same comments, a
 // handful of values replaced. `node tools/make-presets.mjs` after touching the ini.
 //
-// Deliberately one flat list of presets rather than a preset per setting. Independent
-// groups multiply: three groups of three choices is 27 files, and every one of them a
-// copy of the same document. Four named presets each tell a story instead.
+// TWO independent questions, asked separately, because they are about different things:
+// when the System wakes up, and whether it writes on the screen during a fight. Rolling
+// them into one list of named presets meant "Quiet HUD" and "Alternate start" were
+// mutually exclusive choices in the same radio group, which they are not.
+//
+// The installer still only chooses FILES, so each combination needs its own whole ini —
+// the installer picks between them with condition flags (see tools/make-fomod.mjs). That
+// is why the axes stay at two questions of two answers: four files, one per combination.
+// A third axis of three choices would be twelve copies of the same document, which is the
+// trade this file has always refused. If a setting is worth an installer question, it has
+// to be worth doubling the preset count.
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -15,15 +23,16 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-export const PRESETS = [
+// Axis 1 — when the System introduces itself.
+export const STARTS = [
   {
-    dir: "standard",
+    key: "standard",
     name: "Standard",
-    blurb: "The mod as intended. Pick this unless one of the others describes you.",
+    blurb: "The System boots itself the first time you load into the world.",
     values: {},   // the shipped file, unchanged
   },
   {
-    dir: "alternate-start",
+    key: "alternate-start",
     name: "Alternate start",
     blurb:
       "For a start that opens somewhere the System's boot sequence does not belong — a " +
@@ -31,31 +40,39 @@ export const PRESETS = [
       "System hotkey yourself.",
     values: { AutoStart: "0" },
   },
+];
+
+// Axis 2 — the threat readings over enemies. Its own step because it is a HUD taste
+// question, unrelated to how the game starts.
+export const HUDS = [
   {
-    dir: "quiet-hud",
+    key: "",   // no suffix: this is the plain form of whichever start was chosen
+    name: "Show them",
+    blurb:
+      "Name, level, health and a verdict over anything that is fighting you or that you " +
+      "aim at. F10 hides them for a screenshot.",
+    image: "threat-labels.png",
+    values: {},
+  },
+  {
+    key: "quiet",
     name: "Quiet HUD",
     blurb:
-      "No threat readings floating over enemies. Everything else is unchanged, and F10 " +
-      "still switches them back on mid-game if you change your mind.",
+      "Nothing floating over enemies. Everything else is unchanged, and F10 still " +
+      "switches the readings back on mid-game if you change your mind.",
     values: { ThreatLabels: "0" },
   },
-  {
-    dir: "modlist-testing",
-    name: "Modlist testing",
-    blurb:
-      "For building and testing a load order, not for playing. The System waits for your " +
-      "hotkey, panels appear instantly with no typing, objectives arrive immediately and " +
-      "can be re-rolled, and F11 runs the self-test.",
-    values: {
-      AutoStart: "0",
-      TextSpeed: "0",
-      FirstTaskHours: "0",
-      TaskIntervalHours: "0",
-      QuestRerollButton: "1",
-      SelfTestKey: "F11",
-    },
-  },
 ];
+
+// One preset per combination. `dir` is also the flag pair that selects it.
+export const PRESETS = STARTS.flatMap((start) =>
+  HUDS.map((hud) => ({
+    dir: hud.key ? `${start.key}-${hud.key}` : start.key,
+    name: hud.key ? `${start.name} + ${hud.name}` : start.name,
+    start: start.key,
+    hud: hud.key,
+    values: { ...start.values, ...hud.values },
+  })));
 
 // Replace the value on a setting's line, leaving every comment and blank line alone.
 // Fails loudly on a key that is not in the file: a silently ignored override would ship

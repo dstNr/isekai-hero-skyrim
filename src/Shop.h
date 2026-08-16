@@ -25,6 +25,14 @@ namespace Isekai::Shop {
         std::int32_t cost;   // System Points
         std::string  icon;   // file name under the icons folder
         std::string  shelf;  // display group, e.g. "ELIXIRS" — see Shelves()
+
+        // What the item DOES, one effect per line ("Restore Health 10000"), empty for the
+        // material packs and gold. Read off the form at runtime rather than written out
+        // in the catalog: a potion's card was its name, its price and nothing else, so
+        // the only way to find out what an elixir did was to drink one. Deriving it means
+        // the card cannot promise what the ESP does not deliver, and the effect names
+        // arrive in the game's own language.
+        std::string effects;
     };
 
     // The display groups, in the order they should be offered. Both renderers build

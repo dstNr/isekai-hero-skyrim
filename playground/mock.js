@@ -256,16 +256,32 @@
     { name: "Gold Hoard",          qty: "x1,000,000",  cost: 20, icon: "shop_gold_large.png", shelf: "WEALTH" },
     // System potions. These only appear in game once their ESP record resolves; the
     // mock always shows them, which is the point of a preview.
-    { name: "Restorative: Vigor",       qty: "x10", cost: 3, icon: "shop_potion_vigor.png", shelf: "RESTORATIVES" },
-    { name: "Restorative: Focus",       qty: "x10", cost: 3, icon: "shop_potion_focus.png", shelf: "RESTORATIVES" },
-    { name: "Restorative: Vitality",    qty: "x10", cost: 3, icon: "shop_potion_vitality.png", shelf: "RESTORATIVES" },
-    { name: "Panacea",                  qty: "x10", cost: 3, icon: "shop_potion_panacea.png", shelf: "RESTORATIVES" },
-    { name: "Elixir of the System",     qty: "x10", cost: 6, icon: "shop_elixir_system.png", shelf: "ELIXIRS" },
-    { name: "Draught of the Ascended",  qty: "x10", cost: 6, icon: "shop_elixir_ascended.png", shelf: "ELIXIRS" },
-    { name: "Aegis Elixir",             qty: "x10", cost: 6, icon: "shop_elixir_aegis.png", shelf: "ELIXIRS" },
-    { name: "Phantom Draught",          qty: "x10", cost: 6, icon: "shop_elixir_phantom.png", shelf: "ELIXIRS" },
-    { name: "Elixir of Endless Casting", qty: "x10", cost: 6, icon: "shop_elixir_casting.png", shelf: "ELIXIRS" },
-    { name: "Titan's Draught",          qty: "x10", cost: 6, icon: "shop_elixir_titan.png", shelf: "ELIXIRS" }
+    //
+    // `fx` is the hover tooltip's text. In game the plugin READS it off the potion's own
+    // record (Shop::DescribeEffects), so it cannot disagree with what drinking one does —
+    // there is no such record here, so these lines are transcribed from Part H of
+    // docs/CREATION_KIT_ESP.md and are a preview of the layout, not a source of truth.
+    // The game also supplies the effect names in the player's language; these are English.
+    { name: "Restorative: Vigor",       qty: "x10", cost: 3, icon: "shop_potion_vigor.png", shelf: "RESTORATIVES",
+      fx: "Restore Stamina 10000" },
+    { name: "Restorative: Focus",       qty: "x10", cost: 3, icon: "shop_potion_focus.png", shelf: "RESTORATIVES",
+      fx: "Restore Magicka 10000" },
+    { name: "Restorative: Vitality",    qty: "x10", cost: 3, icon: "shop_potion_vitality.png", shelf: "RESTORATIVES",
+      fx: "Restore Health 10000" },
+    { name: "Panacea",                  qty: "x10", cost: 3, icon: "shop_potion_panacea.png", shelf: "RESTORATIVES",
+      fx: "Cure Disease\nCure Poison" },
+    { name: "Elixir of the System",     qty: "x10", cost: 6, icon: "shop_elixir_system.png", shelf: "ELIXIRS",
+      fx: "Fortify Health 500  (60 min)\nFortify Magicka 500  (60 min)\nFortify Stamina 500  (60 min)" },
+    { name: "Draught of the Ascended",  qty: "x10", cost: 6, icon: "shop_elixir_ascended.png", shelf: "ELIXIRS",
+      fx: "Fortify One-Handed 500  (60 min)\nFortify Two-Handed 500  (60 min)\nFortify Marksman 500  (60 min)\nFortify Destruction 500  (60 min)" },
+    { name: "Aegis Elixir",             qty: "x10", cost: 6, icon: "shop_elixir_aegis.png", shelf: "ELIXIRS",
+      fx: "Resist Magic 85  (60 min)\nResist Fire 85  (60 min)\nResist Frost 85  (60 min)\nResist Shock 85  (60 min)" },
+    { name: "Phantom Draught",          qty: "x10", cost: 6, icon: "shop_elixir_phantom.png", shelf: "ELIXIRS",
+      fx: "Invisibility  (60 min)\nMuffle  (60 min)\nFortify Sneak 500  (60 min)" },
+    { name: "Elixir of Endless Casting", qty: "x10", cost: 6, icon: "shop_elixir_casting.png", shelf: "ELIXIRS",
+      fx: "Fortify Magicka Regen 1000  (60 min)\nFortify Magicka 1000  (60 min)" },
+    { name: "Titan's Draught",          qty: "x10", cost: 6, icon: "shop_elixir_titan.png", shelf: "ELIXIRS",
+      fx: "Fortify Carry Weight 2000  (60 min)\nFortify Stamina 500  (60 min)\nWaterbreathing  (60 min)" }
   ];
 
   var SHOP_SHELVES = ["MATERIALS", "WEALTH", "RESTORATIVES", "ELIXIRS"];

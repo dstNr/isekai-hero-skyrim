@@ -32,8 +32,13 @@ namespace Isekai::Config {
         bool          g_threatLabels = true;
         ThreatTargets g_threatTargets = ThreatTargets::kAggro;
         bool          g_threatNumbers = true;
-        bool          g_threatResources = false;
+        // On: the two pools share one thin strip under the health bar, so they cost the
+        // frame five pixels rather than the two extra rows that kept this off before.
+        bool          g_threatResources = true;
         std::uint32_t g_threatRange = 4000;
+        // Percent of screen height. Was a hardcoded 8 and measured against the head alone,
+        // which is why only aiming at an enemy's face produced a reading.
+        std::uint32_t g_threatAimRadius = 15;
         float         g_vrThreatHeight = 0.15f;
         std::uint32_t g_threatKey = 0x44;  // DIK_F10
         std::uint32_t g_questFirstTaskHours = 12;
@@ -42,6 +47,9 @@ namespace Isekai::Config {
         // 0 = off. Off by default: the self-test is a diagnostic for bug reports, not a
         // feature, and a stray key that pops a notification would just be noise.
         std::uint32_t g_selfTestKey = 0;
+        // 0 = off, for the same reason: handing out points is a testing aid, and a stray
+        // key that quietly makes the game easier is worse than one that does nothing.
+        std::uint32_t g_debugPointsKey = 0;
         bool          g_logInputDiag = false;
 
         [[nodiscard]] std::string Trim(std::string a_s) {
@@ -191,8 +199,9 @@ namespace Isekai::Config {
         g_threatLabels = true;
         g_threatTargets = ThreatTargets::kAggro;
         g_threatNumbers = true;
-        g_threatResources = false;
+        g_threatResources = true;
         g_threatRange = 4000;
+        g_threatAimRadius = 15;
         g_vrThreatHeight = 0.15f;
         g_threatKey = 0x44;
         g_questFirstTaskHours = 12;
@@ -276,6 +285,15 @@ namespace Isekai::Config {
                         static_cast<std::uint32_t>(std::stoul(val, nullptr, 0)), 500u, 20000u);
                 } catch (...) {
                 }
+            } else if (key == "threatlabelaimradius") {
+                // Clamped: 0 would mean "only a pixel-perfect hit counts" (the feature off
+                // through the back door), and past half the screen height everything in
+                // front of you is "aimed at".
+                try {
+                    g_threatAimRadius = std::clamp(
+                        static_cast<std::uint32_t>(std::stoul(val, nullptr, 0)), 2u, 50u);
+                } catch (...) {
+                }
             } else if (key == "vrthreatlabelheight") {
                 // Metres, clamped: this is a physical size in the world, and a 0 would
                 // make every billboard degenerate while a large value would put a
@@ -292,6 +310,8 @@ namespace Isekai::Config {
                 g_questRerollButton = AsBool(val);
             } else if (key == "selftestkey") {
                 g_selfTestKey = AsScanCode(val, g_selfTestKey);
+            } else if (key == "debugpointskey") {
+                g_debugPointsKey = AsScanCode(val, g_debugPointsKey);
             } else if (key == "loginputdiagnostics") {
                 g_logInputDiag = AsBool(val);
             }
@@ -310,9 +330,10 @@ namespace Isekai::Config {
                      "HideSealedNodes={}, SystemMenuKey={}, SystemMenuModifier={}, "
                      "VRMenuButton={}, GamepadMenuButton={}, GamepadMenuModifier={}, "
                      "DormantHeroLevel={}, DormantAscendedLevel={}, StorageCodex={}, "
-                     "SkyrimNetIntegration={}, ThreatLabels={} (targets={}, range={}, key={}), "
+                     "SkyrimNetIntegration={}, ThreatLabels={} (targets={}, range={}, aim={}%, "
+                     "key={}), "
                      "FirstTaskHours={}, TaskIntervalHours={}, QuestRerollButton={}, "
-                     "SelfTestKey={}, LogInputDiagnostics={}",
+                     "SelfTestKey={}, DebugPointsKey={}, LogInputDiagnostics={}",
                      g_language, g_autoStart, g_textSpeed,
                      g_hideSealedNodes, KeyName(g_systemMenuKey), KeyName(g_systemMenuModifier),
                      KeyName(g_vrMenuButton), GamepadButtonName(g_padMenuButton),
@@ -323,9 +344,9 @@ namespace Isekai::Config {
                      : g_threatTargets == ThreatTargets::kCrosshair ? "crosshair"
                      : g_threatTargets == ThreatTargets::kHostile   ? "hostile"
                                                                     : "aggro",
-                     g_threatRange, KeyName(g_threatKey), g_questFirstTaskHours,
+                     g_threatRange, g_threatAimRadius, KeyName(g_threatKey), g_questFirstTaskHours,
                      g_questIntervalHours, g_questRerollButton, KeyName(g_selfTestKey),
-                     g_logInputDiag);
+                     KeyName(g_debugPointsKey), g_logInputDiag);
     }
 
     std::string KeyName(std::uint32_t a_scanCode) {
@@ -440,6 +461,10 @@ namespace Isekai::Config {
         return g_vrThreatHeight;
     }
 
+    std::uint32_t ThreatLabelAimRadius() {
+        return g_threatAimRadius;
+    }
+
     std::uint32_t ThreatLabelRange() {
         return g_threatRange;
     }
@@ -458,6 +483,10 @@ namespace Isekai::Config {
 
     std::uint32_t SelfTestKey() {
         return g_selfTestKey;
+    }
+
+    std::uint32_t DebugPointsKey() {
+        return g_debugPointsKey;
     }
 
     bool LogInputDiagnostics() {

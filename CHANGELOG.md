@@ -6,20 +6,30 @@ All notable changes to Isekai Hero are documented here. The format follows
 
 ## [Unreleased]
 
-### Fixed
-- **The storage codex finally does something** (#6, #11). It is used from inside the
-  Inventory menu — that is where a potion is always drunk — and the old handler acted
-  right there: it called `Open()` straight out of the event, on the event thread, with the
-  inventory still on screen. A container menu cannot open over an inventory menu, so the
-  whole sequence ran, logged nothing and produced no visible result. It now marks itself
-  pending and opens on the next menu close, on the main thread.
-  - It opens the **System menu** rather than the chest. The storage is one button inside
-    it, so this is strictly more than it did before — and it is the only way in that needs
-    no key at all, which is what Skyrim VR and anyone with a colliding hotkey need (#11).
-  - Still `StorageCodex = 0` by default, but for a different reason: no longer "it does
-    nothing", now "it has not been tested in a running game yet".
+## [0.8.0] — 2026-08-16
+
+The release where the mod stopped assuming its player sits at a keyboard, reads English,
+and looks at a flat screen. It also stopped guessing at what it sells: a potion card now
+reads its effects off the potion.
+
+Co-save format **v14** (the REBOOT snapshot). Older saves load untouched; a save written by
+this version cannot be read by 0.7.x.
 
 ### Added
+- **Translations** (#4). Every player-visible string — 335 of them — goes through `L()` /
+  `LF()`, with the English text staying in the source as the fallback. Drop a
+  `lang/<code>.txt` next to the plugin and set `Language`; anything a translation does not
+  cover falls back rather than showing a key.
+  - `tools/extract-strings.mjs` harvests the template from the data tables and the web
+    view, and **rejects a key it cannot see at build time** — a key built at runtime
+    (`L(x ? "a" : "b")`) is invisible to the extractor and would be a string that can never
+    be translated. It found one the day it was written.
+  - Keys come from an identifier the tables already have (a milestone key, a node key) or
+    from a written-out `key` field, never from a slug of the English name. A slug is a rule
+    implemented twice — here and in the extractor — and the day the two disagree the
+    translation silently dies.
+  - **The PrismaUI view translates itself.** The whole table is pushed into the page as
+    JSON when the DOM is ready, and its own chrome is HTML, so it needs no round trip.
 - **Controller support for the interface** (#2). Hold **LB** and tap **Back** to open the
   System menu; inside a panel the **left stick** moves the cursor, **A** clicks and **B**
   closes. Both bindings are in the ini (`GamepadMenuButton` / `GamepadMenuModifier`, by
@@ -40,6 +50,107 @@ All notable changes to Isekai Hero are documented here. The format follows
     buttons into the page and the page moves DOM **focus** — D-pad steps through targets,
     A activates, B closes. A page has elements to focus; an ImGui canvas does not. Each
     renderer gets whichever is the cheap answer for it.
+- **An interface inside the headset** (#7, #11), through **ImGuiVRHelper** — threat labels
+  as world-anchored billboards over the actors they belong to, toasts on the HUD layer, and
+  a **B + Y controller chord** that opens the System menu without a keyboard. Untested
+  against a real headset; there is none here.
+  - `VRThreatLabelHeight` sets how tall a billboard stands in the world, in metres. The
+    chord is rebindable through `SKSE\Plugins\IsekaiHero\vrbindings.json`.
+  - Two helper clients rather than one: the labels are world quads, the toasts are HUD, and
+    the helper treats those as different kinds of client.
+- **The shop says what a potion does.** Hovering a card shows its effect list — and the
+  list is **read off the form at runtime**, not written into the catalog beside the name.
+  Spelling the effects out a second time is a promise the ESP is free to break, which is
+  exactly what #24 turned out to be. The effect names arrive already translated by the game.
+- **Magicka and stamina on the threat frame** (#25), sharing one thin strip under the health
+  bar — magicka blue on the left, stamina green on the right. A full row each made the frame
+  half again as tall over every caster, which is what kept this off before; sharing a row
+  costs five pixels, so it is on by default now.
+- **`IsekaiPoints [n]`**, a console command that grants System Points (default 100,
+  negative takes them away). Points come from milestones and nowhere else, so testing the
+  skill tree or the shop otherwise meant playing up to whatever was being tested. There is
+  no slot to add a console command to in Skyrim, so it takes over an unused developer one;
+  the log names which.
+  - `DebugPointsKey` in the ini does the same on a key, for the one case the console cannot
+    cover: it will not open while one of our own panels owns the screen.
+- **`ThreatLabelAimRadius`**, how far off the crosshair an actor may be and still be read.
+- **Pictures in the FOMOD**, and the installer now asks its questions separately.
+
+### Changed
+- **The aim test measures the whole actor, not its head.** The label hangs over the head, so
+  that is what the crosshair was compared against — and at conversational range a person's
+  chest is hundreds of pixels below their skull. Aiming at someone's face produced a
+  reading and aiming at *them* did not. It now measures against the segment from their feet
+  to their head, and the radius above is the sideways tolerance it was always meant to be.
+- **The threat frame's level badge is a diamond**, not a disc. Everything else the System
+  draws is angular — the plate's own lean, the panels' corner brackets — and the circle was
+  the one round thing among it.
+- **The installer asks two independent questions** where it used to offer one list of named
+  presets. "Alternate start" and "Quiet HUD" were mutually exclusive options in the same
+  radio group despite having nothing to do with each other. A FOMOD cannot edit a file, only
+  choose one, so the options raise flags and the settings file is picked from the pair.
+  - **The "Modlist testing" preset is gone.** Its settings are all one ini line away, and it
+    was the one preset that was not about how you want to play.
+- **The two restorative potion icons swapped**, so the red bottle is the one that restores
+  health (see #24 below).
+
+### Fixed
+- **The Vigor and Vitality restoratives were the wrong way round** (#24), reported on Nexus.
+  Vitality restores health and Vigor restores stamina, which is also what the mod's own
+  passive names have always said. The two records swapped their magic effect rather than
+  their names, so editor IDs, FormIDs and the shop's catalog are untouched. Which effect is
+  which was read out of `Skyrim.esm` rather than taken from the documentation — the
+  documentation is where the mistake came from.
+- **The storage codex finally does something** (#6, #11). It is used from inside the
+  Inventory menu — that is where a potion is always drunk — and the old handler acted
+  right there: it called `Open()` straight out of the event, on the event thread, with the
+  inventory still on screen. A container menu cannot open over an inventory menu, so the
+  whole sequence ran, logged nothing and produced no visible result. It now marks itself
+  pending and opens on the next menu close, on the main thread.
+  - It opens the **System menu** rather than the chest. The storage is one button inside
+    it, so this is strictly more than it did before — and it is the only way in that needs
+    no key at all, which is what Skyrim VR and anyone with a colliding hotkey need (#11).
+  - Still `StorageCodex = 0` by default, but for a different reason: no longer "it does
+    nothing", now "it has not been tested in a running game yet".
+
+- **Crafting materials turned up in the inventory and never left.** Recipes that gate on a
+  carried material need one real item in the inventory to become visible, so the plugin
+  lends one of each and takes it back when the menu closes. The return list was cleared
+  unconditionally — including when there was no chest to return anything to — and a
+  forgotten entry is stranded for good, because nothing else in the game knows the item was
+  ever on loan. Each station visit lost a few more; one session went from 275 lent tokens
+  down to 34, with the difference sitting in the player's pockets. The return is now
+  verified by reading the inventory back, and whatever did not move stays on the books.
+- **The skill tree closed itself when a mastery node hit Grandmaster** (PrismaUI only). The
+  celebration took the view over as if it were a screen of its own, the tree re-push put the
+  tree back but not the screen id, and the celebration's own timer then hid the tree the
+  player was still using. It is an overlay now, and plays over whatever is on screen.
+- **"GRANDMASTER" hung out of its row** in the mastery rail. The tier tag could not shrink
+  and could not wrap; it wraps now, which is also the only answer that survives translation
+  — every language spells the five tiers a different length.
+- **The renderer struct is no longer read under VR**, which is what crashed Skyrim VR on
+  startup: `BSGraphics::Renderer`'s layout is flat-screen only. The swap chain is found by
+  creating a throwaway one on a hidden window instead.
+- **The storage codex finally does something** (#6, #11). It is used from inside the
+  Inventory menu — that is where a potion is always drunk — and the old handler acted
+  right there: it called `Open()` straight out of the event, on the event thread, with the
+  inventory still on screen. A container menu cannot open over an inventory menu, so the
+  whole sequence ran, logged nothing and produced no visible result. It now marks itself
+  pending and opens on the next menu close, on the main thread.
+  - It opens the **System menu** rather than the chest. The storage is one button inside
+    it, so this is strictly more than it did before — and it is the only way in that needs
+    no key at all, which is what Skyrim VR and anyone with a colliding hotkey need (#11).
+  - Still `StorageCodex = 0` by default, but for a different reason: no longer "it does
+    nothing", now "it has not been tested in a running game yet".
+  - Its item is no longer called "Dimensional Storage" (#5), which is the container's own
+    name and made it read as a stray copy of the chest rather than the key to it.
+
+### Security
+- **The release archive is checked for the author's real name in full.** The check used to
+  look at the DLL only, which is how 0.5.0 shipped a 130 MB `.pdb` with the name in
+  thousands of records: the scrub ran, reported clean, and never looked at the file next to
+  it. It now walks every staged file before packing, so it cannot be outgrown by adding
+  something to the archive.
 
 ## [0.7.1] — 2026-08-07
 
@@ -598,6 +709,8 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[0.8.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.8.0
+[0.7.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.7.1
 [0.7.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.7.0
 [0.6.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.6.1
 [0.6.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.6.0

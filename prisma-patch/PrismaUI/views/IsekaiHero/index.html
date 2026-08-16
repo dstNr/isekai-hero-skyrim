@@ -187,7 +187,11 @@
   .mBody { min-width: 0; flex: 1; }
   .mName { font-size: 11px; color: var(--text); letter-spacing: 0.04em;
            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mMeta { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+  /* Wraps, so a tier tag that does not fit beside the pips drops to its own line
+     instead of running out through the row's border — which is what "GRANDMASTER",
+     the longest of the five, did. Pixel-fitting the tag was never an option: the
+     labels are translated, and every language spells the tiers a different length. */
+  .mMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 3px; }
   /* Ten pips, one per rank, grouped visually into the five tiers by the gap. Sized so
      the whole row (icon + name + pips + tier tag) fits the rail without the tag being
      clipped — it read as "2 S" instead of "2 SP" when the pips were wider. */
@@ -309,16 +313,18 @@
   .rank.tier5 { border-color: #fff; color: #fff; background: linear-gradient(180deg, #3a2f10, #1a1508);
                 box-shadow: 0 0 20px rgba(255,225,140,0.75); }
 
-  /* Floating tooltip card next to the hovered node. */
-  #tip { position: absolute; width: 300px; padding: 14px 16px; pointer-events: none; opacity: 0;
+  /* Floating tooltip card next to whatever is hovered. A CLASS, not an id: the skill
+     tree and the shop both want one, and two copies of these rules would drift. Each
+     screen owns an instance, because each positions inside its own box. */
+  .tip { position: absolute; width: 300px; padding: 14px 16px; pointer-events: none; opacity: 0;
          transform: translateY(6px); transition: opacity 0.18s var(--ease), transform 0.18s var(--ease);
          background: linear-gradient(180deg, rgba(11,22,38,0.97), rgba(7,15,27,0.97));
          border: 1px solid rgba(90,210,255,0.35); border-radius: 10px; z-index: 20;
          box-shadow: 0 18px 44px rgba(0,0,0,0.65), 0 0 24px rgba(26,110,160,0.3); }
-  #tip.show { opacity: 1; transform: translateY(0); }
-  #tipName { color: var(--accent); font-size: 15px; font-weight: 700; letter-spacing: 0.06em; }
-  #tipDesc { color: var(--text); font-size: 13px; line-height: 1.5; margin-top: 7px; white-space: pre-line; opacity: 0.9; }
-  #tipStatus { font-size: 12px; margin-top: 11px; letter-spacing: 0.12em; font-weight: 600; text-transform: uppercase; }
+  .tip.show { opacity: 1; transform: translateY(0); }
+  .tipName { color: var(--accent); font-size: 15px; font-weight: 700; letter-spacing: 0.06em; }
+  .tipDesc { color: var(--text); font-size: 13px; line-height: 1.5; margin-top: 7px; white-space: pre-line; opacity: 0.9; }
+  .tipStatus { font-size: 12px; margin-top: 11px; letter-spacing: 0.12em; font-weight: 600; text-transform: uppercase; }
 
   #tFoot { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
   #tHint { color: var(--dim); font-size: 12px; letter-spacing: 0.16em; opacity: 0.7; }
@@ -382,7 +388,10 @@
               background: var(--icon-plate); border-radius: 4px; padding: 4px; }
   .cName { font-size: 13px; color: var(--text); letter-spacing: 0.06em; text-align: center; }
   .cQty  { font-size: 11px; color: var(--dim); letter-spacing: 0.16em; }
-  .cCost { font-size: 17px; color: var(--accent); letter-spacing: 0.04em; margin-top: 2px; }
+  /* What the item does lives in the hover tooltip, not on the card — see renderShop().
+     margin-top: auto on .cCost below is what keeps the price and the Buy button on the
+     card's bottom edge, so they line up across a row whatever the names above them do. */
+  .cCost { font-size: 17px; color: var(--accent); letter-spacing: 0.04em; margin-top: auto; }
   .cCost span { font-size: 10px; color: var(--dim); letter-spacing: 0.2em; margin-left: 4px; }
   .card .btn { width: 100%; padding: 9px 0; font-size: 12px; }
 
@@ -669,7 +678,7 @@
         </div>
         <div id="zones"></div>
         <svg id="lines"></svg>
-        <div id="tip"><div id="tipName"></div><div id="tipDesc"></div><div id="tipStatus"></div></div>
+        <div id="tip" class="tip"><div class="tipName"></div><div class="tipDesc"></div><div class="tipStatus"></div></div>
       </div>
       <div id="tFoot">
         <div id="tHint" class="mono" data-loc="view.tree.hint">Click a glowing node to unlock · ESC to close</div>
@@ -776,6 +785,7 @@
         <div id="shHint" class="mono" data-loc="view.shop.hint">Delivered into your Dimensional Storage · ESC to close</div>
         <button id="shClose" class="btn mono" onclick="shopClose()" data-loc="view.close">Close</button>
       </div>
+      <div id="shTip" class="tip"><div class="tipName"></div><div class="tipDesc"></div><div class="tipStatus"></div></div>
     </div>
   </div>
 
@@ -867,8 +877,13 @@ window.isekaiLoc = (table) => {
    static labels still have to end up in their own dataset so a later push works. */
 document.addEventListener("DOMContentLoaded", applyLoc);
 
+/* The flourish is deliberately NOT in this list: it is decoration that plays OVER
+   whatever screen is up (it has no backdrop and no pointer events), not a screen of its
+   own. Listing it here made buying the last rank of a mastery node swap the skill tree
+   out for the celebration, and the tree re-push right after swap it back — the flicker
+   the player saw before the view then hid itself entirely. */
 function showScreen(name) {
-  ["tree", "panel", "flourish", "status", "shop"].forEach(s => $("screen-" + s).classList.toggle("active", s === name));
+  ["tree", "panel", "status", "shop"].forEach(s => $("screen-" + s).classList.toggle("active", s === name));
   padReset();
 }
 
@@ -1094,24 +1109,31 @@ function statusOf(n) {
 
 let hoverKey = 0;
 
-function showTip(n, el) {
-  if (!n || !el) return;
-  hoverKey = n.key;
-  const tip = $("tip");
-  $("tipName").textContent = n.name;
-  $("tipDesc").textContent = n.desc;
-  const s = statusOf(n);
-  $("tipStatus").textContent = s.t;
-  $("tipStatus").style.color = s.c;
-  // Position from the element's actual box (works for graph nodes AND rail nodes,
-  // whose positions come from flex layout, not inline left/top). Flip before it runs
-  // off the right edge.
-  const canvas = $("canvas"), cr = canvas.getBoundingClientRect(), er = el.getBoundingClientRect();
-  const cx = er.left - cr.left + er.width / 2, cy = er.top - cr.top + er.height / 2;
-  const flip = cx > canvas.clientWidth - 330;
+/* Fill and place a tooltip beside `el`, inside `host`. Shared by the skill tree and the
+   shop: both want the same card in the same style, and the positioning — measure the
+   element's real box, flip before running off the right edge — is the fiddly part that
+   should exist once. Position from the actual box rather than from stored coordinates,
+   because rail rows and shop cards are laid out by flex/grid, not by inline left/top. */
+function placeTip(tip, host, el, name, desc, status, color) {
+  tip.querySelector(".tipName").textContent = name;
+  tip.querySelector(".tipDesc").textContent = desc;
+  const st = tip.querySelector(".tipStatus");
+  st.textContent = status;
+  st.style.color = color;
+
+  const hr = host.getBoundingClientRect(), er = el.getBoundingClientRect();
+  const cx = er.left - hr.left + er.width / 2, cy = er.top - hr.top + er.height / 2;
+  const flip = cx > host.clientWidth - 330;
   tip.style.left = (flip ? cx - 316 - 26 : cx + 42) + "px";
   tip.style.top = Math.max(4, cy - 40) + "px";
   tip.classList.add("show");
+}
+
+function showTip(n, el) {
+  if (!n || !el) return;
+  hoverKey = n.key;
+  const s = statusOf(n);
+  placeTip($("tip"), $("canvas"), el, n.name, n.desc, s.t, s.c);
 }
 function hideTip() { hoverKey = 0; $("tip").classList.remove("show"); }
 
@@ -1624,6 +1646,9 @@ function shopBuy(i) { callBack("isekaiShopBuy", String(i)); }
    per shelf would buy whatever happens to sit at that offset in the whole list. */
 function renderShop() {
   $("shPoints").textContent = SHOP.points;
+  // The cards below are rebuilt, so the card the tooltip belongs to is about to stop
+  // existing. Without this it stays on screen pointing at nothing after a purchase.
+  $("shTip").classList.remove("show");
 
   const shelves = SHOP.shelves && SHOP.shelves.length ? SHOP.shelves : [];
   SHELF = Math.max(0, Math.min(SHELF, shelves.length - 1));
@@ -1682,6 +1707,7 @@ function renderShop() {
       card.appendChild(q);
     }
 
+
     const cost = document.createElement("div");
     cost.className = "cCost mono";
     cost.innerHTML = it.cost + "<span>" + esc(tr("view.sp", "SP")) + "</span>";
@@ -1692,6 +1718,20 @@ function renderShop() {
     btn.textContent = afford ? tr("view.buy", "Buy") : tr("view.locked", "Locked");
     if (afford) btn.addEventListener("click", () => shopBuy(i));
     card.appendChild(btn);
+
+    /* What you are actually buying, on hover — the same tooltip the skill tree uses.
+       On the card itself it would have been four extra lines on every elixir, and the
+       cards are already the densest thing in the view. `it.fx` comes from the plugin,
+       which reads the effects off the potion's own record.
+
+       padMove() fires a synthetic mouseenter, so this reaches a controller too. */
+    const fx = it.fx || tr("view.shop.noEffects", "No magical effect — goods, not a potion.");
+    card.addEventListener("mouseenter", () =>
+      placeTip($("shTip"), $("shopCard"), card, it.name, fx,
+               afford ? trf("view.shop.tipCost", "{} SP · {}", it.cost, it.qty)
+                      : tr("view.shop.tipCant", "Not enough System Points"),
+               afford ? "var(--accent)" : "var(--danger)"));
+    card.addEventListener("mouseleave", () => $("shTip").classList.remove("show"));
 
     grid.appendChild(card);
   });
@@ -1744,14 +1784,20 @@ function setFlourishTitle(a_text) {
   });
 }
 
+/* Owns its own lifetime, because it is an overlay rather than a screen: nothing else
+   turns it off. The timing matches the CSS timeline above (done by ~2.2s). */
+let flourishTimer = 0;
+
 window.isekaiFlourish = (data) => {
   let d = {}; try { d = (typeof data === "string") ? JSON.parse(data) : data; } catch (e) {}
   setFlourishTitle(d.title || "");
   $("fSub").textContent = d.subtitle || "";
   buildBurst();
-  showScreen("flourish");
   const el = $("screen-flourish");
+  el.classList.add("active");
   el.classList.remove("play"); void el.offsetWidth; el.classList.add("play");
+  clearTimeout(flourishTimer);
+  flourishTimer = setTimeout(() => el.classList.remove("active", "play"), 2400);
 };
 
 /* ---------------- shared ---------------- */

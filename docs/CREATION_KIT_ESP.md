@@ -334,10 +334,19 @@ one-hour elixir just to top up health would burn its buff.
 
 | Editor ID | Name | Value | Effects (magnitude / duration) |
 |---|---|---|---|
-| `IsekaiPotionVigor` | System Restorative: Vigor | `250` | Restore Health `10000` / `0` |
+| `IsekaiPotionVigor` | System Restorative: Vigor | `250` | Restore Stamina `10000` / `0` |
 | `IsekaiPotionFocus` | System Restorative: Focus | `250` | Restore Magicka `10000` / `0` |
-| `IsekaiPotionVitality` | System Restorative: Vitality | `250` | Restore Stamina `10000` / `0` |
+| `IsekaiPotionVitality` | System Restorative: Vitality | `250` | Restore Health `10000` / `0` |
 | `IsekaiPotionPanacea` | Panacea | `150` | Cure Disease `0` / `0` **+** Cure Poison `0` / `0` |
+
+> ⚠️ **Vigor is Stamina and Vitality is Health**, not the other way round. An earlier
+> version of this table had them swapped, and the mod then disagreed with itself: the
+> passive granted for Health is called `System: Vitality` while the shop sold
+> `Restorative: Vigor` for the same stat (#24). **If your plugin already carries the old
+> pairing, open the two records and swap only the magic EFFECT** — `IsekaiPotionVigor`
+> takes Restore Stamina, `IsekaiPotionVitality` takes Restore Health. Leave the editor
+> IDs, the names and the FormIDs alone: the code keys off the FormID and the shop card
+> reads the effect off the record, so that one field per potion is the whole fix.
 
 > Cure Disease and Cure Poison ignore magnitude — they either fire or they don't.
 > **Panacea cannot cure Lycanthropy or established Vampirism**; both are quest-locked in

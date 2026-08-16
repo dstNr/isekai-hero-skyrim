@@ -187,6 +187,9 @@ namespace Isekai::UI::Prisma {
                 }
                 j += "{\"name\":\"" + Esc(items[i].name.c_str()) + "\",";
                 j += "\"qty\":\"" + Esc(items[i].qty.c_str()) + "\",";
+                // One effect per line; Esc turns the newlines into \n and the card renders
+                // them with white-space: pre-line.
+                j += "\"fx\":\"" + Esc(items[i].effects.c_str()) + "\",";
                 j += "\"cost\":" + std::to_string(items[i].cost) + ",";
                 j += "\"shelf\":\"" + Esc(items[i].shelf.c_str()) + "\",";
                 j += "\"icon\":\"" + Esc(IconFile(items[i].icon).c_str()) + "\"}";
@@ -496,8 +499,22 @@ namespace Isekai::UI::Prisma {
         }
         std::string json = "{\"title\":\"" + Esc(a_title.c_str()) + "\",\"subtitle\":\"" +
                            Esc(a_subtitle.c_str()) + "\"}";
-        g_screen.store(kFlourish, std::memory_order_release);
         Invoke("window.isekaiFlourish(" + json + ")");
+
+        // A flourish is decoration, not a screen. When a real one already owns the view
+        // it plays over it and must touch neither the screen id nor the visibility —
+        // the view is on screen already, and the overlay times itself out.
+        //
+        // Claiming both is what broke buying the last rank of a mastery node: the
+        // Grandmaster flourish set kFlourish while the tree was open, the tree re-push
+        // that follows the purchase put the tree back but not the screen id, and the
+        // flourish's own timer below then found kFlourish still set and hid the tree the
+        // player was still using. Close, reopen, close.
+        if (IsBusy()) {
+            return;
+        }
+
+        g_screen.store(kFlourish, std::memory_order_release);
         g_api->Show(g_view);  // no Focus: purely visual, plays over gameplay
 
         // Auto-hide, but only if a real screen (tree/panel) hasn't taken the view over

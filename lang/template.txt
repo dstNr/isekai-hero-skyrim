@@ -40,6 +40,9 @@ view.shelfEmpty = Nothing on this shelf yet.
 view.shop = Shop
 view.shop.eyebrow = System · Shop
 view.shop.hint = Delivered into your Dimensional Storage · ESC to close
+view.shop.noEffects = No magical effect — goods, not a potion.
+view.shop.tipCant = Not enough System Points
+view.shop.tipCost = {} SP · {}
 view.shop.title = Exchange
 view.skillTree = Skill Tree
 view.sp = SP
@@ -241,6 +244,7 @@ shop.titansDraught.qty = x10
 
 ; --- src/Shop.cpp ---
 shop.delivered = [ SYSTEM ] {} {} -> Dimensional Storage
+shop.effectMinutes =   ({} min)
 shop.notEnoughPoints = [ SYSTEM ] Not enough System Points.
 shop.storageNotReady = [ SYSTEM ] The Dimensional Storage is not ready yet.
 
@@ -326,6 +330,7 @@ button.shattered = SHATTERED
 custom.gift = CUSTOM — 1 of 3: STARTING GIFT\n\nThe flat head start handed over at birth — skills, level,\ngold and seed points.\n\n  NORMAL    Nothing. Begin as any mortal.\n  HERO      A hero's start.\n  ASCENDED  A transcendent's fortune.
 custom.pace = CUSTOM — 2 of 3: REWARD PACE\n\nHow fast the System keeps paying out — milestone\npassives, System Points, dragon souls, perk points.\n\n  NORMAL    x1. The honest grind.\n  HERO      x2.\n  ASCENDED  x4.
 custom.tree = CUSTOM — 3 of 3: SKILL TREE\n\nHow deep the tree opens. You still buy each node\nwith System Points, so a deep tree on a NORMAL\npace is access, not a free ride.\n\n  NORMAL    The self-made half.\n  HERO      + the Omniscience gifts.\n  ASCENDED  + the World Tree capstone.
+debug.pointsGranted = [ SYSTEM ] System Points: {}
 flourish.awakened = AWAKENED
 flourish.transcended = TRANSCENDED
 path.choose = The {} blessing resonates.\nHow will you receive it?\n\n  FULL       Awaken at once — skills, level and\n             fortune granted now.\n  SHATTERED  The System is fractured. Begin as any\n             mortal, but its rewards still flow faster\n             and its deepest gifts stay open to you.\n             Higher ceiling, same floor — earn it.\n\nChoose how you rise:
@@ -339,6 +344,7 @@ window.system = [ SYSTEM ]
 ; --- src/UI/ShopWindow.cpp ---
 shop.catalogEmpty = The catalog is empty.
 shop.footer = Delivered into your Dimensional Storage
+shop.noEffects = No magical effect — goods, not a potion.
 shop.price = {} SP
 shop.shelfEmpty = Nothing on this shelf yet.
 

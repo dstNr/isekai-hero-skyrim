@@ -5,7 +5,7 @@
 # -Version overrides the archive name only (nothing inside the mod carries it).
 # Use it for test builds — "0.6.1-soundfix" — so a released archive is never
 # overwritten by a work-in-progress one of the same name.
-param([string]$Version = "0.7.1")
+param([string]$Version = "0.8.0")
 
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
