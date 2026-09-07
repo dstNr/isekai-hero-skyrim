@@ -43,9 +43,21 @@ Copy-Item (Join-Path $root "build\IsekaiHeroSKSE.dll") $stagedDll
 # neutral token, so byte offsets are untouched and the PE stays valid (Windows does
 # not verify a DLL's PE checksum). Run on the STAGED copy only; the local build keeps
 # its real paths for the author's own debugging.
-$secret = "dstNr"       # exactly as it appears inside C:\Users\...
-$cover  = "isekai-hero-dev"       # MUST match $secret's length (15) — byte-for-byte
-if ($secret.Length -ne $cover.Length) { throw "Name scrub tokens must be equal length." }
+# The name to scrub is derived from the machine at run time and never written down
+# here. This file lives in git: hardcoding the string would publish exactly what the
+# whole exercise exists to keep out of the world, and it would only work on one
+# machine. ISEKAIHERO_SCRUB_NAME overrides it where the user folder is not the name
+# (a build server, a renamed profile).
+$secret = if ($env:ISEKAIHERO_SCRUB_NAME) {
+    $env:ISEKAIHERO_SCRUB_NAME
+} else {
+    Split-Path $env:USERPROFILE -Leaf
+}
+if ([string]::IsNullOrWhiteSpace($secret) -or $secret.Length -lt 4) {
+    throw "Privacy: cannot determine the name to scrub. Set ISEKAIHERO_SCRUB_NAME."
+}
+# Equal length, byte for byte, so offsets and the PE stay valid whatever the name is.
+$cover = ("isekai-hero-" + ("x" * 128)).Substring(0, $secret.Length)
 $bytes = [System.IO.File]::ReadAllBytes($stagedDll)
 $find  = [System.Text.Encoding]::ASCII.GetBytes($secret)
 $repl  = [System.Text.Encoding]::ASCII.GetBytes($cover)
