@@ -179,7 +179,41 @@ intended real-world length: the current generation is **1.9098** long in its own
 a 0.70 m short sword is about 49 Skyrim units, so the factor is `49 / 1.9098` — roughly
 **25.6**.
 
-- [ ] **Step 6: Export the NIF**
+- [ ] **Step 6: Stage the source images so the texture paths come out right**
+
+**PyNifly writes each image's filesystem path into the NIF's texture slots.** Images that
+are still embedded in the imported GLB have no path, so the slots come out empty and the
+weapon renders untextured — with only a `WindowsPath('.') has an empty name` warning to say
+so.
+
+Save the maps to a folder whose path *contains* `textures\isekai\weapons\`, and PyNifly
+truncates at the `textures\` segment on its own:
+
+```python
+stage = r"<outside the repo>\stage\textures\isekai\weapons"
+os.makedirs(stage, exist_ok=True)
+for inp, fname in (("Base Color", "systemblade.png"),
+                   ("Normal", "systemblade_n.png"),
+                   ("Metallic", "systemblade_orm.png")):
+    img = <the image feeding that Principled input>
+    img.filepath_raw = os.path.join(stage, fname)
+    img.file_format = "PNG"
+    img.save()
+```
+
+Verified result in the NIF: `textures\isekai\weapons\systemblade.dds` and `..._n.dds`,
+written automatically. That removes the manual NifSkope step this plan used to carry.
+
+**Stage outside a user folder.** Whatever path the images sit at is what PyNifly writes, so
+staging under `C:\Users\<name>\...` would put the author's real name into a shipped mesh.
+Exporting from a work folder without the `textures\` segment produced an absolute
+`e:\_isekai_assets\...\systemblade_basecolor.dds` in the slots — harmless there, fatal
+under a home directory.
+
+Give the shape a meaningful name before exporting, too: the glTF import calls it `Mesh_0`,
+which says nothing in NifSkope. Vanilla uses the weapon's own name.
+
+- [ ] **Step 7: Export the NIF**
 
 ```python
 import bpy, logging, traceback
@@ -214,7 +248,7 @@ if self.intuit_defaults:                                    # export_nif.py
     self.target_game = self._discover_game(self.objects_to_export)
 ```
 
-- [ ] **Step 7: Verify the written file, not the success message**
+- [ ] **Step 8: Verify the written file, not the success message**
 
 PyNifly reports "Export successful" for files that are the wrong edition and the wrong
 size. Read the NIF back and check the numbers.
@@ -235,7 +269,7 @@ Expected: `game == "SKYRIMSE"`, longest extent about **49 units**, triangle coun
 what went in (10,159 for the current generation). The raw header carries the same answer — BS version **100** is Skyrim SE,
 **83** is Legacy Edition.
 
-- [ ] **Step 8: Commit the mesh**
+- [ ] **Step 9: Commit the mesh**
 
 ```bash
 git add meshes/isekai/weapons/systemblade.nif
@@ -281,7 +315,12 @@ Measured from those files, so the target is known rather than guessed:
 | iron dagger | Y | 35.38 u | −11.68 … +23.70 | 67 / 33 | 416 |
 
 Open the new blade beside `longsword.nif` and check that it runs along **+Y** with the
-pommel at negative Y and the origin inside the grip.
+pommel at negative Y.
+
+**The origin sits at the guard, not in the middle of the grip.** In both reference files the
+negative Y extent equals the hilt length exactly — the sword's hilt is 17% of 77.33 units
+and its minimum is −13.17; the dagger's is 33% of 35.38 and its minimum is −11.68. So the
+blade occupies the whole positive Y range and the hilt the whole negative one.
 
 If the axis is wrong, fix it in Blender and re-export — not in NifSkope, so the source
 stays the truth.
