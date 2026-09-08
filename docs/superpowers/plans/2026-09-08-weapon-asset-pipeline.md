@@ -432,7 +432,7 @@ Normal:  textures\isekai\weapons\systemblade_n.dds
 Only fall back to setting the `BSShaderTextureSet` slots by hand in NifSkope if that
 staging was skipped.
 
-- [ ] **Step 5: Write the guide**
+- [x] **Step 5: Write the guide** — `docs/WEAPON_ASSET_GUIDE.md`
 
 Create `docs/WEAPON_ASSET_GUIDE.md` recording what was actually done, with the real
 settings. Follow the tone of `docs/CREATION_KIT_ESP.md`: numbered steps, and a warning
