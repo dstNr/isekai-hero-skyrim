@@ -78,7 +78,7 @@ def box(name, dim, loc):
     bpy.ops.mesh.primitive_cube_add(size=1.0, location=loc)
     ob = bpy.context.active_object
     ob.name = name
-    ob.scale = (dim[0] / 2.0, dim[1] / 2.0, dim[2] / 2.0)
+    ob.scale = dim                      # size=1.0 -> verts at +-0.5, so scale == dimension
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     return ob
 
