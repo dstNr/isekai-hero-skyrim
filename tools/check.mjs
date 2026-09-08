@@ -1286,6 +1286,35 @@ check("api: the public header and the implementation agree on the version", () =
   return `V${offered.join(", V")}`;
 });
 
+check("api: every node key the public header publishes still exists", () => {
+  const hdr = read("include/IsekaiHeroAPI.h");
+  const tree = read("src/SkillTree.cpp");
+
+  // The header restates node keys so a consumer never has to read our source. That
+  // makes it a second copy of a fact, which in this repo always earns a check.
+  const published = [...hdr.matchAll(/inline constexpr uint32_t\s+k(\w+)\s*=\s*(\d+)/g)]
+    .map((m) => ({ name: m[1], key: Number(m[2]) }));
+  need(published.length > 0, "no node keys found in the public header");
+
+  const live = new Set(
+    [...tree.matchAll(/\{\s*(\d+),\s*Zone::k\w+,\s*"/g)].map((m) => Number(m[1]))
+  );
+  need(live.size > 0, "no node table found in SkillTree.cpp");
+
+  const gone = published.filter((p) => !live.has(p.key));
+  need(
+    gone.length === 0,
+    `the header publishes ${gone.map((g) => `k${g.name}=${g.key}`).join(", ")}, ` +
+      "which no longer exist in SkillTree.cpp. A published key is a promise - retire " +
+      "the node in the header with a comment rather than deleting the constant."
+  );
+
+  const dupes = published.filter((p, i) => published.findIndex((q) => q.key === p.key) !== i);
+  need(dupes.length === 0, `duplicate key values in the header: ${dupes.map((d) => d.key).join(", ")}`);
+
+  return `${published.length} keys published, all live`;
+});
+
 /* -- report ---------------------------------------------------------------- */
 
 const pad = Math.max(...results.map((r) => r.name.length));
