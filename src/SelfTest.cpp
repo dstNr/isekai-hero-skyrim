@@ -1,5 +1,6 @@
 #include "SelfTest.h"
 
+#include "../include/IsekaiHeroAPI.h"
 #include "Config.h"
 #include "CraftHooks.h"
 #include "Passives.h"
@@ -457,6 +458,36 @@ namespace Isekai::SelfTest {
             Add(out, true, false, "dimensional storage",
                 Storage::Available() ? "available" : "unavailable (not reincarnated)");
         }
+
+        // The public API, asked the way a foreign plugin asks it. Deliberately goes
+        // through the real export and a real GetProcAddress rather than our internal
+        // pointer: if the export ever loses its undecorated name, nothing else in this
+        // project would notice, and every integration would break silently.
+        void CheckModApi(std::vector<Result>& out) {
+            auto* api = IsekaiHeroAPI::RequestInterface();
+
+            Add(out, api != nullptr, /*fatal=*/false, "mod API export",
+                api ? "RequestPluginAPI resolved, interface V1"
+                    : "RequestPluginAPI did NOT resolve — no other mod can talk to us");
+
+            if (!api) {
+                return;
+            }
+
+            Add(out, true, false, "mod API state",
+                std::string("active=") + (api->IsActive() ? "yes" : "no") +
+                    ", tier=" + api->GetTierName() +
+                    ", rank=" + std::to_string(static_cast<int>(api->GetRank())) +
+                    ", points=" + std::to_string(api->GetSystemPoints()));
+
+            // One key from each half of the tree, so the log shows both paths answering:
+            // System Core is one-shot, Beast of Burden is repeatable.
+            Add(out, true, false, "mod API node reads",
+                "SystemCore rank=" +
+                    std::to_string(api->GetNodeRank(IsekaiHeroAPI::Keys::kSystemCore)) +
+                    ", BeastOfBurden rank=" +
+                    std::to_string(api->GetNodeRank(IsekaiHeroAPI::Keys::kBeastOfBurden)));
+        }
     }
 
     void Run(bool a_notify) {
@@ -470,6 +501,7 @@ namespace Isekai::SelfTest {
         CheckShop(out);
         CheckUiIcons(out);
         CheckCrafting(out);
+        CheckModApi(out);
 
         std::size_t failed = 0;
         std::size_t fatal = 0;

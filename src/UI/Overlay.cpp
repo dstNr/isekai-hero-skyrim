@@ -1,5 +1,6 @@
 #include "UI/Overlay.h"
 
+#include "ModAPI.h"
 #include "Quests.h"
 #include "SkillTree.h"
 #include "UI/Input.h"
@@ -172,7 +173,12 @@ namespace Isekai::UI {
             }
             last = now;
             if (auto* task = SKSE::GetTaskInterface()) {
-                task->AddTask([]() { Quests::Tick(); });
+                task->AddTask([]() {
+                    Quests::Tick();
+                    // Same cadence, same thread, and the API's listeners want exactly
+                    // the state this tick may just have changed.
+                    ModAPI::PublishIfChanged();
+                });
             }
         }
 

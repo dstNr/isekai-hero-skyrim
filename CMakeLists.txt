@@ -47,6 +47,9 @@ add_commonlibsse_plugin(
         src/CraftHooks.cpp
         src/CraftHooks.h
         src/PrismaUI_API.h
+        src/ModAPI.cpp
+        src/ModAPI.h
+        include/IsekaiHeroAPI.h
         src/Logger.h
         src/PCH.h
         src/UI/Input.cpp

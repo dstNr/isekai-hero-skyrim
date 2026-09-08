@@ -3,6 +3,7 @@
 #include "Config.h"
 #include "Loc.h"
 #include "CraftHooks.h"
+#include "ModAPI.h"
 #include "Passives.h"
 #include "Plugin.h"
 #include "Progression.h"
@@ -1114,6 +1115,7 @@ namespace Isekai {
                 Storage::Install();
                 Shop::Install();         // resolves the System Shop's soul-gem catalog
                 CraftHooks::Install();  // zero-transfer crafting (validation build for now)
+                ModAPI::Install();      // the export other plugins resolve by name
                 UI::Install();
                 UI::Prisma::Install();  // optional web UI; no-op without the patch
                 SkyrimNet::Install();   // optional AI-NPC context; no-op without SkyrimNet
