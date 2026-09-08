@@ -1265,6 +1265,27 @@ check("build: every src file is listed in CMakeLists", () => {
   return "all listed";
 });
 
+/* -- 9. the public mod API ------------------------------------------------- */
+
+check("api: the public header and the implementation agree on the version", () => {
+  const hdr = read("include/IsekaiHeroAPI.h");
+  const impl = read("src/ModAPI.cpp");
+
+  // Every version the header offers must be one the implementation answers, or a
+  // consumer asking for it gets a silent nullptr and no idea why.
+  const offered = [...hdr.matchAll(/V(\d+)\s*=\s*(\d+)/g)].map((m) => Number(m[2]));
+  need(offered.length > 0, "no InterfaceVersion values found in the public header");
+
+  const answered = [...impl.matchAll(/InterfaceVersion::V(\d+)/g)].map((m) => Number(m[1]));
+  const missing = offered.filter((v) => !answered.includes(v));
+  need(
+    missing.length === 0,
+    `header offers V${missing.join(", V")} but ModAPI.cpp never answers it`
+  );
+
+  return `V${offered.join(", V")}`;
+});
+
 /* -- report ---------------------------------------------------------------- */
 
 const pad = Math.max(...results.map((r) => r.name.length));
