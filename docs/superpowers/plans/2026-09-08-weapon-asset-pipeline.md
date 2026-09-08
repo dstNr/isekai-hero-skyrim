@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Get one one-handed sword from a concept image into the System Shop, and leave behind a written route so the second weapon costs a fraction of the first.
+**Goal:** Get one dagger from a concept image into the System Shop, and leave behind a written route so the second weapon costs a fraction of the first.
 
 **Architecture:** Meshy generates the geometry, UVs and PBR maps from the concept image. Local Blender, driven with `bpy` through the official Blender MCP, is the conversion and verification stage — orientation, the Skyrim scale factor, and the PyNifly export flags — and the mesh lands in the repository at the end of Task 1. What stays with the user is the work that needs a human at a GUI — collision in NifSkope, textures, and the WEAP record in the Creation Kit. Only after the asset is proven in game does the C++ side change: a shop entry, packaging, and a path check.
 
@@ -12,7 +12,8 @@
 
 ## Global Constraints
 
-- **The sword is 0.75 m to 0.9 m overall.** Skyrim uses roughly **70 units per metre** (a human is about 128 units tall). Blender models at metre scale, and **nothing applies that factor for you** — PyNifly writes Blender units into the NIF one for one. Scale by 70 as the last step before export and verify by reading the file back.
+- **The dagger is 0.32 m to 0.40 m overall**, so roughly **22 to 28 Skyrim units** at 70 units per metre (a human is about 128 units tall).
+- **Nothing applies the scale factor for you.** PyNifly writes Blender units into the NIF one for one. A generated mesh is not at metre scale either, so the factor is derived from the intended length, not assumed to be 70: the current generation measures 1.9098 in its own units, so a 0.38 m dagger needs about **×14**. Scale last, then read the written file back and check.
 - **PyNifly must be called with `intuit_defaults=False`.** Left at its default it discards every setting passed to the operator and guesses instead, silently producing a Legacy Edition NIF. `export_modifiers=True` is needed too, or bevels and mirrors are dropped.
 - **Every mesh needs a UV map before export.** PyNifly raises on `uv_layers.active` being `None` and reports only "see console window for details".
 - **Nothing shipped may carry the author's real name.** `package.ps1`'s gate walks the whole staged tree. Exported NIF and DDS files sometimes embed their source path — if the gate trips, fix the export, never the gate.
@@ -59,7 +60,7 @@ Tasks 2 and 3 are the user's: NifSkope, texture work and the Creation Kit. Those
 **Interfaces:**
 - Consumes: the user's concept image, and a Meshy generation made from it.
 - Produces: `meshes/isekai/weapons/systemblade.nif`, Skyrim SE format (BS version 100),
-  blade along the axis a vanilla sword uses, **60 Skyrim units** overall, origin at the
+  blade along the axis a vanilla dagger uses, **about 26 Skyrim units** overall, origin at the
   grip. Task 2 adds collision and texture paths to the same file; Task 3's WEAP record
   names it.
 
@@ -76,7 +77,12 @@ Image-to-3D from the concept image, on the Pro plan. Settings that matter:
 
 - **Target polygon count: about 8,000 triangles.** Check whether the field counts polygons
   or triangles — with quads that is a factor of two. Vanilla's 1,000–2,000 is a 2011
-  console budget, not a target.
+  console budget, not a target. The accepted generation came in at **10,159**, which is
+  over the target and fine; what matters is that the raw texturing stage delivers well over
+  a million and must not be shipped.
+- **Run the remesh, and download the remeshed result.** A download whose name ends in
+  `_texture` is the raw texturing stage. The remeshed object arrives named
+  `output_unwrapped`, which is the quickest way to tell the two apart after import.
 - **UV unwrap: on.** The export cannot proceed without it.
 - **PBR textures: on.**
 
@@ -130,7 +136,7 @@ If Meshy's unwrap did not come through the GLB, unwrap in Blender before going f
 - [ ] **Step 5: Fix orientation, then scale**
 
 Orientation first, because scaling is about the origin and a rotation afterwards would
-move the pivot. The blade must run along the axis a vanilla sword uses and point the same
+move the pivot. The blade must run along the axis a vanilla dagger uses and point the same
 way; the origin belongs in the grip, where the hand closes. Generated meshes arrive with
 arbitrary orientation and an origin that is usually the bounding-box centre.
 
@@ -154,12 +160,13 @@ bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 **PyNifly does not convert metres to Skyrim units.** It writes Blender units into the NIF
 one for one, and `blender_xf` governs bone orientation rather than asset scale. An
-unscaled 0.857 m sword exports as a 0.86-unit NIF — about 1.2 cm beside a 128-unit human —
+unscaled 0.857 m blade exports as a 0.86-unit NIF — about 1.2 cm beside a 128-unit human —
 and reports "Export successful".
 
-A generated mesh may not arrive at metre scale at all. Measure it in Step 3 and derive the
-factor from the intended real-world length (0.75–0.9 m for a one-handed sword) rather than
-assuming 70 outright.
+**A generated mesh does not arrive at metre scale**, so `SKYRIM_UNITS_PER_METRE` is the
+wrong constant to reach for. Measure the mesh in Step 3 and derive the factor from the
+intended real-world length: the current generation is 1.9098 long in its own units, and a
+0.38 m dagger is about 26 Skyrim units, so the factor is `26 / 1.9098` — roughly **14**.
 
 - [ ] **Step 6: Export the NIF**
 
@@ -213,8 +220,8 @@ result = {"game": str(nif.game),
           "shapes": sorted(sh.name for sh in nif.shapes)}
 ```
 
-Expected: `game == "SKYRIMSE"`, longest extent about **60 units**, triangle count near the
-8,000 target. The raw header carries the same answer — BS version **100** is Skyrim SE,
+Expected: `game == "SKYRIMSE"`, longest extent about **26 units**, triangle count matching
+what went in (10,159 for the current generation). The raw header carries the same answer — BS version **100** is Skyrim SE,
 **83** is Legacy Edition.
 
 - [ ] **Step 8: Commit the mesh**
@@ -245,19 +252,24 @@ The mesh has no collision and no texture paths yet; Task 2 adds both to this fil
 because judging a collision hull against a blade, and judging whether a texture reads at
 arm's length, means looking at the thing. There is no test to run.
 
-- [ ] **Step 1: Verify the orientation against a vanilla sword**
+- [ ] **Step 1: Verify the orientation against a vanilla dagger**
 
 Still unproven, and it produces no error when wrong. Extract
-`meshes\weapons\iron\ironsword.nif` from the game BSA and import it beside the new blade.
+`meshes\weapons\iron\irondagger.nif` from the game BSA and import it beside the new blade.
 The new blade must run along the same axis and point the same way, and should be within
-roughly ±15% of its length.
+roughly ±15% of its length. The generated mesh arrives along **Z**, which is not
+necessarily what Skyrim wants.
+
+While that file is open, count its triangles. This plan quotes vanilla weapon densities
+from experience rather than measurement; that is the moment to replace the quote with a
+number.
 
 If the axis is wrong, fix it in Blender and re-export — not in NifSkope, so the source
 stays the truth.
 
 - [ ] **Step 2: Give it a collision shape**
 
-Copy the `bhkCollisionObject` branch from the vanilla sword into the new NIF in NifSkope,
+Copy the `bhkCollisionObject` branch from the vanilla dagger into the new NIF in NifSkope,
 then adjust its dimensions to the new blade. Without it the weapon falls through the floor
 when dropped.
 
@@ -272,6 +284,14 @@ Bake or paint the maps, export as PNG, then convert with `texconv`:
 texconv -f BC7_UNORM -y -o textures\isekai\weapons systemblade.png
 texconv -f BC7_UNORM -y -o textures\isekai\weapons systemblade_n.png
 ```
+
+**Meshy's remesh ships no normal map.** The baked output carries a base colour and a packed
+metallic/roughness map only. One has to be produced regardless, because Skyrim's shader
+expects a `_n.dds` and reads its specular mask from that file's alpha. The macro detail —
+grip wrap, guard filigree, pommel — survives as real geometry in the remeshed mesh, so a
+neutral normal map carrying only the specular mask in its alpha is enough to ship. A baked
+map would be better and needs the high-poly of the *same* generation; baking across two
+different generations produces garbage.
 
 **BC7 for both, and the normal map especially.** BC5 stores two channels and has no alpha,
 so it cannot carry the specular mask that gives a metal blade its shine — a blade exported
@@ -318,7 +338,7 @@ Record the failures that produce no error, because they are the whole value of t
 - no UV map — the export dies with a `NoneType` attribute error
 - `intuit_defaults=True` — every passed setting is discarded, output is Legacy Edition
 - `export_modifiers=False` — bevels vanish and a mirrored guard exports as one half
-- unscaled export — a 1.2 cm sword, reported as successful
+- unscaled export — a 1.2 cm blade, reported as successful
 - a BC5 normal map — no alpha, so no specular, so a permanently matte blade
 - missing collision — the weapon falls through the floor
 
@@ -343,9 +363,9 @@ git commit -m "feat(assets): collision, textures, and the weapon asset guide"
 
 **This is the user's work,** through the Creation Kit rather than a script. A WEAP carries a dozen subrecords and a wrong field does not raise an error — it produces a weapon that deals no damage or fits no animation. Automating this is worth doing once there is a known-good record to diff against, which is exactly what does not exist yet.
 
-- [ ] **Step 1: Duplicate a vanilla sword**
+- [ ] **Step 1: Duplicate a vanilla dagger**
 
-In the Creation Kit with `IsekaiHero.esp` as the active file, find `IronSword` under Items → Weapon, duplicate it, and rename the editor ID to `IsekaiSystemBlade`. Duplicating rather than creating from scratch inherits the animation type, equip slot, sounds and keywords already known to be correct.
+In the Creation Kit with `IsekaiHero.esp` as the active file, find `IronDagger` under Items → Weapon, duplicate it, and rename the editor ID to `IsekaiSystemBlade`. Duplicating rather than creating from scratch inherits the animation type, equip slot, sounds and keywords already known to be correct — for a dagger that means `WeapTypeDagger` and the dagger animations, which a duplicated sword would get wrong.
 
 - [ ] **Step 2: Point it at the new mesh**
 
@@ -354,6 +374,8 @@ Set the model to `isekai\weapons\systemblade.nif` — relative to `Data\meshes\`
 - [ ] **Step 3: Set the name, damage and value**
 
 Give it a display name, and set damage and value to whatever the System's tier of reward should feel like. These are balance numbers, not correctness: they can be retuned any time without touching anything else.
+
+One thing to weigh for a dagger specifically: with the Assassin's Blade perk, daggers take a **x15** sneak-attack multiplier where other one-handed weapons take x6. A generous damage number is therefore worth far more to a stealth build than to anyone else, so "balanced" here does not mean the same as it would on a sword.
 
 - [ ] **Step 4: Save and note the FormID**
 
@@ -375,7 +397,7 @@ player.additem <formid> 1
 
 Check all five:
 1. The weapon appears in the inventory with its name.
-2. Equipped, it sits in the hand at a believable size beside a vanilla sword.
+2. Equipped, it sits in the hand at a believable size beside a vanilla dagger.
 3. It draws and sheathes with the one-handed animation.
 4. Dropped, it lands on the ground rather than falling through it.
 5. Picked up again, it returns with its name and stats intact.
@@ -434,7 +456,7 @@ The `static_assert` immediately below already requires one name per shelf, so fo
 At the end of `kCatalog`, using the FormID from Task 3 in place of `0x000D90`:
 
 ```cpp
-            { "shop.systemBlade", "System Blade", "x1", 40,
+            { "shop.systemBlade", "Flameforged Oathblade", "x1", 40,
               "shop_blade.png",
               Kind::kOurItem, Cat::kSmithing, 1, Shelf::kArmaments, 0x000D90 },
 ```

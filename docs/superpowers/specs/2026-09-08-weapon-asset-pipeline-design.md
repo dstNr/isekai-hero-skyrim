@@ -6,7 +6,7 @@ chain that produced it is the point.
 
 ## Goals
 
-- One one-handed sword, in game, drawable, droppable, correctly sized.
+- One dagger, in game, drawable, droppable, correctly sized.
 - Every stage documented well enough that the second weapon costs a fraction of the
   first.
 - No new engine work. Handing out a weapon is the call the shop already makes
@@ -30,12 +30,24 @@ chain that produced it is the point.
 - No world placement, no levelled lists, no crafting recipe.
 - No second weapon until this one is in game.
 
-## Why a one-handed sword
+## Why a dagger
 
-It is the cheapest weapon class to prove the chain with: a single mesh, a common
+A one-handed weapon is the cheapest class to prove the chain with: a single mesh, a common
 animation type, no skeleton, no body fitting, no weight morphs, no dismemberment
-partitions. Everything that makes armour hard is absent, so a failure here is a
-failure of the *pipeline* rather than of the asset class.
+partitions. Everything that makes armour hard is absent, so a failure here is a failure of
+the *pipeline* rather than of the asset class.
+
+Within that, a **dagger** rather than a sword, for a reason that came out of the generated
+mesh rather than out of theory. Concept art draws heroic proportions, and image-to-3D
+reproduces them faithfully. The generated blade measures roughly **68% blade to 32% grip**;
+a one-handed sword wants about **78/22**, while a dagger sits near **63/37**. The
+proportions that were wrong for a sword are right for a dagger, so the class follows the
+asset instead of the asset being forced to the class.
+
+One design consequence worth stating up front: daggers take the **×15** sneak-attack
+multiplier with the Assassin's Blade perk, where other one-handed weapons take ×6. A
+System-granted dagger is therefore disproportionately strong for a stealth build and weak
+for anything else, which shifts what a balanced damage number looks like.
 
 ## Division of labour
 
@@ -45,7 +57,7 @@ failure of the *pipeline* rather than of the asset class.
 | Geometry, UVs, PBR maps | Meshy image-to-3D, Pro plan | **user** |
 | Import, scale, orientation | local Blender 5.2, `bpy` over the Blender MCP | Claude |
 | NIF export | PyNifly 28.2, from the same session | Claude |
-| Collision | NifSkope, copied from a vanilla sword | **user** |
+| Collision | NifSkope, copied from a vanilla dagger | **user** |
 | Textures → DDS | texconv or Paint.NET | **user** |
 | WEAP record | Creation Kit, from a written guide | **user** |
 | Shop entry, checks, packaging | C++ and `tools/` | Claude |
@@ -120,22 +132,31 @@ Neither of these produces an error. Both produce a weapon that is obviously wron
 first time it is equipped, and both are cheap to get right if they are decided up front.
 
 **Scale.** Blender works in metres; Skyrim uses its own units at roughly **70 units per
-metre** (a human is about 128 units tall). A one-handed sword is **0.75 m to 0.9 m**
-overall.
+metre** (a human is about 128 units tall). A substantial ornate dagger is **0.32 m to
+0.40 m** overall, so roughly **22 to 28 units**. The exact target is checked against a
+vanilla `irondagger.nif` rather than taken from this range alone.
+
+**A generated mesh does not arrive at metre scale**, so the factor is not 70. It is derived
+from the intended real-world length: the current generation measures 1.9098 in its own
+units, so a 0.38 m dagger needs a factor of about **14**, not 70. Measure first, then
+divide — never assume the source is in metres.
 
 **PyNifly does not apply that conversion.** It writes Blender units into the NIF one for
 one, and `blender_xf` does not change this — that flag governs bone orientation and
-armature scale, not asset scale. Measured, not assumed: the first export of the 0.857 m
-sword produced a NIF measuring **0.86 units**, which beside a 128-unit human is about
-1.2 cm, and PyNifly reported "Export successful".
+armature scale, not asset scale. Measured, not assumed: an early export of a 0.857 m blade
+produced a NIF measuring **0.86 units**, which beside a 128-unit human is about 1.2 cm, and
+PyNifly reported "Export successful".
 
 So the factor is applied explicitly as the last operation before export, and checked by
 reading the vertex extents back out of the written file rather than by trusting the
-exporter. Correctly scaled, the sword measures **60 units** — 47% of a human's height.
+exporter. The rule is the same whatever the class: scale explicitly, then read the written
+file back and check the number against the intended length.
 
 **Orientation.** The blade must run along the axis Skyrim expects, with the correct
-handedness, or it sits sideways in the hand. The reference is a vanilla one-handed sword
-NIF opened beside it; matching that is the check.
+handedness, or it sits sideways in the hand. The reference is a vanilla `irondagger.nif`
+opened beside it; matching that is the check. The generated mesh arrives along **Z**, which
+is not necessarily the axis Skyrim wants, so this is a real conversion step rather than a
+formality.
 
 ## Textures: Meshy's PBR is the source, not the shipped form
 
@@ -151,6 +172,17 @@ can consume directly, so they are converted rather than passed through:
 
 This conversion is the real work of the texture stage. Skipped, the blade reads matte and
 lifeless, with no error anywhere.
+
+**Meshy's remesh output carries no normal map.** The baked result ships a base colour and a
+packed metallic/roughness map only, so the fine surface relief of the million-triangle
+source is not preserved anywhere. This matters twice: Skyrim's shader expects a `_n.dds`
+and takes its specular mask from that file's alpha, so one has to exist regardless.
+
+The macro detail — the grip wrap, the guard filigree, the pommel — survives as **actual
+geometry** in the remeshed mesh, which is why a neutral normal map carrying only the
+specular mask in its alpha is enough to ship. A baked map would be better; it needs the
+high-poly of the *same* generation, since a bake across two different generations produces
+garbage.
 
 **The normal map cannot be BC5.** BC5 stores two channels and has no alpha, so it cannot
 carry the specular mask that gives a metal blade its shine. Use BC7. (An earlier draft of
@@ -250,7 +282,7 @@ Everything else is in-game verification, and the pipeline is proven only when al
 passes:
 
 1. The weapon appears in the System Shop and can be bought.
-2. Equipped, it sits in the hand at a believable size beside a vanilla sword.
+2. Equipped, it sits in the hand at a believable size beside a vanilla dagger.
 3. It draws and sheathes with the one-handed animation.
 4. Dropped, it lands on the ground rather than falling through it — this is the check
    that the collision survived the conversion.
@@ -259,7 +291,7 @@ passes:
 ## Open question, to settle during the work
 
 Whether the exported NIF needs a collision shape built by hand or whether one
-copied from a vanilla sword in NifSkope is sufficient. Copying is the standard practice
+copied from a vanilla dagger in NifSkope is sufficient. Copying is the standard practice
 and is assumed here; if it turns out that a copied `bhkCollisionObject` does not fit the
 new blade's proportions, the fallback is generating a simple convex shape, which is more
 work but well-trodden. This does not change the design, only the effort in one stage.
