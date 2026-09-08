@@ -339,6 +339,48 @@ version is not carried in `main`; it is preserved whole under the git tag `papyr
 
 ---
 
+## For mod authors
+
+Isekai Hero exposes a small C++ API so other SKSE plugins can read the player's System
+state and reward them with System Points. There is no Papyrus surface — this mod ships no
+scripts, and that is deliberate.
+
+Vendor [`include/IsekaiHeroAPI.h`](include/IsekaiHeroAPI.h) into your plugin. It is one
+file with no dependencies, MIT licensed like the rest of the source.
+
+```cpp
+#include "IsekaiHeroAPI.h"
+
+// Any time from SKSE's kPostLoad onwards. nullptr means the mod is not installed;
+// carry on without it.
+if (auto* isekai = IsekaiHeroAPI::RequestInterface()) {
+    if (isekai->IsActive() && isekai->HasNode(IsekaiHeroAPI::Keys::kAlchemicalInsight)) {
+        isekai->GrantSystemPoints(25, "MyCoolMod");
+    }
+}
+```
+
+`GrantSystemPoints` is safe to call from any thread and takes effect on the next
+main-thread frame. The `source` string is written to Isekai Hero's log with every grant,
+so pass something that identifies your mod — when a player reports an implausible point
+total, that line is what answers it. Every other call is a main-thread call.
+
+To be told when the player's state changes, listen for our messages:
+
+```cpp
+SKSE::GetMessagingInterface()->RegisterListener("IsekaiHeroSKSE",
+    [](SKSE::MessagingInterface::Message* m) {
+        if (m->type == static_cast<uint32_t>(IsekaiHeroAPI::MessageType::kStateChanged)) {
+            const auto* s = static_cast<IsekaiHeroAPI::StateChanged*>(m->data);
+            // s is valid for this call only.
+        }
+    });
+```
+
+`IVIsekaiHero1` is frozen: no method will ever be added to it, removed from it, or
+reordered within it. Later additions ship as a new interface version, and requests for V1
+keep returning V1.
+
 ## Credits
 
 - **UI sounds** by Nathan Gibson (Cyrex Studios) — [UI Sound Pack](https://cyrex-studios.itch.io/ui-sound-pack), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
