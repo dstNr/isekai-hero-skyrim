@@ -41,10 +41,15 @@ It does NOT cover the licensed third-party assets in this repository:
       credit.
 
   Skill-tree node icons (icons/spells_*_frame.png, 40 files)
-      From a purchased icon pack, credited in README.md. Same footing as the
-      sound effects: used under their own licence, not relicensable under the
-      MIT terms above. If you fork this project, replace them or obtain your
-      own licence for them.
+      From a purchased icon pack, credited in README.md. Its licence allows use
+      in commercial and non-commercial projects and asks for no attribution,
+      but it forbids redistributing the icons as part of another asset pack,
+      and it is granted to the purchaser rather than to the work.
+
+      So they are not relicensable under the MIT terms above, and forking this
+      repository does not hand you the right to use them: replace them, or buy
+      your own licence for the pack. This is a narrower permission than the
+      sound effects above, which anyone may redistribute under CC BY 4.0.
 
 The remaining 34 icons (blessings, ranks, shop, UI) are AI-generated artwork
 made for this mod and ARE covered by the MIT licence above.
