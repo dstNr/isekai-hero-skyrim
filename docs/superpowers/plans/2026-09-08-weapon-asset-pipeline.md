@@ -263,18 +263,25 @@ The mesh has no collision and no texture paths yet; Task 2 adds both to this fil
 because judging a collision hull against a blade, and judging whether a texture reads at
 arm's length, means looking at the thing. There is no test to run.
 
-- [ ] **Step 1: Verify the orientation against a vanilla sword**
+- [ ] **Step 1: Compare against the vanilla references (already extracted)**
 
-Still unproven, and it produces no error when wrong. Extract
-`meshes\weapons\iron\ironsword.nif` from the game BSA and import it beside the new blade.
-The new blade must run along the same axis and point the same way, and should be within
-roughly ±15% of its length — bearing in mind this is a short sword at 0.70 m, so it is
-meant to come out shorter than an iron sword rather than matching it. The generated mesh
-arrives along **Z**, which is not necessarily what Skyrim wants.
+The reference meshes are unpacked to `E:\_skyrim_ref\` — `longsword.nif`,
+`1stpersonlongsword.nif` and `irondagger.nif`, taken from `Skyrim - Meshes1.bsa` with
+`BSArch64.exe` from the modlist's SSEEdit folder. **They are Bethesda's assets: they stay
+outside the repository and are never committed.**
 
-While that file is open, count its triangles. This plan quotes vanilla weapon densities
-from experience rather than measurement; that is the moment to replace the quote with a
-number.
+The vanilla file for the iron sword is `longsword.nif`. There is no `ironsword.nif` — the
+only files by that name are broken-sword clutter props.
+
+Measured from those files, so the target is known rather than guessed:
+
+| | axis | length | Y range | blade / hilt | blade tris |
+|---|---|---|---|---|---|
+| iron sword | Y | 77.33 u | −13.17 … +64.16 | 83 / 17 | 425 |
+| iron dagger | Y | 35.38 u | −11.68 … +23.70 | 67 / 33 | 416 |
+
+Open the new blade beside `longsword.nif` and check that it runs along **+Y** with the
+pommel at negative Y and the origin inside the grip.
 
 If the axis is wrong, fix it in Blender and re-export — not in NifSkope, so the source
 stays the truth.
@@ -284,6 +291,10 @@ stays the truth.
 Copy the `bhkCollisionObject` branch from the vanilla sword into the new NIF in NifSkope,
 then adjust its dimensions to the new blade. Without it the weapon falls through the floor
 when dropped.
+
+It is not a single box: `longsword.nif` carries `bhkCollisionObject` → `bhkRigidBody` →
+**`bhkListShape`** with several `bhkConvexTransformShape` children, so refitting means
+several primitives rather than one.
 
 If a copied shape cannot be made to fit, generate a simple convex shape instead — more
 work, well trodden, and the spec records this as the expected fallback.

@@ -120,8 +120,11 @@ repeated here. Its ceiling is the reason it is not the primary route: scripted g
 good at geometric, faceted forms and poor at the organic ornament that concept art tends
 to carry.
 
-**Density target: about 8,000 triangles.** Vanilla one-handed swords run 1,000–2,000, but
-that is a 2011 console budget, not a design goal — modern weapon mods run 5,000–20,000. A
+**Density target: about 8,000 triangles.** Counted rather than quoted: the vanilla iron
+sword's visible blade mesh is **425 triangles**, and the whole file is 795 including its
+scabbard and blood-effect meshes. The iron dagger's blade is 416. Earlier drafts of this
+spec said 1,000–2,000, which was too high. That is a 2011 console budget either way, not a
+design goal — modern weapon mods run 5,000–20,000. A
 weapon is the cheapest place in the game to spend triangles: one or two are on screen at a
 time, and they are held closest to the camera. The scripted blade's 12-sided grip and
 8-sided pommel were visibly faceted at that range, which is what the higher target fixes.
@@ -139,7 +142,7 @@ first time it is equipped, and both are cheap to get right if they are decided u
 
 **Scale.** Blender works in metres; Skyrim uses its own units at roughly **70 units per
 metre** (a human is about 128 units tall). The short sword is **0.70 m** overall, so about
-**49 units**. That target is confirmed against a vanilla `ironsword.nif` rather than taken
+**49 units**. That target is confirmed against the vanilla `longsword.nif` rather than taken
 from this figure alone.
 
 **A generated mesh does not arrive at metre scale**, so the factor is not 70. It is derived
@@ -158,11 +161,21 @@ reading the vertex extents back out of the written file rather than by trusting 
 exporter. The rule is the same whatever the class: scale explicitly, then read the written
 file back and check the number against the intended length.
 
-**Orientation.** The blade must run along the axis Skyrim expects, with the correct
-handedness, or it sits sideways in the hand. The reference is a vanilla `ironsword.nif`
-opened beside it; matching that is the check. The generated mesh arrives along **Z**, which
-is not necessarily the axis Skyrim wants, so this is a real conversion step rather than a
-formality.
+**Orientation — measured, no longer assumed.** Three vanilla weapons were extracted from
+`Skyrim - Meshes1.bsa` and read directly:
+
+| | axis | length | Y range | blade / hilt |
+|---|---|---|---|---|
+| iron sword (`longsword.nif`) | **Y** | 77.33 u | −13.17 … +64.16 | 83 / 17 |
+| iron dagger (`irondagger.nif`) | **Y** | 35.38 u | −11.68 … +23.70 | 67 / 33 |
+
+The blade runs along **+Y**, the pommel sits at negative Y, and the origin falls inside the
+grip. That is exactly the convention this pipeline already targets, so the conversion step
+is a rotation from the generated mesh's **Z** onto **Y** and nothing more.
+
+**The vanilla iron sword's mesh is `meshes\weapons\iron\longsword.nif`.** There is no
+`ironsword.nif`; the only files by that name are the broken-sword clutter props
+`ironswordbottombroken.nif` and `ironswordtopbroken.nif`.
 
 ## Textures: Meshy's PBR is the source, not the shipped form
 
@@ -244,6 +257,25 @@ The `LICENSE` SCOPE section lists what the MIT grant covers. Meshes and textures
 line there either way, and whether a fork may reuse them is the author's decision, as it
 was for the sounds and the icons.
 
+## What a vanilla weapon file contains that ours does not
+
+Reading `longsword.nif` turned up three node groups that the generated mesh has no
+equivalent for:
+
+- **`Scb` — the scabbard.** This is what renders on the character when the weapon is
+  sheathed. A weapon shipped without it has nothing to show when put away.
+- **`BloodLighting` and `BloodEffects`** — the overlay meshes Skyrim uses to make a weapon
+  look bloodied. Cosmetic, and the weapon works without them.
+- **A separate first-person mesh.** `1stpersonlongsword.nif` exists alongside the world
+  model and is denser — 1,019 triangles for the blade against 425. A WEAP record carries a
+  first-person model field pointing at its own record, so a duplicated vanilla sword keeps
+  pointing at the **vanilla** first-person mesh unless that is changed too. Left alone, the
+  weapon would look correct in third person and be an iron sword in first person.
+
+None of this is hard, but none of it was in the plan, and the first two are invisible
+failures of exactly the kind this project keeps finding: the weapon works, looks right in
+the hand, and is wrong the moment it is sheathed.
+
 ## The record goes through the Creation Kit
 
 A WEAP record could be written into the ESP programmatically — this project has already
@@ -301,7 +333,10 @@ passes:
 ## Open question, to settle during the work
 
 Whether the exported NIF needs a collision shape built by hand or whether one
-copied from a vanilla sword in NifSkope is sufficient. Copying is the standard practice
+copied from a vanilla sword in NifSkope is sufficient. The vanilla iron sword's collision
+is not a simple box: it is a `bhkCollisionObject` → `bhkRigidBody` → **`bhkListShape`**
+holding several `bhkConvexTransformShape` children. Copying the whole branch is still the
+approach, but it is more than one primitive to refit. Copying is the standard practice
 and is assumed here; if it turns out that a copied `bhkCollisionObject` does not fit the
 new blade's proportions, the fallback is generating a simple convex shape, which is more
 work but well-trodden. This does not change the design, only the effort in one stage.
