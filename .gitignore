@@ -29,3 +29,7 @@ Thumbs.db
 
 # A stray folder some tool created from a mis-parsed -o flag. Not ours, not shipped.
 /-o/
+
+# Claude Code: the shared agreements and skills are tracked, the per-machine
+# permission rules are not - they carry local paths and the author name.
+.claude/settings.local.json

@@ -14,7 +14,7 @@
 **SKSE C++ plugin** built on [CommonLibSSE-NG](https://github.com/CharmedBaryon/CommonLibSSE-NG),
 with its own ImGui UI drawn straight into the game's D3D11 swap chain.
 
-[**Nexus page**](https://www.nexusmods.com/skyrimspecialedition/mods/149180) ·
+[**Nexus page**](https://www.nexusmods.com/skyrimspecialedition/mods/185548) ·
 [Changelog](CHANGELOG.md) ·
 [VR status](docs/VR.md) ·
 [Test plan](docs/MANUAL_TESTS.md)
