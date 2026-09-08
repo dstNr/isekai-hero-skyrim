@@ -9,7 +9,9 @@ chain that produced it is the point.
 - One one-handed sword, in game, drawable, droppable, correctly sized.
 - Every stage documented well enough that the second weapon costs a fraction of the
   first.
-- No new runtime code. Handing out a weapon is the call the shop already makes.
+- No new engine work. Handing out a weapon is the call the shop already makes
+  (`Plugin::LookupOurForm<RE::TESBoundObject>`); the only C++ change is a catalog row
+  and the shelf to put it on.
 
 ## Non-goals
 
