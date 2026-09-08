@@ -384,6 +384,7 @@ keep returning V1.
 ## Credits
 
 - **UI sounds** by Nathan Gibson (Cyrex Studios) — [UI Sound Pack](https://cyrex-studios.itch.io/ui-sound-pack), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Weapon meshes and textures** generated with [Meshy](https://www.meshy.ai), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 - **Skill-tree node icons** by The Higalina Vault — [40 Spell Icons (Fantasy Style)](https://higalina.itch.io/40-spell-icons-fantasy-style-png-512x512). Every other icon in `icons/` is AI-generated artwork made for this mod.
 - **Crafting integration** — the Dimensional Storage reads/consumes the chest at a
   workbench without moving items, adapting the zero-transfer hooking technique from

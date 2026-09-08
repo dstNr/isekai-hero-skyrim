@@ -240,10 +240,15 @@ which is defined to include generated output. Granting a licence presupposes hol
 rights, so on a paid plan the rights stay with the author and redistribution in a public
 mod is the author's to make.
 
-The terms never use the word "own" for paid customers, so this rests on the structure
-rather than on an explicit sentence. Crediting Meshy in the README costs nothing, removes
-the question entirely, and matches what this repository already does for the sound effects
-and the icon pack.
+The terms never use the word "own" for paid customers, so that reading rests on the
+structure rather than on an explicit sentence.
+
+**Settled by taking the stricter branch:** the assets are credited and licensed as CC BY
+4.0, the licence the terms attach to free-plan output. Meshy is named in the README and
+carved out of the MIT grant in `LICENSE`, exactly as the sound effects are. This is correct
+whichever plan produced a given generation — under free it is required, under a paid plan
+it costs nothing and removes the ambiguity. The practical effect matches the sounds: a fork
+may keep the files, and may not drop the credit.
 
 Two operational consequences, both stated in the terms rather than inferred:
 

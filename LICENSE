@@ -40,6 +40,16 @@ It does NOT cover the licensed third-party assets in this repository:
       on reuse - you may keep these files in a fork, you may not drop the
       credit.
 
+  3D assets (meshes/, textures/)
+      Generated with Meshy (https://www.meshy.ai) and used under the Creative
+      Commons Attribution 4.0 International licence (CC BY 4.0):
+      https://creativecommons.org/licenses/by/4.0/
+
+      Meshy's terms assign ownership of free-plan output to Meshy and license it
+      back under CC BY 4.0. As with the sound effects, that permits redistribution
+      and commercial use on one condition: Meshy is credited and this notice
+      travels with the files. Keep them in a fork; do not drop the credit.
+
   Skill-tree node icons (icons/spells_*_frame.png, 40 files)
       From a purchased icon pack, credited in README.md. Its licence allows use
       in commercial and non-commercial projects and asks for no attribution,
@@ -52,7 +62,10 @@ It does NOT cover the licensed third-party assets in this repository:
       sound effects above, which anyone may redistribute under CC BY 4.0.
 
 The remaining 34 icons (blessings, ranks, shop, UI) are AI-generated artwork
-made for this mod and ARE covered by the MIT licence above.
+made for this mod and ARE covered by the MIT licence above. That they are
+AI-generated is not what decides it - the 3D assets above are AI-generated too
+and are not covered. What decides it is the terms of the tool that produced
+them.
 
 THIRD-PARTY CODE
 
