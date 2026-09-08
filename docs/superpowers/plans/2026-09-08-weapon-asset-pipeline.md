@@ -301,7 +301,9 @@ arm's length, means looking at the thing. There is no test to run.
 
 The reference meshes are unpacked to `E:\_skyrim_ref\` — `longsword.nif`,
 `1stpersonlongsword.nif` and `irondagger.nif`, taken from `Skyrim - Meshes1.bsa` with
-`BSArch64.exe` from the modlist's SSEEdit folder. **They are Bethesda's assets: they stay
+`BSArch64.exe` from the modlist's SSEEdit folder. `BSArch` unpacks a whole archive with no
+single-file filter, so extract to a scratch folder, copy out what is needed and delete the
+rest; the meshes archive is 361 MB and takes about three seconds. **They are Bethesda's assets: they stay
 outside the repository and are never committed.**
 
 The vanilla file for the iron sword is `longsword.nif`. There is no `ironsword.nif` — the
@@ -340,15 +342,55 @@ work, well trodden, and the spec records this as the expected fallback.
 
 - [ ] **Step 3: Convert the textures to DDS**
 
-Export Meshy's maps as PNG, fold roughness into the normal map's alpha, then convert with
-`texconv`. **Meshy's base colour arrives oversized** — the accepted generation ships an
-8192² base colour, more than most whole-body textures in a load order, alongside a 4096²
-ORM and a 4096² normal. A weapon wants 4096² at most, so resize in the same pass:
+`texconv.exe` needs no download — it ships with Octagon in the modlist's tool folder,
+alongside `texdiag.exe`.
+
+**Fold roughness into the normal map's alpha first.** glTF packs occlusion, roughness and
+metallic into one image (R, G, B in that order); Skyrim reads a specular mask from the
+normal map's alpha instead. Do the channel work with Pillow rather than in Blender, whose
+colour management makes it easy to introduce a silent gamma error in a non-colour map:
+
+```python
+import numpy as np
+from PIL import Image
+Image.MAX_IMAGE_PIXELS = None
+
+nrm = Image.open("systemblade_n.png").convert("RGB")     # Meshy's normal
+orm = Image.open("systemblade_orm.png").convert("RGB")   # Meshy's packed ORM
+n, o = np.asarray(nrm, np.uint8), np.asarray(orm, np.uint8)
+
+roughness = o[:, :, 1]                                   # glTF puts roughness in green
+gloss = (255 - roughness).astype(np.uint8)               # Skyrim's alpha is a spec mask
+Image.fromarray(np.dstack([n, gloss]), "RGBA").save("out/systemblade_n.png")
+```
+
+Sanity numbers from the first conversion: roughness ranged 55–255 (mean 160), so the gloss
+alpha came out 0–200 (mean 95), and the normal's green channel averaged 126.9 against the
+128 of a flat surface. A green mean far from 128 means something is wrong with the map.
+
+**Then convert, at 2048.**
 
 ```
-texconv -f BC7_UNORM -w 4096 -h 4096 -y -o textures\isekai\weapons systemblade.png
-texconv -f BC7_UNORM -w 4096 -h 4096 -y -o textures\isekai\weapons systemblade_n.png
+texconv -f BC7_UNORM -w 2048 -h 2048 -y -o textures\isekai\weapons systemblade.png
+texconv -f BC7_UNORM -w 2048 -h 2048 -y -o textures\isekai\weapons systemblade_n.png
 ```
+
+Meshy ships an 8192² base colour, more than most whole-body textures in a load order. The
+resolution is a repository decision, not only a quality one: BC7 with mipmaps costs 22.4 MB
+per map at 4096² and 5.3 MB at 2048². The tracked repository is 33 MB, so one weapon at
+4096² would more than double it, and ten would add roughly 450 MB against 112 MB. 2048² is
+generous for a one-handed weapon and it scales.
+
+Verify the written files rather than the tool's output: the header should read
+`2048x2048, 12 mips, dxgi=98 (BC7_UNORM)`, and the normal map's alpha mode should be
+`NonPM` rather than `Opaque` — `Opaque` means the specular mask was dropped.
+
+**One convention is untested.** Tangent-space normal maps come in two flavours, OpenGL
+(+Y up, which is what glTF and therefore Meshy produce) and DirectX (−Y). If Skyrim expects
+DirectX here, the blade's lighting will look inverted — carved detail reading as raised and
+the reverse. The fix is one line, inverting the green channel before the DDS conversion:
+`n[:, :, 1] = 255 - n[:, :, 1]`. This can only be settled by looking at the weapon in game,
+so it belongs to the in-game verification in Task 3 rather than here.
 
 **BC7 for both, and the normal map especially.** BC5 stores two channels and has no alpha,
 so it cannot carry the specular mask that gives a metal blade its shine — a blade exported
@@ -376,13 +418,19 @@ It is deliberately not part of the first weapon: the asset chain is unproven, an
 texture sets would make a failure ambiguous. Keeping Meshy's original maps is what makes it
 possible later.
 
-- [ ] **Step 4: Point the NIF at the texture paths**
+- [x] **Step 4: Point the NIF at the texture paths** — done in Task 1
 
-In NifSkope, set the `BSShaderTextureSet` slots to
-`textures\isekai\weapons\systemblade.dds` (slot 0) and `..._n.dds` (slot 1). Paths are
-relative to `Data\` and use backslashes.
+Task 1 Step 6 already produces these by staging the source images under a path containing
+`textures\isekai\weapons\`, so PyNifly writes the relative paths itself. Confirmed in the
+exported file:
 
-Done when NifSkope renders the blade with its texture rather than flat white.
+```
+Diffuse: textures\isekai\weapons\systemblade.dds
+Normal:  textures\isekai\weapons\systemblade_n.dds
+```
+
+Only fall back to setting the `BSShaderTextureSet` slots by hand in NifSkope if that
+staging was skipped.
 
 - [ ] **Step 5: Write the guide**
 
