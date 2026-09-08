@@ -341,7 +341,7 @@ version is not carried in `main`; it is preserved whole under the git tag `papyr
 
 ## Credits
 
-- **UI sounds** by Cyrex Studios — [UI Sound Pack](https://cyrex-studios.itch.io/ui-sound-pack)
+- **UI sounds** by Nathan Gibson (Cyrex Studios) — [UI Sound Pack](https://cyrex-studios.itch.io/ui-sound-pack), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 - **Skill-tree node icons** by The Higalina Vault — [40 Spell Icons (Fantasy Style)](https://higalina.itch.io/40-spell-icons-fantasy-style-png-512x512). Every other icon in `icons/` is AI-generated artwork made for this mod.
 - **Crafting integration** — the Dimensional Storage reads/consumes the chest at a
   workbench without moving items, adapting the zero-transfer hooking technique from
@@ -360,8 +360,10 @@ history in [CHANGELOG.md](CHANGELOG.md).
 
 MIT — see [LICENSE](LICENSE). Fork it, port it, patch it, translate it.
 
-Two carve-outs, both spelled out in that file. The **sound effects** and the **40 skill-tree
-node icons** (`icons/spells_*_frame.png`) are licensed third-party assets, used here under
-their own terms, which do not allow relicensing them — replace them or licence them yourself
-if you fork. The other **34 icons** (blessings, ranks, shop, UI) are AI-generated artwork made
-for this mod and come along with the code.
+Two carve-outs, both spelled out in that file. The **sound effects** are
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — keep them in a fork if you like,
+just keep the credit to Nathan Gibson with them. The **40 skill-tree node icons**
+(`icons/spells_*_frame.png`) come from a purchased pack under its own terms, which do not
+allow relicensing them — replace them or licence them yourself if you fork. The other
+**34 icons** (blessings, ranks, shop, UI) are AI-generated artwork made for this mod and come
+along with the code.

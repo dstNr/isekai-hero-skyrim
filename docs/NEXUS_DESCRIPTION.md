@@ -150,8 +150,8 @@ Early release. Feedback is very welcome, especially from heavily modded setups. 
 
 [size=4][b]Credits[/b][/size]
 [list]
-[*][b]UI sounds[/b] by Cyrex Studios — [url=https://cyrex-studios.itch.io/ui-sound-pack]UI Sound Pack[/url]
-[*][b]Spell icons[/b] by The Higalina Vault — [url=https://higalina.itch.io/40-spell-icons-fantasy-style-png-512x512]40 Spell Icons (Fantasy Style)[/url]
+[*][b]UI sounds[/b] by Nathan Gibson (Cyrex Studios) — [url=https://cyrex-studios.itch.io/ui-sound-pack]UI Sound Pack[/url], used under [url=https://creativecommons.org/licenses/by/4.0/]CC BY 4.0[/url]
+[*][b]Skill-tree node icons[/b] by The Higalina Vault — [url=https://higalina.itch.io/40-spell-icons-fantasy-style-png-512x512]40 Spell Icons (Fantasy Style)[/url]. Every other icon is AI-generated artwork made for this mod.
 [*][b]Crafting integration[/b]: the Dimensional Storage reads and consumes the chest at a workbench without moving items, adapting the zero-transfer hooking technique from [url=https://github.com/ohfor/scie]SCIE — Skyrim Crafting Inventory Extender[/url] by ohfor (MIT License). SCIE itself is [b]not required[/b] — its approach is reimplemented here, not depended upon.
 [*][b]VR interface[/b]: drawn through [url=https://www.nexusmods.com/skyrimspecialedition/mods/149180]ImGui VR Helper[/url] (LGPL-3.0-or-later). Its client API ships with this mod unmodified; the helper itself is an optional separate install.
 [/list]
