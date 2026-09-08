@@ -13,11 +13,13 @@ chain that produced it is the point.
 
 ## Non-goals
 
-- **No armour.** Armour needs Skyrim's body mesh and skeleton to be fitted, weighted,
-  split into dismemberment partitions and given `_0`/`_1` weight variants. None of
-  those files can reach the remote Blender worker, so armour is a different project
-  with a different toolchain (Outfit Studio, locally). Deciding about armour is what
-  this weapon is meant to inform.
+- **No armour in this pass.** Armour is intended and will follow; it is not in scope
+  here. It needs Skyrim's body mesh and skeleton to be fitted, weighted, split into
+  dismemberment partitions and given `_0`/`_1` weight variants, and none of those
+  files can reach the remote Blender worker. That makes it a different project with a
+  different toolchain — Outfit Studio, locally, with the user doing the geometry. What
+  this weapon establishes is how much of the *rest* of the chain (records, packaging,
+  shop integration, the path checks) carries over unchanged, which is most of it.
 - No custom magic effect or enchantment record. The weapon may carry a vanilla
   enchantment; a bespoke one is a separate piece of work.
 - No world placement, no levelled lists, no crafting recipe.
