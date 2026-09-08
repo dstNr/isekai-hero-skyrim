@@ -51,6 +51,27 @@ namespace IsekaiHeroAPI
         S = 5,
     };
 
+    // Isekai Hero dispatches this through SKSE's messaging interface when the
+    // player's System state changes. Listen for it with
+    // SKSE::GetMessagingInterface()->RegisterListener("IsekaiHeroSKSE", handler).
+    //
+    // There is nothing to unregister with us and no callback of yours that we hold:
+    // if your plugin goes away, so does its listener, and we never notice.
+    enum class MessageType : uint32_t
+    {
+        // message->data points to a StateChanged, valid only for the duration of
+        // your handler. Copy anything you keep.
+        kStateChanged = 1,
+    };
+
+    struct StateChanged
+    {
+        bool    active;
+        uint8_t tier;  // a Tier value
+        uint8_t rank;  // a Rank value
+        int32_t systemPoints;
+    };
+
     // Skill-tree node keys. These are stable for the life of the mod: the mod's own
     // co-save stores them, so a key can never be renumbered or reused without
     // breaking every existing save. New nodes take new keys; nothing here moves.

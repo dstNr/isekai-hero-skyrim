@@ -112,10 +112,44 @@ namespace Isekai::ModAPI {
         };
 
         Interface1 g_interface1;
+
+        // The last state we told the world about. Compared each tick; a message goes out
+        // only when something actually moved, so a listener is not woken once a second
+        // for nothing.
+        IsekaiHeroAPI::StateChanged g_published{};
+        bool                        g_everPublished = false;
     }
 
     void Install() {
         logger::info("ModAPI: RequestPluginAPI is exported, interface V1 available");
+    }
+
+    void PublishIfChanged() {
+        if (!Plugin::IsLoaded()) {
+            return;
+        }
+
+        IsekaiHeroAPI::StateChanged now{};
+        now.active = GetState().reincarnated;
+        now.tier = TierValue(GetState().power);
+        now.rank = RankValue(Progression::SystemRank());
+        now.systemPoints = GetState().systemPoints;
+
+        if (g_everPublished && now.active == g_published.active && now.tier == g_published.tier &&
+            now.rank == g_published.rank && now.systemPoints == g_published.systemPoints) {
+            return;
+        }
+
+        g_published = now;
+        g_everPublished = true;
+
+        // Dispatched by the address of g_published rather than a stack copy, so the
+        // pointer a listener receives stays valid for the whole of its handler. Only
+        // ever written from the main thread, which is the only thread that gets here.
+        if (auto* msg = SKSE::GetMessagingInterface()) {
+            msg->Dispatch(static_cast<std::uint32_t>(IsekaiHeroAPI::MessageType::kStateChanged),
+                          &g_published, sizeof(g_published), nullptr);
+        }
     }
 
     void* Resolve(std::uint8_t a_version) {
