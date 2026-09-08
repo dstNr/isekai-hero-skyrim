@@ -333,14 +333,16 @@ covering exactly the gaps the two layers above leave and nothing they already pr
 | `plugin/IsekaiHero.esp` | the ESL-flagged data plugin (abilities, container, sound descriptors) |
 | `icons/`, `sounds/` | UI assets, deployed by the build/package scripts |
 | `docs/` | Creation-Kit/xEdit guide for the ESP, ideas backlog, Nexus description |
-| `papyrus/` | the archived original Papyrus version (git tag `papyrus-v1.0`) |
+
+The mod began as a Papyrus script project before being rewritten in C++. That original
+version is not carried in `main`; it is preserved whole under the git tag `papyrus-v1.0`.
 
 ---
 
 ## Credits
 
 - **UI sounds** by Cyrex Studios — [UI Sound Pack](https://cyrex-studios.itch.io/ui-sound-pack)
-- **Spell icons** by The Higalina Vault — [40 Spell Icons (Fantasy Style)](https://higalina.itch.io/40-spell-icons-fantasy-style-png-512x512)
+- **Skill-tree node icons** by The Higalina Vault — [40 Spell Icons (Fantasy Style)](https://higalina.itch.io/40-spell-icons-fantasy-style-png-512x512). Every other icon in `icons/` is AI-generated artwork made for this mod.
 - **Crafting integration** — the Dimensional Storage reads/consumes the chest at a
   workbench without moving items, adapting the zero-transfer hooking technique from
   [SCIE — Skyrim Crafting Inventory Extender](https://github.com/ohfor/scie) by ohfor, used
@@ -358,7 +360,8 @@ history in [CHANGELOG.md](CHANGELOG.md).
 
 MIT — see [LICENSE](LICENSE). Fork it, port it, patch it, translate it.
 
-Two carve-outs, both spelled out in that file: the **sound effects are licensed third-party
-assets** used here under their own terms, which do not allow relicensing them — replace them
-or licence them yourself if you fork. The **icons are AI-generated artwork** made for this
-mod and come along with the code.
+Two carve-outs, both spelled out in that file. The **sound effects** and the **40 skill-tree
+node icons** (`icons/spells_*_frame.png`) are licensed third-party assets, used here under
+their own terms, which do not allow relicensing them — replace them or licence them yourself
+if you fork. The other **34 icons** (blessings, ranks, shop, UI) are AI-generated artwork made
+for this mod and come along with the code.

@@ -210,7 +210,7 @@ The WAV files are already in `Data\Sound\fx\isekai\` (the build workflow does th
 > a vanilla descriptor brings the Category and Output Model (i.e. the correct
 > volume-slider binding) along automatically, instead of having to type them out.
 
-1. **Start `SSEEdit.exe` directly** (e.g. `E:\Modlists\NYA\tools\SSEEdit 4.1.5\`) —
+1. **Start `SSEEdit.exe` directly** from wherever it is installed —
    ⚠️ **not through MO2!** Started directly it sees the base game's load order, i.e.
    exactly our test setup.
 2. In the module dialog: right-click → *Select None*, then tick only **`IsekaiHero.esp`**

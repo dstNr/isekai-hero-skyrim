@@ -9,7 +9,9 @@ build.err.log
 build.pid
 
 # --- Papyrus archive (kept local only) ---
-# Third-party modder-resource sources + compiled output are not redistributed.
+# The archive itself is no longer carried in main; it lives in the tag papyrus-v1.0.
+# These rules remain so a leftover local papyrus/ can never be added by accident:
+# third-party modder-resource sources and compiled output are not redistributable.
 papyrus/Scripts/SourceDeps/*.psc
 papyrus/Scripts/SourceDeps/*.bsa
 papyrus/Scripts/*.pex

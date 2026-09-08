@@ -36,7 +36,7 @@ the leak, never the gate.
 
 ## How the mod is actually tested
 
-Via MO2 from the packaged `dist\*.7z`, and from modlists (e.g. `E:\Modlists\NYA\`).
+Via MO2 from the packaged `dist\*.7z`, and from a full modlist install.
 `build.bat` deploys into the base-game `Data\` — that does **not** reach the
 test setup; the archive has to be rebuilt and updated in MO2.
 

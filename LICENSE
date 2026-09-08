@@ -27,16 +27,21 @@ The MIT licence above covers the SOURCE CODE and the plugin built from it:
 everything under src/, tools/, the build and packaging scripts, the PrismaUI
 view (prisma-patch/), the FOMOD installer and the documentation.
 
-It does NOT cover two things in this repository:
+It does NOT cover the licensed third-party assets in this repository:
 
   Sound effects (sounds/, shipped as Sound/fx/isekai/)
       Licensed third-party assets. They are used here under their own licence,
       which does not permit relicensing them under the MIT terms above. If you
       fork this project, replace them or obtain your own licence for them.
 
-  Icons (icons/)
-      AI-generated artwork made for this mod. Free to reuse alongside the code;
-      not part of the third-party carve-out above.
+  Skill-tree node icons (icons/spells_*_frame.png, 40 files)
+      From a purchased icon pack, credited in README.md. Same footing as the
+      sound effects: used under their own licence, not relicensable under the
+      MIT terms above. If you fork this project, replace them or obtain your
+      own licence for them.
+
+The remaining 34 icons (blessings, ranks, shop, UI) are AI-generated artwork
+made for this mod and ARE covered by the MIT licence above.
 
 THIRD-PARTY CODE
 

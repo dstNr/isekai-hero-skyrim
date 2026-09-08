@@ -29,7 +29,12 @@ if errorlevel 1 exit /b 1
 cmake --build "%~dp0build"
 if errorlevel 1 exit /b 1
 
-set "SKSE_PLUGINS=E:\SteamLibrary\steamapps\common\Skyrim Special Edition\Data\SKSE\Plugins"
+REM Respect an existing SKYRIM_DATA (set it in your environment); the fallback below
+REM is Steam's default install so this committed file carries no personal drive layout.
+if not defined SKYRIM_DATA set "SKYRIM_DATA=C:\Program Files (x86)\Steam\steamapps\common\Skyrim Special Edition\Data"
+if not exist "%SKYRIM_DATA%" goto :no_data
+
+set "SKSE_PLUGINS=%SKYRIM_DATA%\SKSE\Plugins"
 if not exist "%SKSE_PLUGINS%" mkdir "%SKSE_PLUGINS%"
 
 REM A running Skyrim holds the DLL open and the copy fails. Silently, if we let it:
@@ -72,4 +77,10 @@ exit /b 1
 
 :copy_failed
 echo DEPLOY_FAILED: could not copy the plugin into the game folder.
+exit /b 1
+
+:no_data
+echo DEPLOY_FAILED: Skyrim's Data folder was not found at:
+echo   %SKYRIM_DATA%
+echo Set SKYRIM_DATA to your Skyrim Special Edition Data folder, then build again.
 exit /b 1

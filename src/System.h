@@ -1,7 +1,7 @@
 #pragma once
 
-// Core of the Isekai "System". Ported from the Papyrus version's data model
-// (see papyrus/Scripts/Source). Native C++ / CommonLibSSE-NG implementation.
+// Core of the Isekai "System". Ported from the data model of the original
+// Papyrus version (git tag papyrus-v1.0). Native C++ / CommonLibSSE-NG.
 
 #include <cstdint>
 #include <functional>
