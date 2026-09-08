@@ -42,7 +42,8 @@ failure of the *pipeline* rather than of the asset class.
 | Stage | Tool | Owner |
 |---|---|---|
 | Concept images | the user's own AI image workflow | **user** |
-| Geometry and UVs | local Blender 5.2, `bpy` over the Blender MCP | Claude |
+| Geometry, UVs, PBR maps | Meshy image-to-3D, Pro plan | **user** |
+| Import, scale, orientation | local Blender 5.2, `bpy` over the Blender MCP | Claude |
 | NIF export | PyNifly 28.2, from the same session | Claude |
 | Collision | NifSkope, copied from a vanilla sword | **user** |
 | Textures → DDS | texconv or Paint.NET | **user** |
@@ -85,20 +86,33 @@ concept. Worth knowing while generating.
 
 ## Geometry
 
-Modelled directly in local Blender with `bpy`, iterating against rendered views.
+Generated from the concept image with **Meshy** (image-to-3D), on a Pro plan. Local
+Blender then becomes the conversion and verification stage rather than the modelling one.
 
-**Not** generated with `generate_3d` and cleaned up. Image-to-3D output carries topology
-unsuited to a game asset, and repairing it costs more than building clean geometry for a
-shape this simple. `generate_3d` stays available as a fallback if a concept turns out too
-organic to script, and `multi_image_to_3d` would then be the variant to use, since the
-user is supplying more than one view.
+An earlier version of this spec rejected image-to-3D on topology grounds. That objection
+does not survive contact with the actual constraint. Topology matters enormously for
+armour, which is skinned to a skeleton and deforms; a weapon is a rigid prop that is never
+deformed, so it needs only valid geometry, sane density and a UV map. Meshy supplies all
+three directly: **target polygon count**, **UV unwrapping**, and **PBR maps**.
 
-**Every mesh must carry a UV map.** This is not a quality preference. PyNifly reads
-`uv_layers.active.data` unconditionally and raises `AttributeError: 'NoneType' object has
-no attribute 'data'` when there is none, so procedurally built geometry that was never
-unwrapped cannot be exported at all. Smart UV Project is adequate for a hard-surface
-weapon and is what the first blade uses; it is a poor layout to hand-paint on, so a
-weapon whose textures are painted rather than baked wants seams placed deliberately.
+The scripted route was built and does work — it produced a 1784-triangle sword with a
+correct fuller, swept quillons and a faceted pommel, and it remains the fallback if a
+generated mesh has unusable proportions. Its `bpy` code is in the git history rather than
+repeated here. Its ceiling is the reason it is not the primary route: scripted geometry is
+good at geometric, faceted forms and poor at the organic ornament that concept art tends
+to carry.
+
+**Density target: about 8,000 triangles.** Vanilla one-handed swords run 1,000–2,000, but
+that is a 2011 console budget, not a design goal — modern weapon mods run 5,000–20,000. A
+weapon is the cheapest place in the game to spend triangles: one or two are on screen at a
+time, and they are held closest to the camera. The scripted blade's 12-sided grip and
+8-sided pommel were visibly faceted at that range, which is what the higher target fixes.
+
+**Every mesh must still carry a UV map.** PyNifly reads `uv_layers.active.data`
+unconditionally and raises `AttributeError: 'NoneType' object has no attribute 'data'`
+when there is none. Meshy's unwrap satisfies this; it is asserted after import rather than
+assumed, because the failure is otherwise reported only as "see console window for
+details".
 
 ## Scale and orientation, the silent failures
 
@@ -122,6 +136,71 @@ exporter. Correctly scaled, the sword measures **60 units** — 47% of a human's
 **Orientation.** The blade must run along the axis Skyrim expects, with the correct
 handedness, or it sits sideways in the hand. The reference is a vanilla one-handed sword
 NIF opened beside it; matching that is the check.
+
+## Textures: Meshy's PBR is the source, not the shipped form
+
+Skyrim SE's standard shader is not PBR. Meshy's maps carry more information than the game
+can consume directly, so they are converted rather than passed through:
+
+| Meshy produces | Skyrim SE consumes |
+|---|---|
+| Base colour | diffuse, `systemblade.dds` |
+| Normal | normal RGB, **with specular in the alpha channel** |
+| Roughness | inverted into that alpha |
+| Metallic | selects the environment-map shader and its cubemap |
+
+This conversion is the real work of the texture stage. Skipped, the blade reads matte and
+lifeless, with no error anywhere.
+
+**The normal map cannot be BC5.** BC5 stores two channels and has no alpha, so it cannot
+carry the specular mask that gives a metal blade its shine. Use BC7. (An earlier draft of
+the plan specified BC5, copied from the general advice for normal maps without checking it
+against Skyrim's shader.)
+
+### A PBR set is planned as an optional component
+
+Community Shaders' True PBR is common in modern load orders, and Meshy's output is already
+PBR. Shipping it would be a real gain for the users who have it — but requiring Community
+Shaders for a reward weapon would not be acceptable, so it is not an either/or.
+
+The pattern is one this mod already runs: a base that works for everyone plus an optional
+component detected or selected at install time, exactly as the ImGui overlay and the
+PrismaUI view are shipped together in one FOMOD.
+
+**Not on the first weapon.** The mod currently ships no meshes and no textures at all, so
+the entire asset chain is unproven; two texture sets on the first run would make a failure
+ambiguous. What matters now is only the consequence for storage: **Meshy's original PBR
+maps must be kept**, because the conversion to the vanilla shader is lossy and generative
+output is not reproducible. Where they are kept — in the repository, outside it, or in Git
+LFS — is an open decision, and the repository is already 32 MB with icons accounting for
+28.6 MB of that.
+
+## Licensing and the backup obligation
+
+The assets are generated under a **Meshy Pro** plan, which matters because the terms treat
+the tiers differently. Free-plan output is owned by Meshy and licensed back under CC BY
+4.0 — redistributable, but only with credit. That assignment is written to apply to the
+free plan alone; paid customers instead *grant Meshy* a licence in their User Content,
+which is defined to include generated output. Granting a licence presupposes holding the
+rights, so on a paid plan the rights stay with the author and redistribution in a public
+mod is the author's to make.
+
+The terms never use the word "own" for paid customers, so this rests on the structure
+rather than on an explicit sentence. Crediting Meshy in the README costs nothing, removes
+the question entirely, and matches what this repository already does for the sound effects
+and the icon pack.
+
+Two operational consequences, both stated in the terms rather than inferred:
+
+- **Meshy may delete generated output**, including from inactive accounts, and says
+  explicitly that backing up anything worth keeping is the customer's responsibility. The
+  local archive of source meshes and maps is therefore required, not prudent.
+- **Nothing may be published to the Meshy Community page**, which dedicates the output
+  under CC0 irrevocably.
+
+The `LICENSE` SCOPE section lists what the MIT grant covers. Meshes and textures need a
+line there either way, and whether a fork may reuse them is the author's decision, as it
+was for the sounds and the icons.
 
 ## The record goes through the Creation Kit
 

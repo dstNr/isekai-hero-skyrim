@@ -4,9 +4,9 @@
 
 **Goal:** Get one one-handed sword from a concept image into the System Shop, and leave behind a written route so the second weapon costs a fraction of the first.
 
-**Architecture:** Geometry, UVs and NIF export all happen in local Blender, scripted with `bpy` through the official Blender MCP and PyNifly. That is one continuous step with no handover: the mesh lands in the repository at the end of Task 1. What stays with the user is the work that needs a human at a GUI — collision in NifSkope, textures, and the WEAP record in the Creation Kit. Only after the asset is proven in game does the C++ side change: a shop entry, packaging, and a path check.
+**Architecture:** Meshy generates the geometry, UVs and PBR maps from the concept image. Local Blender, driven with `bpy` through the official Blender MCP, is the conversion and verification stage — orientation, the Skyrim scale factor, and the PyNifly export flags — and the mesh lands in the repository at the end of Task 1. What stays with the user is the work that needs a human at a GUI — collision in NifSkope, textures, and the WEAP record in the Creation Kit. Only after the asset is proven in game does the C++ side change: a shop entry, packaging, and a path check.
 
-**Tech Stack:** Blender 5.2.1 LTS driven by the Blender Lab MCP server (`blender-mcp`, socket on `localhost:9876`), PyNifly 28.2, NifSkope, texconv, Creation Kit, C++23 / CommonLibSSE-NG, `tools/check.mjs`, `package.ps1`.
+**Tech Stack:** Meshy (Pro, image-to-3D), Blender 5.2.1 LTS driven by the Blender Lab MCP server (`blender-mcp`, socket on `localhost:9876`), PyNifly 28.2, NifSkope, texconv, Creation Kit, C++23 / CommonLibSSE-NG, `tools/check.mjs`, `package.ps1`.
 
 **Spec:** `docs/superpowers/specs/2026-09-08-weapon-asset-pipeline-design.md`
 
@@ -20,12 +20,15 @@
 - **The plugin is ESL-flagged**: every local FormID must be `<= 0xFFF`. Current use is 35 records, so there is room.
 - **All repository artifacts in English** — code, comments, commit messages, docs.
 - **Never bump the project version.** `CMakeLists.txt` VERSION and `package.ps1`'s default `-Version` stay where they are.
+- **Geometry comes from Meshy** on a Pro plan, at a target of about **8,000 triangles**. Vanilla's 1,000–2,000 is a 2011 console budget, not a design goal.
+- **Meshy's original mesh and PBR maps must be archived locally.** Their terms reserve the right to delete generated output and place backup responsibility on the customer; the conversion to Skyrim's shader is lossy and generative output is not reproducible.
+- **Nothing goes on the Meshy Community page** — publishing there dedicates the output under CC0 irrevocably.
 - **No armour in this plan.** See the spec's non-goals; armour is #34.
 - **`build.bat` needs `SKYRIM_DATA` set** and refuses to deploy while Skyrim is running.
 
 ## Two kinds of task in this plan
 
-Tasks 1 and 4–5 are Claude's: code and repository changes, with the project's real verification (`node tools/check.mjs`, `build.bat`).
+Tasks 1 and 4–5 are Claude's: code and repository changes, with the project's real verification (`node tools/check.mjs`, `build.bat`). Task 1 opens with two user steps — the Meshy generation and its archival — because they happen outside any tool reachable from here.
 
 Tasks 2 and 3 are the user's: NifSkope, texture work and the Creation Kit. Those steps are written as precise instructions with a stated done-condition rather than as a test-first cycle, because there is no test to run — the verification is looking at the thing. Dressing them up as red-green-refactor would be theatre.
 
@@ -48,175 +51,93 @@ Tasks 2 and 3 are the user's: NifSkope, texture work and the Creation Kit. Those
 
 ---
 
-### Task 1: Model the blade, unwrap it, and export a Skyrim SE NIF
+### Task 1: Generate the blade with Meshy, then convert and export it
 
 **Files:**
 - Create: `meshes/isekai/weapons/systemblade.nif`
 
 **Interfaces:**
-- Consumes: the user's concept images — a side-on profile, PNG, at least 1024 px on the
-  long edge, plain background, even lighting; optionally a second edge-on or front view.
+- Consumes: the user's concept image, and a Meshy generation made from it.
 - Produces: `meshes/isekai/weapons/systemblade.nif`, Skyrim SE format (BS version 100),
-  blade along +Y, **60 Skyrim units** overall, origin at the grip where the hand closes.
-  Task 2 adds collision and texture paths to the same file; Task 3's WEAP record names it.
+  blade along the axis a vanilla sword uses, **60 Skyrim units** overall, origin at the
+  grip. Task 2 adds collision and texture paths to the same file; Task 3's WEAP record
+  names it.
 
-**This task cannot start until the concept images exist.** They are the input, not a detail.
+Meshy supplies the geometry, the UVs and the PBR maps. Local Blender is the conversion and
+verification stage — it is where scale, orientation and the export flags are enforced, and
+none of that changed when the geometry stopped being scripted.
 
-Everything here runs in local Blender through the Blender MCP. There is no handover in the
-middle: geometry, UVs, scale and NIF export are one continuous scripted step.
+The scripted route still works and stays the fallback for a generation with unusable
+proportions. Its `bpy` code is in the git history rather than duplicated here.
 
-- [ ] **Step 1: Confirm the toolchain before modelling anything**
+- [ ] **Step 1: Generate in Meshy (user)**
+
+Image-to-3D from the concept image, on the Pro plan. Settings that matter:
+
+- **Target polygon count: about 8,000 triangles.** Check whether the field counts polygons
+  or triangles — with quads that is a factor of two. Vanilla's 1,000–2,000 is a 2011
+  console budget, not a target.
+- **UV unwrap: on.** The export cannot proceed without it.
+- **PBR textures: on.**
+
+Do not publish the result to the Meshy Community page — that dedicates it under CC0
+irrevocably.
+
+- [ ] **Step 2: Download and archive before anything else (user)**
+
+Save the mesh and **every** PBR map to a local archive outside the repository.
+
+This is an obligation, not housekeeping. Meshy's terms reserve the right to delete
+generated output, including from inactive accounts, and state that backing up anything
+worth keeping is the customer's responsibility. The conversion to Skyrim's shader is lossy
+and generative output is not reproducible, so these files cannot be recovered by
+regenerating.
+
+- [ ] **Step 3: Import into Blender and see what actually arrived**
 
 ```python
-import bpy, addon_utils
+import bpy
+from mathutils import Vector
+
+bpy.ops.import_scene.gltf(filepath=r"<downloaded>.glb")
+meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
+dg = bpy.context.evaluated_depsgraph_get()
+
+pts = [(o.matrix_world @ Vector(c)) for o in meshes for c in o.bound_box]
 result = {
-    "blender": bpy.app.version_string,                # expect 5.2.x
-    "pynifly": addon_utils.check("io_scene_nifly"),   # expect (True, True)
-    "export_op": hasattr(bpy.ops.export_scene, "pynifly"),
+    "objects": sorted(o.name for o in meshes),
+    "tris": sum(len(o.evaluated_get(dg).to_mesh().polygons) for o in meshes),
+    "extent_m": [round(max(p[i] for p in pts) - min(p[i] for p in pts), 4) for i in range(3)],
+    "uvs": {o.name: bool(o.data.uv_layers.active) for o in meshes},
+    "materials": sorted({m.name for o in meshes for m in o.data.materials if m}),
 }
 ```
 
-If PyNifly is missing, install the latest `io_scene_nifly.zip` from
-`github.com/BadDogSkyrim/PyNifly` with
-`bpy.ops.preferences.addon_install(filepath=..., overwrite=True)` then `addon_enable`.
-It is a legacy addon, not an extension package — `extension install-file` will not take it.
+Read it against expectations: triangle count near the target, one or a few objects, a UV
+layer on every mesh. Generated meshes sometimes arrive as a single merged object — that is
+fine for a weapon, which needs no per-part separation.
 
-- [ ] **Step 2: Lay down a measured blockout**
+- [ ] **Step 4: Assert the UV maps exist**
 
-Scale and orientation are established before any shaping, because both are what fail
-silently later. Blade along +Y, origin in the grip.
+```python
+missing = [o.name for o in meshes if not o.data.uv_layers.active]
+assert not missing, f"no UV map on: {missing}"
+```
+
+If Meshy's unwrap did not come through the GLB, unwrap in Blender before going further —
+`bpy.ops.uv.smart_project` will do, though it is a poor layout to paint on.
+
+- [ ] **Step 5: Fix orientation, then scale**
+
+Orientation first, because scaling is about the origin and a rotation afterwards would
+move the pivot. The blade must run along the axis a vanilla sword uses and point the same
+way; the origin belongs in the grip, where the hand closes. Generated meshes arrive with
+arbitrary orientation and an origin that is usually the bounding-box centre.
 
 ```python
 import bpy
 
-for o in list(bpy.data.objects):
-    if o.type == "MESH":
-        bpy.data.objects.remove(o, do_unlink=True)
-
-# 0.85 m overall. Blade runs along +Y so the tip points away from the grip.
-def box(name, dim, loc):
-    bpy.ops.mesh.primitive_cube_add(size=1.0, location=loc)
-    ob = bpy.context.active_object
-    ob.name = name
-    ob.scale = dim                      # size=1.0 -> verts at +-0.5, so scale == dimension
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    return ob
-
-box("blade",  (0.052, 0.660, 0.009), (0,  0.410, 0))
-box("guard",  (0.190, 0.028, 0.022), (0,  0.072, 0))
-box("grip",   (0.030, 0.115, 0.026), (0,  0.000, 0))
-box("pommel", (0.048, 0.048, 0.040), (0, -0.078, 0))
-```
-
-Expected: four objects, overall length within 0.80–0.90 m.
-
-- [ ] **Step 3: Render the blockout and check it against the concept**
-
-Render an orthographic profile view and compare the silhouette to the concept image:
-proportions of blade to grip, guard width, taper.
-
-Concept art is usually drawn with a hand-and-a-half grip. A one-handed sword needs it
-shorter or the hand sits wrong — decide that here, not after shaping.
-
-- [ ] **Step 4: Shape the blade to the reference**
-
-Build cross-sections and loft them rather than deforming a cube: that gives direct control
-over the taper and lets the fuller fade out before the point. Keep it hard-surface — flat
-faces and clean bevels survive the NIF conversion without topology surprises.
-
-```python
-import bpy, bmesh, math
-
-def loft(name, rings, tip=None):
-    bm = bmesh.new()
-    vr = [[bm.verts.new(p) for p in ring] for ring in rings]
-    n = len(rings[0])
-    for a, b in zip(vr, vr[1:]):
-        for i in range(n):
-            j = (i + 1) % n
-            bm.faces.new((a[i], a[j], b[j], b[i]))
-    if tip is not None:
-        tv = bm.verts.new(tip)
-        for i in range(n):
-            bm.faces.new((vr[-1][i], vr[-1][(i + 1) % n], tv))
-    else:
-        bm.faces.new(tuple(vr[-1]))
-    bm.faces.new(tuple(reversed(vr[0])))
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
-    me = bpy.data.meshes.new(name)
-    bm.to_mesh(me); bm.free()
-    ob = bpy.data.objects.new(name, me)
-    bpy.context.collection.objects.link(ob)
-    return ob
-
-# Ten-point blade section: two cutting edges, two ridges, a fuller in each face.
-# `fuller` fades to 0 so the channel ends before the point.
-W, T = 0.036, 0.0055
-
-def blade_ring(y, ws, ts, fuller):
-    w, t = W * ws, T * ts
-    fz = t * (0.26 + 0.74 * (1.0 - fuller))
-    xz = [(-w, 0.0), (-0.66*w, t), (-0.34*w, fz), (0.34*w, fz), (0.66*w, t),
-          (w, 0.0), (0.66*w, -t), (0.34*w, -fz), (-0.34*w, -fz), (-0.66*w, -t)]
-    return [(x, y, z) for x, z in xz]
-```
-
-Bevel every hard edge once so the silhouette catches light instead of reading flat:
-
-```python
-for ob in [o for o in bpy.data.objects if o.type == "MESH"]:
-    m = ob.modifiers.new(name="bevel", type="BEVEL")
-    m.width, m.segments = 0.0008, 2
-    m.limit_method, m.angle_limit = "ANGLE", math.radians(30)
-```
-
-Re-render after each coherent edit and compare. Watch for parts that sit inside other
-parts — a gem buried in its collar renders as nothing and is easy to miss in profile.
-
-Done when the rendered silhouette matches the concept closely enough that the user
-approves it. **Ask them; do not decide this alone.**
-
-- [ ] **Step 5: Apply Principled materials**
-
-Base colour and roughness only. Procedural shaders do not survive export, and anything
-more elaborate is repainted as a texture in Task 2.
-
-- [ ] **Step 6: Unwrap every mesh — the export fails without it**
-
-PyNifly reads `uv_layers.active.data` unconditionally. A procedurally built mesh has no UV
-map, and the export dies with `AttributeError: 'NoneType' object has no attribute 'data'`,
-surfaced only as "see console window for details".
-
-```python
-from math import radians
-meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
-for o in meshes:
-    bpy.ops.object.select_all(action="DESELECT")
-    o.select_set(True)
-    bpy.context.view_layer.objects.active = o
-    bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.uv.smart_project(angle_limit=radians(66), island_margin=0.02)
-    bpy.ops.object.mode_set(mode="OBJECT")
-
-assert all(o.data.uv_layers.active for o in meshes), "a mesh is still unwrapped"
-```
-
-Smart UV Project is adequate for a hard-surface weapon whose textures will be baked. It is
-an awkward layout to hand-paint on; if the textures are to be painted, place seams by hand.
-
-- [ ] **Step 7: Apply the Skyrim scale, then export**
-
-**PyNifly does not convert metres to Skyrim units.** It writes Blender units into the NIF
-one for one. `blender_xf` does not help — that flag governs bone orientation and armature
-scale, not asset scale. Exporting a 0.857 m sword unscaled yields a NIF measuring 0.86
-units, about 1.2 cm beside a 128-unit human, and reports "Export successful".
-
-```python
-import bpy, logging, traceback
-
 SKYRIM_UNITS_PER_METRE = 70.0     # a 128-unit human is about 1.83 m
-out = r"<repo>\meshes\isekai\weapons\systemblade.nif"
 
 meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
 bpy.ops.object.select_all(action="DESELECT")
@@ -224,10 +145,28 @@ for o in meshes:
     o.select_set(True)
 bpy.context.view_layer.objects.active = meshes[0]
 
-# Scale about the world origin, which sits in the grip, then bake it in.
+# ... rotate here so the blade runs along +Y, and move the grip to the world origin ...
+
 bpy.ops.transform.resize(value=(SKYRIM_UNITS_PER_METRE,) * 3,
                          center_override=(0.0, 0.0, 0.0))
-bpy.ops.object.transform_apply(location=True, rotation=False, scale=True)
+bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+```
+
+**PyNifly does not convert metres to Skyrim units.** It writes Blender units into the NIF
+one for one, and `blender_xf` governs bone orientation rather than asset scale. An
+unscaled 0.857 m sword exports as a 0.86-unit NIF — about 1.2 cm beside a 128-unit human —
+and reports "Export successful".
+
+A generated mesh may not arrive at metre scale at all. Measure it in Step 3 and derive the
+factor from the intended real-world length (0.75–0.9 m for a one-handed sword) rather than
+assuming 70 outright.
+
+- [ ] **Step 6: Export the NIF**
+
+```python
+import bpy, logging, traceback
+
+out = r"<repo>\meshes\isekai\weapons\systemblade.nif"
 
 # "see console window for details" is a dead end over MCP; capture the real traceback.
 caught = []
@@ -240,7 +179,7 @@ log = logging.getLogger("pynifly"); h = Grab(); log.addHandler(h)
 bpy.ops.export_scene.pynifly(
     filepath=out,
     target_game="SKYRIMSE",
-    export_modifiers=True,      # or bevels are dropped and a mirrored guard exports halved
+    export_modifiers=True,      # or bevels are dropped and a mirrored part exports halved
     check_existing=False,
     intuit_defaults=False)      # REQUIRED - see below
 
@@ -257,7 +196,7 @@ if self.intuit_defaults:                                    # export_nif.py
     self.target_game = self._discover_game(self.objects_to_export)
 ```
 
-- [ ] **Step 8: Verify the written file, not the success message**
+- [ ] **Step 7: Verify the written file, not the success message**
 
 PyNifly reports "Export successful" for files that are the wrong edition and the wrong
 size. Read the NIF back and check the numbers.
@@ -268,15 +207,17 @@ pynifly = importlib.import_module("io_scene_nifly.pyn.pynifly")
 nif = pynifly.NifFile(out)
 allv = [v for sh in nif.shapes for v in sh.verts]
 ext = [round(max(v[i] for v in allv) - min(v[i] for v in allv), 2) for i in range(3)]
-result = {"game": str(nif.game), "extent_units": ext,
+result = {"game": str(nif.game),
+          "extent_units": ext,
+          "tris": sum(len(sh.tris) for sh in nif.shapes),
           "shapes": sorted(sh.name for sh in nif.shapes)}
 ```
 
-Expected: `game == "SKYRIMSE"`, longest extent **60 units** (0.857 m x 70), one shape per
-part. The raw header carries the same answer — BS version **100** is Skyrim SE, **83** is
-Legacy Edition.
+Expected: `game == "SKYRIMSE"`, longest extent about **60 units**, triangle count near the
+8,000 target. The raw header carries the same answer — BS version **100** is Skyrim SE,
+**83** is Legacy Edition.
 
-- [ ] **Step 9: Commit the mesh**
+- [ ] **Step 8: Commit the mesh**
 
 ```bash
 git add meshes/isekai/weapons/systemblade.nif
@@ -329,15 +270,34 @@ Bake or paint the maps, export as PNG, then convert with `texconv`:
 
 ```
 texconv -f BC7_UNORM -y -o textures\isekai\weapons systemblade.png
-texconv -f BC5_UNORM -y -o textures\isekai\weapons systemblade_n.png
+texconv -f BC7_UNORM -y -o textures\isekai\weapons systemblade_n.png
 ```
 
-BC7 for colour, BC5 for the normal map — that is what Skyrim SE expects.
+**BC7 for both, and the normal map especially.** BC5 stores two channels and has no alpha,
+so it cannot carry the specular mask that gives a metal blade its shine — a blade exported
+that way is uniformly matte, with no error to say so. Earlier drafts of this plan said BC5,
+copied from the general advice for normal maps without checking it against Skyrim's shader.
 
-Most of the detail in a concept image lives here rather than in geometry: the grip wrap,
-the engraving on guard and pommel, the surface wear. Vanilla one-handed swords run about
-1000–2000 triangles, so the geometry is meant to be plain. The glow in the fuller is
-Skyrim's enchantment shader plus a glow map, not geometry and not the diffuse map.
+Meshy's maps are the source, not the shipped form. Skyrim SE's standard shader is not PBR,
+so they are converted:
+
+| Meshy produces | Skyrim SE consumes |
+|---|---|
+| Base colour | diffuse, `systemblade.dds` |
+| Normal | normal RGB, **with specular in the alpha channel** |
+| Roughness | inverted into that alpha |
+| Metallic | selects the environment-map shader and its cubemap |
+
+Surface ornament belongs here rather than in geometry — the grip wrap, the engraving on
+guard and pommel, the wear. Silhouette does not: no map changes an outline, which is why
+the mesh carries the target triangle count instead of leaning on the texture. The glow in
+the fuller is Skyrim's enchantment shader plus a glow map, neither geometry nor diffuse.
+
+A **PBR set for Community Shaders' True PBR is planned as an optional FOMOD component**,
+following the same base-plus-optional pattern as the ImGui overlay and the PrismaUI view.
+It is deliberately not part of the first weapon: the asset chain is unproven, and two
+texture sets would make a failure ambiguous. Keeping Meshy's original maps is what makes it
+possible later.
 
 - [ ] **Step 4: Point the NIF at the texture paths**
 
@@ -359,6 +319,7 @@ Record the failures that produce no error, because they are the whole value of t
 - `intuit_defaults=True` — every passed setting is discarded, output is Legacy Edition
 - `export_modifiers=False` — bevels vanish and a mirrored guard exports as one half
 - unscaled export — a 1.2 cm sword, reported as successful
+- a BC5 normal map — no alpha, so no specular, so a permanently matte blade
 - missing collision — the weapon falls through the floor
 
 - [ ] **Step 6: Commit**
