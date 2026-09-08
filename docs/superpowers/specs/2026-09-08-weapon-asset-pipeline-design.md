@@ -17,10 +17,13 @@ chain that produced it is the point.
 
 - **No armour in this pass.** Armour is intended and will follow; it is not in scope
   here. It needs Skyrim's body mesh and skeleton to be fitted, weighted, split into
-  dismemberment partitions and given `_0`/`_1` weight variants, and none of those
-  files can reach the remote Blender worker. That makes it a different project with a
-  different toolchain — Outfit Studio, locally, with the user doing the geometry. What
-  this weapon establishes is how much of the *rest* of the chain (records, packaging,
+  dismemberment partitions and given `_0`/`_1` weight variants. The original reason for
+  deferring it — that none of those files could reach a remote Blender worker — no longer
+  holds: the chain now runs in local Blender, where PyNifly imports Skyrim's body meshes
+  and skeletons directly. What still separates armour from a weapon is the work itself.
+  Skinning and weight painting are judgement rather than script, and no amount of tooling
+  access changes that; Outfit Studio remains the likely route. Armour is therefore closer
+  than this spec first assumed, and still out of scope here. What this weapon establishes is how much of the *rest* of the chain (records, packaging,
   shop integration, the path checks) carries over unchanged, which is most of it.
 - No custom magic effect or enchantment record. The weapon may carry a vanilla
   enchantment; a bespoke one is a separate piece of work.
@@ -39,16 +42,21 @@ failure of the *pipeline* rather than of the asset class.
 | Stage | Tool | Owner |
 |---|---|---|
 | Concept images | the user's own AI image workflow | **user** |
-| Geometry | remote Blender 5.2 worker, `bpy`, with render feedback | Claude |
-| Handover | GLB | Claude |
-| GLB → NIF | Blender + PyNifly, locally | **user** |
+| Geometry and UVs | local Blender 5.2, `bpy` over the Blender MCP | Claude |
+| NIF export | PyNifly 28.2, from the same session | Claude |
+| Collision | NifSkope, copied from a vanilla sword | **user** |
 | Textures → DDS | texconv or Paint.NET | **user** |
 | WEAP record | Creation Kit, from a written guide | **user** |
 | Shop entry, checks, packaging | C++ and `tools/` | Claude |
 
-The two stages that sit with the user are there for one reason: they need Skyrim's own
-files and format plugins, and the remote worker is explicitly forbidden from fetching
-external files. This is a boundary of the tooling, not a division of skill.
+This split was originally drawn around a remote Blender worker that cannot fetch external
+files, which put NIF export on the user's side. That boundary is gone: Blender 5.2 is
+installed locally, the official Blender MCP drives it, and PyNifly 28.2 supports 5.2, so
+geometry, UVs and NIF export are one continuous scripted step with no handover in the
+middle. A GLB is still produced, but as an intermediate rather than a delivery.
+
+What remains with the user is what genuinely needs a human at a GUI: approving the
+silhouette against the concept, the NifSkope collision work, and the Creation Kit.
 
 ## What the concept images must show
 
@@ -77,7 +85,7 @@ concept. Worth knowing while generating.
 
 ## Geometry
 
-Modelled directly in the Blender worker with `bpy`, iterating against rendered views.
+Modelled directly in local Blender with `bpy`, iterating against rendered views.
 
 **Not** generated with `generate_3d` and cleaned up. Image-to-3D output carries topology
 unsuited to a game asset, and repairing it costs more than building clean geometry for a
@@ -85,7 +93,12 @@ shape this simple. `generate_3d` stays available as a fallback if a concept turn
 organic to script, and `multi_image_to_3d` would then be the variant to use, since the
 user is supplying more than one view.
 
-Delivered as GLB, which is the worker's portable export.
+**Every mesh must carry a UV map.** This is not a quality preference. PyNifly reads
+`uv_layers.active.data` unconditionally and raises `AttributeError: 'NoneType' object has
+no attribute 'data'` when there is none, so procedurally built geometry that was never
+unwrapped cannot be exported at all. Smart UV Project is adequate for a hard-surface
+weapon and is what the first blade uses; it is a poor layout to hand-paint on, so a
+weapon whose textures are painted rather than baked wants seams placed deliberately.
 
 ## Scale and orientation, the silent failures
 
@@ -94,9 +107,17 @@ first time it is equipped, and both are cheap to get right if they are decided u
 
 **Scale.** Blender works in metres; Skyrim uses its own units at roughly **70 units per
 metre** (a human is about 128 units tall). A one-handed sword is **0.75 m to 0.9 m**
-overall. The model is built at metre scale and the conversion applies the factor — so
-the number that matters is the length in metres, stated above, and it is checked against
-a vanilla sword in NifSkope before the record is made.
+overall.
+
+**PyNifly does not apply that conversion.** It writes Blender units into the NIF one for
+one, and `blender_xf` does not change this — that flag governs bone orientation and
+armature scale, not asset scale. Measured, not assumed: the first export of the 0.857 m
+sword produced a NIF measuring **0.86 units**, which beside a 128-unit human is about
+1.2 cm, and PyNifly reported "Export successful".
+
+So the factor is applied explicitly as the last operation before export, and checked by
+reading the vertex extents back out of the written file rather than by trusting the
+exporter. Correctly scaled, the sword measures **60 units** — 47% of a human's height.
 
 **Orientation.** The blade must run along the axis Skyrim expects, with the correct
 handedness, or it sits sideways in the hand. The reference is a vanilla one-handed sword
@@ -158,7 +179,7 @@ passes:
 
 ## Open question, to settle during the work
 
-Whether the GLB → NIF conversion needs a collision shape built by hand or whether one
+Whether the exported NIF needs a collision shape built by hand or whether one
 copied from a vanilla sword in NifSkope is sufficient. Copying is the standard practice
 and is assumed here; if it turns out that a copied `bhkCollisionObject` does not fit the
 new blade's proportions, the fallback is generating a simple convex shape, which is more
