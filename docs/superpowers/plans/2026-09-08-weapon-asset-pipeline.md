@@ -313,32 +313,43 @@ Measured from those files, so the target is known rather than guessed:
 
 | | axis | length | Y range | blade / hilt | blade tris |
 |---|---|---|---|---|---|
-| iron sword | Y | 77.33 u | −13.17 … +64.16 | 83 / 17 | 425 |
-| iron dagger | Y | 35.38 u | −11.68 … +23.70 | 67 / 33 | 416 |
+| iron sword | Y | 74.87 u | −11.72 … +63.15 | 77.3 / 22.7 | 425 |
+| iron dagger | Y | 28.65 u | −6.80 … +21.85 | 62.7 / 37.3 | 416 |
 
 Open the new blade beside `longsword.nif` and check that it runs along **+Y** with the
 pommel at negative Y.
 
-**The origin sits at the guard, not in the middle of the grip.** In both reference files the
-negative Y extent equals the hilt length exactly — the sword's hilt is 17% of 77.33 units
-and its minimum is −13.17; the dagger's is 33% of 35.38 and its minimum is −11.68. So the
-blade occupies the whole positive Y range and the hilt the whole negative one.
+**The origin is where the hand closes, inside the grip — not at the guard.** The guard sits
+**5.28 units above the origin** on the sword and 3.88 on the dagger; a hand is a constant
+size, so that offset barely moves with weapon length.
+
+> An earlier draft of this plan claimed the origin sat at the guard, because it measured
+> whole files and the scabbard is wider than the guard, so "the widest slice" found the
+> scabbard. Measure the weapon mesh alone. The guard collision box corroborates it: on the
+> sword it straddles Y 4.77–6.32.
 
 If the axis is wrong, fix it in Blender and re-export — not in NifSkope, so the source
 stays the truth.
 
-- [ ] **Step 2: Give it a collision shape**
+- [x] **Step 2: Give it a collision shape** — scripted, no NifSkope
 
-Copy the `bhkCollisionObject` branch from the vanilla sword into the new NIF in NifSkope,
-then adjust its dimensions to the new blade. Without it the weapon falls through the floor
-when dropped.
+`tools/add-weapon-collision.py`, run headless, imports a vanilla weapon as a template so
+PyNifly's block structure and Havok parameters are inherited, then replaces every geometric
+number with one measured from our blade and deletes all vanilla meshes.
 
-It is not a single box: `longsword.nif` carries `bhkCollisionObject` → `bhkRigidBody` →
-**`bhkListShape`** with several `bhkConvexTransformShape` children, so refitting means
-several primitives rather than one.
+```
+blender --background --python tools/add-weapon-collision.py -- \
+    --nif meshes/isekai/weapons/systemblade.nif \
+    --template <extracted>/longsword.nif --root-name SystemBlade
+```
 
-If a copied shape cannot be made to fit, generate a simple convex shape instead — more
-work, well trodden, and the spec records this as the expected fallback.
+It also carries over the three blocks that fail just as silently as missing collision:
+`BSXFlags` (`HAVOC | DYNAMIC | ARTICULATED` — without it collision is ignored even when
+present), `NiStringExtraData:Prn` (`WeaponSword` — where the weapon sits on the body) and
+`BSInvMarker` (the inventory angle).
+
+Verified in the written file: `bhkListShape` with 3 children, and no `Iron…` string left
+from the template.
 
 - [ ] **Step 3: Convert the textures to DDS**
 

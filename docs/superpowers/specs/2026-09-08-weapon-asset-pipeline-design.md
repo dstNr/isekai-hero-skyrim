@@ -63,7 +63,7 @@ the same ratio becomes an obvious mistake.
 | Geometry, UVs, PBR maps | Meshy image-to-3D, Pro plan | **user** |
 | Import, scale, orientation | local Blender 5.2, `bpy` over the Blender MCP | Claude |
 | NIF export | PyNifly 28.2, from the same session | Claude |
-| Collision | NifSkope, copied from a vanilla sword | **user** |
+| Collision, BSX, attachment point | `tools/add-weapon-collision.py`, headless Blender | Claude |
 | Textures → DDS | texconv or Paint.NET | **user** |
 | WEAP record | Creation Kit, from a written guide | **user** |
 | Shop entry, checks, packaging | C++ and `tools/` | Claude |
@@ -75,7 +75,7 @@ geometry, UVs and NIF export are one continuous scripted step with no handover i
 middle. A GLB is still produced, but as an intermediate rather than a delivery.
 
 What remains with the user is what genuinely needs a human at a GUI: approving the
-silhouette against the concept, the NifSkope collision work, and the Creation Kit.
+silhouette against the concept and the Creation Kit.
 
 ## What the concept images must show
 
@@ -166,12 +166,15 @@ file back and check the number against the intended length.
 
 | | axis | length | Y range | blade / hilt |
 |---|---|---|---|---|
-| iron sword (`longsword.nif`) | **Y** | 77.33 u | −13.17 … +64.16 | 83 / 17 |
-| iron dagger (`irondagger.nif`) | **Y** | 35.38 u | −11.68 … +23.70 | 67 / 33 |
+| iron sword (`longsword.nif`) | **Y** | 74.87 u | −11.72 … +63.15 | 77.3 / 22.7 |
+| iron dagger (`irondagger.nif`) | **Y** | 28.65 u | −6.80 … +21.85 | 62.7 / 37.3 |
 
 The blade runs along **+Y**, the pommel sits at negative Y, and the origin falls inside the
-grip. That is exactly the convention this pipeline already targets, so the conversion step
-is a rotation from the generated mesh's **Z** onto **Y** and nothing more.
+grip **where the hand closes** — the guard sits 5.28 units above it on the sword, 3.88 on
+the dagger. An earlier draft of this spec measured whole files rather than the blade mesh
+alone, found the scabbard wider than the guard, and concluded the origin sat *at* the guard.
+It does not. The conversion step is therefore a rotation from the generated mesh's **Z**
+onto **Y**, plus that offset.
 
 **The vanilla iron sword's mesh is `meshes\weapons\iron\longsword.nif`.** There is no
 `ironsword.nif`; the only files by that name are the broken-sword clutter props
@@ -338,10 +341,12 @@ passes:
 ## Open question, to settle during the work
 
 Whether the exported NIF needs a collision shape built by hand or whether one
-copied from a vanilla sword in NifSkope is sufficient. The vanilla iron sword's collision
-is not a simple box: it is a `bhkCollisionObject` → `bhkRigidBody` → **`bhkListShape`**
-holding several `bhkConvexTransformShape` children. Copying the whole branch is still the
-approach, but it is more than one primitive to refit. Copying is the standard practice
+copied from a vanilla sword is sufficient. **Settled: copying works, and it needs no
+NifSkope.** PyNifly reads and writes collision, so a vanilla weapon can be imported purely
+as a template and every geometric number replaced with one measured from our own blade —
+`tools/add-weapon-collision.py` does exactly that. The structure is `bhkCollisionObject` →
+`bhkRigidBody` → **`bhkListShape`** with three `bhkBoxShape` children for grip, guard and
+blade, deliberately slimmer than the visual mesh. Copying is the standard practice
 and is assumed here; if it turns out that a copied `bhkCollisionObject` does not fit the
 new blade's proportions, the fallback is generating a simple convex shape, which is more
 work but well-trodden. This does not change the design, only the effort in one stage.

@@ -11,13 +11,14 @@ The mesh and its textures are in the repository and verified. What is left:
 
 | What | Why it matters |
 |---|---|
-| Collision (`bhkCollisionObject`) | Without it the weapon falls through the floor when dropped. |
-| Scabbard (`Scb` node) | Without it nothing appears on the body when the weapon is sheathed. |
 | First-person mesh | A record duplicated from `IronSword` shows a **vanilla** sword in first person. |
 | The WEAP record | See `CREATION_KIT_ESP.md`; duplicate `IronSword`. |
 
-All four are detailed under **G. Still to do**. Sections A–F are done and are the route to
+Both are detailed under **H. Still to do**. Sections A–G are done and are the route to
 repeat.
+
+**No scabbard.** Most weapon mods ship without one and Skyrim copes — the weapon simply
+appears whole on the body when sheathed. It was a deliberate decision, not an omission.
 
 ---
 
@@ -63,16 +64,23 @@ Extracted from `Skyrim - Meshes1.bsa` and measured, so the targets are known rat
 guessed. **The vanilla iron sword's mesh is `longsword.nif`** — there is no `ironsword.nif`;
 the files by that name are broken-sword clutter props.
 
-| | axis | length | Y range | blade / hilt | blade tris |
-|---|---|---|---|---|---|
-| iron sword (`longsword.nif`) | Y | 77.33 u | −13.17 … +64.16 | 83 / 17 | 425 |
-| iron dagger (`irondagger.nif`) | Y | 35.38 u | −11.68 … +23.70 | 67 / 33 | 416 |
+| | axis | length | Y range | guard at | blade / hilt | blade tris |
+|---|---|---|---|---|---|---|
+| iron sword (`longsword.nif`) | Y | 74.87 u | −11.72 … +63.15 | **+5.28** | 77.3 / 22.7 | 425 |
+| iron dagger (`irondagger.nif`) | Y | 28.65 u | −6.80 … +21.85 | **+3.88** | 62.7 / 37.3 | 416 |
 
-Two conventions follow from those numbers:
+> **Measure the weapon mesh alone.** An earlier draft measured whole files and reported
+> 83/17 and 67/33 with the origin sitting at the guard. Both were wrong: the scabbard is
+> wider than the guard, so "the widest slice" found the scabbard instead. The numbers above
+> come from the blade mesh on its own and are corroborated by the guard collision box, which
+> straddles Y 4.77–6.32 on the sword.
+
+Two conventions follow:
 
 - **The blade runs along +Y**, the pommel sits at negative Y.
-- **The origin sits at the guard**, not in the middle of the grip. In both files the
-  negative Y extent equals the hilt length exactly.
+- **The origin is where the hand closes**, inside the grip — *not* at the guard. The guard
+  sits **5.28 units above the origin** on the sword and 3.88 on the dagger. A hand is a
+  constant size, so this offset barely changes with weapon length; use ~5.3 for a sword.
 
 Skyrim's weapons are larger relative to the body than real ones — 77 units is about 1.10 m
 at 70 units per metre. A weapon scaled to real-world dimensions looks stubby beside them.
@@ -107,8 +115,8 @@ Image-to-3D from the concept image. Three settings matter:
 ### Proportions decide the weapon class, not the other way round
 
 Concept art draws heroic proportions and image-to-3D reproduces them faithfully. The System
-Blade measures **68 % blade to 32 % grip**, which sits between a vanilla sword (83/17) and a
-vanilla dagger (67/33). The class is therefore chosen by the length you scale to:
+Blade measures **68 % blade to 32 % grip**, which sits between a vanilla sword (77/23) and a
+vanilla dagger (63/37). The class is therefore chosen by the length you scale to:
 
 | scaled to | blade | grip | reads as |
 |---|---|---|---|
@@ -290,19 +298,55 @@ dropped.
 > conversion: `n[:, :, 1] = 255 - n[:, :, 1]`. This can only be settled by looking at the
 > weapon in game.
 
-## G. Still to do
+## G. Collision and the extra-data nodes
 
-- **Collision.** Copy the `bhkCollisionObject` branch from `longsword.nif` in NifSkope and
-  refit it. It is not a single box: it is `bhkCollisionObject` → `bhkRigidBody` →
-  **`bhkListShape`** with several `bhkConvexTransformShape` children.
-- **The scabbard.** A vanilla weapon file carries an `Scb` node, which is what renders on the
-  body when the weapon is sheathed, plus `BloodLighting` and `BloodEffects` overlays for the
-  bloodied look. The generated mesh has none of them; the blood overlays are cosmetic, the
-  scabbard is not.
+**NifSkope is not needed for this.** PyNifly reads and writes collision, so the whole job is
+a script: `tools/add-weapon-collision.py`, run headless.
+
+```
+blender --background --python tools/add-weapon-collision.py -- \
+    --nif meshes/isekai/weapons/systemblade.nif \
+    --template <extracted>/longsword.nif --root-name SystemBlade
+```
+
+It imports a vanilla weapon purely as a **template**, so PyNifly's exact block structure and
+Havok parameters are inherited rather than guessed, then replaces every geometric number
+with one measured from our own blade and deletes all vanilla meshes. A collision box is
+three numbers, so nothing of Bethesda's survives into the output — verified by checking that
+no `Iron…` string remains in the written file.
+
+What a vanilla weapon carries, and what the script therefore reproduces:
+
+| Block | Value | Without it |
+|---|---|---|
+| `bhkCollisionObject` → `bhkRigidBody` → `bhkListShape` | layer `WEAPON`, `SPHERE_STABILIZED`, quality `MOVING` | falls through the floor |
+| three `bhkBoxShape` children | material `MATERIAL_BLADE_1HAND` | — |
+| `BSXFlags:BSX` | `HAVOC \| DYNAMIC \| ARTICULATED` | collision is ignored even when present |
+| `NiStringExtraData:Prn` | `WeaponSword` | nowhere to sit on the body |
+| `BSInvMarker:INV` | rotation, zoom 1.2 | wrong angle in the inventory |
+
+The three collision boxes are grip, guard and blade, and they are deliberately **slimmer
+than the visual mesh** — vanilla's blade box is 0.28 deep against a 3.13-deep blade. The
+script preserves those ratios while remapping the Y span onto our own pommel, guard and tip.
+
+Result for the System Blade:
+
+```
+grip    y -12.26 .. 3.29    3.56 x 15.55 x 0.82
+guard   y   4.72 .. 6.01    8.82 x  1.29 x 1.48
+blade   y   5.86 .. 46.35   4.27 x 40.50 x 0.22
+```
+
+> **Set `pynNodeFlags` on the shape.** Our own export drops them, and re-importing then
+> exporting warns `Error setting pynNodeFlags`. Copy the template's value.
+
+## H. Still to do
+
 - **The first-person mesh.** `1stpersonlongsword.nif` exists alongside the world model and is
   denser — 1,019 triangles for the blade against 425. A WEAP record points at its own
   first-person model, so a record duplicated from `IronSword` keeps pointing at the **vanilla**
   one. Left alone the weapon looks correct in third person and is an iron sword in first.
+- **The WEAP record.** See `CREATION_KIT_ESP.md`.
 
 ---
 
