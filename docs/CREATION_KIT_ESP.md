@@ -10,12 +10,12 @@ plugin and wired up. What is left:
 
 | Part | What | Why now |
 |---|---|---|
-| **K** | The System Blade | The mesh and textures are finished and in the repo. Until these records exist the weapon cannot enter the game at all. ~15 min |
 | **G fix** | Rename `IsekaiStorageToken` | One field. It currently carries the container's name, so it reads as a stray copy of the storage in the inventory. ~1 min |
 | **J** | Damage abilities | *Optional.* Unblocks a roadmap item, but nothing references them yet. |
 
-**K** is the one that unblocks something. The **G fix** is a single `FULL - Name` change —
-see the warning box in Part G. **J** only if you want to go further.
+**K is done** — the System Blade's two records are in the plugin and wired into the shop.
+The **G fix** is a single `FULL - Name` change — see the warning box in Part G. **J** only
+if you want to go further.
 
 Afterwards send me the FormIDs (the last three hex digits of each) and I wire them in;
 see *Afterwards — the FormIDs* under Part H for the three ways to read them off.
@@ -647,20 +647,31 @@ Leave the keyword list alone. It carries `WeapTypeSword` (the animation set),
 1. **The title bar names the active file.** If it does not say `IsekaiHero.esp`, both
    records went somewhere else and are gone.
 
-2. **The FormIDs.** The weapon list has a **Form ID** column. The ESP is ESL-flagged, so
-   only the **last three hex digits** are the local ID — `FE012D8D` → `D8D`. Note both
-   records. The highest ID currently in the plugin is `D8C`, so expect `D8D` and `D8E`;
-   anything above **`FFF`** breaks the light-plugin limit and has to be renumbered in
-   SSEEdit before going further.
+2. **Expect the FormIDs to be out of range.** ⚠️ This is not a hypothetical: on the first
+   run the Creation Kit assigned `0x2311`, `0x2312` and `0x2313`. The plugin is
+   ESL-flagged, so a local FormID above **`0xFFF`** is out of range, and the CK does not
+   know or care. The existing records sit at `0xD69`–`0xD8C`, nowhere near where it put
+   the new ones.
 
-3. **The bounds prove the model actually resolved.** The Creation Kit recomputes a record's
-   object bounds from its mesh on save — vanilla's iron sword reads `-6,-11,-1 / 6,63,1`
-   against a mesh spanning Y −11.72 … +63.15. Ours spans **Y −13.59 … +46.40**, so after
-   saving it should read roughly **`-5,-14,-1 / 5,46,1`**.
-   **If it still reads `63`, the CK never found the mesh** — go back to K.0. This is the
-   only cheap way to catch that failure before the game does.
+   So this is a step, not a check: **the new records have to be renumbered afterwards.**
+   Either right-click the plugin in SSEEdit → *Compact FormIDs for ESL*, or send it to me.
+   `tools/check.mjs` refuses the plugin until they are in range, which is what caught it.
 
-4. Copy the saved `IsekaiHero.esp` back into the repository over `plugin/IsekaiHero.esp`,
+3. **The bounds will be zero, and should not stay that way.** The Creation Kit blanked
+   `OBND` on both records — `0,0,0 / 0,0,0`. It does *not* recompute bounds from the mesh
+   on save, whatever an earlier draft of this section claimed. Vanilla's iron sword reads
+   `-6,-11,-1 / 6,63,1` against a mesh spanning Y −11.72 … +63.15, so the numbers do exist
+   in a finished record.
+
+   Ours were written from the mesh's measured extents (Y −13.59 … +46.40) as
+   `-6,-14,-2 / 6,47,2`. Zero bounds are not fatal, but they are what the game uses for a
+   dropped item's pick-up box.
+
+4. **A duplicate you delete does not go away.** The CK left `0x2312` behind as a deleted,
+   empty `WEAP`. Harmless, and worth knowing before you go looking for a third record you
+   did not make.
+
+5. Copy the saved `IsekaiHero.esp` back into the repository over `plugin/IsekaiHero.esp`,
    then run:
 
    ```
@@ -669,11 +680,22 @@ Leave the keyword list alone. It carries `WeapTypeSword` (the animation set),
 
    Expected: PASS, including `ESP: every FormID is valid for a light plugin`.
 
+> **After a repair, the game folder's copy is the stale one.** The repository holds the
+> corrected plugin; copy it back over `<Skyrim>\Data\IsekaiHero.esp`, and do not re-save
+> from a Creation Kit session that still has the old one loaded.
+
 ### K.7 — Send me the two IDs
 
 The last three hex digits of each; the weapon's goes into the shop catalog. Or start the
 game once and send the log — the plugin dumps every form the ESP contributes with its
 FormID, which needs no tool at all (see Part F).
+
+For the record, the first pass came out as:
+
+| Record | Editor ID | As saved | After renumbering |
+|---|---|---|---|
+| STAT | `IsekaiSystemBlade1st` | `0x2311` | **`0xD8D`** |
+| WEAP | `IsekaiSystemBlade` | `0x2313` | **`0xD8F`** |
 
 ### If something looks wrong
 
@@ -682,7 +704,8 @@ FormID, which needs no tool at all (see Part F).
 | The model picker does not list `systemblade.nif` | K.0 was skipped — the file is not under the game's `Data\meshes\`. |
 | Our entry is missing from the **1st Person Model Object** dropdown | K.2 was not done, or the static landed in a different active file. |
 | Correct sword in third person, iron sword in first | `WNAM` still points at `1stPersonIronSword`. See the box in K.4. |
-| Bounds still read `63` after saving | The model path did not resolve; the CK kept the iron sword's numbers. |
+| Bounds read `0,0,0 / 0,0,0` | Expected — the CK blanks them and does not recompute. See K.6 step 3. |
+| A third, nameless weapon record appeared | A duplicate that was deleted. The CK keeps the empty shell. |
 | The blade falls through the floor when dropped | Not a Creation Kit problem — that is the mesh's collision, and it is in there. Report it and I will re-run `tools/add-weapon-collision.py`. |
 | Nothing on the hip when sheathed | Expected. The mesh has no scabbard, by decision — most weapon mods ship without one and the blade simply appears whole on the body. |
 

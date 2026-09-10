@@ -89,6 +89,8 @@ const xml = `<?xml version="1.0" encoding="utf-8"?>
     <file   source="SKSE\\Plugins\\IsekaiHeroSKSE.dll"   destination="SKSE\\Plugins\\IsekaiHeroSKSE.dll"/>
     <folder source="SKSE\\Plugins\\IsekaiHero"           destination="SKSE\\Plugins\\IsekaiHero"/>
     <folder source="Sound"                             destination="Sound"/>
+    <folder source="meshes"                            destination="meshes"/>
+    <folder source="textures"                          destination="textures"/>
   </requiredInstallFiles>
 
   <installSteps order="Explicit">

@@ -6,6 +6,29 @@ All notable changes to Isekai Hero are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **The Flameforged Oathblade**, the first weapon the System sells — a new ARMAMENTS shelf
+  in the shop, at 40 System Points. The mesh is generated geometry converted to a Skyrim
+  NIF with collision, BSX flags and an attachment point built from measured numbers rather
+  than copied blocks (`tools/add-weapon-collision.py`); the pipeline is written up in
+  `docs/WEAPON_ASSET_GUIDE.md`.
+- A weapon's shop card shows its **damage and critical damage**. `DescribeEffects()` used
+  to return early for anything that is not a potion, which would have left a 40-point item
+  showing a name and a price and nothing else.
+- `tools/icon-cutout.py`, because image models asked for a transparent background paint the
+  checkerboard into the pixels instead. It removes only background reachable from the
+  border, so highlights inside the subject survive.
+
+### Fixed
+- `package.ps1` and the FOMOD now carry `meshes\` and `textures\`. Without them the ESP
+  would have shipped pointing at a mesh that was not in the archive.
+
+### Notes
+- The Creation Kit assigned the two new records FormIDs above the ESL ceiling (`0x2311`
+  and `0x2313`) and blanked their object bounds. Both were repaired and the failure is
+  documented as Part K of `docs/CREATION_KIT_ESP.md`; `tools/check.mjs` is what caught the
+  FormIDs.
+
 ## [0.8.0] — 2026-08-16
 
 The release where the mod stopped assuming its player sits at a keyboard, reads English,

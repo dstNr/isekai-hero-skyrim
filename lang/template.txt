@@ -201,6 +201,7 @@ quest.slay = Slay {} {}
 quest.tally = {}   {} / {}
 
 ; --- src/Shop.cpp (catalog) ---
+shelf.ARMAMENTS = ARMAMENTS
 shelf.ELIXIRS = ELIXIRS
 shelf.MATERIALS = MATERIALS
 shelf.RESTORATIVES = RESTORATIVES
@@ -239,6 +240,8 @@ shop.soulGemCrate = Soul Gem Crate
 shop.soulGemCrate.qty = 250 of each
 shop.soulGems = Soul Gems
 shop.soulGems.qty = 50 of each
+shop.systemBlade = Flameforged Oathblade
+shop.systemBlade.qty = x1
 shop.titansDraught = Titan's Draught
 shop.titansDraught.qty = x10
 
@@ -247,6 +250,8 @@ shop.delivered = [ SYSTEM ] {} {} -> Dimensional Storage
 shop.effectMinutes =   ({} min)
 shop.notEnoughPoints = [ SYSTEM ] Not enough System Points.
 shop.storageNotReady = [ SYSTEM ] The Dimensional Storage is not ready yet.
+shop.weaponCritical = Critical {}
+shop.weaponDamage = Damage {}
 
 ; --- src/SkillTree.cpp (skill tree) ---
 node.1 = System Core

@@ -30,11 +30,12 @@ namespace Isekai::Shop {
             kWealth,        // septims
             kRestoratives,  // the cheap, spammable potions
             kElixirs,       // the expensive ones
+            kArmaments,     // weapons the System hands over
             kCount
         };
 
         constexpr const char* kShelfNames[] = { "MATERIALS", "WEALTH", "RESTORATIVES",
-                                                "ELIXIRS" };
+                                                "ELIXIRS", "ARMAMENTS" };
         static_assert(std::size(kShelfNames) == static_cast<std::size_t>(Shelf::kCount),
                       "every shelf needs a name");
 
@@ -143,6 +144,8 @@ namespace Isekai::Shop {
               Kind::kOurItem, Cat::kSmithing, 10, Shelf::kElixirs, 0x000D89 },
             { "shop.titansDraught", "Titan's Draught", "x10", 6, "shop_elixir_titan.png",
               Kind::kOurItem, Cat::kSmithing, 10, Shelf::kElixirs, 0x000D8A },
+            { "shop.systemBlade", "Flameforged Oathblade", "x1", 40, "shop_blade.png",
+              Kind::kOurItem, Cat::kSmithing, 1, Shelf::kArmaments, 0x000D8F },
         };
 
         // The form an entry hands over, or nullptr for the material packs (which are
@@ -167,7 +170,17 @@ namespace Isekai::Shop {
         // no magic effects and whose quantity line already says everything.
         [[nodiscard]] std::string DescribeEffects(const Entry& a_entry) {
             auto* form = EntryForm(a_entry);
-            auto* potion = form ? form->As<RE::AlchemyItem>() : nullptr;
+            if (!form) {
+                return {};
+            }
+            // A weapon carries no effect list, so without this its card is a name and a
+            // price with nothing between them — the damage is the whole pitch.
+            if (auto* weapon = form->As<RE::TESObjectWEAP>()) {
+                return LF("shop.weaponDamage", "Damage {}", weapon->GetAttackDamage()) +
+                       '\n' +
+                       LF("shop.weaponCritical", "Critical {}", weapon->GetCritDamage());
+            }
+            auto* potion = form->As<RE::AlchemyItem>();
             if (!potion) {
                 return {};
             }

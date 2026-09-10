@@ -479,11 +479,11 @@ git commit -m "feat(assets): collision, textures, and the weapon asset guide"
 
 **This is the user's work,** through the Creation Kit rather than a script. A WEAP carries a dozen subrecords and a wrong field does not raise an error — it produces a weapon that deals no damage or fits no animation. Automating this is worth doing once there is a known-good record to diff against, which is exactly what does not exist yet.
 
-- [ ] **Step 1: Duplicate a vanilla sword**
+- [x] **Step 1: Duplicate a vanilla sword**
 
 In the Creation Kit with `IsekaiHero.esp` as the active file, find `IronSword` under Items → Weapon, duplicate it, and rename the editor ID to `IsekaiSystemBlade`. Duplicating rather than creating from scratch inherits the animation type, equip slot, sounds and keywords already known to be correct — `WeapTypeSword` and the ordinary one-handed animations. A short sword is still a sword to the game; only the mesh is smaller.
 
-- [ ] **Step 2: Point it at the new mesh — both times**
+- [x] **Step 2: Point it at the new mesh — both times**
 
 Set the model to `isekai\weapons\systemblade.nif` — relative to `Data\meshes\`, so the leading `meshes\` is not part of the path. Confirmed against `Skyrim.esm`, where the vanilla record reads `Weapons\Iron\LongSword.nif`.
 
@@ -491,15 +491,15 @@ Then create a **STAT record** with the same model and point the weapon's `WNAM` 
 
 > **A duplicate of `IronSword` inherits `WNAM` → `1stPersonIronSword`.** Change only the model and the weapon is right in third person and a vanilla iron sword in first, silently.
 
-- [ ] **Step 3: Set the name, damage and value**
+- [x] **Step 3: Set the name, damage and value**
 
 Give it a display name, and set damage and value to whatever the System's tier of reward should feel like. These are balance numbers, not correctness: they can be retuned any time without touching anything else.
 
-- [ ] **Step 4: Save and note the FormID**
+- [x] **Step 4: Save and note the FormID** — `0xD8F`; the CK assigned `0x2313` and it had to be renumbered
 
 Save the plugin. Note the record's FormID; only the low three digits matter — the local ID. Task 4 needs it.
 
-- [ ] **Step 5: Check the plugin is still light**
+- [x] **Step 5: Check the plugin is still light**
 
 Run: `node tools/check.mjs`
 Expected: PASS, including `ESP: every FormID is valid for a light plugin`. If the new record landed above `0xFFF`, the Creation Kit assigned a high ID and it must be renumbered in SSEEdit before going further.
@@ -522,7 +522,7 @@ Check all five:
 
 **If any of these fail, stop and fix before Task 4.** Everything after this point assumes a working asset.
 
-- [ ] **Step 7: Add the record section to the guide**
+- [x] **Step 7: Add the record section to the guide** — `CREATION_KIT_ESP.md` Part K
 
 Append a section to `docs/WEAPON_ASSET_GUIDE.md` covering Steps 1–5, including the FormID ceiling for a light plugin, which is the one thing here that is specific to this project.
 
@@ -545,7 +545,7 @@ git commit -m "feat(esp): the System Blade weapon record"
 - Consumes: the local FormID from Task 3.
 - Produces: a catalog row whose translation keys are `shop.systemBlade` and `shop.systemBlade.qty`.
 
-- [ ] **Step 1: Add the shelf**
+- [x] **Step 1: Add the shelf**
 
 In `src/Shop.cpp`, extend the `Shelf` enum — a weapon does not belong on any existing shelf:
 
@@ -560,7 +560,7 @@ In `src/Shop.cpp`, extend the `Shelf` enum — a weapon does not belong on any e
         };
 ```
 
-- [ ] **Step 2: Name it**
+- [x] **Step 2: Name it**
 
 ```cpp
         constexpr const char* kShelfNames[] = { "MATERIALS", "WEALTH", "RESTORATIVES",
@@ -569,7 +569,7 @@ In `src/Shop.cpp`, extend the `Shelf` enum — a weapon does not belong on any e
 
 The `static_assert` immediately below already requires one name per shelf, so forgetting this is a compile error rather than an empty tab.
 
-- [ ] **Step 3: Add the catalog row**
+- [x] **Step 3: Add the catalog row** — icon generated, so no blank card
 
 At the end of `kCatalog`, using the FormID from Task 3 in place of `0x000D90`:
 
@@ -583,12 +583,12 @@ At the end of `kCatalog`, using the FormID from Task 3 in place of `0x000D90`:
 
 The icon `shop_blade.png` does not exist yet. That is deliberate and safe: `docs/SHOP_ICON_PROMPTS.md` records that a card whose icon file is missing renders without an image and nothing breaks. It can be filled in later.
 
-- [ ] **Step 4: Regenerate the string table**
+- [x] **Step 4: Regenerate the string table**
 
 Run: `node tools/extract-strings.mjs`
 Expected: `lang/template.txt` gains `shop.systemBlade` and `shop.systemBlade.qty`.
 
-- [ ] **Step 5: Build and check**
+- [x] **Step 5: Build and check**
 
 Run: `node tools/check.mjs`
 Expected: PASS.

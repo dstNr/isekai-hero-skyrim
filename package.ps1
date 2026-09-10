@@ -106,6 +106,13 @@ $icons = Join-Path $plugins "IsekaiHero\icons"
 New-Item -ItemType Directory -Force $icons | Out-Null
 Copy-Item (Join-Path $root "icons\*.png") $icons
 
+# --- weapon assets ---
+# Loose files, not a BSA: the plugin is ESL-flagged and the archive would need its own
+# name registered in the INI. The mesh's texture slots name these exact paths, and a
+# missing texture is not an error in Skyrim -- it is a purple sword.
+Copy-Item (Join-Path $root "meshes") $stage -Recurse
+Copy-Item (Join-Path $root "textures") $stage -Recurse
+
 # --- sounds (only the four the mod actually plays) ---
 $sound = Join-Path $stage "Sound\fx\isekai"
 New-Item -ItemType Directory -Force $sound | Out-Null
