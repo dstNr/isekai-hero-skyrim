@@ -342,11 +342,34 @@ blade   y   5.86 .. 46.35   4.27 x 40.50 x 0.22
 
 ## H. Still to do
 
-- **The first-person mesh.** `1stpersonlongsword.nif` exists alongside the world model and is
-  denser — 1,019 triangles for the blade against 425. A WEAP record points at its own
-  first-person model, so a record duplicated from `IronSword` keeps pointing at the **vanilla**
-  one. Left alone the weapon looks correct in third person and is an iron sword in first.
-- **The WEAP record.** See `CREATION_KIT_ESP.md`.
+- **The WEAP record, and a STAT beside it.** See `CREATION_KIT_ESP.md`.
+
+### The first-person model is a separate record, not a separate mesh
+
+A weapon's first-person appearance does not come from the WEAP's own model. It comes from
+`WNAM`, which points at a **STAT record** that carries its own mesh. Read out of
+`Skyrim.esm`:
+
+```
+WEAP  MODL: Weapons\Iron\LongSword.nif
+      WNAM: 0x00036BB0  ->  STAT, EDID "1stPersonIronSword"
+```
+
+**Use the same mesh for both.** Vanilla ships a separate, denser first-person mesh — 1,019
+triangles against 425 — but ours is already 10,159, so there is nothing to gain from a
+second one. Most weapon mods do the same.
+
+That still means **two records**: a STAT whose model is `isekai\weapons\systemblade.nif`,
+and the WEAP's `WNAM` pointing at it.
+
+> **A WEAP duplicated from `IronSword` inherits `WNAM` → `1stPersonIronSword`.** Change only
+> `MODL` and the weapon is correct in third person and a vanilla iron sword in first, with
+> nothing to warn you. Leaving `WNAM` empty is untested here; creating the STAT is one
+> record and avoids finding out.
+
+Incidentally the vanilla path confirms the convention: `Weapons\Iron\LongSword.nif` is
+relative to `Data\meshes\`, so ours is `isekai\weapons\systemblade.nif` with no leading
+`meshes\`.
 
 ---
 

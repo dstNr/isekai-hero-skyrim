@@ -483,9 +483,13 @@ git commit -m "feat(assets): collision, textures, and the weapon asset guide"
 
 In the Creation Kit with `IsekaiHero.esp` as the active file, find `IronSword` under Items → Weapon, duplicate it, and rename the editor ID to `IsekaiSystemBlade`. Duplicating rather than creating from scratch inherits the animation type, equip slot, sounds and keywords already known to be correct — `WeapTypeSword` and the ordinary one-handed animations. A short sword is still a sword to the game; only the mesh is smaller.
 
-- [ ] **Step 2: Point it at the new mesh**
+- [ ] **Step 2: Point it at the new mesh — both times**
 
-Set the model to `isekai\weapons\systemblade.nif` — relative to `Data\meshes\`, so the leading `meshes\` is not part of the path.
+Set the model to `isekai\weapons\systemblade.nif` — relative to `Data\meshes\`, so the leading `meshes\` is not part of the path. Confirmed against `Skyrim.esm`, where the vanilla record reads `Weapons\Iron\LongSword.nif`.
+
+Then create a **STAT record** with the same model and point the weapon's `WNAM` (1st Person Model Object) at it. The first-person appearance comes from that STAT, not from the WEAP's own model: vanilla's `WNAM` is `0x00036BB0`, the STAT `1stPersonIronSword`. Our mesh is used for both — at 10,159 triangles there is nothing to gain from a separate first-person version.
+
+> **A duplicate of `IronSword` inherits `WNAM` → `1stPersonIronSword`.** Change only the model and the weapon is right in third person and a vanilla iron sword in first, silently.
 
 - [ ] **Step 3: Set the name, damage and value**
 
