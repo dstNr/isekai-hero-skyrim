@@ -12,7 +12,7 @@ The mesh and its textures are in the repository and verified. What is left:
 | What | Why it matters |
 |---|---|
 | First-person mesh | A record duplicated from `IronSword` shows a **vanilla** sword in first person. |
-| The WEAP record | See `CREATION_KIT_ESP.md`; duplicate `IronSword`. |
+| The WEAP record | Step by step in **`CREATION_KIT_ESP.md`, Part K**. |
 
 Both are detailed under **H. Still to do**. Sections A–G are done and are the route to
 repeat.
@@ -342,7 +342,9 @@ blade   y   5.86 .. 46.35   4.27 x 40.50 x 0.22
 
 ## H. Still to do
 
-- **The WEAP record, and a STAT beside it.** See `CREATION_KIT_ESP.md`.
+- **The WEAP record, and a STAT beside it.** Written up step by step as **Part K** of
+  `CREATION_KIT_ESP.md`, including the field names the Creation Kit actually uses and the
+  object-bounds check that catches a model path the CK never resolved.
 
 ### The first-person model is a separate record, not a separate mesh
 

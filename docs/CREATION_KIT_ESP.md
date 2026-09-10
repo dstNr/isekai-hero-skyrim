@@ -10,11 +10,12 @@ plugin and wired up. What is left:
 
 | Part | What | Why now |
 |---|---|---|
+| **K** | The System Blade | The mesh and textures are finished and in the repo. Until these records exist the weapon cannot enter the game at all. ~15 min |
 | **G fix** | Rename `IsekaiStorageToken` | One field. It currently carries the container's name, so it reads as a stray copy of the storage in the inventory. ~1 min |
 | **J** | Damage abilities | *Optional.* Unblocks a roadmap item, but nothing references them yet. |
 
-The **G fix** is a single `FULL - Name` change — see the warning box in Part G. **J** only
-if you want to go further.
+**K** is the one that unblocks something. The **G fix** is a single `FULL - Name` change —
+see the warning box in Part G. **J** only if you want to go further.
 
 Afterwards send me the FormIDs (the last three hex digits of each) and I wire them in;
 see *Afterwards — the FormIDs* under Part H for the three ways to read them off.
@@ -508,6 +509,182 @@ value in Skyrim modding, and the tree already avoids it on purpose.
 The plugin then writes **every form from `IsekaiHero.esp` with its FormID to the log**. I
 read them out and wire them into the code — the same method we already used to verify the
 quest IDs. So there is no guessed number in the code.
+
+---
+
+## Part K — The System Blade (a weapon *and* a first-person static)
+
+Two records, not one. Everything else is inherited by duplicating a vanilla sword.
+
+The asset side is finished: `meshes/isekai/weapons/systemblade.nif` with collision, BSX
+flags and an attachment point, plus two 2048² BC7 textures. How they were built is in
+`docs/WEAPON_ASSET_GUIDE.md`; none of it matters here.
+
+### K.0 — Before you start the Creation Kit
+
+**The CK reads meshes from the game's own `Data\` folder, and ours are not there.**
+MO2 is not involved: the CK is started outside it, `build.bat` copies only the DLL, and
+nothing has ever put a mesh into the base game. Skip this step and the model does not
+appear in the file picker at all — there is nothing to select.
+
+From the repository root, in PowerShell:
+
+```powershell
+robocopy meshes   "$env:SKYRIM_DATA\meshes"   /E
+robocopy textures "$env:SKYRIM_DATA\textures" /E
+```
+
+Then confirm this file exists before going further:
+
+```
+<Skyrim>\Data\meshes\isekai\weapons\systemblade.nif      432,233 bytes
+```
+
+These copies exist only for the Creation Kit's benefit. The mod ships its meshes through
+the FOMOD; the base-game folder is not the test setup and never was.
+
+### K.1 — Setup
+
+As in Part H's *Setup* — the ESP already exists:
+
+1. **File → Data**
+2. Tick `Skyrim.esm`, `Update.esm` **and** `IsekaiHero.esp`
+3. Select `IsekaiHero.esp`, click **Set as Active File**
+4. **OK**, dismiss the warnings with *Yes to All*
+
+### K.2 — The first-person static, first
+
+Do this one **before** the weapon: the weapon's dropdown can only choose a static that
+already exists, and there is no "create one from here" button.
+
+**Object Window** → left tree: **WorldObjects → Static** → right-click the list → **New**
+
+| Field | Value |
+|---|---|
+| **ID** | `IsekaiSystemBlade1st` |
+| **Model** | click the **`...`** button and pick `meshes\isekai\weapons\systemblade.nif` |
+
+Everything else stays at its default. **OK**.
+
+A static is a genuinely small record — vanilla's `1stPersonIronSword` is nothing but an
+editor ID, bounds and a model path.
+
+> **Why the same mesh as third person?** Vanilla ships a separate, denser first-person
+> version — 1,019 triangles against 425 for the world model. Ours is already 10,159, so a
+> second one would gain nothing. Most weapon mods do exactly this.
+
+### K.3 — Duplicate the iron sword
+
+**Object Window** → **Items → Weapon**. Click the **Editor ID** column header to sort,
+find **`IronSword`** (the plain one — there are several `FavorAmren…` variants, ignore
+them), right-click → **Duplicate**.
+
+You get `IronSwordDUPLICATE000` in the list. Double-click it and change:
+
+| Field | Value |
+|---|---|
+| **ID** | `IsekaiSystemBlade` |
+
+Duplicating rather than starting from **New** inherits about a dozen fields that are easy
+to get wrong and that raise no error when they are: the equip type, the one-handed
+animation set, the attack and impact sounds, the block-bash impact, the keyword list. A
+short sword is still a sword to the game — only the mesh is smaller.
+
+### K.4 — The two model fields
+
+| Field | Value |
+|---|---|
+| **Model** | `isekai\weapons\systemblade.nif` — via the **`...`** button |
+| **1st Person Model Object** | `IsekaiSystemBlade1st` — the dropdown, from K.2 |
+
+The path is relative to `Data\meshes\`, so **no leading `meshes\`**. Confirmed against
+`Skyrim.esm`, where the vanilla record reads `Weapons\Iron\LongSword.nif`.
+
+> ⚠️ **The second field is the whole reason this part has a warning box.** A weapon's
+> first-person appearance does not come from its own model. It comes from `WNAM`, which
+> points at a **separate STAT record**. Vanilla:
+>
+> ```
+> WEAP  MODL: Weapons\Iron\LongSword.nif
+>       WNAM: 0x00036BB0  ->  STAT "1stPersonIronSword"
+> ```
+>
+> **A duplicate inherits `WNAM` → `1stPersonIronSword`.** Change only the Model and you get
+> a weapon that is correct in third person and a vanilla iron sword the moment you look
+> down at your hand — with nothing anywhere to warn you.
+
+### K.5 — Name, damage, value
+
+| Field | Value | Note |
+|---|---|---|
+| **Name** | `Flameforged Oathblade` | Must match the shop card exactly — the code carries the same string. |
+| **Damage** | `20` | Vanilla's ceiling is Daedric 14, Dragonbone 15. |
+| **Critical Damage** | `10` | The iron sword is 3. |
+| **Value** | `2500` | The iron sword is 25. |
+| **Weight** | `6.0` | The iron sword is 9.0; ours is a shorter blade. |
+
+**These five are balance, not correctness.** Retune them at any time without touching the
+mesh, the code or anything else — nothing reads them.
+
+Optional, if you want the shorter blade to *feel* shorter: **Speed** `1.1` (the iron sword
+is `1.0`, a Daedric dagger `1.3`). Leave **Reach** at `1.0`; cutting it makes a weapon feel
+worse far more than it makes it feel small.
+
+Leave the keyword list alone. It carries `WeapTypeSword` (the animation set),
+`WeapMaterialIron` and `VendorItemWeapon` (merchants will buy it).
+
+> `WeapMaterialIron` only decides which perk a **tempering recipe** would require — and
+> there is no recipe, so the blade cannot be improved at a grindstone at all. For a weapon
+> the System hands over that is a decision, not an oversight. A `COBJ` record can add it
+> later if it ever matters.
+
+**OK** to close the dialog.
+
+### K.6 — Save, then four checks
+
+**File → Save.** Then, in order:
+
+1. **The title bar names the active file.** If it does not say `IsekaiHero.esp`, both
+   records went somewhere else and are gone.
+
+2. **The FormIDs.** The weapon list has a **Form ID** column. The ESP is ESL-flagged, so
+   only the **last three hex digits** are the local ID — `FE012D8D` → `D8D`. Note both
+   records. The highest ID currently in the plugin is `D8C`, so expect `D8D` and `D8E`;
+   anything above **`FFF`** breaks the light-plugin limit and has to be renumbered in
+   SSEEdit before going further.
+
+3. **The bounds prove the model actually resolved.** The Creation Kit recomputes a record's
+   object bounds from its mesh on save — vanilla's iron sword reads `-6,-11,-1 / 6,63,1`
+   against a mesh spanning Y −11.72 … +63.15. Ours spans **Y −13.59 … +46.40**, so after
+   saving it should read roughly **`-5,-14,-1 / 5,46,1`**.
+   **If it still reads `63`, the CK never found the mesh** — go back to K.0. This is the
+   only cheap way to catch that failure before the game does.
+
+4. Copy the saved `IsekaiHero.esp` back into the repository over `plugin/IsekaiHero.esp`,
+   then run:
+
+   ```
+   node tools/check.mjs
+   ```
+
+   Expected: PASS, including `ESP: every FormID is valid for a light plugin`.
+
+### K.7 — Send me the two IDs
+
+The last three hex digits of each; the weapon's goes into the shop catalog. Or start the
+game once and send the log — the plugin dumps every form the ESP contributes with its
+FormID, which needs no tool at all (see Part F).
+
+### If something looks wrong
+
+| Symptom | Cause |
+|---|---|
+| The model picker does not list `systemblade.nif` | K.0 was skipped — the file is not under the game's `Data\meshes\`. |
+| Our entry is missing from the **1st Person Model Object** dropdown | K.2 was not done, or the static landed in a different active file. |
+| Correct sword in third person, iron sword in first | `WNAM` still points at `1stPersonIronSword`. See the box in K.4. |
+| Bounds still read `63` after saving | The model path did not resolve; the CK kept the iron sword's numbers. |
+| The blade falls through the floor when dropped | Not a Creation Kit problem — that is the mesh's collision, and it is in there. Report it and I will re-run `tools/add-weapon-collision.py`. |
+| Nothing on the hip when sheathed | Expected. The mesh has no scabbard, by decision — most weapon mods ship without one and the blade simply appears whole on the body. |
 
 ---
 
