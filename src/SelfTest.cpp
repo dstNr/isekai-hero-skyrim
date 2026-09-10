@@ -94,6 +94,19 @@ namespace Isekai::SelfTest {
             auto* codex = Plugin::LookupOurForm<RE::TESBoundObject>(0x000D7F);
             Add(out, codex != nullptr, false, "ESP storage codex",
                 codex ? "resolved" : "0x000D7F missing — the physical shortcut is gone");
+
+            // A reference with no owner of its own inherits the owner of the cell it sits
+            // in, and the storage is moved into whatever cell the player stands in. Left
+            // unowned it becomes the innkeeper's property, and every transfer is a theft.
+            if (auto* chestRef = Storage::ChestRef()) {
+                auto* player = RE::PlayerCharacter::GetSingleton();
+                auto* base = player ? player->GetActorBase() : nullptr;
+                const bool mine = base && chestRef->extraList.GetOwner() == base;
+                Add(out, mine, true, "storage chest ownership",
+                    mine ? "the player's own"
+                         : "unowned — inside an NPC-owned building every transfer counts "
+                           "as theft");
+            }
         }
 
         // The 79 milestones are the mod's biggest hand-typed surface: each names a quest

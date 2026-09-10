@@ -20,6 +20,16 @@ All notable changes to Isekai Hero are documented here. The format follows
   border, so highlights inside the subject survive.
 
 ### Fixed
+- **The Dimensional Storage is the player's property.** Transferring items in or out while
+  standing in an NPC-owned cell — an inn, a shop, a house — was a crime: a bounty, items
+  flagged stolen, and witnesses turning hostile, a follower included. A reference that
+  carries no owner of its own inherits the owner of the cell it sits in, and `Open()` moves
+  the chest into whatever cell the player is standing in, so the storage became the
+  innkeeper's. It now carries an explicit `ExtraOwnership` naming the player, applied on
+  every access rather than only at creation, so saves that already hold an unowned chest
+  are repaired on the next open. Reported on Nexus by two players independently.
+  Items already flagged stolen stay flagged: clearing the flag on anything put into the
+  storage would make it a laundering machine, which a vanilla container is not.
 - `package.ps1` and the FOMOD now carry `meshes\` and `textures\`. Without them the ESP
   would have shipped pointing at a mesh that was not in the archive.
 

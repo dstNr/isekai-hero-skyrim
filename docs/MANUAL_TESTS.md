@@ -215,6 +215,29 @@ This inverted how the Dimensional Storage works, so it is worth confirming end t
 | Try to buy something you cannot afford. | Card is dimmed, clicking does nothing, **no points are lost**. |
 | Load an **old save** whose chest was already full. | Contents unchanged — old saves keep what they had. |
 
+### 1.2b The storage is the player's own property (reported bug)
+
+Two players reported this independently: transferring anything in or out **inside an
+NPC-owned building** counted as theft — a bounty, items flagged stolen, and a follower
+turning hostile. The chest carried no owner, so it inherited the owner of whatever cell it
+had been moved into.
+
+Test it where it went wrong. **Haelga's Bunkhouse in Riften** is the reported case; any inn,
+shop or NPC house does.
+
+| Step | Expected |
+|---|---|
+| Walk into an inn or a shop, **with a follower**, and open the storage. | Container menu opens as usual. |
+| Deposit something valuable — a few thousand gold will do. | **No bounty, no "stolen" tag, the follower stays friendly.** |
+| Take it back out. | Same: nothing is flagged, nothing is charged. |
+| Leave, check your bounty in the Hold. | Unchanged from before you walked in. |
+| Run the **self-test** (the key in `IsekaiHero.ini`). | `storage chest ownership — the player's own`. |
+| Repeat with a **save made before this fix**. | Same result: the owner is repaired on the next access, not only for new chests. |
+
+> Items that were **already** flagged stolen stay flagged. That is deliberate — clearing the
+> flag on anything placed in the storage would turn it into a laundering machine for
+> genuinely stolen goods, which vanilla containers are not.
+
 ### 1.3 Mastery tiers (the cost maths changed, and so did respec)
 
 | Step | Expected |

@@ -51,6 +51,30 @@ namespace Isekai::Storage {
         // the official masters too, so a pack's contents stay predictable.
         using Plugin::IsOfficialMaster;
 
+        // Mark the chest as the player's own property.
+        //
+        // A reference that carries no owner of its own inherits the owner of the CELL it
+        // sits in — and Open() moves the chest into whatever cell the player is standing
+        // in. Inside an NPC-owned building (an inn, a shop, a house) the storage therefore
+        // became that NPC's property: transfers through the container menu counted as
+        // theft, items came out flagged stolen, a bounty followed, and witnesses — a
+        // follower included — turned hostile. Outside, in a dungeon or a player home, the
+        // cell has no owner and nothing ever went wrong, which is why this survived until
+        // two players reported it independently.
+        //
+        // Run on every access rather than only at creation: saves made before this fix
+        // already hold an unowned chest, and they have to be repaired too. It costs a
+        // pointer comparison once the owner is right.
+        void ClaimChest(RE::TESObjectREFR* a_chest) {
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            auto* base = player ? player->GetActorBase() : nullptr;
+            if (!a_chest || !base || a_chest->extraList.GetOwner() == base) {
+                return;
+            }
+            a_chest->extraList.SetOwner(base);
+            logger::info("Storage: chest {:#x} claimed for the player", a_chest->GetFormID());
+        }
+
         // The one chest reference, created on first use.
         //
         // There is no reference in the ESP on purpose: Skyrim's CK cannot mark a
@@ -74,6 +98,7 @@ namespace Isekai::Storage {
                 state.storageChest = 0;
                 return nullptr;
             }
+            ClaimChest(chest);
             return chest;
         }
 
@@ -97,6 +122,7 @@ namespace Isekai::Storage {
             const auto pos = a_player->GetPosition();
             chest->SetPosition(pos.x, pos.y, pos.z - 3000.0f);
 
+            ClaimChest(chest.get());
             GetState().storageChest = chest->GetFormID();
             logger::info("Storage: chest created ({:#x})", chest->GetFormID());
             return chest.get();
@@ -143,6 +169,7 @@ namespace Isekai::Storage {
 
             const auto pos = a_player->GetPosition();
             fresh->SetPosition(pos.x, pos.y, pos.z - 3000.0f);
+            ClaimChest(fresh.get());
             GetState().storageChest = fresh->GetFormID();
             logger::warn("Storage: rebuilt orphaned chest -> {:#x}, migrated {} stack(s)",
                          fresh->GetFormID(), moved);
