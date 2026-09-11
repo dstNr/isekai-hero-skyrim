@@ -200,11 +200,17 @@ design appended into `2.text`, and the type's negative into `3.text`.
 
 | Type | Positive frame (`<design>` appended) | Negative |
 |---|---|---|
-| Weapon | single fantasy weapon, entire weapon in frame, upright, flat side facing the camera, orthographic view, centered, plain light grey background, soft diffuse studio lighting, matte finish, no specular highlights | hand, person, character, multiple weapons, cropped, perspective, dramatic lighting, glare, reflections, specular highlights, scenery, text, watermark |
-| Shield | single fantasy shield, entire shield in frame, upright, front face to the camera, orthographic view, centered, plain light grey background, soft diffuse studio lighting, matte finish, no specular highlights | hand, person, character, multiple shields, cropped, perspective, dramatic lighting, glare, reflections, specular highlights, scenery, text, watermark |
-| Armour | full fantasy armour set on a plain mannequin, helmet, cuirass, gauntlets and boots, full figure in frame, standing, front view, orthographic view, centered, plain light grey background, soft diffuse studio lighting, matte finish, no specular highlights | nude, weapon, multiple figures, cropped, perspective, dramatic lighting, glare, reflections, specular highlights, scenery, text, watermark |
+| Weapon | no humans, a single fantasy weapon, one object only, entire weapon in frame, upright, flat side facing the camera, orthographic view, centered, plain light grey background, soft diffuse studio lighting, matte finish, no specular highlights | hand, hands, holding, arm, person, character, multiple weapons, multiple views, reference sheet, concept sheet, turnaround, variations, cropped, perspective, dramatic lighting, glare, reflections, specular highlights, scenery, text, watermark |
+| Shield | no humans, a single fantasy shield, one object only, entire shield in frame, upright, front face to the camera, orthographic view, centered, plain light grey background, soft diffuse studio lighting, matte finish, no specular highlights | hand, hands, holding, arm, person, character, multiple shields, multiple views, reference sheet, concept sheet, turnaround, variations, cropped, perspective, dramatic lighting, glare, reflections, specular highlights, scenery, text, watermark |
+| Armour | full fantasy armour set on a plain mannequin, helmet, cuirass, gauntlets and boots, full figure in frame, standing, front view, orthographic view, centered, plain light grey background, soft diffuse studio lighting, matte finish, no specular highlights | nude, weapon, multiple figures, multiple views, reference sheet, concept sheet, turnaround, variations, cropped, perspective, dramatic lighting, glare, reflections, specular highlights, scenery, text, watermark |
 
 The armour concept's pose does not matter — it is only Picture 2 for the dress step.
+
+`no humans`, `one object only` and the sheet terms in the negatives come from the first smoke
+test. On an Illustrious checkpoint the frame without them drew two to four swords per image,
+laid out as a design sheet, and `solo` in their place drew a hand holding the sword. The
+armour negative takes only the sheet terms: `hands` and `arm` would fight the gauntlets on the
+mannequin.
 
 Archive layout per asset:
 
