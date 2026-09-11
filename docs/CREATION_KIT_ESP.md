@@ -13,7 +13,8 @@ plugin and wired up. What is left:
 | **G fix** | Rename `IsekaiStorageToken` | One field. It currently carries the container's name, so it reads as a stray copy of the storage in the inventory. ~1 min |
 | **J** | Damage abilities | *Optional.* Unblocks a roadmap item, but nothing references them yet. |
 
-**K is done** — the System Blade's two records are in the plugin and wired into the shop.
+**K is done** — the System Blade's two records are in the plugin, wired into the shop, and
+verified in game on 2026-09-11.
 The **G fix** is a single `FULL - Name` change — see the warning box in Part G. **J** only
 if you want to go further.
 

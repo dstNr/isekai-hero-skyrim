@@ -4,6 +4,12 @@ Prove, on exactly one weapon, that this project can take a concept image and end
 with a usable Skyrim weapon in the System Shop. The weapon is the deliverable; the
 chain that produced it is the point.
 
+> **Status: implemented and proven in game, 2026-09-11.** The weapon — sold as the
+> **Flameforged Oathblade** — was bought from the System Shop and used from the packaged
+> archive. What actually ran, including where this design turned out wrong, is recorded in
+> `docs/WEAPON_ASSET_GUIDE.md`. This spec is kept as the design it started from, with its
+> numbers corrected where they were superseded.
+
 ## Goals
 
 - One one-handed short sword, in game, drawable, droppable, correctly sized.
@@ -55,18 +61,24 @@ scaled to, and the ratio determines which lengths look right:
 and the long grip reads as a stylistic flourish rather than an error. At full sword length
 the same ratio becomes an obvious mistake.
 
+It shipped as **60 Skyrim units** — see *Scale* below for why that is not the 49 a straight
+conversion gives.
+
 ## Division of labour
 
-| Stage | Tool | Owner |
+| Stage | Tool | Owner, as it ran |
 |---|---|---|
 | Concept images | the user's own AI image workflow | **user** |
 | Geometry, UVs, PBR maps | Meshy image-to-3D, Pro plan | **user** |
 | Import, scale, orientation | local Blender 5.2, `bpy` over the Blender MCP | Claude |
 | NIF export | PyNifly 28.2, from the same session | Claude |
 | Collision, BSX, attachment point | `tools/add-weapon-collision.py`, headless Blender | Claude |
-| Textures → DDS | texconv or Paint.NET | **user** |
-| WEAP record | Creation Kit, from a written guide | **user** |
-| Shop entry, checks, packaging | C++ and `tools/` | Claude |
+| Textures → DDS | Pillow for the channels, `texconv` | Claude — planned as the user's |
+| WEAP and first-person STAT records | Creation Kit, from `CREATION_KIT_ESP.md` Part K | **user** |
+| Repair of the saved plugin | in-place byte patches: FormIDs and object bounds | Claude — not planned at all |
+| Shop entry, card text, packaging | C++, `playground/`, `package.ps1`, the FOMOD | Claude |
+| Shop icon | Higgsfield `gpt_image_2`, then `tools/icon-cutout.py` | Claude, at the user's direction |
+| In-game verification | MO2, from the packaged archive | **user** |
 
 This split was originally drawn around a remote Blender worker that cannot fetch external
 files, which put NIF export on the user's side. That boundary is gone: Blender 5.2 is
@@ -141,14 +153,17 @@ Neither of these produces an error. Both produce a weapon that is obviously wron
 first time it is equipped, and both are cheap to get right if they are decided up front.
 
 **Scale.** Blender works in metres; Skyrim uses its own units at roughly **70 units per
-metre** (a human is about 128 units tall). The short sword is **0.70 m** overall, so about
-**49 units**. That target is confirmed against the vanilla `longsword.nif` rather than taken
-from this figure alone.
+metre** (a human is about 128 units tall). The short sword is **0.70 m** overall, which a
+straight conversion puts at about **49 units**. Checked against the vanilla
+`longsword.nif`, that was too small: vanilla weapons are drawn larger than real ones — the
+iron sword is 74.87 units, about 1.07 m at that rate — so a weapon converted from real-world
+dimensions looks stubby beside them. **The shipped length is 60 units**, about 80 % of the
+iron sword.
 
 **A generated mesh does not arrive at metre scale**, so the factor is not 70. It is derived
-from the intended real-world length: the current generation measures **1.9098** in its own
-units, so 49 Skyrim units needs a factor of about **25.6**. Measure first, then divide —
-never assume the source is in metres.
+from the intended length: the generation measures **1.9098** in its own units, so 60 Skyrim
+units needed a factor of **31.4175**. Measure first, then divide — never assume the source is
+in metres.
 
 **PyNifly does not apply that conversion.** It writes Blender units into the NIF one for
 one, and `blender_xf` does not change this — that flag governs bone orientation and
@@ -225,13 +240,13 @@ The pattern is one this mod already runs: a base that works for everyone plus an
 component detected or selected at install time, exactly as the ImGui overlay and the
 PrismaUI view are shipped together in one FOMOD.
 
-**Not on the first weapon.** The mod currently ships no meshes and no textures at all, so
-the entire asset chain is unproven; two texture sets on the first run would make a failure
-ambiguous. What matters now is only the consequence for storage: **Meshy's original PBR
+**Not on the first weapon.** When this was decided the mod shipped no meshes and no
+textures at all, so the entire asset chain was unproven, and two texture sets on the first
+run would have made a failure ambiguous. The chain is proven now, so that reason no longer
+holds. What matters now is only the consequence for storage: **Meshy's original PBR
 maps must be kept**, because the conversion to the vanilla shader is lossy and generative
-output is not reproducible. Where they are kept — in the repository, outside it, or in Git
-LFS — is an open decision, and the repository is already 32 MB with icons accounting for
-28.6 MB of that.
+output is not reproducible. **Settled: they are kept outside the repository**, in a local
+archive; the repository carries only the converted 2048² DDS files, 5.3 MB each.
 
 ## Licensing and the backup obligation
 
@@ -271,7 +286,8 @@ Reading `longsword.nif` turned up three node groups that the generated mesh has 
 equivalent for:
 
 - **`Scb` — the scabbard.** This is what renders on the character when the weapon is
-  sheathed. A weapon shipped without it has nothing to show when put away.
+  sheathed. **Decided: no scabbard.** Most weapon mods ship without one, and Skyrim copes —
+  the blade simply appears whole at the hip when put away.
 - **`BloodLighting` and `BloodEffects`** — the overlay meshes Skyrim uses to make a weapon
   look bloodied. Cosmetic, and the weapon works without them.
 - **A separate first-person mesh.** `1stpersonlongsword.nif` exists alongside the world
@@ -279,6 +295,8 @@ equivalent for:
   first-person model field pointing at its own record, so a duplicated vanilla sword keeps
   pointing at the **vanilla** first-person mesh unless that is changed too. Left alone, the
   weapon would look correct in third person and be an iron sword in first person.
+  **Resolved** with a STAT record carrying the same mesh: the field names a record, not a
+  file, so "the same mesh" still means a second record.
 
 None of this is hard, but none of it was in the plan, and the first two are invisible
 failures of exactly the kind this project keeps finding: the weapon works, looks right in
@@ -295,13 +313,19 @@ silent. The Creation Kit guarantees a valid record.
 Once the chain works and more weapons follow, automating the record is a sensible second
 pass — with a known-good record to diff against, which is exactly what is missing now.
 
+**What happened:** the Creation Kit did produce a valid record — and it saved the new
+records with FormIDs above the light-plugin ceiling and blanked their object bounds, neither
+of which it reports. Both were repaired by patching the file (guide, section H). A
+known-good record now exists, so the automation deferred here has something to diff
+against.
+
 The guide follows the pattern of `docs/CREATION_KIT_ESP.md`, which has worked for this
 project before.
 
 ## What changes in the repository
 
-The mod ships **no meshes and no textures today** — there is no `meshes/` or `textures/`
-directory. Both are new:
+The mod shipped **no meshes and no textures** before this weapon — there was no `meshes/`
+or `textures/` directory. Both are new, and all of this is in place:
 
 - `meshes/isekai/` and `textures/isekai/` in the repo, mirroring the `Data\` layout.
 - `package.ps1` stages both.
@@ -317,13 +341,14 @@ Exported NIF and DDS files sometimes carry their source path in a header —
 DLL, so it catches this before an upload does. This is not luck: walking the whole tree
 is the reason the gate was widened after v0.5.0 shipped a 130 MB `.pdb`.
 
-No change is needed. It is recorded here because a new asset type is exactly the case
+No change was needed: the first packaged build walked 96 staged files, the NIF and both DDS
+files included, all clean. It is recorded here because a new asset type is exactly the case
 the gate exists for, and because a future contributor might otherwise narrow it.
 
 ## Verification
 
 There is nothing here that `check.mjs` can decide from source, with one exception worth
-adding: **every mesh and texture path named in the ESP must exist in the repository.** A
+adding — and **still not built**: **every mesh and texture path named in the ESP must exist in the repository.** A
 weapon whose `MODL` points at a file that was never committed installs cleanly and then
 shows an invisible weapon in game. That is the same class of failure the existing icon
 check guards against, and it belongs in the same harness.
@@ -338,7 +363,10 @@ passes:
    that the collision survived the conversion.
 5. Picked up again, it returns to the inventory with its name and stats intact.
 
-## Open question, to settle during the work
+**Result, 2026-09-11:** bought from the shop and used in game from the packaged archive, and
+reported as working.
+
+## Open question — settled
 
 Whether the exported NIF needs a collision shape built by hand or whether one
 copied from a vanilla sword is sufficient. **Settled: copying works, and it needs no
@@ -346,7 +374,5 @@ NifSkope.** PyNifly reads and writes collision, so a vanilla weapon can be impor
 as a template and every geometric number replaced with one measured from our own blade —
 `tools/add-weapon-collision.py` does exactly that. The structure is `bhkCollisionObject` →
 `bhkRigidBody` → **`bhkListShape`** with three `bhkBoxShape` children for grip, guard and
-blade, deliberately slimmer than the visual mesh. Copying is the standard practice
-and is assumed here; if it turns out that a copied `bhkCollisionObject` does not fit the
-new blade's proportions, the fallback is generating a simple convex shape, which is more
-work but well-trodden. This does not change the design, only the effort in one stage.
+blade, deliberately slimmer than the visual mesh. The weapon worked in game with this
+collision, so the fallback — a generated convex shape — was never needed.

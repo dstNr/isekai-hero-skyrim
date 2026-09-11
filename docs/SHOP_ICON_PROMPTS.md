@@ -4,12 +4,14 @@
 > choice, the rank badge — plus the mod page art is in
 > [UI_ART_PROMPTS.md](UI_ART_PROMPTS.md).
 
-The System Shop's eight cards each want an icon. The plugin already references them by
+Every System Shop card wants an icon. The plugin already references them by
 file name — generate the PNGs, drop them in `icons/`, and both renderers pick them up
 with no code change (the build and package scripts copy the whole folder).
 
-If a file is missing, the card simply renders without an image — nothing breaks, so
-these can be filled in one at a time.
+In game, a card whose file is missing renders without an image and nothing breaks. The
+repository is stricter: `tools/check.mjs` refuses any **visible** card without its icon, and
+a card becomes visible the moment its ESP FormID is in the catalog. So an icon has to exist
+before its record is wired in, not after.
 
 ## Target files
 
@@ -24,14 +26,14 @@ these can be filled in one at a time.
 | `shop_gold_small.png` | Gold | a small stack of septims |
 | `shop_gold_large.png` | Gold Hoard | a large pile / chest of septims |
 
-## Requirements (apply to all eight)
+## Requirements (apply to every icon)
 
 - **512 x 512 px, PNG, transparent background.**
 - The subject fills roughly the middle 80%, centred, with breathing room at the edges —
   the UI draws them inside a bordered tile and crops nothing.
 - No text, no numbers, no lettering of any kind.
 - No drop shadow onto the background (it would show as a grey smear on the dark tile).
-- Consistent light direction across all eight (top-left key light).
+- Consistent light direction across every icon (top-left key light).
 - The pairs must read as **the same item at two scales** — same palette, same rendering,
   the "Crate" version simply being the bigger haul.
 
@@ -121,9 +123,34 @@ icons can wait until after the Creation Kit work.
 Keep the four **Restoratives** visually plainer than the six **Elixirs** — they are the
 cheap spammable ones, and the elixirs should read as the prize.
 
+## Weapon icons
+
+Same requirements, same style block. A weapon differs from a potion in one way: the item
+already exists as a 3D model, so the subject line describes **that model** rather than
+inventing one — the card is a promise about what the player receives.
+
+| File name | Card | Subject line |
+|---|---|---|
+| `shop_blade.png` | Flameforged Oathblade | `an ornate one-handed short sword laid diagonally from lower-left to upper-right, its broad double-edged blade polished silver-white with veins of glowing azure energy running along the fuller, an elaborate scrolled dark-steel crossguard set with a round blue gem, a dark leather-wrapped grip, and a matching blue gem in the pommel.` |
+
+Generated with Higgsfield, model `gpt_image_2`, aspect `1:1`, two variants; the one whose
+crossguard read better at tile size was kept.
+
+> **The output is not transparent, whatever the prompt says.** It arrives as a 1024² RGB
+> image with the transparency checkerboard *painted in*. Cut it out and size it in one step:
+>
+> ```
+> python tools/icon-cutout.py <raw>.png icons/shop_blade.png
+> ```
+>
+> The script removes only background connected to the frame border, so white highlights
+> inside the subject survive. Then look at the result on a dark background — that is what
+> the shop tile is, and a white fringe that vanishes on white is obvious there.
+
 ## After generating
 
-1. Save all eight into `icons/` with exactly the file names above.
+1. Save them into `icons/` with exactly the file names above — through
+   `tools/icon-cutout.py` if the generator painted the background in.
 2. Run `./build.bat` (deploys the icon folder) or `./package.ps1` for an archive.
 3. Check them in the playground: `node playground/serve.mjs`, then the **Shop** button.
 

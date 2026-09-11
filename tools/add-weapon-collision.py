@@ -13,7 +13,7 @@ Run it headless:
 
     blender --background --python tools/add-weapon-collision.py -- \
         --nif meshes/isekai/weapons/systemblade.nif \
-        --template <extracted>/longsword.nif
+        --template <extracted>/longsword.nif --root-name SystemBlade
 
 The template must be extracted from the game's own BSA (see docs/WEAPON_ASSET_GUIDE.md);
 it is Bethesda's file and never belongs in this repository.

@@ -4,24 +4,26 @@
 
 **Goal:** Get one one-handed short sword from a concept image into the System Shop, and leave behind a written route so the second weapon costs a fraction of the first.
 
-**Architecture:** Meshy generates the geometry, UVs and PBR maps from the concept image. Local Blender, driven with `bpy` through the official Blender MCP, is the conversion and verification stage — orientation, the Skyrim scale factor, and the PyNifly export flags — and the mesh lands in the repository at the end of Task 1. What stays with the user is the work that needs a human at a GUI — collision in NifSkope, textures, and the WEAP record in the Creation Kit. Only after the asset is proven in game does the C++ side change: a shop entry, packaging, and a path check.
+**Architecture:** Meshy generates the geometry, UVs and PBR maps from the concept image. Local Blender, driven with `bpy` through the official Blender MCP, is the conversion and verification stage — orientation, the Skyrim scale factor, and the PyNifly export flags — and the mesh lands in the repository at the end of Task 1. What stays with the user is the work that needs a human at a GUI — the WEAP record in the Creation Kit, and the in-game check. (Collision and textures were planned as the user's too; both ended up scripted.) Only after the asset is proven in game does the C++ side change: a shop entry, packaging, and a path check.
 
-**Tech Stack:** Meshy (Pro, image-to-3D), Blender 5.2.1 LTS driven by the Blender Lab MCP server (`blender-mcp`, socket on `localhost:9876`), PyNifly 28.2, NifSkope, texconv, Creation Kit, C++23 / CommonLibSSE-NG, `tools/check.mjs`, `package.ps1`.
+**Tech Stack:** Meshy (Pro, image-to-3D), Blender 5.2.1 LTS driven by the Blender Lab MCP server (`blender-mcp`, socket on `localhost:9876`), PyNifly 28.2, Pillow, texconv, Creation Kit, Higgsfield (the shop icon), C++23 / CommonLibSSE-NG, `tools/check.mjs`, `package.ps1`.
 
 **Spec:** `docs/superpowers/specs/2026-09-08-weapon-asset-pipeline-design.md`
 
+> **Status, 2026-09-11: done, except Task 5 Steps 1–2.** The weapon was bought and used in game from the packaged archive. The ESP path check in Task 5 was never built and is carried into the refinement pass. Where this plan and what actually ran differ, `docs/WEAPON_ASSET_GUIDE.md` is the record; the corrections below are marked.
+
 ## Global Constraints
 
-- **The short sword is 0.70 m overall**, so about **49 Skyrim units** at 70 units per metre (a human is about 128 units tall). The mesh measures 68% blade to 32% grip, which is between a sword's 78/22 and a dagger's 63/37; 0.70 m is the length at which that ratio still reads as a sword.
-- **Nothing applies the scale factor for you.** PyNifly writes Blender units into the NIF one for one. A generated mesh is not at metre scale either, so the factor is derived from the intended length, not assumed to be 70: the current generation measures **1.9098** in its own units, so 49 units needs about **×25.6**. Scale last, then read the written file back and check.
+- **The short sword is 0.70 m overall, shipped as 60 Skyrim units.** A straight conversion at 70 units per metre gives 49, which reads stubby beside vanilla weapons — they are drawn larger than real ones. 60 is about 80 % of the vanilla iron sword. The mesh measures 68% blade to 32% grip, which is between a sword's 78/22 and a dagger's 63/37; 0.70 m is the length at which that ratio still reads as a sword.
+- **Nothing applies the scale factor for you.** PyNifly writes Blender units into the NIF one for one. A generated mesh is not at metre scale either, so the factor is derived from the intended length, not assumed to be 70: the current generation measures **1.9098** in its own units, so 60 units needed **×31.4175**. Scale last, then read the written file back and check.
 - **PyNifly must be called with `intuit_defaults=False`.** Left at its default it discards every setting passed to the operator and guesses instead, silently producing a Legacy Edition NIF. `export_modifiers=True` is needed too, or bevels and mirrors are dropped.
 - **Every mesh needs a UV map before export.** PyNifly raises on `uv_layers.active` being `None` and reports only "see console window for details".
 - **Nothing shipped may carry the author's real name.** `package.ps1`'s gate walks the whole staged tree. Exported NIF and DDS files sometimes embed their source path — if the gate trips, fix the export, never the gate.
 - **The mod is tested from the packaged archive in MO2**, not from the base-game folder. `build.bat` deploys the plugin for development only and does not carry assets.
-- **The plugin is ESL-flagged**: every local FormID must be `<= 0xFFF`. Current use is 35 records, so there is room.
+- **The plugin is ESL-flagged**: every local FormID must be `<= 0xFFF`. Current use is 38 records, the highest `0xD8F`. The Creation Kit does not respect the ceiling — see Task 3 Step 4.
 - **All repository artifacts in English** — code, comments, commit messages, docs.
 - **Never bump the project version.** `CMakeLists.txt` VERSION and `package.ps1`'s default `-Version` stay where they are.
-- **Geometry comes from Meshy** on a Pro plan, at a target of about **8,000 triangles**. Vanilla's 1,000–2,000 is a 2011 console budget, not a design goal.
+- **Geometry comes from Meshy** on a Pro plan, at a target of about **8,000 triangles**. Vanilla's 400–800 is a 2011 console budget, not a design goal.
 - **Meshy's original mesh and PBR maps must be archived locally.** Their terms reserve the right to delete generated output and place backup responsibility on the customer; the conversion to Skyrim's shader is lossy and generative output is not reproducible.
 - **Nothing goes on the Meshy Community page** — publishing there dedicates the output under CC0 irrevocably.
 - **No armour in this plan.** See the spec's non-goals; armour is #34.
@@ -31,7 +33,7 @@
 
 Tasks 1 and 4–5 are Claude's: code and repository changes, with the project's real verification (`node tools/check.mjs`, `build.bat`). Task 1 opens with two user steps — the Meshy generation and its archival — because they happen outside any tool reachable from here.
 
-Tasks 2 and 3 are the user's: NifSkope, texture work and the Creation Kit. Those steps are written as precise instructions with a stated done-condition rather than as a test-first cycle, because there is no test to run — the verification is looking at the thing. Dressing them up as red-green-refactor would be theatre.
+Tasks 2 and 3 were planned as the user's: NifSkope, texture work and the Creation Kit. In the event only the Creation Kit stayed with the user — collision and textures were scripted. Those steps are written as precise instructions with a stated done-condition rather than as a test-first cycle, because there is no test to run — the verification is looking at the thing. Dressing them up as red-green-refactor would be theatre.
 
 ---
 
@@ -60,7 +62,7 @@ Tasks 2 and 3 are the user's: NifSkope, texture work and the Creation Kit. Those
 **Interfaces:**
 - Consumes: the user's concept image, and a Meshy generation made from it.
 - Produces: `meshes/isekai/weapons/systemblade.nif`, Skyrim SE format (BS version 100),
-  blade along the axis a vanilla sword uses, **about 49 Skyrim units** overall, origin at the
+  blade along the axis a vanilla sword uses, **60 Skyrim units** overall, origin at the
   grip. Task 2 adds collision and texture paths to the same file; Task 3's WEAP record
   names it.
 
@@ -71,7 +73,7 @@ none of that changed when the geometry stopped being scripted.
 The scripted route still works and stays the fallback for a generation with unusable
 proportions. Its `bpy` code is in the git history rather than duplicated here.
 
-- [ ] **Step 1: Generate in Meshy (user)**
+- [x] **Step 1: Generate in Meshy (user)**
 
 Image-to-3D from the concept image, on the Pro plan. Settings that matter:
 
@@ -89,7 +91,7 @@ Image-to-3D from the concept image, on the Pro plan. Settings that matter:
 Do not publish the result to the Meshy Community page — that dedicates it under CC0
 irrevocably.
 
-- [ ] **Step 2: Download and archive before anything else (user)**
+- [x] **Step 2: Download and archive before anything else (user)**
 
 Save the mesh and **every** PBR map to a local archive outside the repository.
 
@@ -99,7 +101,7 @@ worth keeping is the customer's responsibility. The conversion to Skyrim's shade
 and generative output is not reproducible, so these files cannot be recovered by
 regenerating.
 
-- [ ] **Step 3: Import into Blender and see what actually arrived**
+- [x] **Step 3: Import into Blender and see what actually arrived**
 
 ```python
 import bpy
@@ -123,7 +125,7 @@ Read it against expectations: triangle count near the target, one or a few objec
 layer on every mesh. Generated meshes sometimes arrive as a single merged object — that is
 fine for a weapon, which needs no per-part separation.
 
-- [ ] **Step 4: Assert the UV maps exist**
+- [x] **Step 4: Assert the UV maps exist**
 
 ```python
 missing = [o.name for o in meshes if not o.data.uv_layers.active]
@@ -143,7 +145,7 @@ shader expects a `_n.dds` and reads its specular mask from that file's alpha.
 If Meshy's unwrap did not come through the GLB, unwrap in Blender before going further —
 `bpy.ops.uv.smart_project` will do, though it is a poor layout to paint on.
 
-- [ ] **Step 5: Fix orientation, then scale**
+- [x] **Step 5: Fix orientation, then scale**
 
 Orientation first, because scaling is about the origin and a rotation afterwards would
 move the pivot. The blade must run along the axis a vanilla sword uses and point the same
@@ -179,7 +181,12 @@ intended real-world length: the current generation is **1.9098** long in its own
 a 0.70 m short sword is about 49 Skyrim units, so the factor is `49 / 1.9098` — roughly
 **25.6**.
 
-- [ ] **Step 6: Stage the source images so the texture paths come out right**
+> **Superseded.** 49 units read stubby beside vanilla weapons, which are drawn larger than
+> real ones; the blade shipped at **60 units**, factor `60 / 1.9098` = **31.4175**. What ran
+> also moved the geometry with `ob.data.transform(matrix)` rather than `transform_apply` —
+> the guide's stage D explains why, and is the corrected version of this step.
+
+- [x] **Step 6: Stage the source images so the texture paths come out right**
 
 **PyNifly writes each image's filesystem path into the NIF's texture slots.** Images that
 are still embedded in the imported GLB have no path, so the slots come out empty and the
@@ -213,7 +220,7 @@ under a home directory.
 Give the shape a meaningful name before exporting, too: the glTF import calls it `Mesh_0`,
 which says nothing in NifSkope. Vanilla uses the weapon's own name.
 
-- [ ] **Step 7: Export the NIF**
+- [x] **Step 7: Export the NIF**
 
 ```python
 import bpy, logging, traceback
@@ -248,7 +255,7 @@ if self.intuit_defaults:                                    # export_nif.py
     self.target_game = self._discover_game(self.objects_to_export)
 ```
 
-- [ ] **Step 8: Verify the written file, not the success message**
+- [x] **Step 8: Verify the written file, not the success message**
 
 PyNifly reports "Export successful" for files that are the wrong edition and the wrong
 size. Read the NIF back and check the numbers.
@@ -265,11 +272,11 @@ result = {"game": str(nif.game),
           "shapes": sorted(sh.name for sh in nif.shapes)}
 ```
 
-Expected: `game == "SKYRIMSE"`, longest extent about **49 units**, triangle count matching
+Expected: `game == "SKYRIMSE"`, longest extent **60 units**, triangle count matching
 what went in (10,159 for the current generation). The raw header carries the same answer — BS version **100** is Skyrim SE,
 **83** is Legacy Edition.
 
-- [ ] **Step 9: Commit the mesh**
+- [x] **Step 9: Commit the mesh**
 
 ```bash
 git add meshes/isekai/weapons/systemblade.nif
@@ -297,7 +304,11 @@ The mesh has no collision and no texture paths yet; Task 2 adds both to this fil
 because judging a collision hull against a blade, and judging whether a texture reads at
 arm's length, means looking at the thing. There is no test to run.
 
-- [ ] **Step 1: Compare against the vanilla references (already extracted)**
+> In the event neither needed a person: collision became `tools/add-weapon-collision.py`, and
+> the texture conversion was scripted with Pillow and `texconv`. The judging still did — at
+> the in-game check.
+
+- [x] **Step 1: Compare against the vanilla references (already extracted)**
 
 The reference meshes are unpacked to `E:\_skyrim_ref\` — `longsword.nif`,
 `1stpersonlongsword.nif` and `irondagger.nif`, taken from `Skyrim - Meshes1.bsa` with
@@ -351,7 +362,7 @@ present), `NiStringExtraData:Prn` (`WeaponSword` — where the weapon sits on th
 Verified in the written file: `bhkListShape` with 3 children, and no `Iron…` string left
 from the template.
 
-- [ ] **Step 3: Convert the textures to DDS**
+- [x] **Step 3: Convert the textures to DDS**
 
 `texconv.exe` needs no download — it ships with Octagon in the modlist's tool folder,
 alongside `texdiag.exe`.
@@ -401,7 +412,7 @@ Verify the written files rather than the tool's output: the header should read
 DirectX here, the blade's lighting will look inverted — carved detail reading as raised and
 the reverse. The fix is one line, inverting the green channel before the DDS conversion:
 `n[:, :, 1] = 255 - n[:, :, 1]`. This can only be settled by looking at the weapon in game,
-so it belongs to the in-game verification in Task 3 rather than here.
+so it belongs to the in-game verification in Task 3 rather than here. *(2026-09-11: shipped as OpenGL; the weapon passed its in-game check with no lighting fault reported, but the lighting was not examined for this specifically.)*
 
 **BC7 for both, and the normal map especially.** BC5 stores two channels and has no alpha,
 so it cannot carry the specular mask that gives a metal blade its shine — a blade exported
@@ -458,7 +469,7 @@ Record the failures that produce no error, because they are the whole value of t
 - a BC5 normal map — no alpha, so no specular, so a permanently matte blade
 - missing collision — the weapon falls through the floor
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add meshes/ textures/ docs/WEAPON_ASSET_GUIDE.md
@@ -504,7 +515,7 @@ Save the plugin. Note the record's FormID; only the low three digits matter — 
 Run: `node tools/check.mjs`
 Expected: PASS, including `ESP: every FormID is valid for a light plugin`. If the new record landed above `0xFFF`, the Creation Kit assigned a high ID and it must be renumbered in SSEEdit before going further.
 
-- [ ] **Step 6: First in-game verification**
+- [x] **Step 6: First in-game verification** — 2026-09-11, bought and used from the packaged archive; reported working
 
 This is the moment the pipeline is either proven or not. Repackage and install through MO2 — a `build.bat` deploy does not reach the test setup. Then, with the console:
 
@@ -526,7 +537,7 @@ Check all five:
 
 Append a section to `docs/WEAPON_ASSET_GUIDE.md` covering Steps 1–5, including the FormID ceiling for a light plugin, which is the one thing here that is specific to this project.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add plugin/IsekaiHero.esp docs/WEAPON_ASSET_GUIDE.md
@@ -583,6 +594,8 @@ At the end of `kCatalog`, using the FormID from Task 3 in place of `0x000D90`:
 
 The icon `shop_blade.png` does not exist yet. That is deliberate and safe: `docs/SHOP_ICON_PROMPTS.md` records that a card whose icon file is missing renders without an image and nothing breaks. It can be filled in later.
 
+> **Wrong.** `tools/check.mjs` has a check for exactly this — `shop: every visible card has its icon file` — and a card is visible as soon as its FormID is in the row. The icon had to exist first; see `docs/SHOP_ICON_PROMPTS.md`.
+
 - [x] **Step 4: Regenerate the string table**
 
 Run: `node tools/extract-strings.mjs`
@@ -596,7 +609,7 @@ Expected: PASS.
 Run: `build.bat`
 Expected: `BUILD_OK`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/Shop.cpp lang/template.txt
@@ -616,7 +629,7 @@ git commit -m "feat(shop): an ARMAMENTS shelf, and the System Blade on it"
 - Consumes: `meshes/` from Tasks 1-2 and `textures/` from Task 2; the WEAP record from Task 3.
 - Produces: nothing other code uses. This is what makes the asset reach a player.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the failing test** — **not done**; carried into the refinement pass. The comment in Step 3 below assumes this check exists; it does not yet
 
 `parseEsp` currently discards each record's body, so a check cannot see the mesh path. Add it. In `tools/check.mjs`, in `parseEsp`, change the `recs.push` line to keep the body:
 
@@ -671,7 +684,7 @@ Expected: PASS with `1 mesh path(s), all present`.
 
 To prove it can fail, rename `meshes/isekai/weapons/systemblade.nif` temporarily, re-run, confirm the failure names `IsekaiSystemBlade`, then rename it back. A check that cannot fail is worse than no check.
 
-- [ ] **Step 3: Stage the assets when packaging**
+- [x] **Step 3: Stage the assets when packaging**
 
 In `package.ps1`, after the sounds block:
 
@@ -684,7 +697,7 @@ Copy-Item (Join-Path $root "meshes")   $stage -Recurse
 Copy-Item (Join-Path $root "textures") $stage -Recurse
 ```
 
-- [ ] **Step 4: Install them**
+- [x] **Step 4: Install them**
 
 In `tools/make-fomod.mjs`, in `requiredInstallFiles`:
 
@@ -695,7 +708,7 @@ In `tools/make-fomod.mjs`, in `requiredInstallFiles`:
 
 Required, not optional: the ESP names these paths unconditionally, so a player who skipped them would get an invisible weapon.
 
-- [ ] **Step 5: Package and verify the gate**
+- [x] **Step 5: Package and verify the gate**
 
 Run: `.\package.ps1 -Version 0.8.0`
 
@@ -705,7 +718,7 @@ Expected, both lines:
 
 If the gate trips on a NIF or DDS, the export embedded the source path. Fix the export — re-export without the path, or strip it in NifSkope — never the gate.
 
-- [ ] **Step 6: Confirm the archive carries the assets**
+- [x] **Step 6: Confirm the archive carries the assets**
 
 ```bash
 "C:\Program Files\7-Zip\7z.exe" l dist\IsekaiHero-v0.8.0.7z | grep -iE "meshes|textures"
@@ -713,7 +726,7 @@ If the gate trips on a NIF or DDS, the export embedded the source path. Fix the 
 
 Expected: the NIF and both DDS files listed.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add tools/check.mjs package.ps1 tools/make-fomod.mjs fomod/ModuleConfig.xml
@@ -733,6 +746,8 @@ Install the packaged archive through MO2 and confirm the whole chain, not just t
 
 Only when all four hold is the pipeline proven, and only then is a second weapon — or the armour route in #34 — worth planning.
 
+**Result, 2026-09-11:** reported holding. The pipeline is proven; the refinement pass comes before a second weapon.
+
 ## Out of scope, deliberately
 
-No armour. No custom enchantment or magic effect. No world placement, levelled lists or crafting recipe. No second weapon. No shop icon — the card renders without one, and it can follow through the existing `docs/SHOP_ICON_PROMPTS.md` workflow.
+No armour. No custom enchantment or magic effect. No world placement, levelled lists or crafting recipe. No second weapon. A shop icon was listed here as out of scope; it could not be, because `tools/check.mjs` refuses a visible card without one. It was generated — see `docs/SHOP_ICON_PROMPTS.md`.

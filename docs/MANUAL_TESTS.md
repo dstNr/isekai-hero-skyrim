@@ -238,6 +238,22 @@ shop or NPC house does.
 > flag on anything placed in the storage would turn it into a laundering machine for
 > genuinely stolen goods, which vanilla containers are not.
 
+### 1.2c The Flameforged Oathblade (the first shipped mesh)
+
+The first thing this mod ships that is a mesh rather than code. Passed once, on 2026-09-11;
+repeat it for any release that touches `meshes\`, `textures\`, the plugin or the shop
+catalog. From the **packaged archive** — `build.bat` does not carry assets.
+
+| Step | Expected |
+|---|---|
+| Open the Shop. | An **ARMAMENTS** shelf, holding the Oathblade with its icon, **Damage 20** and **Critical 10**. |
+| Buy it (40 SP). | Points drop by 40; the blade is in the Dimensional Storage. |
+| Equip it. | In the hand at a believable size — visibly shorter than an iron sword. |
+| Draw and sheathe. | One-handed animations; sheathed, it hangs whole at the hip (no scabbard, by design). |
+| Switch to first person. | **This** blade, not an iron sword. |
+| Drop it, then pick it up. | It lands on the ground, and returns with its name and stats. |
+| Look at the blade under a torch or a raking light. | Carved detail reads as carved. If it reads raised, the normal map's green channel is inverted — `docs/WEAPON_ASSET_GUIDE.md`, section F. |
+
 ### 1.3 Mastery tiers (the cost maths changed, and so did respec)
 
 | Step | Expected |
