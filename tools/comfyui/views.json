@@ -1,0 +1,695 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "isekai_views_input.png"
+    },
+    "_meta": {
+      "title": "Input"
+    }
+  },
+  "2": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "qwen_image_edit_2511_fp8mixed.safetensors",
+      "weight_dtype": "default"
+    },
+    "_meta": {
+      "title": "Qwen Image Edit 2511"
+    }
+  },
+  "3": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    },
+    "_meta": {
+      "title": "Qwen 2.5 VL"
+    }
+  },
+  "4": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "_meta": {
+      "title": "Qwen VAE"
+    }
+  },
+  "5": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "lora_name": "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
+      "strength_model": 1.0,
+      "model": [
+        "2",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors"
+    }
+  },
+  "6": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "lora_name": "qwen-image-edit-2511-multiple-angles-lora.safetensors",
+      "strength_model": 1.0,
+      "model": [
+        "5",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "qwen-image-edit-2511-multiple-angles-lora.safetensors"
+    }
+  },
+  "7": {
+    "class_type": "ModelSamplingAuraFlow",
+    "inputs": {
+      "shift": 3.1,
+      "model": [
+        "6",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Shift"
+    }
+  },
+  "8": {
+    "class_type": "CFGNorm",
+    "inputs": {
+      "strength": 1.0,
+      "model": [
+        "7",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "CFGNorm"
+    }
+  },
+  "9": {
+    "class_type": "FluxKontextImageScale",
+    "inputs": {
+      "image": [
+        "1",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Scale input"
+    }
+  },
+  "10": {
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "inputs": {
+      "prompt": "<sks> front view eye-level shot medium shot",
+      "clip": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ],
+      "image1": [
+        "9",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Positive"
+    }
+  },
+  "11": {
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "inputs": {
+      "reference_latents_method": "index_timestep_zero",
+      "conditioning": [
+        "10",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Positive method"
+    }
+  },
+  "12": {
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "inputs": {
+      "prompt": "",
+      "clip": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ],
+      "image1": [
+        "9",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "13": {
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "inputs": {
+      "reference_latents_method": "index_timestep_zero",
+      "conditioning": [
+        "12",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Negative method"
+    }
+  },
+  "14": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 0,
+      "steps": 4,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "8",
+        0
+      ],
+      "positive": [
+        "11",
+        0
+      ],
+      "negative": [
+        "13",
+        0
+      ],
+      "latent_image": [
+        "50",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Sampler"
+    }
+  },
+  "15": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "14",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Decode"
+    }
+  },
+  "16": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "upscale_method": "lanczos",
+      "width": 1536,
+      "height": 1536,
+      "crop": "disabled",
+      "image": [
+        "15",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Lanczos 1536"
+    }
+  },
+  "17": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "isekai/views/main",
+      "images": [
+        "16",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Save"
+    }
+  },
+  "20": {
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "inputs": {
+      "prompt": "<sks> left side view eye-level shot medium shot",
+      "clip": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ],
+      "image1": [
+        "9",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Positive"
+    }
+  },
+  "21": {
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "inputs": {
+      "reference_latents_method": "index_timestep_zero",
+      "conditioning": [
+        "20",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Positive method"
+    }
+  },
+  "22": {
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "inputs": {
+      "prompt": "",
+      "clip": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ],
+      "image1": [
+        "9",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "23": {
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "inputs": {
+      "reference_latents_method": "index_timestep_zero",
+      "conditioning": [
+        "22",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Negative method"
+    }
+  },
+  "24": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 0,
+      "steps": 4,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "8",
+        0
+      ],
+      "positive": [
+        "21",
+        0
+      ],
+      "negative": [
+        "23",
+        0
+      ],
+      "latent_image": [
+        "50",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Sampler"
+    }
+  },
+  "25": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "24",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Decode"
+    }
+  },
+  "26": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "upscale_method": "lanczos",
+      "width": 1536,
+      "height": 1536,
+      "crop": "disabled",
+      "image": [
+        "25",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Lanczos 1536"
+    }
+  },
+  "27": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "isekai/views/left",
+      "images": [
+        "26",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Save"
+    }
+  },
+  "30": {
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "inputs": {
+      "prompt": "<sks> back view eye-level shot medium shot",
+      "clip": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ],
+      "image1": [
+        "9",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Positive"
+    }
+  },
+  "31": {
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "inputs": {
+      "reference_latents_method": "index_timestep_zero",
+      "conditioning": [
+        "30",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Positive method"
+    }
+  },
+  "32": {
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "inputs": {
+      "prompt": "",
+      "clip": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ],
+      "image1": [
+        "9",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "33": {
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "inputs": {
+      "reference_latents_method": "index_timestep_zero",
+      "conditioning": [
+        "32",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Negative method"
+    }
+  },
+  "34": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 0,
+      "steps": 4,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "8",
+        0
+      ],
+      "positive": [
+        "31",
+        0
+      ],
+      "negative": [
+        "33",
+        0
+      ],
+      "latent_image": [
+        "50",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Sampler"
+    }
+  },
+  "35": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "34",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Decode"
+    }
+  },
+  "36": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "upscale_method": "lanczos",
+      "width": 1536,
+      "height": 1536,
+      "crop": "disabled",
+      "image": [
+        "35",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Lanczos 1536"
+    }
+  },
+  "37": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "isekai/views/back",
+      "images": [
+        "36",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Save"
+    }
+  },
+  "40": {
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "inputs": {
+      "prompt": "<sks> right side view eye-level shot medium shot",
+      "clip": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ],
+      "image1": [
+        "9",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Positive"
+    }
+  },
+  "41": {
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "inputs": {
+      "reference_latents_method": "index_timestep_zero",
+      "conditioning": [
+        "40",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Positive method"
+    }
+  },
+  "42": {
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "inputs": {
+      "prompt": "",
+      "clip": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ],
+      "image1": [
+        "9",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "43": {
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "inputs": {
+      "reference_latents_method": "index_timestep_zero",
+      "conditioning": [
+        "42",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Negative method"
+    }
+  },
+  "44": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 0,
+      "steps": 4,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "8",
+        0
+      ],
+      "positive": [
+        "41",
+        0
+      ],
+      "negative": [
+        "43",
+        0
+      ],
+      "latent_image": [
+        "50",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Sampler"
+    }
+  },
+  "45": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "44",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Decode"
+    }
+  },
+  "46": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "upscale_method": "lanczos",
+      "width": 1536,
+      "height": 1536,
+      "crop": "disabled",
+      "image": [
+        "45",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Lanczos 1536"
+    }
+  },
+  "47": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "isekai/views/right",
+      "images": [
+        "46",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Save"
+    }
+  },
+  "50": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "9",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Latent from input"
+    }
+  }
+}
