@@ -277,10 +277,11 @@ mannequin script only Blender 5.2 and PyNifly, both already installed for the we
 fp8mixed (20.5 GB). The nvfp4 text encoder (6.11 GB) is not used: FP4 needs RTX 50-series
 hardware, which an RTX 4090 is not.
 
-**Licences.** The multiple-angles LoRA is Apache-2.0 per its model card. None of the
-generated images ship in the mod — the mod ships Meshy's output, whose licensing is settled
-in the weapon pipeline spec — so the image models' licences bear on this tooling rather than
-on the release. Each licence is read and recorded when its file is downloaded.
+**Licences.** All six model files are Apache-2.0 per their model cards — Qwen-Image-Edit-2511,
+Qwen2.5-VL, the Comfy-Org repackages, and the Lightning and multiple-angles LoRAs. ComfyUI and
+comfy-cli are GPL-3.0, comfy-mcp AGPL-3.0-or-later; all run locally and none is distributed.
+None of the generated images ship in the mod — the mod ships Meshy's output, whose licensing
+is settled in the weapon pipeline spec.
 
 **The old installation on `J:`** (ComfyUI 0.19.3) is left untouched. Its two Illustrious XL
 checkpoints are linked **read-only** through `extra_model_paths.yaml` for the smoke test;
@@ -386,6 +387,7 @@ for the multiple-angles LoRA, differing only in its prompt and its save prefix.
 | 7 | `ModelSamplingAuraFlow` | as in fal's reference workflow |
 | 8 | `CFGNorm` | as in fal's reference workflow |
 | 9 | `FluxKontextImageScale` | scales the input; a square image stays 1024² |
+| 50 | `VAEEncode` | node 9's output — the latent every branch samples from |
 | 10–19 | branch **main** | `<sks> front view eye-level shot medium shot` → `isekai/views/main` |
 | 20–29 | branch **left** | `<sks> left side view eye-level shot medium shot` → `isekai/views/left` |
 | 30–39 | branch **back** | `<sks> back view eye-level shot medium shot` → `isekai/views/back` |
@@ -393,9 +395,9 @@ for the multiple-angles LoRA, differing only in its prompt and its save prefix.
 
 Every branch samples with **4 steps, CFG 1, `euler`, `simple`, denoise 1.0** and an empty
 negative prompt — the values in fal's reference workflow, which loads the Lightning LoRA
-together with the multiple-angles LoRA. Values the reference sets and this spec does not
-list (the AuraFlow shift, the CFGNorm strength, the latent source) are copied from that file,
-not chosen. Each branch ends in `ImageScale` to 1536 × 1536 with `lanczos`, then `SaveImage`.
+together with the multiple-angles LoRA. The reference also sets the AuraFlow shift to **3.1**,
+the CFGNorm strength to 1.0 and both reference-latent methods to `index_timestep_zero`, and
+samples from `VAEEncode` of the scaled input; those values are copied, not chosen. Each branch ends in `ImageScale` to 1536 × 1536 with `lanczos`, then `SaveImage`.
 
 Within a branch, ids follow one pattern — `x0` positive `TextEncodeQwenImageEditPlus`,
 `x1` its reference-latent method, `x2` the negative encode, `x3` its method, `x4` `KSampler`,
@@ -466,4 +468,5 @@ MV-Adapter in its own environment — is added behind the same concept workflow.
 
 Everything else stays local: the installation, the models, `extra_model_paths.yaml`, the MCP
 registration, the extracted and modlist meshes, the mannequin renders and every generated image.
-The pre-push byte scan covers the new files like any other tracked file.
+None of the new files holds a path or a name; a `git grep` for the author's name runs before
+each commit.
