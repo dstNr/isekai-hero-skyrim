@@ -519,7 +519,7 @@ Two records, not one. Everything else is inherited by duplicating a vanilla swor
 
 The asset side is finished: `meshes/isekai/weapons/systemblade.nif` with collision, BSX
 flags and an attachment point, plus two 2048² BC7 textures. How they were built is in
-`docs/WEAPON_ASSET_GUIDE.md`; none of it matters here.
+the [asset pipeline repository](https://github.com/dstNr/isekai-asset-pipeline); none of it matters here.
 
 ### K.0 — Before you start the Creation Kit
 
@@ -707,7 +707,7 @@ For the record, the first pass came out as:
 | Correct sword in third person, iron sword in first | `WNAM` still points at `1stPersonIronSword`. See the box in K.4. |
 | Bounds read `0,0,0 / 0,0,0` | Expected — the CK blanks them and does not recompute. See K.6 step 3. |
 | A third, nameless weapon record appeared | A duplicate that was deleted. The CK keeps the empty shell. |
-| The blade falls through the floor when dropped | Not a Creation Kit problem — that is the mesh's collision, and it is in there. Report it and I will re-run `tools/add-weapon-collision.py`. |
+| The blade falls through the floor when dropped | Not a Creation Kit problem — that is the mesh's collision, and it is in there. Report it and I will re-run the collision script from the [asset pipeline](https://github.com/dstNr/isekai-asset-pipeline). |
 | Nothing on the hip when sheathed | Expected. The mesh has no scabbard, by decision — most weapon mods ship without one and the blade simply appears whole on the body. |
 
 ---

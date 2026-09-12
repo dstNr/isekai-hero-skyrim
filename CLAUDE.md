@@ -51,6 +51,14 @@ before packaging one. `gh issue create` does **not** put an issue on the board â
 every create must be followed by `gh project item-add` and an `item-edit`.
 `gh` lives at `C:\Program Files\GitHub CLI\gh.exe` and may not be on PATH.
 
+## Assets come from elsewhere
+
+The meshes and textures under `meshes/isekai/` and `textures/isekai/` are shipped here,
+but how they are made is not. The specs, the weapon guide and the Blender, ComfyUI and
+Outfit Studio scripts live in
+[isekai-asset-pipeline](https://github.com/dstNr/isekai-asset-pipeline). Only the finished
+files cross over.
+
 ## Gotchas
 
 - **Crafting token-lending lends official-master items only.** Moving a scripted

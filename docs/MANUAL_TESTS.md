@@ -252,7 +252,7 @@ catalog. From the **packaged archive** — `build.bat` does not carry assets.
 | Draw and sheathe. | One-handed animations; sheathed, it hangs whole at the hip (no scabbard, by design). |
 | Switch to first person. | **This** blade, not an iron sword. |
 | Drop it, then pick it up. | It lands on the ground, and returns with its name and stats. |
-| Look at the blade under a torch or a raking light. | Carved detail reads as carved. If it reads raised, the normal map's green channel is inverted — `docs/WEAPON_ASSET_GUIDE.md`, section F. |
+| Look at the blade under a torch or a raking light. | Carved detail reads as carved. If it reads raised, the normal map's green channel is inverted — see the weapon guide's texture stage in the [asset pipeline](https://github.com/dstNr/isekai-asset-pipeline). |
 
 ### 1.3 Mastery tiers (the cost maths changed, and so did respec)
 
