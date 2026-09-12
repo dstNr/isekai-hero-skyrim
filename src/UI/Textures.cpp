@@ -25,9 +25,7 @@ namespace Isekai::UI {
         // gets exactly one line about it instead of one per frame.
         g_cache[a_path] = 0;
 
-        auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
-        auto* device = renderer ? reinterpret_cast<ID3D11Device*>(renderer->data.forwarder)
-                                : nullptr;
+        auto* device = reinterpret_cast<ID3D11Device*>(RE::BSGraphics::Renderer::GetDevice());
         if (!device) {
             logger::error("Textures: no D3D device for \"{}\"", a_path);
             return 0;

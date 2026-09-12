@@ -10,6 +10,7 @@
 #include <imgui.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <mutex>
@@ -51,6 +52,21 @@ namespace Isekai::UI {
         // A gamepad button in the same encoding, for callers that speak XInput masks.
         [[nodiscard]] constexpr std::uint32_t PadId(std::uint32_t a_button) {
             return HotkeyId(RE::INPUT_DEVICE::kGamepad, a_button);
+        }
+
+        // The VR wands. CommonLibSSE-NG 7 dropped the old kVRLeft/kVRRight pair: the game
+        // never had one "VR controller" device, it has a primary and a secondary per
+        // headset family, and which family is live depends on the player's hardware. We
+        // bind every one of them, for the same reason the old code bound both hands —
+        // which wand sends a press is a function of how the player is holding the thing.
+        constexpr std::array kVRDevices{
+            RE::INPUT_DEVICE::kVivePrimary,   RE::INPUT_DEVICE::kViveSecondary,
+            RE::INPUT_DEVICE::kOculusPrimary, RE::INPUT_DEVICE::kOculusSecondary,
+            RE::INPUT_DEVICE::kWMRPrimary,    RE::INPUT_DEVICE::kWMRSecondary,
+        };
+
+        [[nodiscard]] constexpr bool IsVRDevice(RE::INPUT_DEVICE a_device) {
+            return std::ranges::find(kVRDevices, a_device) != kVRDevices.end();
         }
 
         // B closes our panels, the way ESC and Tab do on a keyboard.
@@ -168,8 +184,9 @@ namespace Isekai::UI {
                     // DIAGNOSTIC, before the device filter on purpose. When a hotkey does
                     // not fire, the log otherwise cannot separate "no input event arrives
                     // at all" from "one arrives under a device we ignore" — and the second
-                    // is real: Skyrim VR delivers controller buttons as kVRRight (5) /
-                    // kVRLeft (6), which the keyboard-only path below drops silently.
+                    // is real: Skyrim VR delivers controller buttons under one of the
+                    // wand devices (3-8, by headset family), which the keyboard-only path
+                    // below drops silently.
                     // Switched from the ini so a tester needs no special build.
                     //
                     // Device and scan code only — nothing here or anywhere else turns a
@@ -194,9 +211,7 @@ namespace Isekai::UI {
 
                     const auto device = event->GetDevice();
                     if (device != RE::INPUT_DEVICE::kKeyboard &&
-                        device != RE::INPUT_DEVICE::kGamepad &&
-                        device != RE::INPUT_DEVICE::kVRRight &&
-                        device != RE::INPUT_DEVICE::kVRLeft) {
+                        device != RE::INPUT_DEVICE::kGamepad && !IsVRDevice(device)) {
                         continue;
                     }
                     const std::uint32_t id = HotkeyId(device, button->GetIDCode());
@@ -374,21 +389,30 @@ namespace Isekai::UI {
         // player-control handlers — the journal/tween menu opens through THIS chain,
         // which is why ESC used to punch straight through the System panel into
         // Skyrim's own menu. ESC and Tab dismiss our panel instead.
+        //
+        // Skyrim 1.7.99 inserted two virtual functions (ProcessMotionGesture,
+        // ProcessSixaxis) at slots 02 and 03 of MenuEventHandler's vtable, so everything
+        // behind them shifted: ProcessButton moved from slot 05 to 07, and VR has always
+        // had its own order with it at 08. CommonLibSSE-NG answers that by making the
+        // Process* methods non-virtual dispatchers that resolve the slot per runtime —
+        // which is right for CALLING one, but leaves nothing to override for a handler we
+        // implement ourselves. One C++ class has one vtable; we need three.
+        //
+        // So the logic lives here, and three thin subclasses below declare the dummies
+        // needed to push ProcessButton onto the slot the running game expects.
+        // GetSingleton() picks one, once, from the detected runtime.
         class MenuGuard : public RE::MenuEventHandler {
         public:
-            static MenuGuard* GetSingleton() {
-                static MenuGuard singleton;
-                return std::addressof(singleton);
-            }
+            static MenuGuard* GetSingleton();
 
-            bool CanProcess(RE::InputEvent* a_event) override {
+            bool DoCanProcess(RE::InputEvent* a_event) {
                 if (!a_event || a_event->GetEventType() != RE::INPUT_EVENT_TYPE::kButton) {
                     return false;
                 }
                 return IsCapturingInput() || s_swallowDismissKey;
             }
 
-            bool ProcessButton(RE::ButtonEvent* a_event) override {
+            bool DoProcessButton(RE::ButtonEvent* a_event) {
                 constexpr std::uint32_t kEsc = 0x01;  // DIK_ESCAPE
                 constexpr std::uint32_t kTab = 0x0F;  // DIK_TAB
                 const bool dismissKey =
@@ -428,11 +452,78 @@ namespace Isekai::UI {
                 return false;  // not ours — let the chain have it
             }
 
-        private:
+        protected:
             MenuGuard() = default;
 
             static inline bool s_swallowDismissKey = false;
         };
+
+        // Slot 00 is the destructor and 01 CanProcess in every layout; the dummies below
+        // occupy the slots between it and ProcessButton. Their parameter types do not
+        // matter beyond being pointer-sized — they exist to take up a vtable entry and
+        // answer "not consumed" if the game ever calls one.
+#define ISEKAI_MENU_GUARD_HEAD(NAME)                                         ~NAME() override = default;                             /* 00 */         bool CanProcess(RE::InputEvent* a_event) override {      /* 01 */            return DoCanProcess(a_event);                                        }
+#define ISEKAI_MENU_GUARD_SLOT(NAME)     virtual bool NAME(void*) { return false; }
+#define ISEKAI_MENU_GUARD_BUTTON                                             virtual bool ProcessButtonImpl(RE::ButtonEvent* a_event) {                   return DoProcessButton(a_event);                                     }
+
+        // Skyrim SE and AE up to 1.6.x: ProcessButton at slot 05.
+        class MenuGuardLegacy final : public MenuGuard {
+        public:
+            ISEKAI_MENU_GUARD_HEAD(MenuGuardLegacy)
+            ISEKAI_MENU_GUARD_SLOT(Kinect)      // 02
+            ISEKAI_MENU_GUARD_SLOT(Thumbstick)  // 03
+            ISEKAI_MENU_GUARD_SLOT(MouseMove)   // 04
+            ISEKAI_MENU_GUARD_BUTTON            // 05
+        };
+
+        // Skyrim AE from 1.7.99: two new slots ahead of the rest, ProcessButton at 07.
+        class MenuGuardModern final : public MenuGuard {
+        public:
+            ISEKAI_MENU_GUARD_HEAD(MenuGuardModern)
+            ISEKAI_MENU_GUARD_SLOT(MotionGesture)  // 02 - added in 1.7.99
+            ISEKAI_MENU_GUARD_SLOT(Sixaxis)        // 03 - added in 1.7.99
+            ISEKAI_MENU_GUARD_SLOT(Kinect)         // 04
+            ISEKAI_MENU_GUARD_SLOT(Thumbstick)     // 05
+            ISEKAI_MENU_GUARD_SLOT(MouseMove)      // 06
+            ISEKAI_MENU_GUARD_BUTTON               // 07
+        };
+
+        // Skyrim VR: its own order, ProcessButton at 08. Carried along unchanged and
+        // untested — there is no VR install to try it on (see docs/VR.md).
+        class MenuGuardVR final : public MenuGuard {
+        public:
+            ISEKAI_MENU_GUARD_HEAD(MenuGuardVR)
+            ISEKAI_MENU_GUARD_SLOT(WandTouchpadSwipe)     // 02
+            ISEKAI_MENU_GUARD_SLOT(WandTouchpadPosition)  // 03
+            ISEKAI_MENU_GUARD_SLOT(Unk04)                 // 04
+            ISEKAI_MENU_GUARD_SLOT(Kinect)                // 05
+            ISEKAI_MENU_GUARD_SLOT(Thumbstick)            // 06
+            ISEKAI_MENU_GUARD_SLOT(MouseMove)             // 07
+            ISEKAI_MENU_GUARD_BUTTON                      // 08
+        };
+
+#undef ISEKAI_MENU_GUARD_HEAD
+#undef ISEKAI_MENU_GUARD_SLOT
+#undef ISEKAI_MENU_GUARD_BUTTON
+
+        MenuGuard* MenuGuard::GetSingleton() {
+            static MenuGuard* const instance = []() -> MenuGuard* {
+                if (REL::Module::IsVR()) {
+                    static MenuGuardVR vr;
+                    logger::info("UI: menu guard using the VR vtable layout");
+                    return std::addressof(vr);
+                }
+                if (REL::Module::IsAtLeast(SKSE::RUNTIME_SSE_1_7_99)) {
+                    static MenuGuardModern modern;
+                    logger::info("UI: menu guard using the 1.7.99+ vtable layout");
+                    return std::addressof(modern);
+                }
+                static MenuGuardLegacy legacy;
+                logger::info("UI: menu guard using the pre-1.7.99 vtable layout");
+                return std::addressof(legacy);
+            }();
+            return instance;
+        }
     }
 
     void RegisterHotkey(std::uint32_t a_scanCode, std::function<void()> a_fn,
@@ -477,7 +568,7 @@ namespace Isekai::UI {
         // to make in an ini — and a tester reading codes out of the input diagnostic has
         // no way of telling which hand produced which number anyway.
         std::scoped_lock lock(g_hotkeyMutex);
-        for (auto device : { RE::INPUT_DEVICE::kVRRight, RE::INPUT_DEVICE::kVRLeft }) {
+        for (auto device : kVRDevices) {
             g_hotkeys[HotkeyId(device, a_button)] = Hotkey{ a_fn, 0 };
         }
     }

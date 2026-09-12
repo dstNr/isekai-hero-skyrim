@@ -2,7 +2,6 @@
   "name": "isekai-hero-skse-poc",
   "version-string": "0.6.1",
   "dependencies": [
-    "commonlibsse-ng",
     {
       "name": "imgui",
       "features": [
@@ -11,7 +10,15 @@
     },
     "stb",
     "minhook",
-    "nlohmann-json"
+    "directxmath",
+    "directxtk",
+    "fmt",
+    "nlohmann-json",
+    "rapidcsv",
+    "simpleini",
+    "spdlog",
+    "toml11",
+    "xbyak"
   ],
   "builtin-baseline": "cf1c7380e710d5d2b483b0645eaf442704971bac"
 }

@@ -744,7 +744,7 @@ namespace Isekai::Storage {
             return;
         }
         if (!IsEligible()) {
-            RE::DebugNotification(
+            RE::SendHUDMessage::ShowHUDMessage(
                 L("storage.denied", "[ SYSTEM ] ACCESS DENIED — the System is not yet bound to you."));
             return;
         }
@@ -765,7 +765,7 @@ namespace Isekai::Storage {
             logger::warn("Storage: chest {:#x} disabled at open — rebuilding", chest->GetFormID());
             chest = RebuildChest(player, chest);
             if (!chest) {
-                RE::DebugNotification(L("storage.reanchoring",
+                RE::SendHUDMessage::ShowHUDMessage(L("storage.reanchoring",
                                         "[ SYSTEM ] storage is re-anchoring — try again in a moment."));
                 return;
             }
@@ -785,7 +785,7 @@ namespace Isekai::Storage {
                          chest->GetFormID());
             chest = RebuildChest(player, chest);
             if (!chest) {
-                RE::DebugNotification(L("storage.reanchoring",
+                RE::SendHUDMessage::ShowHUDMessage(L("storage.reanchoring",
                                         "[ SYSTEM ] storage is re-anchoring — try again in a moment."));
                 return;
             }

@@ -85,8 +85,13 @@ namespace Isekai::UI {
                 return false;
             }
 
-            auto* device = reinterpret_cast<ID3D11Device*>(renderer->data.forwarder);
-            g_context = reinterpret_cast<ID3D11DeviceContext*>(renderer->data.context);
+            // CommonLibSSE-NG 7 no longer exposes a plain `data` member: 1.7 moved the
+            // block, so the library reaches it through accessors that resolve per runtime.
+            auto* device = reinterpret_cast<ID3D11Device*>(RE::BSGraphics::Renderer::GetDevice());
+            auto* rendererData = RE::BSGraphics::Renderer::GetRendererDataSingleton();
+            g_context = rendererData
+                            ? reinterpret_cast<ID3D11DeviceContext*>(rendererData->context)
+                            : nullptr;
             if (!device || !g_context) {
                 logger::error("UI: renderer is missing device/context");
                 return false;
@@ -428,8 +433,12 @@ namespace Isekai::UI {
                 return;
             }
 
+            // Was renderWindows[0]. The library's own comment says the current window is
+            // not necessarily index 0, so ask for the current one rather than the first.
+            auto* renderWindow = RE::BSGraphics::Renderer::GetCurrentRenderWindow();
             auto* swapChain =
-                reinterpret_cast<IDXGISwapChain*>(renderer->data.renderWindows[0].swapChain);
+                renderWindow ? reinterpret_cast<IDXGISwapChain*>(renderWindow->swapChain)
+                             : nullptr;
             if (!swapChain) {
                 logger::error("UI: no swap chain — overlay not installed");
                 return;
@@ -446,7 +455,7 @@ namespace Isekai::UI {
             if (!vtable) {
                 logger::error("UI: swap chain {:p} is not a readable object — overlay not "
                               "installed",
-                              static_cast<void*>(swapChain));
+                              static_cast<const void*>(swapChain));
                 return;
             }
         }
@@ -454,7 +463,7 @@ namespace Isekai::UI {
         if (!present) {
             logger::error("UI: swap chain vtable {:p} has no readable Present at index {} — "
                           "overlay not installed",
-                          static_cast<void*>(vtable), kPresentVTableIndex);
+                          static_cast<const void*>(vtable), kPresentVTableIndex);
             return;
         }
         g_originalPresent = reinterpret_cast<PresentFn>(present);

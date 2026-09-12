@@ -6,6 +6,27 @@ All notable changes to Isekai Hero are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- **Skyrim 1.7.104 support.** The plugin now builds against `alandtse/CommonLibSSE-NG`
+  v7.5.4, pulled in as the `extern/CommonLibSSE-NG` submodule, instead of the
+  `commonlibsse-ng` vcpkg port. That port still ships CharmedBaryon's 3.7.0 from May 2023,
+  and upstream itself marks it unmaintained. It cannot run 1.7: it classifies the runtime
+  by minor version, so `1.7` falls through to "SE", and its address library reader only
+  knows database formats 1 and 2 while 1.7.99+ ships format 5. One DLL still serves SE, AE
+  and VR. What the move required:
+  - `RE::DebugNotification` became `RE::SendHUDMessage::ShowHUDMessage`.
+  - `BSGraphics::Renderer`'s `data` member is gone; the device, context and swap chain now
+    come from `GetDevice()`, `GetRendererDataSingleton()` and `GetCurrentRenderWindow()`.
+    The swap chain used to be read from `renderWindows[0]`, which the library warns is not
+    necessarily the current window — this fixes that too.
+  - VR wands are no longer one `kVRLeft`/`kVRRight` pair but a primary and a secondary per
+    headset family; hotkeys now bind across all six.
+  - `MenuGuard` grew three vtable layouts. 1.7.99 inserted two virtual functions into
+    `MenuEventHandler`, moving `ProcessButton` from slot 05 to 07 (VR has it at 08), so
+    CommonLibSSE-NG made the `Process*` methods non-virtual dispatchers — leaving nothing
+    to override. The logic sits in a base class and three thin subclasses place the slot;
+    the runtime picks one and logs which.
+
 ### Added
 - **The Flameforged Oathblade**, the first weapon the System sells — a new ARMAMENTS shelf
   in the shop, at 40 System Points. The mesh is generated geometry converted to a Skyrim

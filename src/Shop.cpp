@@ -287,7 +287,7 @@ namespace Isekai::Shop {
 
         auto& state = GetState();
         if (state.systemPoints < entry->cost) {
-            RE::DebugNotification(L("shop.notEnoughPoints", "[ SYSTEM ] Not enough System Points."));
+            RE::SendHUDMessage::ShowHUDMessage(L("shop.notEnoughPoints", "[ SYSTEM ] Not enough System Points."));
             return false;
         }
 
@@ -301,7 +301,7 @@ namespace Isekai::Shop {
             delivered = Storage::Deliver(EntryForm(*entry), entry->amount);
         }
         if (!delivered) {
-            RE::DebugNotification(
+            RE::SendHUDMessage::ShowHUDMessage(
                 L("shop.storageNotReady", "[ SYSTEM ] The Dimensional Storage is not ready yet."));
             return false;
         }
@@ -315,7 +315,7 @@ namespace Isekai::Shop {
         // Say so on screen. Nothing confirmed a purchase before: the card stayed put, the
         // goods land in a chest that is not open, and the only trace was a log line — so
         // a successful buy was indistinguishable from a click that never registered.
-        RE::DebugNotification(LF("shop.delivered", "[ SYSTEM ] {} {} -> Dimensional Storage",
+        RE::SendHUDMessage::ShowHUDMessage(LF("shop.delivered", "[ SYSTEM ] {} {} -> Dimensional Storage",
                                  Loc::Get(entry->key, entry->name),
                                  Loc::Get(std::string(entry->key) + ".qty", entry->qty))
                                   .c_str());
@@ -332,7 +332,7 @@ namespace Isekai::Shop {
             return;
         }
         if (!Available()) {
-            RE::DebugNotification("[ SYSTEM ] ACCESS DENIED — the System is not yet bound to you.");
+            RE::SendHUDMessage::ShowHUDMessage("[ SYSTEM ] ACCESS DENIED — the System is not yet bound to you.");
             return;
         }
 

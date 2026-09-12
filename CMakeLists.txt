@@ -6,7 +6,21 @@ project(
     LANGUAGES CXX
 )
 
-find_package(CommonLibSSE CONFIG REQUIRED)
+# CommonLibSSE-NG is built from source as a submodule, not from a vcpkg port. The port
+# (colorglass) still ships CharmedBaryon's 3.7.0 from 2023, which cannot run Skyrim 1.7:
+# it classifies the runtime by minor version (7 falls through to "SE") and its address
+# library reader only knows database formats 1 and 2, while 1.7.99+ ships format 5.
+# alandtse's fork is the maintained one. See extern/CommonLibSSE-NG, pinned to a tag.
+set(BUILD_TESTS OFF CACHE BOOL "" FORCE)          # Catch2, not needed to consume the library.
+set(SKSE_SUPPORT_XBYAK OFF CACHE BOOL "" FORCE)   # We detour with MinHook, not Xbyak.
+add_subdirectory(extern/CommonLibSSE-NG)
+
+# Built from source, the library's CMakeLists only defines add_commonlibsse_plugin() on
+# its prebuilt-bundle path, so a source consumer has to include the module itself. This
+# is the pattern upstream's own reference consumer uses (test_consumer_live).
+get_target_property(COMMONLIB_SRC_DIR CommonLibSSE SOURCE_DIR)
+include(${COMMONLIB_SRC_DIR}/cmake/CommonLibSSE.cmake)
+
 find_package(imgui CONFIG REQUIRED)
 find_package(minhook CONFIG REQUIRED)
 # Required by the vendored ImGuiVRHelper client API: its InputCombo serialises through

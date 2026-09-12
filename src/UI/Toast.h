@@ -5,14 +5,14 @@
 // Transient status lines, top-centre, the way an MMO reports progress: they appear over
 // normal gameplay, never take focus or pause anything, and fade out on their own.
 //
-// This exists because RE::DebugNotification was the wrong instrument for quest feedback.
+// This exists because RE::SendHUDMessage::ShowHUDMessage was the wrong instrument for quest feedback.
 // It writes to Skyrim's own corner queue, which is shared with every other mod, holds
 // several lines at once, and is easy to miss entirely — the same property that made the
 // self-test look broken. Kill progress needs to be seen the moment it happens.
 //
 // Drawn by the ImGui overlay on SE/AE, and on ImGuiVRHelper's head-locked HUD plane in
 // VR. With neither surface available — VR without the helper installed — the calls fall
-// back to DebugNotification rather than going silent.
+// back to the HUD message rather than going silent.
 
 namespace Isekai::UI {
 

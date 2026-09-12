@@ -48,7 +48,7 @@ namespace Isekai {
         constexpr std::uint32_t kVersion = 14;
 
         void SystemMsg(const char* a_text) {
-            RE::DebugNotification(a_text);
+            RE::SendHUDMessage::ShowHUDMessage(a_text);
         }
 
         // Icon paths for the reincarnation choices. Files may not exist yet: a missing
@@ -1024,7 +1024,7 @@ namespace Isekai {
         // below zero, which no legitimate path can produce either.
         void GrantDebugPoints(std::int32_t a_amount) {
             g_state.systemPoints = std::max(0, g_state.systemPoints + a_amount);
-            RE::DebugNotification(
+            RE::SendHUDMessage::ShowHUDMessage(
                 LF("debug.pointsGranted", "[ SYSTEM ] System Points: {}", g_state.systemPoints)
                     .c_str());
             if (auto* console = RE::ConsoleLog::GetSingleton()) {

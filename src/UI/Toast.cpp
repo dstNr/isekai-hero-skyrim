@@ -45,7 +45,7 @@ namespace Isekai::UI {
             // the helper's HUD plane in VR. VR reaches this fallback only when
             // ImGuiVRHelper is absent, which is exactly where it was before.
             if (!OverlayReady() && !VROverlayReady()) {
-                RE::DebugNotification(a_text.c_str());
+                RE::SendHUDMessage::ShowHUDMessage(a_text.c_str());
                 return;
             }
 
