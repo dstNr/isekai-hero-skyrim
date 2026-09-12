@@ -39,6 +39,12 @@ namespace Isekai::UI {
         constexpr float kStickSpeed = 13.0f;
         constexpr float kStickDeadzone = 0.18f;
 
+        // The right stick scrolls, at a rate that reads like a wheel rather than a slide.
+        // One scrollable surface exists today — the skill tree's mastery rail — and a
+        // cursor alone cannot reach it: dragging inside a child window pans the tree
+        // behind it instead of scrolling the rail.
+        constexpr float kStickScrollSpeed = 0.35f;
+
         // Hotkeys are keyed by DEVICE and code, never by code alone. A gamepad button
         // arrives as its XInput mask — D-pad up is 0x0001, Start is 0x0010 — and those
         // collide head-on with keyboard scan codes, where 0x0001 is ESCAPE and 0x0010 is
@@ -259,7 +265,12 @@ namespace Isekai::UI {
                     if (event->GetDevice() == RE::INPUT_DEVICE::kGamepad) {
                         if (event->GetEventType() == RE::INPUT_EVENT_TYPE::kThumbstick) {
                             auto* stick = static_cast<RE::ThumbstickEvent*>(event);
-                            if (stick->IsLeft()) {
+                            if (stick->IsRight()) {
+                                const float y = stick->yValue;
+                                if (std::abs(y) > kStickDeadzone) {
+                                    g_pending.wheel += y * kStickScrollSpeed;  // up scrolls up
+                                }
+                            } else if (stick->IsLeft()) {
                                 const float x = stick->xValue;
                                 const float y = stick->yValue;
                                 if (std::abs(x) > kStickDeadzone) {

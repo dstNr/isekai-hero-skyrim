@@ -28,6 +28,11 @@ All notable changes to Isekai Hero are documented here. The format follows
     the runtime picks one and logs which.
 
 ### Added
+- **The right stick scrolls** (#2). The controller already reached every screen — the left
+  stick drives a cursor and A clicks, which covers the panels and the skill-tree canvas
+  with one mechanism — but not the skill tree's mastery rail: dragging inside a child
+  window pans the tree behind it rather than scrolling the rail, so the one scrollable
+  surface in the mod was unreachable without a mouse wheel.
 - **The System notices what you actually do** (#30). Two tracks, both off a single setting
   each, and both paying into System Points rather than into new records:
   - **Kill bounties.** Every kill is tallied against the quarry types it matches — the same
