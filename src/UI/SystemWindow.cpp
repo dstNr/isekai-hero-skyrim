@@ -82,6 +82,24 @@ namespace Isekai::UI {
             }
         }
 
+        // Shut the panel without reporting a choice. Answer() cannot do this: it always
+        // hands an index to the callback, and for a panel whose buttons are SKILL TREE,
+        // STORAGE and SHOP that means ESC would open one of them instead of closing.
+        void Close() {
+            {
+                std::scoped_lock lock(g_mutex);
+                g_win = WindowState{};
+            }
+            g_open.store(false, std::memory_order_release);
+
+            if (auto* task = SKSE::GetTaskInterface()) {
+                task->AddTask([]() {
+                    Sounds::Play(Sounds::Sfx::WindowClose);
+                    SetGameHold(false);
+                });
+            }
+        }
+
         // How the bottom button row lays itself out. Decided ONCE for the whole row and
         // BEFORE the window opens, because the panel's height is computed up front and
         // has to include whatever this comes back with.
@@ -628,9 +646,20 @@ namespace Isekai::UI {
                 }
             }
         }
+
+        // One text choice is a prompt with a single way out — an "OK". Pressing it is
+        // what dismissing means there, and the caller still gets its answer.
         if (textCount == 1 && lastText >= 0) {
             Answer(lastText);
+            return;
         }
+
+        // Everything else is a view rather than a question: the status panel carries
+        // three icon buttons and, unless the reroll button is switched on, no text
+        // choice at all. This used to fall out of the function having done nothing, so
+        // ESC never closed the status panel — it only reached Skyrim's own menu, which
+        // is the sound players heard under a panel that stayed open.
+        Close();
     }
 
     void ShowSystemWindow(std::string a_title, std::string a_body,

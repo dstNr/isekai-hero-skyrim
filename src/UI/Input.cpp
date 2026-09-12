@@ -622,19 +622,41 @@ namespace Isekai::UI {
         if (auto* menuControls = RE::MenuControls::GetSingleton()) {
             menuControls->AddHandler(MenuGuard::GetSingleton());
 
-            // AddHandler appends, and the chain stops at the FIRST handler that
-            // consumes an event — appended last, we ran after the journal handler and
-            // ESC closed our panel *and* opened Skyrim's menu on the same press.
-            // Rotate ourselves to the front so the guard sees every button first.
-            auto& handlers = menuControls->handlers;
-            if (!handlers.empty() && handlers.back() == MenuGuard::GetSingleton()) {
-                for (std::size_t i = handlers.size() - 1; i > 0; --i) {
+            // The chain stops at the FIRST handler that consumes an event, and we have to
+            // be that one. The journal handler opens Skyrim's menu as it runs, so seeing
+            // the key after it is already too late — the menu is on its way up and all we
+            // can do is hide it again, which is what the player hears as a menu sound
+            // under a panel that will not close.
+            //
+            // Find ourselves rather than assuming AddHandler put us at the back: it does
+            // not always append, because MenuControls queues registrations while it is
+            // dispatching and flushes them later. The old code tested handlers.back() and
+            // silently skipped the rotation whenever that missed — while logging success
+            // either way, which is how it hid until ESC started falling through.
+            auto&       handlers = menuControls->handlers;
+            auto* const guard = MenuGuard::GetSingleton();
+
+            std::size_t index = handlers.size();
+            for (std::size_t i = 0; i < handlers.size(); ++i) {
+                if (handlers[i] == guard) {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index == handlers.size()) {
+                logger::error("UI: menu guard is NOT in the handler chain ({} handlers) — "
+                              "ESC and Tab will fall through into Skyrim's menus",
+                              handlers.size());
+            } else {
+                for (std::size_t i = index; i > 0; --i) {
                     handlers[i] = handlers[i - 1];
                 }
-                handlers[0] = MenuGuard::GetSingleton();
+                handlers[0] = guard;
+                logger::info("UI: menu guard moved from index {} to the front of the chain "
+                             "({} handlers)",
+                             index, handlers.size());
             }
-            logger::info("UI: menu guard armed at the front of the chain ({} handlers)",
-                         handlers.size());
         }
     }
 
