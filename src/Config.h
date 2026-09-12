@@ -166,6 +166,12 @@ namespace Isekai::Config {
     [[nodiscard]] std::uint32_t QuestIntervalHours();
     [[nodiscard]] float         QuestRewardScale();
 
+    // 0 = no bounties. How many kills of one quarry type pay KillBountyPoints.
+    [[nodiscard]] std::uint32_t KillsPerBounty();
+    [[nodiscard]] std::int32_t  KillBountyPoints();
+    // 0 = professions off. Harvest/smelt/tan/craft actions per System Point.
+    [[nodiscard]] std::uint32_t ProfessionActionsPerPoint();
+
     // Show the NEW TASK button on the status panel, which throws the standing objective
     // away and rolls another one — free, instantly, as often as you like.
     //

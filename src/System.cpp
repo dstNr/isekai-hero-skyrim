@@ -7,6 +7,7 @@
 #include "Passives.h"
 #include "Plugin.h"
 #include "Progression.h"
+#include "Professions.h"
 #include "Quests.h"
 #include "SelfTest.h"
 #include "SkillTree.h"
@@ -45,7 +46,7 @@ namespace Isekai {
         // 12: its snapshotted target/reward, and when the next one is due
         // 13: how many objectives this character has been given
         // 14: the pre-blessing baseline, so REBOOT can hand the body back
-        constexpr std::uint32_t kVersion = 14;
+        constexpr std::uint32_t kVersion = 15;
 
         void SystemMsg(const char* a_text) {
             RE::SendHUDMessage::ShowHUDMessage(a_text);
@@ -812,6 +813,16 @@ namespace Isekai {
             a_intf->WriteRecordData(g_state.preMagicka);
             a_intf->WriteRecordData(g_state.preStamina);
 
+            // v15: what the character has hunted and made. Count first, as with the
+            // baseline above, so the reader never needs to know the quarry table.
+            const auto killTypes = static_cast<std::uint32_t>(g_state.killCounts.size());
+            a_intf->WriteRecordData(killTypes);
+            for (const auto& [key, count] : g_state.killCounts) {
+                a_intf->WriteRecordData(key);
+                a_intf->WriteRecordData(count);
+            }
+            a_intf->WriteRecordData(g_state.professionActions);
+
             logger::info(
                 "State saved (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={}, "
                 "dormant={}, custom={}, grant={}, tree={})",
@@ -979,6 +990,32 @@ namespace Isekai {
                     a_intf->ReadRecordData(g_state.preMagicka);
                     a_intf->ReadRecordData(g_state.preStamina);
                 }
+
+                // A save from before v15 simply has not been counting: an empty tally is
+                // the truthful answer, not a loss.
+                g_state.killCounts.clear();
+                g_state.professionActions = 0;
+                if (version >= 15) {
+                    std::uint32_t killTypes = 0;
+                    a_intf->ReadRecordData(killTypes);
+                    // Bounded before it is used as a length, like the baseline above: this
+                    // is a number out of a file, and a corrupt one must not allocate.
+                    if (killTypes > 256) {
+                        logger::error("Co-save: kill tally claims {} types — ignoring it",
+                                      killTypes);
+                        killTypes = 0;
+                    }
+                    for (std::uint32_t i = 0; i < killTypes; ++i) {
+                        std::uint32_t key = 0;
+                        std::int32_t  count = 0;
+                        a_intf->ReadRecordData(key);
+                        a_intf->ReadRecordData(count);
+                        if (count > 0) {
+                            g_state.killCounts[key] = count;
+                        }
+                    }
+                    a_intf->ReadRecordData(g_state.professionActions);
+                }
             }
 
             logger::info(
@@ -1121,6 +1158,7 @@ namespace Isekai {
                 SkyrimNet::Install();   // optional AI-NPC context; no-op without SkyrimNet
                 Progression::Install();
                 Quests::Install();      // watches kills for the standing objective
+                Professions::Install();  // harvesting and crafting feed the System
                 UI::InstallThreatLabels();  // the on/off key for the floating verdicts
                 SelfTest::Install();    // diagnostic hotkey, off unless the ini sets one
                 InstallConsoleCommand();  // IsekaiPoints [n]

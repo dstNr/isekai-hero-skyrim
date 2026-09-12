@@ -65,6 +65,9 @@ view.tree.tierTag =  · {} ({}/{})
 view.tree.title = System · Skill Tree
 view.tree.unlocked = Unlocked
 
+; --- src/Professions.cpp ---
+profession.payout = [ SYSTEM ]  Craft recognised  —  +1 SP
+
 ; --- src/Progression.cpp (passive titles) ---
 passive.1101 = Survivor
 passive.1102 = Wayfarer
@@ -195,6 +198,7 @@ quarry.7 = dragons
 quarry.8 = trolls
 
 ; --- src/Quests.cpp ---
+quest.bounty = [ SYSTEM ]  {} {} slain  —  bounty
 quest.complete = [ SYSTEM ]  Objective complete.  +{} System Points
 quest.newObjective = [ SYSTEM ]  New objective:  slay {} {}
 quest.slay = Slay {} {}

@@ -44,6 +44,9 @@ namespace Isekai::Config {
         std::uint32_t g_questFirstTaskHours = 12;
         std::uint32_t g_questIntervalHours = 24;
         float         g_questRewardScale = 1.0f;
+        std::uint32_t g_killsPerBounty = 50;
+        std::int32_t  g_killBountyPoints = 1;
+        std::uint32_t g_professionActionsPerPoint = 25;
         bool          g_questRerollButton = false;
         // 0 = off. Off by default: the self-test is a diagnostic for bug reports, not a
         // feature, and a stray key that pops a notification would just be noise.
@@ -160,6 +163,19 @@ namespace Isekai::Config {
             }
         }
 
+        // A whole number inside a range. Out of range is refused rather than clamped:
+        // a value someone typed by hand and got wrong should keep the documented default,
+        // not silently become the nearest legal thing.
+        [[nodiscard]] std::uint32_t AsCount(const std::string& a_val, std::uint32_t a_def,
+                                            std::uint32_t a_min, std::uint32_t a_max) {
+            try {
+                const auto n = std::stoul(a_val, nullptr, 10);
+                return (n >= a_min && n <= a_max) ? static_cast<std::uint32_t>(n) : a_def;
+            } catch (...) {
+                return a_def;
+            }
+        }
+
         // A speed multiplier, 0..20. 0 is legal and means "no typewriter at all".
         [[nodiscard]] float AsSpeed(const std::string& a_val, float a_def) {
             try {
@@ -208,6 +224,9 @@ namespace Isekai::Config {
         g_questFirstTaskHours = 12;
         g_questIntervalHours = 24;
         g_questRewardScale = 1.0f;
+        g_killsPerBounty = 50;
+        g_killBountyPoints = 1;
+        g_professionActionsPerPoint = 25;
         g_questRerollButton = false;
         g_selfTestKey = 0;
         g_logInputDiag = false;
@@ -308,6 +327,14 @@ namespace Isekai::Config {
                 g_questFirstTaskHours = AsHours(val, g_questFirstTaskHours);
             } else if (key == "taskintervalhours") {
                 g_questIntervalHours = AsHours(val, g_questIntervalHours);
+            } else if (key == "killsperbounty") {
+                g_killsPerBounty = AsCount(val, g_killsPerBounty, 0u, 10000u);
+            } else if (key == "killbountypoints") {
+                g_killBountyPoints =
+                    static_cast<std::int32_t>(AsCount(val, static_cast<std::uint32_t>(
+                                                               g_killBountyPoints), 1u, 1000u));
+            } else if (key == "professionactionsperpoint") {
+                g_professionActionsPerPoint = AsCount(val, g_professionActionsPerPoint, 0u, 10000u);
             } else if (key == "questrewardscale") {
                 // Clamped rather than trusted: 0 would hand out objectives that pay
                 // nothing, which reads as the quest system being broken rather than as a
@@ -481,6 +508,18 @@ namespace Isekai::Config {
 
     std::uint32_t QuestFirstTaskHours() {
         return g_questFirstTaskHours;
+    }
+
+    std::uint32_t KillsPerBounty() {
+        return g_killsPerBounty;
+    }
+
+    std::int32_t KillBountyPoints() {
+        return g_killBountyPoints;
+    }
+
+    std::uint32_t ProfessionActionsPerPoint() {
+        return g_professionActionsPerPoint;
     }
 
     float QuestRewardScale() {

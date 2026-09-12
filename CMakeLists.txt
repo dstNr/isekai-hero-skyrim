@@ -42,6 +42,8 @@ add_commonlibsse_plugin(
         src/Passives.h
         src/Plugin.cpp
         src/Plugin.h
+        src/Professions.cpp
+        src/Professions.h
         src/Progression.cpp
         src/Quests.cpp
         src/Quests.h

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 // Core of the Isekai "System". Ported from the data model of the original
 // Papyrus version (git tag papyrus-v1.0). Native C++ / CommonLibSSE-NG.
 
@@ -135,6 +137,19 @@ namespace Isekai {
         // always the starter quarry (see kStarterKey), and neither may happen twice
         // because the save was reloaded.
         std::int32_t questsGiven = 0;
+
+        // Lifetime kills per quarry type, by the same stable key the objectives use, and
+        // counted whether or not an objective is standing. Every kKillsPerBounty of a type
+        // pays a bounty: the System noticing what you actually hunt (#30).
+        //
+        // A map rather than a vector because the keys are stable identifiers with retired
+        // values in the middle, not indices — see the quarry table in Quests.cpp.
+        std::map<std::uint32_t, std::int32_t> killCounts;
+
+        // Harvesting, smelting, tanning and crafting, counted as one track. Every
+        // kProfessionActionsPerPoint of them pays a System Point, so the non-combat half
+        // of the game feeds the System too (#30).
+        std::int32_t professionActions = 0;
     };
 
     [[nodiscard]] State& GetState();

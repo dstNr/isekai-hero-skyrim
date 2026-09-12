@@ -28,6 +28,18 @@ All notable changes to Isekai Hero are documented here. The format follows
     the runtime picks one and logs which.
 
 ### Added
+- **The System notices what you actually do** (#30). Two tracks, both off a single setting
+  each, and both paying into System Points rather than into new records:
+  - **Kill bounties.** Every kill is tallied against the quarry types it matches — the same
+    ActorType keywords the objectives use — whether or not an objective is standing. Each
+    time a type crosses another multiple of `KillsPerBounty` (50 by default) the System
+    pays `KillBountyPoints`. An actor that is honestly two types counts for both.
+  - **Professions.** Harvesting, smelting, tanning, smithing, alchemy and enchanting count
+    as one track: every `ProfessionActionsPerPoint` of them (25 by default) pays a System
+    Point. Taking materials out of the Dimensional Storage at a station does not count —
+    a crafted item arrives with no previous container, a withdrawn one carries the chest.
+  - The co-save grows to version 15 for the tally and the action count. Older saves load
+    with an empty tally, which is the truthful answer rather than a loss.
 - **`QuestRewardScale`, so the System's objectives can be made worth more or less** (#32).
   A multiplier on what an objective pays, in the `[Quests]` block, clamped to 0.1..10.0.
   It applies where the payout is snapshotted — when the objective is handed out — so an

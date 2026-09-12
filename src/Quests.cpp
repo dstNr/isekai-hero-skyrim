@@ -230,6 +230,40 @@ namespace Isekai::Quests {
             return killer == player || killer->IsPlayerTeammate();
         }
 
+        // Every kill is tallied against whichever quarry types the actor matches, and each
+        // time a type crosses another multiple of KillsPerBounty the System pays a bounty.
+        //
+        // Deliberately not "a bonus against that type": that would need either records the
+        // Creation Kit has to make or a hook into damage, and the reward here is the
+        // System noticing the work. An actor can match more than one type, and then it
+        // counts for each — a draugr that is also undead is honestly both.
+        void CountKill(RE::Actor& a_dying) {
+            const auto per = Config::KillsPerBounty();
+            if (per == 0) {
+                return;  // bounties switched off
+            }
+
+            auto&        state = GetState();
+            std::int32_t owed = 0;
+            for (const auto& q : kQuarries) {
+                if (!a_dying.HasKeywordString(q.keyword)) {
+                    continue;
+                }
+                const auto count = ++state.killCounts[q.key];
+                if (count % static_cast<std::int32_t>(per) != 0) {
+                    continue;
+                }
+                owed += Config::KillBountyPoints();
+                logger::info("Quests: {} kills against {} — bounty paid", count, q.name);
+                UI::ShowToastBanner(LF("quest.bounty", "[ SYSTEM ]  {} {} slain  —  bounty",
+                                       count, q.name),
+                                    kToastKey);
+            }
+            if (owed > 0) {
+                GrantSystemPoints(owed);
+            }
+        }
+
         class DeathWatcher : public RE::BSTEventSink<RE::TESDeathEvent> {
         public:
             static DeathWatcher* GetSingleton() {
@@ -245,8 +279,7 @@ namespace Isekai::Quests {
                 if (!a_event || !a_event->dead || !a_event->actorDying) {
                     return RE::BSEventNotifyControl::kContinue;
                 }
-                const auto* quarry = Current();
-                if (!quarry || !GetState().reincarnated) {
+                if (!GetState().reincarnated) {
                     return RE::BSEventNotifyControl::kContinue;
                 }
                 auto* dying = a_event->actorDying->As<RE::Actor>();
@@ -254,6 +287,16 @@ namespace Isekai::Quests {
                     return RE::BSEventNotifyControl::kContinue;
                 }
                 if (!CountsForPlayer(a_event)) {
+                    return RE::BSEventNotifyControl::kContinue;
+                }
+
+                // The lifetime tally runs whether or not an objective is standing: the
+                // System is meant to notice what you actually hunt, not only what it
+                // asked for (#30).
+                CountKill(*dying);
+
+                const auto* quarry = Current();
+                if (!quarry) {
                     return RE::BSEventNotifyControl::kContinue;
                 }
                 // The keyword sits on the actor's base/race, and HasKeywordString walks
