@@ -656,6 +656,18 @@ namespace Isekai::UI {
 
         const float bandH = a_panel.y / static_cast<float>(kMaxLabels);
         const float height = Config::VRThreatLabelHeight();
+
+        // UiScale has to reach this surface too — it was the one place it did not (#26).
+        // Not Style::g_scale: in VR that already carries the helper's own panel scale
+        // (VROverlay.cpp sets it), so using it here would apply that factor twice.
+        //
+        // Clamped so a frame can never grow out of its band into the one above. The frame
+        // grows upward from its baseline by badgeRY * 2 + extra, which is 17 * 2 * k plus
+        // an 8 * k resource row when one is shown — 42 * k at its tallest. The 4 px is the
+        // same clearance the baseline below already leaves.
+        constexpr float kFrameHeightAt1x = 42.0f;
+        const float     scale =
+            std::clamp(Style::g_userScale, 0.5f, std::max(0.5f, (bandH - 4.0f) / kFrameHeightAt1x));
         ImDrawList* dl = ImGui::GetBackgroundDrawList();
 
         for (std::size_t i = 0; i < labels.size(); ++i) {
@@ -664,10 +676,11 @@ namespace Isekai::UI {
             const float  baseline = static_cast<float>(i + 1) * bandH - 4.0f;
             const ImVec2 anchor{ a_panel.x * 0.5f, baseline };
 
-            // Fixed scale and full opacity, unlike the flat path: the billboard already
-            // shrinks with distance because it is a fixed size in the world, and fading
-            // it as well would make anything past a few metres unreadable.
-            const ImVec2 size = DrawFrame(dl, labels[i], anchor, 1.0f, 1.0f);
+            // The player's own scale, but no distance falloff and full opacity, unlike
+            // the flat path: the billboard already shrinks with distance because it is a
+            // fixed size in the world, and fading it as well would make anything past a
+            // few metres unreadable.
+            const ImVec2 size = DrawFrame(dl, labels[i], anchor, scale, 1.0f);
             if (size.x <= 0.0f || size.y <= 0.0f) {
                 continue;
             }

@@ -54,6 +54,12 @@ All notable changes to Isekai Hero are documented here. The format follows
   border, so highlights inside the subject survive.
 
 ### Fixed
+- **`UiScale` now reaches the threat labels in VR** (#26). It was the one surface the
+  setting did not cover: the VR path drew its frames at a fixed size. The flat path has
+  scaled with both resolution and `UiScale` since 0.8.0, so the 4K complaint behind the
+  report does not apply there. The VR scale is clamped so a frame can never grow out of
+  its band into the one above it, and distance falloff stays off in VR, where the
+  billboard already shrinks in world space. **Untested — there is no VR install here.**
 - **The Dimensional Storage is the player's property.** Transferring items in or out while
   standing in an NPC-owned cell — an inn, a shop, a house — was a crime: a bounty, items
   flagged stolen, and witnesses turning hostile, a follower included. A reference that
