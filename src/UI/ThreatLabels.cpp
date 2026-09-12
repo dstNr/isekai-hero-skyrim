@@ -414,181 +414,129 @@ namespace Isekai::UI {
         // more than a few metres away unreadable.
         ImVec2 DrawFrame(ImDrawList* dl, const Label& label, const ImVec2& a_anchor, float k,
                          float alpha) {
-        ImFont* font = Style::g_body;
+            ImFont* font = Style::g_body;
 
-        // A target frame rather than two lines of text: an angular plate leaning right,
-        // the level in a disc on the left, the name across the top and a health bar under
-        // it, with the verdict closing the right end. Same information as before — the
-        // shape is what makes it readable at a glance instead of something you parse.
-        //
-        // All of it is draw-list geometry, no textures: the frame has to scale with
-        // distance, and stretched art at a dozen sizes looks worse than lines do.
-        const auto measure = [&](float a_size, const char* a_text) {
-            return font ? font->CalcTextSizeA(a_size, FLT_MAX, 0.0f, a_text).x
-                        : ImGui::CalcTextSize(a_text).x;
-        };
+            // One line of text over one underline, and the underline IS the health bar.
+            //
+            // The plate this replaced drew the verdict colour three times over: the level
+            // badge, the plate's two edges and the whole bar, with magicka blue and stamina
+            // green competing underneath. Four saturated things at once is what the 0.8.0
+            // feedback meant by "too many high-contrast elements competing", and no amount
+            // of restyling a plate fixes a frame that says the same thing four ways.
+            //
+            // So: exactly ONE coloured element. The bar carries the verdict colour, which
+            // keeps the meaning that colour always had - red is lethal, not low health -
+            // and everything else is dim. The text is outlined rather than backed by a
+            // panel, which is what lets the panel go away without the name disappearing
+            // over snow or firelight.
+            const float nameSize = 18.0f * k;
+            const float smallSize = 12.0f * k;
+            const float barH = 4.0f * k;
+            const float gap = 3.0f * k;
+            const float resH = 2.5f * k;
+            const float resGap = 2.0f * k;
+            const float pad = 10.0f * k;
 
-        {
-            const float nameSize = 20.0f * k;
-            const float tagSize = 12.0f * k;
-            const float lvlSize = 15.0f * k;
-            // The level badge is a lozenge: as tall as the old disc (the plate's height
-            // hangs off it) but wider, because a three-digit level had to fit through the
-            // narrow middle of a diamond and a circle's width was all it had.
-            const float badgeRX = 20.0f * k;
-            const float badgeRY = 17.0f * k;
-            const float barH = 6.0f * k;
-            const float skew = 9.0f * k;
+            const auto measure = [&](float a_size, const char* a_text) {
+                return font ? font->CalcTextSizeA(a_size, FLT_MAX, 0.0f, a_text).x
+                            : ImGui::CalcTextSize(a_text).x;
+            };
 
-            const std::string lvl = std::to_string(label.level);
+            const std::string lvl = "LV " + std::to_string(label.level);
             const char*       name =
                 label.name.empty() ? L("threat.unknown", "Unknown") : label.name.c_str();
-            const float       nameW = measure(nameSize, name);
-            const float       tagW = measure(tagSize, label.verdict.tag);
 
-            const float plateW =
-                badgeRX * 2.0f + 14.0f * k + std::max(nameW, 120.0f * k) + 12.0f * k + tagW +
-                14.0f * k;
-            // Magicka and stamina, side by side in ONE thin strip under the health bar.
-            // Only for actors that HAVE the pool — most animals carry no magicka, and an
-            // empty bar reads as "drained" rather than "not applicable".
-            //
-            // A row each was the obvious layout and the wrong one: it made the frame half
-            // again as tall over every mage in the room, which is precisely what the 0.7.0
-            // feedback asked us to stop doing (#25). Sharing a row costs four pixels, and
-            // blue against green says which is which without either being labelled.
             const bool  wantRes = Config::ThreatLabelResources();
             const bool  showMp = wantRes && label.mp.max > 0;
             const bool  showSp = wantRes && label.sp.max > 0;
-            const float resH = 5.0f * k;
-            const float resGap = 3.0f * k;
             const float extra = (showMp || showSp) ? resH + resGap : 0.0f;
 
+            // The health figure joins the text row rather than sitting on the bar: at four
+            // pixels there is no room on it, and a second row is exactly the height this
+            // frame was asked to stop taking.
+            std::string hpText;
+            if (Config::ThreatLabelNumbers() && label.hp.max > 0) {
+                hpText = std::to_string(label.hp.now) + " / " + std::to_string(label.hp.max);
+            }
+
+            const float lvlW = measure(smallSize, lvl.c_str());
+            const float nameW = measure(nameSize, name);
+            const float tagW = measure(smallSize, label.verdict.tag);
+            const float hpGap = hpText.empty() ? 0.0f : 8.0f * k;
+            const float hpW = hpText.empty() ? 0.0f : measure(smallSize, hpText.c_str());
+
+            const float totalW =
+                std::max(140.0f * k, lvlW + pad + nameW + hpGap + hpW + pad + tagW);
+
             const float cx = a_anchor.x;
-            const float y1 = a_anchor.y;               // sits just above the head point
-            // The frame grows UPWARD. y1 is pinned to the head, so the extra row must never
-            // push the frame down over the actor's face.
-            const float y0 = y1 - badgeRY * 2.0f - extra;
-            const float x0 = cx - plateW * 0.5f;
-            const float x1 = cx + plateW * 0.5f;
+            const float x0 = cx - totalW * 0.5f;
+            const float x1 = cx + totalW * 0.5f;
 
-            // The plate: a parallelogram, not a rectangle. The lean is the whole reason
-            // this reads as a banner rather than as a tooltip.
-            dl->AddQuadFilled(ImVec2{ x0 + skew, y0 }, ImVec2{ x1, y0 },
-                              ImVec2{ x1 - skew, y1 }, ImVec2{ x0, y1 },
-                              Style::Col(Style::kPanelBg, 0.72f * alpha));
-            dl->AddLine(ImVec2{ x0 + skew, y0 }, ImVec2{ x1, y0 },
-                        Style::Col(label.verdict.col, 0.55f * alpha), 1.5f * k);
-            dl->AddLine(ImVec2{ x0, y1 }, ImVec2{ x1 - skew, y1 },
-                        Style::Col(label.verdict.col, 0.35f * alpha), 1.0f * k);
+            // Pinned to the head point and growing upward, so a taller frame never drops
+            // over the actor's face.
+            const float y1 = a_anchor.y;
+            const float barY = y1 - extra - barH;
+            const float textY = barY - gap - nameSize;
+            const float y0 = textY;
 
-            // Level badge on the left, in the verdict's colour — the one element you can
-            // identify without reading anything. A diamond rather than a disc: everything
-            // else the System draws is angular (this plate's own lean, the panels' corner
-            // brackets), and the circle was the single round thing among it.
-            const ImVec2 badge{ x0 + badgeRX + 3.0f * k, (y0 + y1) * 0.5f };
-            const ImVec2 dTop{ badge.x, badge.y - badgeRY };
-            const ImVec2 dRight{ badge.x + badgeRX, badge.y };
-            const ImVec2 dBottom{ badge.x, badge.y + badgeRY };
-            const ImVec2 dLeft{ badge.x - badgeRX, badge.y };
-            dl->AddQuadFilled(dTop, dRight, dBottom, dLeft,
-                              Style::Col(Style::kPanelBg, 0.95f * alpha));
-            dl->AddQuad(dTop, dRight, dBottom, dLeft, Style::Col(label.verdict.col, alpha),
-                        2.0f * k);
-            // A second outline just inside, faint: the badge is the frame's focal point and
-            // a single stroke read as flat next to the bars' filled colour.
-            dl->AddQuad(ImVec2{ badge.x, badge.y - badgeRY + 4.0f * k },
-                        ImVec2{ badge.x + badgeRX - 4.0f * k, badge.y },
-                        ImVec2{ badge.x, badge.y + badgeRY - 4.0f * k },
-                        ImVec2{ badge.x - badgeRX + 4.0f * k, badge.y },
-                        Style::Col(label.verdict.col, 0.30f * alpha), 1.0f * k);
-            const float lvlW = measure(lvlSize, lvl.c_str());
-            Style::DrawTextOutlined(dl, font, lvlSize,
-                                    ImVec2{ badge.x - lvlW * 0.5f, badge.y - lvlSize * 0.62f },
-                                    label.verdict.col, lvl.c_str(), alpha);
+            // Small type sits on the name's baseline rather than its top, or the row reads
+            // as three things at three different heights.
+            const float smallY = textY + (nameSize - smallSize) * 0.70f;
 
-            const float textX = badge.x + badgeRX + 11.0f * k;
-            const float barR = x1 - 12.0f * k - tagW - 10.0f * k;
-
-            Style::DrawTextOutlined(dl, font, nameSize, ImVec2{ textX, y0 + 2.0f * k },
+            Style::DrawTextOutlined(dl, font, smallSize, ImVec2{ x0, smallY }, Style::kTextDim,
+                                    lvl.c_str(), alpha);
+            Style::DrawTextOutlined(dl, font, nameSize, ImVec2{ x0 + lvlW + pad, textY },
                                     Style::kText, name, alpha);
+            if (!hpText.empty()) {
+                Style::DrawTextOutlined(dl, font, smallSize,
+                                        ImVec2{ x0 + lvlW + pad + nameW + hpGap, smallY },
+                                        Style::kTextDim, hpText.c_str(), alpha);
+            }
+            // The verdict, right-aligned: the one piece of text allowed to be coloured, and
+            // it names in a word what the bar underneath already said in a colour.
+            Style::DrawTextOutlined(dl, font, smallSize, ImVec2{ x1 - tagW, smallY },
+                                    label.verdict.col, label.verdict.tag, alpha);
 
-            // Health. Empty track first so a nearly dead target still shows the frame.
-            const float barY = y1 - 9.0f * k - extra;
-            dl->AddRectFilled(ImVec2{ textX, barY }, ImVec2{ barR, barY + barH },
-                              Style::Col(Style::kPanelBg, 0.9f * alpha));
-            dl->AddRectFilled(
-                ImVec2{ textX, barY },
-                ImVec2{ textX + (barR - textX) * label.hp.fraction, barY + barH },
-                Style::Col(label.verdict.col, 0.85f * alpha));
-            dl->AddRect(ImVec2{ textX, barY }, ImVec2{ barR, barY + barH },
-                        Style::Col(label.verdict.col, 0.45f * alpha), 0.0f, 0, 1.0f * k);
+            // The underline. Empty track first, so a nearly dead target still shows a line
+            // instead of disappearing at the moment it matters most.
+            dl->AddRectFilled(ImVec2{ x0, barY }, ImVec2{ x1, barY + barH },
+                              Style::Col(Style::kPanelBg, 0.85f * alpha));
+            dl->AddRectFilled(ImVec2{ x0, barY },
+                              ImVec2{ x0 + totalW * label.hp.fraction, barY + barH },
+                              Style::Col(label.verdict.col, 0.90f * alpha));
 
-            // The number on the bar. A bar answers "roughly how much is left"; a fight
-            // where it matters whether that is 40 or 400 wants the figure. Centred on the
-            // bar, which is the one place it fits without making the frame taller — and
-            // the frame was deliberately made less obtrusive earlier, so growing it back
-            // would undo somebody else's feedback to satisfy this one.
-            const bool numbers = Config::ThreatLabelNumbers();
-
-            // One bar's worth of figures, centred on it — the MMO convention, and the
-            // reason the text may sit taller than the bar it is on.
-            const auto drawFigures = [&](const Pool& pool, float a_y, float a_h,
-                                         float a_size) {
-                if (!numbers || pool.max <= 0) {
-                    return;
-                }
-                const std::string text =
-                    std::to_string(pool.now) + " / " + std::to_string(pool.max);
-                const float w = measure(a_size, text.c_str());
-                Style::DrawTextOutlined(
-                    dl, font, a_size,
-                    ImVec2{ (textX + barR) * 0.5f - w * 0.5f, a_y + a_h * 0.5f - a_size * 0.62f },
-                    Style::kText, text.c_str(), alpha);
-            };
-
-            drawFigures(label.hp, barY, barH, 11.0f * k);
-
-            // The resource strip: magicka on the left, stamina on the right, each filling
-            // from its own edge. Colour only — no figures. At five pixels tall they would
-            // not be readable at the distances these labels are seen from, and health is
-            // the number that decides the fight anyway.
+            // Magicka and stamina, each filling from its own edge, as one hairline beneath
+            // the health line. Colour only: at two pixels a figure is a smudge, and health
+            // is the number that decides the fight anyway. Dimmer than the health line on
+            // purpose - they are context, not the verdict.
             if (showMp || showSp) {
-                const float resY = barY + barH + resGap;
+                const float resY = y1 - resH;
                 const auto  strip = [&](float a_x0, float a_x1, const Pool& pool,
                                        const ImVec4& col) {
                     if (a_x1 - a_x0 < 2.0f) {
                         return;
                     }
                     dl->AddRectFilled(ImVec2{ a_x0, resY }, ImVec2{ a_x1, resY + resH },
-                                      Style::Col(Style::kPanelBg, 0.9f * alpha));
+                                      Style::Col(Style::kPanelBg, 0.85f * alpha));
                     dl->AddRectFilled(
                         ImVec2{ a_x0, resY },
                         ImVec2{ a_x0 + (a_x1 - a_x0) * pool.fraction, resY + resH },
-                        Style::Col(col, 0.9f * alpha));
-                    dl->AddRect(ImVec2{ a_x0, resY }, ImVec2{ a_x1, resY + resH },
-                                Style::Col(col, 0.45f * alpha), 0.0f, 0, 1.0f * k);
+                        Style::Col(col, 0.65f * alpha));
                 };
                 if (showMp && showSp) {
                     // A gap between them, not a shared border: touching, the two fills read
                     // as one bar that changes colour partway along.
-                    const float mid = (textX + barR) * 0.5f;
                     const float split = 4.0f * k;
-                    strip(textX, mid - split * 0.5f, label.mp, kMagickaCol);
-                    strip(mid + split * 0.5f, barR, label.sp, kStaminaCol);
+                    strip(x0, cx - split * 0.5f, label.mp, kMagickaCol);
+                    strip(cx + split * 0.5f, x1, label.sp, kStaminaCol);
                 } else if (showMp) {
-                    strip(textX, barR, label.mp, kMagickaCol);
+                    strip(x0, x1, label.mp, kMagickaCol);
                 } else {
-                    strip(textX, barR, label.sp, kStaminaCol);
+                    strip(x0, x1, label.sp, kStaminaCol);
                 }
             }
 
-            Style::DrawTextOutlined(dl, font, tagSize,
-                                    ImVec2{ barR + 10.0f * k, barY + barH * 0.5f - tagSize * 0.6f },
-                                    label.verdict.col, label.verdict.tag, alpha);
-
-            return ImVec2{ plateW, y1 - y0 };
-        }
+            return ImVec2{ totalW, y1 - y0 };
         }
     }
 

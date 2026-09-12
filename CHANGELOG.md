@@ -7,6 +7,18 @@ All notable changes to Isekai Hero are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **The threat labels are one line over one underline** (#26). The plate is gone. What it
+  drew was the verdict colour three times over — the level badge, the plate's two edges
+  and the whole health bar — with magicka blue and stamina green competing underneath;
+  four saturated things at once, which is what the report meant by "too many
+  high-contrast elements competing". Restyling a plate does not fix a frame that says the
+  same thing four ways, so now exactly one element carries colour: the underline, which is
+  the health bar and keeps the verdict's colour, so red still means lethal rather than
+  low. The level, the name and the health figure share one dim row, the verdict names in a
+  word what the bar says in a colour, and the text is outlined rather than backed by a
+  panel — which is what lets the panel go away without the name vanishing over snow.
+  Nothing was dropped: level, name, health figure, verdict and the resource hairline are
+  all still there, and the frame is shorter than it was.
 - **Skyrim 1.7.104 support.** The plugin now builds against `alandtse/CommonLibSSE-NG`
   v7.5.4, pulled in as the `extern/CommonLibSSE-NG` submodule, instead of the
   `commonlibsse-ng` vcpkg port. That port still ships CharmedBaryon's 3.7.0 from May 2023,
