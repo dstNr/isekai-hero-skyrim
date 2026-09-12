@@ -43,6 +43,7 @@ namespace Isekai::Config {
         std::uint32_t g_threatKey = 0x44;  // DIK_F10
         std::uint32_t g_questFirstTaskHours = 12;
         std::uint32_t g_questIntervalHours = 24;
+        float         g_questRewardScale = 1.0f;
         bool          g_questRerollButton = false;
         // 0 = off. Off by default: the self-test is a diagnostic for bug reports, not a
         // feature, and a stray key that pops a notification would just be noise.
@@ -206,6 +207,7 @@ namespace Isekai::Config {
         g_threatKey = 0x44;
         g_questFirstTaskHours = 12;
         g_questIntervalHours = 24;
+        g_questRewardScale = 1.0f;
         g_questRerollButton = false;
         g_selfTestKey = 0;
         g_logInputDiag = false;
@@ -306,6 +308,14 @@ namespace Isekai::Config {
                 g_questFirstTaskHours = AsHours(val, g_questFirstTaskHours);
             } else if (key == "taskintervalhours") {
                 g_questIntervalHours = AsHours(val, g_questIntervalHours);
+            } else if (key == "questrewardscale") {
+                // Clamped rather than trusted: 0 would hand out objectives that pay
+                // nothing, which reads as the quest system being broken rather than as a
+                // setting. The floor still allows "barely worth it" at a tenth.
+                try {
+                    g_questRewardScale = std::clamp(std::stof(val), 0.1f, 10.0f);
+                } catch (...) {
+                }
             } else if (key == "questrerollbutton") {
                 g_questRerollButton = AsBool(val);
             } else if (key == "selftestkey") {
@@ -332,7 +342,7 @@ namespace Isekai::Config {
                      "DormantHeroLevel={}, DormantAscendedLevel={}, StorageCodex={}, "
                      "SkyrimNetIntegration={}, ThreatLabels={} (targets={}, range={}, aim={}%, "
                      "key={}), "
-                     "FirstTaskHours={}, TaskIntervalHours={}, QuestRerollButton={}, "
+                     "FirstTaskHours={}, TaskIntervalHours={}, QuestRewardScale={}, QuestRerollButton={}, "
                      "SelfTestKey={}, DebugPointsKey={}, LogInputDiagnostics={}",
                      g_language, g_autoStart, g_textSpeed,
                      g_hideSealedNodes, KeyName(g_systemMenuKey), KeyName(g_systemMenuModifier),
@@ -345,7 +355,7 @@ namespace Isekai::Config {
                      : g_threatTargets == ThreatTargets::kHostile   ? "hostile"
                                                                     : "aggro",
                      g_threatRange, g_threatAimRadius, KeyName(g_threatKey), g_questFirstTaskHours,
-                     g_questIntervalHours, g_questRerollButton, KeyName(g_selfTestKey),
+                     g_questIntervalHours, g_questRewardScale, g_questRerollButton, KeyName(g_selfTestKey),
                      KeyName(g_debugPointsKey), g_logInputDiag);
     }
 
@@ -471,6 +481,10 @@ namespace Isekai::Config {
 
     std::uint32_t QuestFirstTaskHours() {
         return g_questFirstTaskHours;
+    }
+
+    float QuestRewardScale() {
+        return g_questRewardScale;
     }
 
     std::uint32_t QuestIntervalHours() {

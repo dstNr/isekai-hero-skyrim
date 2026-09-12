@@ -180,7 +180,8 @@ namespace Isekai::Quests {
                 1, static_cast<std::int32_t>(std::lround(chosen->count * factor)));
             state.questReward = std::max(
                 1, static_cast<std::int32_t>(
-                       std::lround(static_cast<float>(chosen->reward) * factor * RewardScale())));
+                       std::lround(static_cast<float>(chosen->reward) * factor * RewardScale() *
+                                   Config::QuestRewardScale())));
             state.questNextDue = 0.0f;  // one is live now; the clock restarts on completion
             ++state.questsGiven;
 
@@ -308,7 +309,8 @@ namespace Isekai::Quests {
                     std::max(1, static_cast<std::int32_t>(std::lround(q->count * factor)));
                 state.questReward = std::max(
                     1, static_cast<std::int32_t>(
-                           std::lround(static_cast<float>(q->reward) * factor * RewardScale())));
+                           std::lround(static_cast<float>(q->reward) * factor * RewardScale() *
+                                       Config::QuestRewardScale())));
                 state.questProgress = std::min(state.questProgress, state.questTarget - 1);
                 logger::info("Quests: sized a pre-v12 objective to {} / {}", state.questProgress,
                              state.questTarget);

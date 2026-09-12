@@ -28,6 +28,19 @@ All notable changes to Isekai Hero are documented here. The format follows
     the runtime picks one and logs which.
 
 ### Added
+- **`QuestRewardScale`, so the System's objectives can be made worth more or less** (#32).
+  A multiplier on what an objective pays, in the `[Quests]` block, clamped to 0.1..10.0.
+  It applies where the payout is snapshotted — when the objective is handed out — so an
+  objective already standing keeps the number it was written with and changing the setting
+  cannot move a finish line the player is already running at. How often objectives arrive
+  was already tunable through `FirstTaskHours` and `TaskIntervalHours`.
+- **A public API other SKSE plugins can use** (#28). A versioned pure-virtual interface
+  behind an exported `RequestPluginAPI`, the same pattern this mod already consumes from
+  PrismaUI. Foreign plugins can read whether the System is active, the tier, points, rank
+  and whether the player holds a given skill-tree node, and can grant System Points with an
+  attributed source; a state-changed message is dispatched for listeners. Nothing mutates
+  structure, and there is no Papyrus surface — the mod stays script-free. Ships as the
+  single dependency-free header `include/IsekaiHeroAPI.h`.
 - **The Flameforged Oathblade**, the first weapon the System sells — a new ARMAMENTS shelf
   in the shop, at 40 System Points. The mesh is generated geometry converted to a Skyrim
   NIF with collision, BSX flags and an attachment point built from measured numbers rather

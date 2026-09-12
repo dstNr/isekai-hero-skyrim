@@ -164,6 +164,7 @@ namespace Isekai::Config {
     // 0 means "at once", which is what you want while testing. Clamped to 0..720 (30 days).
     [[nodiscard]] std::uint32_t QuestFirstTaskHours();
     [[nodiscard]] std::uint32_t QuestIntervalHours();
+    [[nodiscard]] float         QuestRewardScale();
 
     // Show the NEW TASK button on the status panel, which throws the standing objective
     // away and rolls another one — free, instantly, as often as you like.
