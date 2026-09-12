@@ -47,6 +47,22 @@
             </plugin>
           </plugins>
         </group>
+
+        <!-- Additive, not an alternative, so its own group: the MCM sits beside whichever
+             interface was picked above rather than replacing it. SelectAny with a single
+             entry is how FOMOD spells "a checkbox". -->
+        <group name="Extras" type="SelectAny">
+          <plugins order="Explicit">
+            <plugin name="Mod Configuration Menu">
+              <description>Adds an MCM under the usual Mod Configuration list, with every setting from IsekaiHero.ini and its explanation. REQUIRES SkyUI and MCM Helper. Leave it unticked if you do not have those - the mod is fully configurable through the ini either way, and this is the only thing in it that needs them.</description>
+              <files>
+                <folder source="MCM\Config\IsekaiHero"
+                        destination="MCM\Config\IsekaiHero"/>
+              </files>
+              <typeDescriptor><type name="Optional"/></typeDescriptor>
+            </plugin>
+          </plugins>
+        </group>
       </optionalFileGroups>
     </installStep>
 

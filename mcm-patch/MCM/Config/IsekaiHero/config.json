@@ -1,0 +1,256 @@
+{
+  "modName": "IsekaiHero",
+  "displayName": "Isekai Hero",
+  "cursorFillMode": "topToBottom",
+  "pages": [
+    {
+      "pageDisplayName": "Interface",
+      "content": [
+        { "text": "Panels", "type": "header" },
+        {
+          "id": "fUiScale:Interface",
+          "text": "Interface scale",
+          "help": "Scales every panel, the toasts and the threat labels. 1.0 is as authored; panels already grow with screen height on their own, so this is a preference on top of that.",
+          "type": "slider",
+          "valueOptions": { "min": 0.5, "max": 3.0, "step": 0.1, "formatString": "{2}", "sourceType": "ModSettingFloat", "defaultValue": 1.0 }
+        },
+        {
+          "id": "fTextSpeed:Interface",
+          "text": "Text speed",
+          "help": "How fast the System types. 0 switches the typewriter off and shows the whole message at once.",
+          "type": "slider",
+          "valueOptions": { "min": 0.0, "max": 20.0, "step": 0.5, "formatString": "{1}", "sourceType": "ModSettingFloat", "defaultValue": 1.0 }
+        },
+        {
+          "id": "bHideSealedNodes:Interface",
+          "text": "Hide sealed nodes",
+          "help": "Sealed skill-tree nodes are greyed out with their requirement shown. Turn this on to hide them entirely instead.",
+          "type": "toggle",
+          "valueOptions": { "sourceType": "ModSettingBool", "defaultValue": false }
+        },
+        {
+          "id": "bAutoStart:Interface",
+          "text": "Start automatically",
+          "help": "The System introduces itself on its own. Turn this off to wait for the hotkey instead.",
+          "type": "toggle",
+          "valueOptions": { "sourceType": "ModSettingBool", "defaultValue": true }
+        },
+        { "text": "", "type": "empty" },
+        {
+          "text": "Language stays in IsekaiHero.ini: it names a file in the lang folder, and there is no useful way to list those here.",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Hotkeys",
+      "content": [
+        { "text": "Keyboard", "type": "header" },
+        {
+          "id": "iSystemMenuKey:Hotkey",
+          "text": "Open the System",
+          "help": "Opens the System panel, held together with the modifier below if one is set.",
+          "type": "keymap",
+          "valueOptions": { "sourceType": "ModSettingInt", "defaultValue": 31 }
+        },
+        {
+          "id": "iSystemMenuModifier:Hotkey",
+          "text": "Modifier",
+          "help": "Must be held for the key above to count. Leave unmapped for no modifier.",
+          "type": "keymap",
+          "valueOptions": { "sourceType": "ModSettingInt", "defaultValue": 54 }
+        },
+        {
+          "id": "iThreatLabelKey:Hotkey",
+          "text": "Toggle threat labels",
+          "help": "Turns the labels off for this session only. To turn them off for good, use the toggle on the Threat labels page.",
+          "type": "keymap",
+          "valueOptions": { "sourceType": "ModSettingInt", "defaultValue": 68 }
+        },
+        { "text": "", "type": "empty" },
+        {
+          "text": "Controller buttons and the VR wand button stay in IsekaiHero.ini: they are button masks rather than key codes, which this control cannot capture.",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Threat labels",
+      "content": [
+        { "text": "What is shown", "type": "header" },
+        {
+          "id": "bThreatLabels:Threat",
+          "text": "Threat labels",
+          "help": "The target frames over enemies. Turning them off here is permanent; the hotkey only lasts for the session.",
+          "type": "toggle",
+          "valueOptions": { "sourceType": "ModSettingBool", "defaultValue": true }
+        },
+        {
+          "id": "iThreatLabelTargets:Threat",
+          "text": "Label which actors",
+          "help": "Aggro: only what is actually fighting you. Hostile: anything that would. Crosshair: only what you are aiming at. All: every actor in range.",
+          "type": "enum",
+          "valueOptions": {
+            "options": ["Aggro", "Hostile", "Crosshair", "All"],
+            "shortNames": ["AGGRO", "HOSTILE", "CROSSHAIR", "ALL"],
+            "sourceType": "ModSettingInt",
+            "defaultValue": 0
+          }
+        },
+        {
+          "id": "bThreatLabelNumbers:Threat",
+          "text": "Show numbers",
+          "help": "The health figure on the bar. Off leaves the bar alone, which is the quieter frame.",
+          "type": "toggle",
+          "valueOptions": { "sourceType": "ModSettingBool", "defaultValue": true }
+        },
+        {
+          "id": "bThreatLabelResources:Threat",
+          "text": "Show magicka and stamina",
+          "help": "Adds a second, thinner row under the health bar. Off is one row.",
+          "type": "toggle",
+          "valueOptions": { "sourceType": "ModSettingBool", "defaultValue": true }
+        },
+        { "text": "Reach", "type": "header" },
+        {
+          "id": "iThreatLabelRange:Threat",
+          "text": "Range",
+          "help": "How far a labelled actor may be, in game units. Frames shrink and fade with distance.",
+          "type": "slider",
+          "valueOptions": { "min": 500, "max": 20000, "step": 100, "formatString": "{0}", "sourceType": "ModSettingInt", "defaultValue": 4000 }
+        },
+        {
+          "id": "iThreatLabelAimRadius:Threat",
+          "text": "Crosshair tolerance",
+          "help": "How close to the crosshair an actor counts as aimed at, as a percentage of the screen. Only the Crosshair mode uses it.",
+          "type": "slider",
+          "valueOptions": { "min": 2, "max": 50, "step": 1, "formatString": "{0}", "sourceType": "ModSettingInt", "defaultValue": 15 }
+        },
+        {
+          "id": "fVRThreatLabelHeight:Threat",
+          "text": "VR label height",
+          "help": "How tall a label stands in the headset, in metres. Ignored outside VR.",
+          "type": "slider",
+          "valueOptions": { "min": 0.03, "max": 1.0, "step": 0.01, "formatString": "{2}", "sourceType": "ModSettingFloat", "defaultValue": 0.15 }
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "The System",
+      "content": [
+        { "text": "Objectives", "type": "header" },
+        {
+          "id": "iFirstTaskHours:Quests",
+          "text": "Wait before the first",
+          "help": "Game hours before a new character is handed their first objective. The first is always the same reachable one.",
+          "type": "slider",
+          "valueOptions": { "min": 0, "max": 720, "step": 1, "formatString": "{0}", "sourceType": "ModSettingInt", "defaultValue": 12 }
+        },
+        {
+          "id": "iTaskIntervalHours:Quests",
+          "text": "Wait between objectives",
+          "help": "Game hours between finishing one objective and being handed the next.",
+          "type": "slider",
+          "valueOptions": { "min": 0, "max": 720, "step": 1, "formatString": "{0}", "sourceType": "ModSettingInt", "defaultValue": 24 }
+        },
+        {
+          "id": "fQuestRewardScale:Quests",
+          "text": "Objective payout",
+          "help": "Multiplier on what an objective pays. It applies when the next one is handed out; an objective already standing keeps the number it was written with.",
+          "type": "slider",
+          "valueOptions": { "min": 0.1, "max": 10.0, "step": 0.1, "formatString": "{1}", "sourceType": "ModSettingFloat", "defaultValue": 1.0 }
+        },
+        { "text": "Bounties and professions", "type": "header" },
+        {
+          "id": "iKillsPerBounty:Progression",
+          "text": "Kills per bounty",
+          "help": "How many of one enemy type you must kill before the System pays a bounty. 0 switches bounties off.",
+          "type": "slider",
+          "valueOptions": { "min": 0, "max": 500, "step": 5, "formatString": "{0}", "sourceType": "ModSettingInt", "defaultValue": 50 }
+        },
+        {
+          "id": "iKillBountyPoints:Progression",
+          "text": "Bounty payout",
+          "help": "System Points paid each time a kill count crosses the threshold above.",
+          "type": "slider",
+          "valueOptions": { "min": 1, "max": 50, "step": 1, "formatString": "{0}", "sourceType": "ModSettingInt", "defaultValue": 1 }
+        },
+        {
+          "id": "iProfessionActionsPerPoint:Progression",
+          "text": "Crafts per System Point",
+          "help": "Harvesting, smelting, tanning, smithing, alchemy and enchanting count as one track. 0 switches professions off.",
+          "type": "slider",
+          "valueOptions": { "min": 0, "max": 500, "step": 5, "formatString": "{0}", "sourceType": "ModSettingInt", "defaultValue": 25 }
+        },
+        { "text": "Awakening", "type": "header" },
+        {
+          "id": "iDormantHeroLevel:Dormant",
+          "text": "HERO awakens at level",
+          "help": "Character level at which a dormant blessing wakes to HERO.",
+          "type": "slider",
+          "valueOptions": { "min": 1, "max": 200, "step": 1, "formatString": "{0}", "sourceType": "ModSettingInt", "defaultValue": 25 }
+        },
+        {
+          "id": "iDormantAscendedLevel:Dormant",
+          "text": "ASCENDED awakens at level",
+          "help": "Character level at which a dormant blessing wakes to ASCENDED.",
+          "type": "slider",
+          "valueOptions": { "min": 1, "max": 200, "step": 1, "formatString": "{0}", "sourceType": "ModSettingInt", "defaultValue": 80 }
+        },
+        { "text": "Integration", "type": "header" },
+        {
+          "id": "bStorageCodex:Storage",
+          "text": "Storage Codex",
+          "help": "A carried book that opens the Dimensional Storage. Off by default, because the panel already reaches it.",
+          "type": "toggle",
+          "valueOptions": { "sourceType": "ModSettingBool", "defaultValue": false }
+        },
+        {
+          "id": "bSkyrimNetIntegration:SkyrimNet",
+          "text": "SkyrimNet integration",
+          "help": "Tells SkyrimNet about the System so NPCs can react to it. Does nothing when SkyrimNet is not installed.",
+          "type": "toggle",
+          "valueOptions": { "sourceType": "ModSettingBool", "defaultValue": true }
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Diagnostics",
+      "content": [
+        { "text": "Testing aids, not features", "type": "header" },
+        {
+          "text": "These exist to walk the manual test plan. Leave them off unless you are chasing a bug.",
+          "type": "text"
+        },
+        {
+          "id": "bQuestRerollButton:Diagnostics",
+          "text": "NEW TASK button",
+          "help": "Adds a button to the status panel that throws the standing objective away and rolls another, free and instantly.",
+          "type": "toggle",
+          "valueOptions": { "sourceType": "ModSettingBool", "defaultValue": false }
+        },
+        {
+          "id": "bLogInputDiagnostics:Diagnostics",
+          "text": "Log input diagnostics",
+          "help": "Writes every button event to the log. Noisy, and only useful when a hotkey does not fire.",
+          "type": "toggle",
+          "valueOptions": { "sourceType": "ModSettingBool", "defaultValue": false }
+        },
+        {
+          "id": "iSelfTestKey:Diagnostics",
+          "text": "Run the self-test",
+          "help": "Writes a report for bug reports. It is written after every game load anyway, so this is only for running it on demand.",
+          "type": "keymap",
+          "valueOptions": { "sourceType": "ModSettingInt", "defaultValue": 0 }
+        },
+        {
+          "id": "iDebugPointsKey:Diagnostics",
+          "text": "Grant System Points",
+          "help": "Hands out points on demand. A testing aid: it quietly makes the game easier.",
+          "type": "keymap",
+          "valueOptions": { "sourceType": "ModSettingInt", "defaultValue": 0 }
+        }
+      ]
+    }
+  ]
+}

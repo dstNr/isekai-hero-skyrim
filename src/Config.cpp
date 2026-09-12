@@ -12,6 +12,10 @@ namespace Isekai::Config {
         // Relative to the game root (where SkyrimSE.exe runs), the standard SKSE layout.
         constexpr const char* kIniPath = "Data\\SKSE\\Plugins\\IsekaiHero.ini";
 
+        // Where MCM Helper puts what the player chose, if the optional MCM component is
+        // installed at all. Absent is the normal case, not an error.
+        constexpr const char* kMcmIniPath = "Data\\MCM\\Settings\\IsekaiHero.ini";
+
         std::string   g_language = "en";
         bool          g_hideSealedNodes = false;
         bool          g_autoStart = true;
@@ -196,61 +200,11 @@ namespace Isekai::Config {
                 return a_def;
             }
         }
-    }
 
-    void Load() {
-        // Defaults, overwritten only by an explicit key below.
-        g_hideSealedNodes = false;
-        g_autoStart = true;
-        g_textSpeed = 1.0f;
-        g_uiScale = 1.0f;
-        g_systemMenuKey = 0x1F;       // DIK_S
-        g_systemMenuModifier = 0x36;  // DIK_RSHIFT
-        g_vrMenuButton = 0;
-        g_padMenuButton = 0x0020;
-        g_padMenuModifier = 0x0100;
-        g_dormantHeroLevel = 25;
-        g_dormantAscendedLevel = 80;
-        g_storageCodex = false;
-        g_skyrimNetIntegration = true;
-        g_threatLabels = true;
-        g_threatTargets = ThreatTargets::kAggro;
-        g_threatNumbers = true;
-        g_threatResources = true;
-        g_threatRange = 4000;
-        g_threatAimRadius = 15;
-        g_vrThreatHeight = 0.15f;
-        g_threatKey = 0x44;
-        g_questFirstTaskHours = 12;
-        g_questIntervalHours = 24;
-        g_questRewardScale = 1.0f;
-        g_killsPerBounty = 50;
-        g_killBountyPoints = 1;
-        g_professionActionsPerPoint = 25;
-        g_questRerollButton = false;
-        g_selfTestKey = 0;
-        g_logInputDiag = false;
-
-        std::ifstream in(kIniPath);
-        if (!in) {
-            logger::info("Config: no ini at {} — using defaults", kIniPath);
-            return;
-        }
-
-        // Deliberately section-agnostic: a flat key=value scan is enough for our handful
-        // of settings and keeps the parser trivial. Lines starting ';' or '#' (or an
-        // inline trailer of one) are comments.
-        std::string line;
-        while (std::getline(in, line)) {
-            if (const auto cut = line.find_first_of(";#"); cut != std::string::npos) {
-                line.erase(cut);
-            }
-            const auto eq = line.find('=');
-            if (eq == std::string::npos) {
-                continue;
-            }
-            const std::string key = Lower(Trim(line.substr(0, eq)));
-            const std::string val = Trim(line.substr(eq + 1));
+        // Applying a key is split out of the reading loop because two files feed it: the
+        // shipped ini, then MCM Helper's, whose values are the ones the player just
+        // clicked and therefore win. Both go through the same clamps.
+        void Apply(const std::string& key, const std::string& val) {
             if (key == "language") {
                 g_language = Lower(val);
             } else if (key == "hidesealednodes") {
@@ -352,6 +306,102 @@ namespace Isekai::Config {
             } else if (key == "loginputdiagnostics") {
                 g_logInputDiag = AsBool(val);
             }
+        }
+
+        // Read one ini and hand every key to Apply. a_mcm rewrites MCM Helper's spelling
+        // into ours: it stores engine settings, whose names carry Bethesda's type prefix
+        // (bThreatLabels, iFirstTaskHours, fUiScale) because the engine reads a setting's
+        // type from its first letter. Ours do not, so the prefix comes off.
+        bool ReadIni(const char* a_path, bool a_mcm) {
+            std::ifstream in(a_path);
+            if (!in) {
+                return false;
+            }
+
+            // Deliberately section-agnostic: a flat key=value scan is enough for our
+            // handful of settings and keeps the parser trivial. Lines starting ';' or '#'
+            // (or an inline trailer of one) are comments.
+            std::string line;
+            while (std::getline(in, line)) {
+                if (const auto cut = line.find_first_of(";#"); cut != std::string::npos) {
+                    line.erase(cut);
+                }
+                const auto eq = line.find('=');
+                if (eq == std::string::npos) {
+                    continue;
+                }
+                std::string key = Lower(Trim(line.substr(0, eq)));
+                std::string val = Trim(line.substr(eq + 1));
+
+                if (a_mcm) {
+                    if (key.size() > 1 && (key[0] == 'b' || key[0] == 'i' || key[0] == 'f')) {
+                        key.erase(0, 1);
+                    }
+                    // The one setting whose shapes differ. Ours is a word; the MCM stores
+                    // the index of the chosen option, because MCM Helper has no string
+                    // setting to store a word in.
+                    if (key == "threatlabeltargets") {
+                        static constexpr const char* kNames[] = { "aggro", "hostile",
+                                                                  "crosshair", "all" };
+                        try {
+                            const auto i = std::stoul(val, nullptr, 10);
+                            if (i < std::size(kNames)) {
+                                val = kNames[i];
+                            }
+                        } catch (...) {
+                        }
+                    }
+                }
+                Apply(key, val);
+            }
+            return true;
+        }
+
+    }
+
+    void Load() {
+        // Defaults, overwritten only by an explicit key below.
+        g_hideSealedNodes = false;
+        g_autoStart = true;
+        g_textSpeed = 1.0f;
+        g_uiScale = 1.0f;
+        g_systemMenuKey = 0x1F;       // DIK_S
+        g_systemMenuModifier = 0x36;  // DIK_RSHIFT
+        g_vrMenuButton = 0;
+        g_padMenuButton = 0x0020;
+        g_padMenuModifier = 0x0100;
+        g_dormantHeroLevel = 25;
+        g_dormantAscendedLevel = 80;
+        g_storageCodex = false;
+        g_skyrimNetIntegration = true;
+        g_threatLabels = true;
+        g_threatTargets = ThreatTargets::kAggro;
+        g_threatNumbers = true;
+        g_threatResources = true;
+        g_threatRange = 4000;
+        g_threatAimRadius = 15;
+        g_vrThreatHeight = 0.15f;
+        g_threatKey = 0x44;
+        g_questFirstTaskHours = 12;
+        g_questIntervalHours = 24;
+        g_questRewardScale = 1.0f;
+        g_killsPerBounty = 50;
+        g_killBountyPoints = 1;
+        g_professionActionsPerPoint = 25;
+        g_questRerollButton = false;
+        g_selfTestKey = 0;
+        g_logInputDiag = false;
+
+        if (!ReadIni(kIniPath, false)) {
+            logger::info("Config: no ini at {} — using defaults", kIniPath);
+        }
+
+        // MCM Helper writes what the player chose here, and it is layered ON TOP: a key
+        // it does not mention falls through to the shipped ini rather than resetting.
+        // Nothing is ever written back - two writers on one file is how settings quietly
+        // revert, and the menu is the only thing that needs to write.
+        if (ReadIni(kMcmIniPath, true)) {
+            logger::info("Config: MCM settings applied over the ini ({})", kMcmIniPath);
         }
 
         // The ladder only makes sense upwards. Swapped thresholds would otherwise

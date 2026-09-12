@@ -714,6 +714,14 @@ namespace Isekai {
         // reincarnation runs exactly once per character.
         // ------------------------------------------------------------------
 
+        // Re-read both inis and re-push the handful of values that are cached rather than
+        // read live. Hotkeys are NOT among them: they are registered once at load, so a
+        // rebound key needs a restart — the ini says so, and so does the MCM's help text.
+        void ReloadSettings() {
+            Config::Load();
+            ::Isekai::UI::Style::g_userScale = Config::UiScale();
+        }
+
         class MenuWatcher : public RE::BSTEventSink<RE::MenuOpenCloseEvent>,
                             public RE::BSTEventSink<RE::LevelIncrease::Event> {
         public:
@@ -726,6 +734,12 @@ namespace Isekai {
                 const RE::MenuOpenCloseEvent* a_event,
                 RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override {
                 if (a_event && !a_event->opening) {
+                    // SkyUI's MCM lives inside the journal, and MCM Helper writes its ini
+                    // as the menu closes. Re-reading here is what makes a changed setting
+                    // take hold without a restart.
+                    if (a_event->menuName == RE::JournalMenu::MENU_NAME) {
+                        ReloadSettings();
+                    }
                     TryTrigger();
                     // The level-up event below is the real trigger; this is the retry
                     // for the case where it landed while a menu still held the screen.

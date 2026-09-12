@@ -28,6 +28,19 @@ All notable changes to Isekai Hero are documented here. The format follows
     the runtime picks one and logs which.
 
 ### Added
+- **A Mod Configuration Menu, as an optional installer component** (#27). Five pages
+  covering 28 of the 32 ini settings, each row carrying the explanation the ini gives it —
+  the reported problem was that the settings existed and nobody could find them, so no new
+  knobs were added. Requires SkyUI and MCM Helper, which is why it is optional: a player
+  happy with the built-in panel installs nothing new and loses nothing.
+  - The plugin uses no MCM Helper API. MCM Helper writes a plain ini, and `Config` layers
+    it over the shipped one — a key the MCM never mentions falls through to the shipped
+    value rather than resetting. Nothing is ever written back.
+  - Settings take hold when the journal closes, which is where SkyUI's MCM lives. Hotkeys
+    are the exception: they are registered once at load and still need a restart.
+  - `Language`, the controller buttons and the VR wand button stay ini-only. MCM Helper
+    stores engine settings, which have no string type, and the pad buttons are masks the
+    keymap control cannot capture. The menu says so on the page where they would have been.
 - **The right stick scrolls** (#2). The controller already reached every screen — the left
   stick drives a cursor and A clicks, which covers the panels and the skill-tree canvas
   with one mechanism — but not the skill tree's mastery rail: dragging inside a child

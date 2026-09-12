@@ -101,6 +101,13 @@ $prismaView = Join-Path $stage "PrismaUI\views\IsekaiHero"
 New-Item -ItemType Directory -Force $prismaView | Out-Null
 Copy-Item (Join-Path $root "prisma-patch\PrismaUI\views\IsekaiHero\index.html") $prismaView
 
+# --- MCM definition, as an installer option ---
+# The menu itself; MCM Helper writes the player's answers to Data\MCM\Settings, which is
+# not ours to ship. Staged even when the option goes unticked: the installer decides.
+$mcmCfg = Join-Path $stage "MCM\Config\IsekaiHero"
+New-Item -ItemType Directory -Force $mcmCfg | Out-Null
+Copy-Item (Join-Path $root "mcm-patch\MCM\Config\IsekaiHero\*") $mcmCfg
+
 # --- panel icons ---
 $icons = Join-Path $plugins "IsekaiHero\icons"
 New-Item -ItemType Directory -Force $icons | Out-Null
