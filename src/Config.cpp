@@ -51,6 +51,18 @@ namespace Isekai::Config {
         std::uint32_t g_killsPerBounty = 50;
         std::int32_t  g_killBountyPoints = 1;
         std::uint32_t g_professionActionsPerPoint = 25;
+        // Read once at reincarnation and then fixed for that character — see
+        // State::nodeCostScale. Live here only so a new character picks up the ini.
+        float         g_nodeCostScale = 1.0f;
+        // Live: node effects are re-derived on every load, so changing this mid-save
+        // recomputes cleanly instead of stacking.
+        float         g_nodeEffectScale = 1.0f;
+        std::uint32_t g_heroSkillLevel = 50;
+        std::uint32_t g_heroAttributeTarget = 180;
+        std::int32_t  g_heroSystemPoints = 5;
+        std::uint32_t g_ascendedSkillLevel = 100;
+        std::uint32_t g_ascendedAttributeTarget = 600;
+        std::int32_t  g_ascendedSystemPoints = 10;
         bool          g_questRerollButton = false;
         // 0 = off. Off by default: the self-test is a diagnostic for bug reports, not a
         // feature, and a stray key that pops a notification would just be noise.
@@ -297,6 +309,32 @@ namespace Isekai::Config {
                     g_questRewardScale = std::clamp(std::stof(val), 0.1f, 10.0f);
                 } catch (...) {
                 }
+            } else if (key == "nodecostscale") {
+                // Clamped, not trusted: 0 would make the whole tree free, which reads as
+                // the mod being broken rather than as a setting.
+                try {
+                    g_nodeCostScale = std::clamp(std::stof(val), 0.1f, 10.0f);
+                } catch (...) {
+                }
+            } else if (key == "nodeeffectscale") {
+                try {
+                    g_nodeEffectScale = std::clamp(std::stof(val), 0.1f, 10.0f);
+                } catch (...) {
+                }
+            } else if (key == "heroskilllevel") {
+                g_heroSkillLevel = AsCount(val, g_heroSkillLevel, 0u, 100u);
+            } else if (key == "heroattributetarget") {
+                g_heroAttributeTarget = AsCount(val, g_heroAttributeTarget, 0u, 10000u);
+            } else if (key == "herosystempoints") {
+                g_heroSystemPoints =
+                    static_cast<std::int32_t>(AsCount(val, static_cast<std::uint32_t>(g_heroSystemPoints), 0u, 100000u));
+            } else if (key == "ascendedskilllevel") {
+                g_ascendedSkillLevel = AsCount(val, g_ascendedSkillLevel, 0u, 100u);
+            } else if (key == "ascendedattributetarget") {
+                g_ascendedAttributeTarget = AsCount(val, g_ascendedAttributeTarget, 0u, 10000u);
+            } else if (key == "ascendedsystempoints") {
+                g_ascendedSystemPoints =
+                    static_cast<std::int32_t>(AsCount(val, static_cast<std::uint32_t>(g_ascendedSystemPoints), 0u, 100000u));
             } else if (key == "questrerollbutton") {
                 g_questRerollButton = AsBool(val);
             } else if (key == "selftestkey") {
@@ -388,6 +426,14 @@ namespace Isekai::Config {
         g_killsPerBounty = 50;
         g_killBountyPoints = 1;
         g_professionActionsPerPoint = 25;
+        g_nodeCostScale = 1.0f;
+        g_nodeEffectScale = 1.0f;
+        g_heroSkillLevel = 50;
+        g_heroAttributeTarget = 180;
+        g_heroSystemPoints = 5;
+        g_ascendedSkillLevel = 100;
+        g_ascendedAttributeTarget = 600;
+        g_ascendedSystemPoints = 10;
         g_questRerollButton = false;
         g_selfTestKey = 0;
         g_logInputDiag = false;
@@ -420,7 +466,8 @@ namespace Isekai::Config {
                      "SkyrimNetIntegration={}, ThreatLabels={} (targets={}, range={}, aim={}%, "
                      "key={}), "
                      "FirstTaskHours={}, TaskIntervalHours={}, QuestRewardScale={}, QuestRerollButton={}, "
-                     "SelfTestKey={}, DebugPointsKey={}, LogInputDiagnostics={}",
+                     "SelfTestKey={}, DebugPointsKey={}, LogInputDiagnostics={}"
+                     ", NodeCostScale={}, NodeEffectScale={}, Hero={}/{}/{}, Ascended={}/{}/{}",
                      g_language, g_autoStart, g_textSpeed,
                      g_hideSealedNodes, KeyName(g_systemMenuKey), KeyName(g_systemMenuModifier),
                      KeyName(g_vrMenuButton), GamepadButtonName(g_padMenuButton),
@@ -433,7 +480,10 @@ namespace Isekai::Config {
                                                                     : "aggro",
                      g_threatRange, g_threatAimRadius, KeyName(g_threatKey), g_questFirstTaskHours,
                      g_questIntervalHours, g_questRewardScale, g_questRerollButton, KeyName(g_selfTestKey),
-                     KeyName(g_debugPointsKey), g_logInputDiag);
+                     KeyName(g_debugPointsKey), g_logInputDiag,
+                     g_nodeCostScale, g_nodeEffectScale, g_heroSkillLevel,
+                     g_heroAttributeTarget, g_heroSystemPoints, g_ascendedSkillLevel,
+                     g_ascendedAttributeTarget, g_ascendedSystemPoints);
     }
 
     std::string KeyName(std::uint32_t a_scanCode) {
@@ -574,6 +624,38 @@ namespace Isekai::Config {
 
     float QuestRewardScale() {
         return g_questRewardScale;
+    }
+
+    float NodeCostScale() {
+        return g_nodeCostScale;
+    }
+
+    float NodeEffectScale() {
+        return g_nodeEffectScale;
+    }
+
+    std::uint32_t HeroSkillLevel() {
+        return g_heroSkillLevel;
+    }
+
+    std::uint32_t HeroAttributeTarget() {
+        return g_heroAttributeTarget;
+    }
+
+    std::int32_t HeroSystemPoints() {
+        return g_heroSystemPoints;
+    }
+
+    std::uint32_t AscendedSkillLevel() {
+        return g_ascendedSkillLevel;
+    }
+
+    std::uint32_t AscendedAttributeTarget() {
+        return g_ascendedAttributeTarget;
+    }
+
+    std::int32_t AscendedSystemPoints() {
+        return g_ascendedSystemPoints;
     }
 
     std::uint32_t QuestIntervalHours() {

@@ -172,6 +172,18 @@ namespace Isekai::Config {
     // 0 = professions off. Harvest/smelt/tan/craft actions per System Point.
     [[nodiscard]] std::uint32_t ProfessionActionsPerPoint();
 
+    // Skill-tree price scale. Read once at reincarnation and snapshotted into the
+    // co-save — see State::nodeCostScale for why it must not be live.
+    [[nodiscard]] float         NodeCostScale();
+    // Skill-tree magnitude scale. Live: effects are re-derived on every load.
+    [[nodiscard]] float         NodeEffectScale();
+    [[nodiscard]] std::uint32_t HeroSkillLevel();
+    [[nodiscard]] std::uint32_t HeroAttributeTarget();
+    [[nodiscard]] std::int32_t  HeroSystemPoints();
+    [[nodiscard]] std::uint32_t AscendedSkillLevel();
+    [[nodiscard]] std::uint32_t AscendedAttributeTarget();
+    [[nodiscard]] std::int32_t  AscendedSystemPoints();
+
     // Show the NEW TASK button on the status panel, which throws the standing objective
     // away and rolls another one — free, instantly, as often as you like.
     //
