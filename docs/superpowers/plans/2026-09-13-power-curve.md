@@ -23,8 +23,10 @@ serialization, `node tools/check.mjs` as the test harness, MCM Helper for the in
   `-Version`, git tags and `CHANGELOG.md` headings stay at 0.8.0. New entries go under
   `## [Unreleased]`.
 - **Everything committed is in English** — code, comments, commit messages, docs.
-- **No committed file may contain the author's real name.** Run
-  `git grep -n -i "dustin\|reymendt"` before every commit; it must print nothing.
+- **No committed file may contain the author's real name.**
+  Grep the tree case-insensitively for the author's first name and surname before
+  every commit; it must print nothing. Write the names on the command line, never into
+  a file you commit — a pattern committed as text makes every later check match itself.
 - **Co-save is append-only.** Every version has only ever added fields at the end, each read
   behind a `version >= N` gate. Co-save goes to **v16**; older saves must stay readable.
 - **`node tools/check.mjs` must pass.** It is at 48/48 before this plan starts. Three existing
@@ -276,7 +278,7 @@ Expected: `BUILD_OK`.
 - [ ] **Step 10: Commit**
 
 ```bash
-git grep -n -i "dustin\|reymendt"   # must print nothing
+git grep -n -i "<author first name>\|<author surname>"   # must print nothing
 git add IsekaiHero.ini src/Config.h src/Config.cpp
 git commit -m "feat(config): the progression curve becomes eight settings"
 ```
@@ -497,7 +499,7 @@ System.cpp, leave the include — other call sites use it.
 - [ ] **Step 9: Commit**
 
 ```bash
-git grep -n -i "dustin\|reymendt"   # must print nothing
+git grep -n -i "<author first name>\|<author surname>"   # must print nothing
 git add src/System.cpp tools/check.mjs
 git commit -m "feat(system): the blessing grants a body, not a character level"
 ```
@@ -660,7 +662,7 @@ Expected: `BUILD_OK`.
 - [ ] **Step 9: Commit**
 
 ```bash
-git grep -n -i "dustin\|reymendt"   # must print nothing
+git grep -n -i "<author first name>\|<author surname>"   # must print nothing
 git add src/System.h src/System.cpp
 git commit -m "feat(system): co-save v16 — the price snapshot and the level migration"
 ```
@@ -782,7 +784,7 @@ Expected: `BUILD_OK`.
 - [ ] **Step 7: Commit**
 
 ```bash
-git grep -n -i "dustin\|reymendt"   # must print nothing
+git grep -n -i "<author first name>\|<author surname>"   # must print nothing
 git add src/SkillTree.cpp tools/check.mjs
 git commit -m "feat(tree): node prices and magnitudes become multipliers"
 ```
@@ -994,7 +996,7 @@ Expected: `Privacy gate: ... all clean` and `PACKAGE_OK`. Confirm
 - [ ] **Step 8: Commit**
 
 ```bash
-git grep -n -i "dustin\|reymendt"   # must print nothing
+git grep -n -i "<author first name>\|<author surname>"   # must print nothing
 git add mcm-patch src/SelfTest.cpp CHANGELOG.md docs/MANUAL_TESTS.md
 git commit -m "feat(mcm,docs): the power curve becomes visible and testable"
 ```
