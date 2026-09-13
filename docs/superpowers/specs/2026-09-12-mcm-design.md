@@ -41,15 +41,17 @@ this mod's script-free promise survives:
 
 | | |
 |---|---|
-| A custom Papyrus script | **Not needed.** MCM Helper's script attaches to our quest. |
+| A custom Papyrus script | **A two-line subclass of `MCM_ConfigBase`, with no code in it.** Correction: an earlier draft of this table said none was needed. MCM Helper's documentation says to extend the script rather than attach it, and no plugin out of 3525 in the test modlist attaches it directly. The mod still writes no Papyrus logic. |
 | A quest record in the ESP | Needed. Creation Kit work — see "What has to be done by hand". |
 | Menu definition | `Data/MCM/Config/IsekaiHero/config.json` |
 | Default values | `Data/MCM/Config/IsekaiHero/settings.ini` |
 | Where the player's choices land | `Data/MCM/Settings/IsekaiHero.ini` |
 | SkyUI | Hard requirement of MCM Helper |
 
-The README's claim that the mod "ships no scripts" stays literally true. What changes is
-that a scripted framework becomes a runtime requirement — which is why it is optional.
+The README's claim that the mod "ships no scripts" needs one word of qualification: with this
+component ticked it ships exactly one, `IsekaiHeroMCM.pex`, an empty subclass that exists so
+the menu registers. No Papyrus of ours runs any logic. Without the component nothing changes,
+which is the point of it being optional.
 
 ## It is an optional component
 
@@ -108,15 +110,12 @@ row.
 
 ## What has to be done by hand
 
-The Creation Kit part cannot be scripted from here:
-
-1. In `IsekaiHero.esp`, create a quest — suggested editor ID `IsekaiHeroMCM`. Start Game
-   Enabled, not run-once.
-2. Attach MCM Helper's config script to it.
-3. Save. **The plugin is ESL-flagged**, so the new FormID must land under `0xFFF`; the
-   highest in use today is `0xd8f`, so there is room, but check it after saving — the
-   Creation Kit has blanked object bounds and mis-assigned FormIDs in this plugin before
-   (`docs/CREATION_KIT_ESP.md`).
+Nothing, as it turned out. Creation Kit 1.7.99 — which Steam shipped on 2026-09-04 —
+crashes when a quest is created, and CKPE has no build for it. The record was written into
+the plugin directly instead, modelled field for field on a shipping MCM Helper plugin, and
+lives at `QUST 0xD90` with a `PlayerAlias` carrying `SKI_PlayerLoadGameAlias`. The full
+account, including what still has to be tested in game, is Part L of
+`docs/CREATION_KIT_ESP.md`.
 
 ## Verification
 

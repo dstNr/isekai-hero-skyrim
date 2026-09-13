@@ -10,14 +10,14 @@ plugin and wired up. What is left:
 
 | Part | What | Why now |
 |---|---|---|
-| **L** | The MCM quest | **The one blocker.** Issue #27's menu is written and shipped but unreachable without it. One quest, one alias, ~10 min. |
 | **G fix** | Rename `IsekaiStorageToken` | One field. It currently carries the container's name, so it reads as a stray copy of the storage in the inventory. ~1 min |
 | **J** | Damage abilities | *Optional.* Unblocks a roadmap item, but nothing references them yet. |
 
 **K is done** — the System Blade's two records are in the plugin, wired into the shop, and
 verified in game on 2026-09-11.
-Start with **L**: nothing else is waiting on the plugin. The **G fix** is a single
-`FULL - Name` change — see the warning box in Part G. **J** only if you want to go further.
+**L is done too**, and without the Creation Kit — see Part L for why and for what to test.
+The **G fix** is a single `FULL - Name` change — see the warning box in Part G. **J** only
+if you want to go further.
 
 Afterwards send me the FormIDs (the last three hex digits of each) and I wire them in;
 see *Afterwards — the FormIDs* under Part H for the three ways to read them off.
@@ -713,123 +713,55 @@ For the record, the first pass came out as:
 
 ---
 
-## Part L — The MCM quest (issue #27)
+## Part L — The MCM quest (issue #27) — **done, and not in the Creation Kit**
 
-The Mod Configuration Menu is already written: `mcm-patch\MCM\Config\IsekaiHero\config.json`
-declares every page and row, and the plugin reads the player's choices back out of
-`Data\MCM\Settings\IsekaiHero.ini`. **None of it is reachable until the ESP carries a quest**
-— that is the one piece MCM Helper cannot get from a JSON file, and the one piece that has to
-be done here.
+Nothing to do here. The quest was written into the plugin directly, because the Creation
+Kit could not do it: Steam's 2026-09-04 update replaced it with **CK 1.7.99.0**, and it
+crashes with an access violation when a quest is created. CKPE, which is what normally
+patches the editor's crashes, supports up to CK 1.6.1378.1 and has no build for 1.7.99.
 
-No script of ours is involved. MCM Helper's own `MCM_ConfigBase` is attached unchanged, and
-its C++ side looks for any quest carrying that script, reads the quest's source plugin name
-(`IsekaiHero.esp` → `IsekaiHero`) and loads `Data\MCM\Config\IsekaiHero\config.json` under
-that name. That is why the folder is spelled exactly like the plugin, and why renaming
-either one breaks the menu.
+So the record was built from the format itself and verified against plugins that already
+ship a working MCM Helper menu.
 
-### L.0 — Dependencies (already installed)
+### What is in the plugin
 
-Both halves are in place; this section is here so it can be redone on another machine.
-
-**For the Creation Kit** — `MCM_ConfigBase` and the four `SKI_*` scripts it inherits from
-are extracted into
-`E:\SteamLibrary\steamapps\common\Skyrim Special Edition\Data\Scripts`, with the sources
-alongside in `Data\Source\Scripts`. They come from MCM Helper's own **SDK** archive
-(`MCM.SDK.7z`, [GitHub release v1.5.0](https://github.com/Exit-9B/MCM-Helper/releases)), which
-exists precisely so the Creation Kit can attach the script without SkyUI's BSA being unpacked.
-Ten files, nothing overwritten, no plugin added — the script picker in L.2 reads loose `.pex`
-from `Data\Scripts`, and that is all it needs.
-
-**For playing** — the modlist profile already runs SkyUI, MCM Helper and `IsekaiHero.esp`,
-so nothing has to be installed to test the finished menu. The FOMOD's *Mod Configuration Menu*
-component has to be ticked when the archive is reinstalled, or `MCM\Config\IsekaiHero\` never
-reaches the mod folder.
-
-> The base-game `Data` gets the scripts only, not SkyUI or MCM Helper themselves. The plugin
-> is tested through MO2 from the packaged archive, and that install is untouched by this.
-
-### L.1 — Create the quest
-
-**Object Window** → **Character → Quest** → right-click in the list → **New**
-
-On the **Quest Data** tab:
-
-| Field | Value |
+| | |
 |---|---|
-| **ID** | `IsekaiHeroMCM` |
-| **Quest Name** | leave empty — it never shows in the journal |
-| **Priority** | `0` |
-| **Start Game Enabled** | ✅ **ticked** |
-| **Run Once** | ⬜ **unticked** |
-| **Type** | `None` |
+| `QUST 0xD90` | `IsekaiHeroMCM`, start game enabled, priority 0 |
+| Script | `IsekaiHeroMCM`, an empty subclass of `MCM_ConfigBase` |
+| Alias 0 | `PlayerAlias`, forced reference `PlayerRef` (`0x14`), script `SKI_PlayerLoadGameAlias` |
 
-> **Both boxes matter.** *Start Game Enabled* is what makes the quest run without anything
-> starting it, and that is what fires the script's `OnInit`. *Run Once* left ticked would
-> let the menu register on one save and never again.
+**The subclass is required.** MCM Helper's own documentation says to write a script
+extending `MCM_ConfigBase` rather than attaching that script itself, and of 3525 plugins
+in the test modlist, 127 attach a subclass and **none** attach `MCM_ConfigBase` directly.
+Its C++ side would accept the base class, but there is no reason to be the first to try it.
 
-### L.2 — Attach the script
+The script is nevertheless empty, and should stay that way: the menu's contents come from
+`config.json` and the player's answers are read back from the ini by the plugin. Source in
+`mcm-patch/Source/Scripts/IsekaiHeroMCM.psc`, compiled with the Papyrus compiler that ships
+with the game, output committed as `mcm-patch/Scripts/IsekaiHeroMCM.pex`.
 
-Still in the quest window, the **Scripts** tab → **Add** → **[New Script]** is *not* what
-you want. Pick from the list instead:
+### How it was verified
 
-1. **Add** → the picker lists every compiled script in `Data\Scripts`.
-2. Choose **`MCM_ConfigBase`**.
-3. **OK**. No properties to fill in — it has none we set.
+Every field was compared against `OCPA.esl`, a shipping mod whose MCM works in the test
+modlist, and the record matches it exactly in structure: same subrecord sequence
+(`EDID VMAD DNAM NEXT ANAM ALST ALID FNAM ALFR VTCK ALED`), same `DNAM` (flags `0x0101`,
+priority 0, type 0), same alias fill, same VMAD layout down to the fragment block. The
+VMAD parses to exactly its own length, so there are no trailing bytes. `node tools\check.mjs`
+passes, including the light-plugin ceiling: `0xD90` is well under `0xFFF`.
 
-> **Do not create a subclass.** The wiki's "Creating a Config Script" page describes the
-> scripted route, for menus that react to a setting from Papyrus. Ours reacts in C++ instead:
-> the plugin re-reads the ini when the menu closes. `MCM_ConfigBase` attached directly is
-> what MCM Helper's `IsType` check looks for, so a plain attachment is enough — and it keeps
-> the promise that this mod ships no Papyrus of its own.
+> **One trade-off, stated plainly.** The quest lives in the main `IsekaiHero.esp`, so
+> players who do not tick the MCM component get a quest whose script is not installed.
+> Papyrus writes one "cannot open store" line for that and carries on; logging is off by
+> default, and nothing else changes. The alternative was a second plugin file, which costs
+> every player a load-order slot to save a log line that almost nobody will see.
 
-### L.3 — Add the player alias
+### What is left
 
-This is the part that is easy to skip and fails quietly a week later: the script's
-registration with SkyUI's config manager is a mod-event registration, and Papyrus throws
-those away on every save/load. The alias is what re-fires it.
-
-**Quest Aliases** tab → right-click in the list → **New Reference Alias**
-
-| Field | Value |
-|---|---|
-| **Alias Name** | `PlayerAlias` |
-| **Fill Type** | **Unique Actor** → `Player` |
-| **Optional** | ⬜ unticked |
-
-In the same dialog, the **Scripts** box at the bottom → **Add** → **`SKI_PlayerLoadGameAlias`**
-→ **OK**, then **OK** again to close the alias.
-
-> Without this the menu appears on the save where you first installed it and is gone from the
-> list on the next load. If that is the symptom you see, this step is the cause.
-
-### L.4 — Save and check the FormID
-
-**File → Save.** Then read the new quest's FormID — the CK shows it in the Object Window's
-`Form ID` column, or start the game once and read the plugin's own dump from the log (Part F).
-
-> **The plugin is ESL-flagged, so the FormID must be under `0xFFF`.** The highest in use today
-> is `0xD8F`, so there is room — but the Creation Kit has handed out FormIDs above the ceiling
-> in this plugin before (see K.6). If the new quest comes out as something like `0x2315`,
-> renumber it in SSEEdit exactly the way K.6 describes, then run
-> `node tools\check.mjs` and expect `ESP: every FormID is valid for a light plugin` to pass.
-
-### L.5 — Verify
-
-Package, install the **Mod Configuration Menu** component in the FOMOD, and with SkyUI and
-MCM Helper present:
-
-1. **Mod Configuration** in the pause menu lists **Isekai Hero**.
-2. All five pages open and every row shows the value the shipped ini holds.
-3. Change **Interface scale**, close the menu: the panel scales without a restart.
-4. Save, load, open the menu again — it is still in the list. (That is L.3 working.)
-5. Uninstall the component: the mod loads as before, and the log mentions neither SkyUI nor
-   MCM Helper.
-
-### L.6 — Send me the FormID
-
-The last three hex digits are enough. Nothing in the code references the quest, so this is
-only for the record in this document — but it is worth having when the next renumbering pass
-comes around.
+Only playing it: install the archive in MO2 with **Mod Configuration Menu** ticked, and check
+that **Isekai Hero** appears under Mod Configuration, that all five pages show the shipped
+values, that changing the interface scale takes effect without a restart, and — this is the
+one the `PlayerAlias` exists for — that the entry is **still there after a save and reload**.
 
 ---
 

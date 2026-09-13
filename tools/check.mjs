@@ -693,6 +693,7 @@ check("fomod: the installer offers files that exist, and presets that are curren
       "prisma-patch/PrismaUI/views/IsekaiHero/index.html",
     "SKSE\\Plugins\\IsekaiHero\\icons": "icons",
     "MCM\\Config\\IsekaiHero": "mcm-patch/MCM/Config/IsekaiHero",
+    "Scripts\\IsekaiHeroMCM.pex": "mcm-patch/Scripts/IsekaiHeroMCM.pex",
   };
   const sources = [...new Set([...xml.matchAll(/source="([^"]+)"/g)].map((m) => m[1]))];
   need(sources.length >= 5, "ModuleConfig lists almost nothing — generator stale?");

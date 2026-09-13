@@ -131,6 +131,8 @@ const xml = `<?xml version="1.0" encoding="utf-8"?>
               <files>
                 <folder source="MCM\\Config\\IsekaiHero"
                         destination="MCM\\Config\\IsekaiHero"/>
+                <file source="Scripts\\IsekaiHeroMCM.pex"
+                      destination="Scripts\\IsekaiHeroMCM.pex"/>
               </files>
               <typeDescriptor><type name="Optional"/></typeDescriptor>
             </plugin>

@@ -108,6 +108,13 @@ $mcmCfg = Join-Path $stage "MCM\Config\IsekaiHero"
 New-Item -ItemType Directory -Force $mcmCfg | Out-Null
 Copy-Item (Join-Path $root "mcm-patch\MCM\Config\IsekaiHero\*") $mcmCfg
 
+# The one compiled script the mod ships, and only with this option. MCM Helper requires a
+# script of the mod's own on the config quest; this one is an empty subclass of
+# MCM_ConfigBase and exists solely so the menu registers. Source in mcm-patch\Source.
+$mcmScripts = Join-Path $stage "Scripts"
+New-Item -ItemType Directory -Force $mcmScripts | Out-Null
+Copy-Item (Join-Path $root "mcm-patch\Scripts\IsekaiHeroMCM.pex") $mcmScripts
+
 # --- panel icons ---
 $icons = Join-Path $plugins "IsekaiHero\icons"
 New-Item -ItemType Directory -Force $icons | Out-Null
