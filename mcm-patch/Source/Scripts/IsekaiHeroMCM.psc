@@ -11,3 +11,7 @@ Scriptname IsekaiHeroMCM extends MCM_ConfigBase
 ; here would be a second place where settings are handled, and the ini is already the one
 ; place. If a setting ever needs to act the moment it changes rather than when the menu
 ; closes, that belongs in Config::Load's reload path in C++, not here.
+;
+; After recompiling this, run `node tools/pex-scrub.mjs mcm-patch/Scripts/IsekaiHeroMCM.pex`.
+; The compiler stamps the Windows account name into the .pex header, and package.ps1's
+; privacy gate will refuse to build until it is gone.

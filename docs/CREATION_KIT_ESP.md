@@ -741,6 +741,10 @@ The script is nevertheless empty, and should stay that way: the menu's contents 
 `mcm-patch/Source/Scripts/IsekaiHeroMCM.psc`, compiled with the Papyrus compiler that ships
 with the game, output committed as `mcm-patch/Scripts/IsekaiHeroMCM.pex`.
 
+> **If you ever recompile it, run `node tools\pex-scrub.mjs mcm-patch\Scripts\IsekaiHeroMCM.pex`
+> afterwards.** The compiler writes the Windows account name into the `.pex` header, and
+> packaging stops dead until it is gone — which is the privacy gate working, not a bug in it.
+
 ### How it was verified
 
 Every field was compared against `OCPA.esl`, a shipping mod whose MCM works in the test
