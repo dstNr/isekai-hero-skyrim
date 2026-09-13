@@ -30,12 +30,15 @@ namespace Isekai::Shop {
             kWealth,        // septims
             kRestoratives,  // the cheap, spammable potions
             kElixirs,       // the expensive ones
-            kArmaments,     // weapons the System hands over
+            // kArmaments is parked: the Oathblade is out of the shop until its balance
+            // is settled. The ESP record and the icon stay; only the shelf and the card
+            // below are commented out, so putting it back is uncommenting three places.
+            // kArmaments,  // weapons the System hands over
             kCount
         };
 
         constexpr const char* kShelfNames[] = { "MATERIALS", "WEALTH", "RESTORATIVES",
-                                                "ELIXIRS", "ARMAMENTS" };
+                                                "ELIXIRS" };
         static_assert(std::size(kShelfNames) == static_cast<std::size_t>(Shelf::kCount),
                       "every shelf needs a name");
 
@@ -144,8 +147,8 @@ namespace Isekai::Shop {
               Kind::kOurItem, Cat::kSmithing, 10, Shelf::kElixirs, 0x000D89 },
             { "shop.titansDraught", "Titan's Draught", "x10", 6, "shop_elixir_titan.png",
               Kind::kOurItem, Cat::kSmithing, 10, Shelf::kElixirs, 0x000D8A },
-            { "shop.systemBlade", "Flameforged Oathblade", "x1", 40, "shop_blade.png",
-              Kind::kOurItem, Cat::kSmithing, 1, Shelf::kArmaments, 0x000D8F },
+            // { "shop.systemBlade", "Flameforged Oathblade", "x1", 40, "shop_blade.png",
+            //   Kind::kOurItem, Cat::kSmithing, 1, Shelf::kArmaments, 0x000D8F },
         };
 
         // The form an entry hands over, or nullptr for the material packs (which are

@@ -281,12 +281,11 @@
     { name: "Elixir of Endless Casting", qty: "x10", cost: 6, icon: "shop_elixir_casting.png", shelf: "ELIXIRS",
       fx: "Fortify Magicka Regen 1000  (60 min)\nFortify Magicka 1000  (60 min)" },
     { name: "Titan's Draught",          qty: "x10", cost: 6, icon: "shop_elixir_titan.png", shelf: "ELIXIRS",
-      fx: "Fortify Carry Weight 2000  (60 min)\nFortify Stamina 500  (60 min)\nWaterbreathing  (60 min)" },
-    { name: "Flameforged Oathblade",    qty: "x1",  cost: 40, icon: "shop_blade.png", shelf: "ARMAMENTS",
-      fx: "Damage 20\nCritical 10" }
+      fx: "Fortify Carry Weight 2000  (60 min)\nFortify Stamina 500  (60 min)\nWaterbreathing  (60 min)" }
+    // The Flameforged Oathblade and its ARMAMENTS shelf are parked; see src/Shop.cpp.
   ];
 
-  var SHOP_SHELVES = ["MATERIALS", "WEALTH", "RESTORATIVES", "ELIXIRS", "ARMAMENTS"];
+  var SHOP_SHELVES = ["MATERIALS", "WEALTH", "RESTORATIVES", "ELIXIRS"];
 
   function buildShop() { return { points: G.points, shelves: SHOP_SHELVES, items: SHOP_ITEMS }; }
   function pushShop() { call("isekaiShowShop", buildShop()); }

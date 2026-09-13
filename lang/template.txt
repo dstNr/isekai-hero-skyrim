@@ -205,7 +205,6 @@ quest.slay = Slay {} {}
 quest.tally = {}   {} / {}
 
 ; --- src/Shop.cpp (catalog) ---
-shelf.ARMAMENTS = ARMAMENTS
 shelf.ELIXIRS = ELIXIRS
 shelf.MATERIALS = MATERIALS
 shelf.RESTORATIVES = RESTORATIVES

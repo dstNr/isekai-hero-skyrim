@@ -265,10 +265,15 @@ The first thing this mod ships that is a mesh rather than code. Passed once, on 
 repeat it for any release that touches `meshes\`, `textures\`, the plugin or the shop
 catalog. From the **packaged archive** — `build.bat` does not carry assets.
 
+**Parked.** The blade is out of the shop while its balance is settled, so there is no way
+to buy one in game. The ESP record, the mesh and the icon all still ship, so the mesh half
+of this test can be run with `help oathblade` and `player.additem`; the first row cannot.
+Restore the card in `src/Shop.cpp` to run it as written.
+
 | Step | Expected |
 |---|---|
-| Open the Shop. | An **ARMAMENTS** shelf, holding the Oathblade with its icon, **Damage 20** and **Critical 10**. |
-| Buy it (40 SP). | Points drop by 40; the blade is in the Dimensional Storage. |
+| ~~Open the Shop.~~ | ~~An **ARMAMENTS** shelf, holding the Oathblade with its icon, **Damage 20** and **Critical 10**.~~ Parked — the shop has no ARMAMENTS shelf. |
+| ~~Buy it (40 SP).~~ | Parked. Use `player.additem` with the ID from `help oathblade` instead. |
 | Equip it. | In the hand at a believable size — visibly shorter than an iron sword. |
 | Draw and sheathe. | One-handed animations; sheathed, it hangs whole at the hip (no scabbard, by design). |
 | Switch to first person. | **This** blade, not an iron sword. |

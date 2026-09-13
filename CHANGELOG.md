@@ -7,6 +7,11 @@ All notable changes to Isekai Hero are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **The Flameforged Oathblade is out of the shop for now.** Its balance is not settled, so
+  the card and the ARMAMENTS shelf it lived on are commented out in `src/Shop.cpp` rather
+  than deleted. The ESP record, the mesh, the textures and the icon all still ship — only
+  the way to buy one is gone. Putting it back is uncommenting three places there, one line
+  in `playground/mock.js`, and regenerating `lang/template.txt`.
 - **The System no longer sets your character level** (#29, #17, and the pace half of #32).
   A player reported that there was "no good way to set the difficulty" — enemies were either
   impossible and then trivial, or trivial from the start. Both halves were one fact: the
