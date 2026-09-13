@@ -238,7 +238,27 @@ shop or NPC house does.
 > flag on anything placed in the storage would turn it into a laundering machine for
 > genuinely stolen goods, which vanilla containers are not.
 
-### 1.2c The Flameforged Oathblade (the first shipped mesh)
+### 1.2c The System no longer moves the world (#29)
+
+The blessing used to set the character level, which pulled every scaling enemy to its
+ceiling. Test on the modlist, from the packaged archive — `build.bat` does not reach it.
+
+| Step | Expected |
+|---|---|
+| Reincarnate a fresh character as ASCENDED, read the log. | `attrTarget=600`, and `attr=+500` on a character still at the 100 baseline. No `level=` in the line at all. |
+| `player.getlevel` in the console straight after. | The character's own level, unchanged by the blessing. |
+| Fight a scaling enemy near the start. | It is at its own level, not at a ceiling. |
+| Save, reload, `player.getlevel` again. | The same number. Nothing re-asserts it, nothing reverts it. |
+| Load an **existing ASCENDED save** made before this build. | The log says `Level grant retired: level 150 -> N (one-shot migration)`. Attributes, skills, perks and points unchanged. |
+| Load that same save a second time. | **No second migration line.** The flag held. |
+| In the same session, load a save the System has never touched. | Level untouched. This is the reported ActorBase bug, and there is no grant left to leak. |
+| A DORMANT character crossing level 80. | Awakens to ASCENDED; the world does not jump. |
+| Set `NodeEffectScale = 2.0`, reload an existing character. | Node bonuses double. Reload again — they do not double a second time. |
+| Set `NodeCostScale = 2.0`, load an existing character. | Prices unchanged: the snapshot holds. Self-test reports `node price scale x1.00`. |
+| REBOOT that character and choose ASCENDED again. | Prices now doubled, self-test reports `x2.00`, and a respec refunds exactly what was paid. |
+| Run the **self-test**. | `level grant retired — the System no longer sets the character level`. |
+
+### 1.2d The Flameforged Oathblade (the first shipped mesh)
 
 The first thing this mod ships that is a mesh rather than code. Passed once, on 2026-09-11;
 repeat it for any release that touches `meshes\`, `textures\`, the plugin or the shop

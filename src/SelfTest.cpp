@@ -107,6 +107,17 @@ namespace Isekai::SelfTest {
                          : "unowned — inside an NPC-owned building every transfer counts "
                            "as theft");
             }
+
+            // The two things about this change a player cannot see from inside the game: did
+            // the one-shot level migration run, and what price is this character's tree at.
+            if (const auto& st = GetState(); st.reincarnated) {
+                Add(out, st.levelGrantRetired, true, "level grant retired",
+                    st.levelGrantRetired
+                        ? "the System no longer sets the character level"
+                        : "pending — it runs on the next load, or this save has no baseline");
+                Add(out, st.nodeCostScale > 0.0f, true, "node price scale",
+                    std::format("x{:.2f}, fixed at reincarnation", st.nodeCostScale));
+            }
         }
 
         // The 79 milestones are the mod's biggest hand-typed surface: each names a quest

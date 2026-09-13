@@ -7,6 +7,37 @@ All notable changes to Isekai Hero are documented here. The format follows
 ## [Unreleased]
 
 ### Changed
+- **The System no longer sets your character level** (#29, #17, and the pace half of #32).
+  A player reported that there was "no good way to set the difficulty" — enemies were either
+  impossible and then trivial, or trivial from the start. Both halves were one fact: the
+  blessing set the character level (150 for ASCENDED), Skyrim's levelled lists key off that
+  level, and so every scaling enemy was pulled to its ceiling in a single step. The
+  attribute grant was derived from the same number, which is why it was worth `+497` per
+  stat and why the skill tree's own attribute nodes read as noise beside it.
+  The blessing now grants a **body**: Health, Magicka and Stamina are raised *to* a target
+  (180 for HERO, 600 for ASCENDED — what the old level worked out to), never past it and
+  never twice, so a DORMANT character awakening at level 80 still receives only what they
+  are missing. Your skills, attributes and perks make you stronger; the world stays where it
+  is. DORMANT is fixed by the same change — it used to jump twice, and the second jump was
+  the whole 150.
+  ASCENDED's starting System Points drop from 500 to 10. The 500 were marked in the source
+  as a test value, and they bought the entire 260-point tree twice over; HERO seeds 5 at a
+  2× reward scale, so 4× seeds 10. A tier's advantage is its scale, which is what the design
+  always said.
+  Eight values move into the ini and the MCM: both skill-tree multipliers and each tier's
+  skills, body and starting points. The price multiplier is fixed when a character is
+  reincarnated rather than read live, because a respec gives back exactly what was paid and
+  could not keep that promise if the price moved underneath the purchase; the strength
+  multiplier is live, because node effects are recomputed from scratch on every load.
+  **Existing characters** are corrected once on the next load, back to the level they had
+  before their blessing. Nothing else is touched — attributes, skills, perks and points all
+  stay. A save from before the pre-blessing baseline existed (or a SHATTERED start, which
+  never captures one) keeps what it has; REBOOT already says plainly that it cannot hand
+  that body back.
+  This also removes a reported bug on its way out: the granted level lived on the shared
+  ActorBase, so once ASCENDED had written 150 there, loading a save the System had never
+  touched left *that* character at 150 and fired level-gated quest mods. There is no grant
+  left to leak.
 - **The threat labels are one line over one underline** (#26). The plate is gone. What it
   drew was the verdict colour three times over — the level badge, the plate's two edges
   and the whole health bar — with magicka blue and stamina green competing underneath;
