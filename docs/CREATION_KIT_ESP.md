@@ -727,19 +727,26 @@ its C++ side looks for any quest carrying that script, reads the quest's source 
 that name. That is why the folder is spelled exactly like the plugin, and why renaming
 either one breaks the menu.
 
-### L.0 — Before starting the Creation Kit
+### L.0 — Dependencies (already installed)
 
-Both of these must be installed **into the same `Data` folder the Creation Kit loads from**,
-or the scripts will not appear in the pickers:
+Both halves are in place; this section is here so it can be redone on another machine.
 
-| | Where from | What is needed |
-|---|---|---|
-| **SkyUI** | Nexus 12604 | Hard requirement of MCM Helper. |
-| **MCM Helper** | Nexus 53000 | Install it **with the SDK component ticked.** |
+**For the Creation Kit** — `MCM_ConfigBase` and the four `SKI_*` scripts it inherits from
+are extracted into
+`E:\SteamLibrary\steamapps\common\Skyrim Special Edition\Data\Scripts`, with the sources
+alongside in `Data\Source\Scripts`. They come from MCM Helper's own **SDK** archive
+(`MCM.SDK.7z`, [GitHub release v1.5.0](https://github.com/Exit-9B/MCM-Helper/releases)), which
+exists precisely so the Creation Kit can attach the script without SkyUI's BSA being unpacked.
+Ten files, nothing overwritten, no plugin added — the script picker in L.2 reads loose `.pex`
+from `Data\Scripts`, and that is all it needs.
 
-The SDK component is what ships `Scripts\MCM_ConfigBase.pex` and
-`Scripts\SKI_PlayerLoadGameAlias.pex`. Without it the main mod still works in game, but the
-Creation Kit has nothing to attach and step L.2 has an empty list.
+**For playing** — the modlist profile already runs SkyUI, MCM Helper and `IsekaiHero.esp`,
+so nothing has to be installed to test the finished menu. The FOMOD's *Mod Configuration Menu*
+component has to be ticked when the archive is reinstalled, or `MCM\Config\IsekaiHero\` never
+reaches the mod folder.
+
+> The base-game `Data` gets the scripts only, not SkyUI or MCM Helper themselves. The plugin
+> is tested through MO2 from the packaged archive, and that install is untouched by this.
 
 ### L.1 — Create the quest
 
