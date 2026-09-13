@@ -1060,6 +1060,25 @@ check("co-save: every state field written is also read", () => {
   return `${written.length} fields round-trip`;
 });
 
+check("system: the blessing grants no character level", () => {
+  // Skyrim's levelled lists key off the player's character level, so granting one pulled
+  // every scaling enemy to its ceiling in a single step. The grant is gone, and so is the
+  // machinery that held the number up across loads — actorData.level does not persist for
+  // the player, which is the only reason that machinery existed.
+  const sys = read("src/System.cpp");
+  const gone = ["SetPlayerLevelAtLeast", "ReapplyLevelOnLoad", "RestoreLevelBeforeGrant",
+                "g_levelBeforeGrant", "AttributeBonusPerStat"];
+  const left = gone.filter((n) => sys.includes(n));
+  need(left.length === 0,
+       `System.cpp still carries ${left.join(", ")} — the level grant is only half removed, ` +
+       `and a half-removed grant still moves the world`);
+  need(!/std::uint16_t\s+playerLevel;/.test(sys),
+       "Blessing still has a playerLevel field");
+  need(/std::uint16_t\s+attrTarget;/.test(sys),
+       "Blessing has no attrTarget field — attributes must be a target, not a level derivation");
+  return "no level grant";
+});
+
 /* -- 6. the ESP's form IDs -------------------------------------------------
    Four separate tables in three files name local FormIDs in IsekaiHero.esp. They
    must not collide: two features pointing at one record means one of them is

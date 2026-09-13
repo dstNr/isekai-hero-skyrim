@@ -66,114 +66,35 @@ namespace Isekai {
 
         // What each blessing grants. 0 = leave that stat untouched.
         struct Blessing {
-            std::uint16_t skillLevel;    // set all 18 skills to this
-            std::uint16_t playerLevel;   // set character level
+            std::uint16_t skillLevel;    // set all 18 skills to at least this
+            std::uint16_t attrTarget;    // raise Health/Magicka/Stamina to at least this
             std::int32_t  perkPoints;    // add to available perk points
             std::int32_t  gold;          // add to inventory
             std::int32_t  dragonSouls;   // add to the unspent soul pool
             std::int32_t  systemPoints;  // seed for the skill tree
         };
 
+        // No character level in here any more, and that is the whole of #29. Skyrim's
+        // levelled lists key off the player's level, so setting it to 150 pulled every
+        // scaling enemy to its ceiling at once — "insanely hard before quickly catching
+        // up, then trivialized" is one fact seen from both ends, not two complaints.
+        //
+        // Attributes used to be derived from that level ((150-1)*10/3 = 497 per stat).
+        // They are now their own target, and both halves are settings: the curve is the
+        // thing players asked to be able to tune.
         Blessing BlessingFor(PowerLevel a_power) {
             switch (a_power) {
             case PowerLevel::Hero:
-                return { 50, 25, 10, 2000, 3, 5 };
+                return { static_cast<std::uint16_t>(Config::HeroSkillLevel()),
+                         static_cast<std::uint16_t>(Config::HeroAttributeTarget()),
+                         10, 2000, 3, Config::HeroSystemPoints() };
             case PowerLevel::Ascended:
-                // systemPoints 500 is a TEST value for the modlist runs — enough to
-                // buy the whole tree (260) outright. Rebalance before any release
-                // (the earned-through-milestones figure for ASCENDED is ~380).
-                return { 100, 150, kMaxPerkPoints, 25000, 20, 500 };
+                return { static_cast<std::uint16_t>(Config::AscendedSkillLevel()),
+                         static_cast<std::uint16_t>(Config::AscendedAttributeTarget()),
+                         kMaxPerkPoints, 25000, 20, Config::AscendedSystemPoints() };
             default:  // Normal — pure challenge, no boosts
                 return { 0, 0, 0, 0, 0, 0 };
             }
-        }
-
-        // Health/Magicka/Stamina are not a separate knob: they follow the granted
-        // level. A character who levelled to N by hand would have banked (N-1) * 10
-        // attribute points; we spread them evenly across the big three. A flat +300
-        // used to make ASCENDED a paper giant — level 150 with level-30 stats.
-        // Takes the level actually gained: an existing-save character already banked
-        // their own level-ups, so only the granted difference pays out.
-        [[nodiscard]] float AttributeBonusPerStat(std::uint16_t a_fromLevel,
-                                                  std::uint16_t a_toLevel) {
-            if (a_toLevel <= a_fromLevel) {
-                return 0.0f;
-            }
-            return std::round(static_cast<float>(a_toLevel - a_fromLevel) * 10.0f / 3.0f);
-        }
-
-        // Hand over one blessing's flat grant, and report the per-stat attribute bonus
-        // that came with it (for the log line). Split out of ApplyReincarnation because
-        // Raise the player's character level to a_target, never lower.
-        //
-        // For the PLAYER the level is stored in the ActorBase's actorData.level, but that
-        // does NOT survive a save/load on its own — the player's base reverts, so the
-        // level dropped back to 1 on load (reported bug). Everything else the blessing
-        // grants (skills, attributes, perks, gold) goes through channels that DO persist,
-        // so only the number was affected. We therefore re-assert the level on every load
-        // in ReapplyLevelOnLoad, the same derive-on-load approach the passives use.
-        //
-        // The before/after GetLevel is logged on purpose: if the engine does not report
-        // the new level here, actorData.level is not the field the player's level reads
-        // from and we need the XP/AdvanceLevel path instead — the log tells a tester which.
-        // The level this character had before we ever raised it, for THIS SESSION.
-        // 0 = we have not raised anything yet.
-        //
-        // It cannot live in the co-save, which is the whole point: the save it has to be
-        // restored into is one that predates the System and therefore carries no record of
-        // ours at all. It has to be remembered process-side, because the thing that leaks
-        // is process-side (see RestoreLevelBeforeGrant).
-        std::uint16_t g_levelBeforeGrant = 0;
-
-        void SetPlayerLevelAtLeast(std::uint16_t a_target) {
-            if (a_target == 0) {
-                return;
-            }
-            auto* player = RE::PlayerCharacter::GetSingleton();
-            if (!player) {
-                return;
-            }
-            const std::uint16_t before = player->GetLevel();
-            if (a_target <= before) {
-                return;  // already at or past it — never demote
-            }
-            if (auto* base = player->GetActorBase()) {
-                if (g_levelBeforeGrant == 0) {
-                    g_levelBeforeGrant = before;
-                }
-                base->actorData.level = a_target;
-                logger::info("Player level: {} -> requested {} (GetLevel reads back {})", before,
-                             a_target, player->GetLevel());
-            }
-        }
-
-        // Put the level back where we found it, before anything else is loaded.
-        //
-        // REPORTED BUG. actorData.level lives on the player's ActorBase, and a save load
-        // does not restore it — that is the same fact ReapplyLevelOnLoad exists for, seen
-        // from the other side. Once ASCENDED has written 150 there, loading a save from
-        // BEFORE the System ever ran leaves the character at 150: the save has no record
-        // of us, nothing lowers it, and SetPlayerLevelAtLeast deliberately never demotes.
-        // The reporter watched level-gated quest mods fire in a game the System had not
-        // touched yet. Restarting Skyrim fixed it, because that reloads the form.
-        //
-        // So the level is reverted on every load, and ReapplyLevelOnLoad then raises it
-        // again to whatever the save being loaded actually earned. Down first, up second.
-        void RestoreLevelBeforeGrant() {
-            if (g_levelBeforeGrant == 0) {
-                return;
-            }
-            auto* player = RE::PlayerCharacter::GetSingleton();
-            auto* base = player ? player->GetActorBase() : nullptr;
-            if (!base) {
-                return;
-            }
-            if (base->actorData.level != g_levelBeforeGrant) {
-                logger::info("Player level: {} -> {} (reverting our grant before load)",
-                             base->actorData.level, g_levelBeforeGrant);
-                base->actorData.level = g_levelBeforeGrant;
-            }
-            g_levelBeforeGrant = 0;
         }
 
         // a DORMANT awakening pays out the very same grant, just years of play later.
@@ -213,7 +134,7 @@ namespace Isekai {
                 return 0.0f;
             }
             // Before a single value is written.
-            if (b.skillLevel > 0 || b.playerLevel > 0) {
+            if (b.skillLevel > 0 || b.attrTarget > 0) {
                 CaptureBaseline();
             }
             auto* avOwner = player->AsActorValueOwner();
@@ -229,18 +150,26 @@ namespace Isekai {
                 }
             }
 
-            // Character level lives on the ActorBase (TESNPC); attributes follow the
-            // levels actually gained, spread evenly across the big three.
-            const std::uint16_t currentLevel = player->GetLevel();
-            const float attrBonus = AttributeBonusPerStat(std::max<std::uint16_t>(currentLevel, 1),
-                                                          b.playerLevel);
-            if (attrBonus > 0.0f && avOwner) {
+            // Health/Magicka/Stamina are raised TO the target, never past it and never
+            // lowered — the same "only if below" rule the skills above use.
+            //
+            // A target rather than a flat bonus, because the formula this replaces paid
+            // out only the DIFFERENCE between the character's level and the granted one.
+            // A DORMANT character awakening to ASCENDED at character level 80 received
+            // 233 per stat, not 497, and must keep receiving only what they are missing.
+            // A flat field would hand them the whole amount a second time.
+            float granted = 0.0f;
+            if (b.attrTarget > 0 && avOwner) {
+                const float target = static_cast<float>(b.attrTarget);
                 for (auto av : { RE::ActorValue::kHealth, RE::ActorValue::kMagicka,
                                  RE::ActorValue::kStamina }) {
-                    avOwner->SetBaseActorValue(av, avOwner->GetBaseActorValue(av) + attrBonus);
+                    const float have = avOwner->GetBaseActorValue(av);
+                    if (have < target) {
+                        avOwner->SetBaseActorValue(av, target);
+                        granted = std::max(granted, target - have);
+                    }
                 }
             }
-            SetPlayerLevelAtLeast(b.playerLevel);
 
             GrantPerkPoints(b.perkPoints);
             GrantDragonSouls(b.dragonSouls);
@@ -253,7 +182,7 @@ namespace Isekai {
                 }
             }
 
-            return attrBonus;
+            return granted;
         }
 
         void ApplyReincarnation() {
@@ -276,8 +205,9 @@ namespace Isekai {
             Quests::EnsureObjective();       // the System's first standing objective
 
             logger::info(
-                "Reincarnation applied: power={} skills={} level={} perks=+{} attr=+{} gold={} souls=+{}",
-                PowerName(g_state.power), b.skillLevel, b.playerLevel, b.perkPoints, attrBonus,
+                "Reincarnation applied: power={} skills={} attrTarget={} perks=+{} attr=+{} "
+                "gold={} souls=+{}",
+                PowerName(g_state.power), b.skillLevel, b.attrTarget, b.perkPoints, attrBonus,
                 b.gold, b.dragonSouls);
 
             // Tell SkyrimNet (if present) who the player now is, so AI NPCs can react to
@@ -1042,25 +972,9 @@ namespace Isekai {
         }
 
         void RevertCallback(SKSE::SerializationInterface*) {
-            // Before g_state is cleared: this is the one moment we still know what we
-            // granted, and the last moment before the incoming save decides what the
-            // character should be.
-            RestoreLevelBeforeGrant();
             g_state = State{};
             g_firstReadyCell = 0;  // the next game gets a fresh chargen-room detection
             logger::info("State reverted to defaults (new game / pre-load)");
-        }
-
-        // Re-assert the blessing's character level after a load. The player's level does
-        // not persist when set through actorData.level (it reverted to 1 on load), so we
-        // rebuild it from the save's memory here — the flat start's level for the tier
-        // whose grant was handed over (grantTier). NORMAL / SHATTERED / a gift-less CUSTOM
-        // build granted no level, so this is a no-op there.
-        void ReapplyLevelOnLoad() {
-            if (!g_state.reincarnated) {
-                return;
-            }
-            SetPlayerLevelAtLeast(BlessingFor(g_state.grantTier).playerLevel);
         }
 
         // --- Debug: getting System Points without earning them -------------------
@@ -1210,9 +1124,6 @@ namespace Isekai {
                 // as whatever the ESP says (zero) on every load. Rebuild them from the
                 // milestones the save *does* remember.
                 Passives::Refresh();
-                // The character level doesn't persist for the player either — re-assert
-                // the blessing's level so it stops dropping to 1 on load.
-                ReapplyLevelOnLoad();
                 // Chests stocked by earlier builds still hold the Creation Club
                 // ingredients that made the crafting shuttle stutter — clean them out.
                 Storage::PruneForeignStock();
