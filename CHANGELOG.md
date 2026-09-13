@@ -31,13 +31,24 @@ All notable changes to Isekai Hero are documented here. The format follows
   multiplier is live, because node effects are recomputed from scratch on every load.
   **Existing characters** are corrected once on the next load, back to the level they had
   before their blessing. Nothing else is touched — attributes, skills, perks and points all
-  stay. A save from before the pre-blessing baseline existed (or a SHATTERED start, which
-  never captures one) keeps what it has; REBOOT already says plainly that it cannot hand
-  that body back.
+  stay. A character blessed on this build is marked as needing no correction the moment the
+  blessing is applied, so the migration can never mistake an earned level for a granted one.
+  A save from before the pre-blessing baseline existed (or a SHATTERED start, which never
+  captures one) keeps what it has; REBOOT already says plainly that it cannot hand that body
+  back.
   This also removes a reported bug on its way out: the granted level lived on the shared
   ActorBase, so once ASCENDED had written 150 there, loading a save the System had never
   touched left *that* character at 150 and fired level-gated quest mods. There is no grant
-  left to leak.
+  left to write, and what the one-shot migration writes is the character's own earned level
+  rather than a ceiling — so the symptom should not appear, even though nothing reverts that
+  field.
+  **REBOOT** changes with it. It no longer restores a character level: since the blessing
+  grants none, the baseline's level is simply what the character had earned by then, and
+  writing it back would confiscate every level lived since. It now **refunds the skill
+  tree** instead of carrying it over — re-applying the blessing re-reads the price
+  multiplier, and a tree bought at the old prices could otherwise be respec'd at the new
+  ones. The refund happens first, at the price each node actually cost, and the new prices
+  then apply to an empty tree. No points are lost, only their allocation.
 - **The threat labels are one line over one underline** (#26). The plate is gone. What it
   drew was the verdict colour three times over — the level badge, the plate's two edges
   and the whole health bar — with magicka blue and stamina green competing underneath;

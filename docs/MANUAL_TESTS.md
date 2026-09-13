@@ -188,10 +188,11 @@ touch it once the panel is open.
 
 | Step | Expected |
 |---|---|
-| New character, take **ASCENDED / Full**. | Level 150, skills 100, the usual grant. |
-| Press **REBOOT**, read the confirm text. | It says what is undone and what is not - no promise of a clean slate. |
-| Confirm, then take **NORMAL**. | Level, skills and Health/Magicka/Stamina are back to what they were before the first blessing. Milestones, skill tree and System Points are untouched. |
-| REBOOT a second time, take ASCENDED again, then REBOOT again. | Still returns to the ORIGINAL mortal, not to the ASCENDED body. The baseline is captured once and never overwritten. |
+| New character, take **ASCENDED / Full**. | Skills 100, Health/Magicka/Stamina at 600, the usual grant. The character level is whatever it already was. |
+| Note `player.getlevel`, then buy a few skill-tree nodes and play on a few levels. | Points spend as usual. |
+| Press **REBOOT**, read the confirm text. | It says what is undone and what is not - no promise of a clean slate, and it says the skill tree is refunded rather than kept. |
+| Confirm, then take **NORMAL**. | Skills and Health/Magicka/Stamina are back to what they were before the first blessing. The **character level is untouched** - the levels played since the blessing are still there. Milestones and storage are untouched, and the System Points spent on the tree are back in the pool with the tree cleared. |
+| REBOOT a second time, take ASCENDED again, then REBOOT again. | Still returns to the ORIGINAL mortal body, not to the ASCENDED one. The baseline is captured once and never overwritten. The level still never moves. |
 | Take NORMAL on a fresh character, then REBOOT. | Nothing to restore, and the panel says so - no grant was ever applied. |
 | Load a **0.7.x save** and REBOOT. | Works as before; the confirm text says a character from before the update keeps what it was given. |
 | Load a 0.7.x save, save it, load it again. | No warnings in the log. v13 saves must still read. |
@@ -251,7 +252,7 @@ ceiling. Test on the modlist, from the packaged archive — `build.bat` does not
 | Save, reload, `player.getlevel` again. | The same number. Nothing re-asserts it, nothing reverts it. |
 | Load an **existing ASCENDED save** made before this build. | The log says `Level grant retired: level 150 -> N (one-shot migration)`. Attributes, skills, perks and points unchanged. |
 | Load that same save a second time. | **No second migration line.** The flag held. |
-| In the same session, load a save the System has never touched. | Level untouched. This is the reported ActorBase bug, and there is no grant left to leak. |
+| In the same session, load a save the System has never touched. | Level untouched. This is the reported ActorBase bug. The migration still writes `actorData.level` and nothing reverts it afterwards, so a carry-over is not impossible - but the number it writes is now the character's own earned level rather than 150, so the reported symptom (a level-1 character at 150, firing level-gated quest mods) should not appear. Report it if it does. |
 | A DORMANT character crossing level 80. | Awakens to ASCENDED; the world does not jump. |
 | Set `NodeEffectScale = 2.0`, reload an existing character. | Node bonuses double. Reload again — they do not double a second time. |
 | Set `NodeCostScale = 2.0`, load an existing character. | Prices unchanged: the snapshot holds. Self-test reports `node price scale x1.00`. |

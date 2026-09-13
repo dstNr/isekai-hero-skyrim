@@ -226,7 +226,7 @@ In game, on the modlist, from the packaged archive:
 | Save, reload, `player.getlevel` again | The same number. Nothing re-asserts, nothing reverts. |
 | Load an existing ASCENDED save made before the update | Level corrected once; the log says so; attributes and skills unchanged |
 | Load that save a second time | No second correction — the flag held |
-| Load a save the System has never touched, in the same session | Level untouched. This is the reported ActorBase bug, and it cannot recur. |
+| Load a save the System has never touched, in the same session | Level untouched. This is the reported ActorBase bug. The migration still writes `actorData.level` on the shared ActorBase and nothing reverts it, so a carry-over within one session is not ruled out by the code — but what it writes is now the character's own earned level, not 150, so the reported symptom should not appear. |
 | DORMANT character crossing level 80 | Awakens; the world does not jump |
 | Set `NodeEffectScale = 2.0`, reload | Node bonuses double, no drift and no stacking across loads |
 | Set `NodeCostScale = 2.0`, load an existing character | Prices unchanged — the snapshot holds |
