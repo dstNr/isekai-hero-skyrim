@@ -97,7 +97,8 @@ namespace Isekai {
             }
         }
 
-        // a DORMANT awakening pays out the very same grant, just years of play later.
+        // A DORMANT awakening pays out the very same grant, just years of play later, so it
+        // needs the same pre-blessing baseline captured here that an immediate grant does.
         //
         // Blessings only ever RAISE — on an existing save the character may already be
         // past parts of the blessing, and neither a rebirth nor an awakening may demote.
@@ -264,7 +265,7 @@ namespace Isekai {
         }
 
         // Second step: take the power now, or earn it. FULL is the blessing as designed
-        // (flat skills/level/fortune); SHATTERED keeps the tier's reward pace and deep
+        // (flat skills/body/fortune); SHATTERED keeps the tier's reward pace and deep
         // tree but starts you at the mortal floor. The question is orthogonal to DORMANT
         // — there it decides not *whether* the tiers arrive but whether each one still
         // arrives carrying its grant.
@@ -276,7 +277,7 @@ namespace Isekai {
                         "How will each awakening reach you?\n"
                         "\n"
                         "  FULL       Every awakening arrives whole —\n"
-                        "             skills, level and fortune granted\n"
+                        "             skills, body and fortune granted\n"
                         "             the moment it comes.\n"
                         "  SHATTERED  Only the System's reach grows: faster\n"
                         "             rewards and deeper gifts unlock, but\n"
@@ -287,7 +288,7 @@ namespace Isekai {
                          "The {} blessing resonates.\n"
                          "How will you receive it?\n"
                          "\n"
-                         "  FULL       Awaken at once — skills, level and\n"
+                         "  FULL       Awaken at once — skills, body and\n"
                          "             fortune granted now.\n"
                          "  SHATTERED  The System is fractured. Begin as any\n"
                          "             mortal, but its rewards still flow faster\n"
@@ -346,7 +347,7 @@ namespace Isekai {
                 L("custom.gift",
                   "CUSTOM — 1 of 3: STARTING GIFT\n"
                   "\n"
-                  "The flat head start handed over at birth — skills, level,\n"
+                  "The flat head start handed over at birth — skills, body,\n"
                   "gold and seed points.\n"
                   "\n"
                   "  NORMAL    Nothing. Begin as any mortal.\n"
