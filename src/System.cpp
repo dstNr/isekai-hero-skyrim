@@ -158,8 +158,13 @@ namespace Isekai {
             const auto before = base->actorData.level;
             base->actorData.level = g_state.preLevel;
             g_state.levelGrantRetired = true;
-            logger::info("Level grant retired: level {} -> {} (one-shot migration)", before,
-                         g_state.preLevel);
+            // GetLevel() is read back AFTER the write on purpose: it is the only evidence
+            // a tester can produce that actorData.level is the field the player's own
+            // level actually comes from. If the two numbers disagree in the log, the
+            // migration wrote somewhere the game does not read.
+            logger::info("Level grant retired: level {} -> {} (one-shot migration); "
+                         "GetLevel() now {}",
+                         before, g_state.preLevel, player->GetLevel());
         }
 
         float ApplyBlessing(const Blessing& b) {
@@ -232,6 +237,13 @@ namespace Isekai {
             // Fix the tree's prices for this character before a single point can be spent.
             // See State::nodeCostScale.
             g_state.nodeCostScale = Config::NodeCostScale();
+            // And mark the one-shot level migration done. A character blessed by THIS
+            // build was never handed a level, so there is nothing to retire — while the
+            // v14 baseline it is about to capture is the character's own earned level.
+            // Without this the migration would read that baseline on a later load and
+            // drag the character back down to it. Saves from before the update never
+            // reach this line, so they still migrate exactly once.
+            g_state.levelGrantRetired = true;
             const Blessing b = BlessingFor(g_state.grantTier);
             const float attrBonus = ApplyBlessing(b);
             // No crafting stock here any more: the Dimensional Storage starts empty for
@@ -1258,9 +1270,15 @@ namespace Isekai {
         AwakenTo(earned);
     }
 
-    // Put the character back to the baseline captured at the first grant, if there is one.
-    // Reports what it did so REBOOT can say it plainly rather than promising a clean slate
-    // it cannot deliver.
+    // Put the character's SKILLS and BODY back to the baseline captured at the first grant,
+    // if there is one. Reports what it did so REBOOT can say it plainly rather than
+    // promising a clean slate it cannot deliver.
+    //
+    // The character level is deliberately NOT restored. The baseline holds the level the
+    // character had when the System first bound itself, and since the blessing stopped
+    // granting one that number is simply what they had earned by then — writing it back
+    // would confiscate every level lived since. The one-shot migration is the only thing
+    // left that touches the character level.
     bool RestoreBaseline() {
         if (g_state.preSkills.empty()) {
             return false;
@@ -1279,32 +1297,41 @@ namespace Isekai {
         av->SetBaseActorValue(RE::ActorValue::kHealth, g_state.preHealth);
         av->SetBaseActorValue(RE::ActorValue::kMagicka, g_state.preMagicka);
         av->SetBaseActorValue(RE::ActorValue::kStamina, g_state.preStamina);
-        if (auto* base = player->GetActorBase(); base && g_state.preLevel > 0) {
-            base->actorData.level = g_state.preLevel;
-        }
-        logger::info("Baseline restored: level {}, {} skills", g_state.preLevel,
-                     g_state.preSkills.size());
+        logger::info("Baseline restored: {} skills and H/M/S {}/{}/{} (character level left "
+                     "as it is)",
+                     g_state.preSkills.size(), g_state.preHealth, g_state.preMagicka,
+                     g_state.preStamina);
         return true;
     }
 
     void RebootSystem() {
         // Just re-run the blessing selection. ShowPowerSelection overwrites the blessing
         // fields (power / shattered / dormant) from the new choice and re-applies, while
-        // leaving reincarnated, milestones, the skill tree and System Points untouched —
-        // so nothing earned is lost and the milestone catch-up cannot double-grant. No
-        // need to reset the one-shot flag: we deliberately bypass the boot trigger and
-        // open the menu directly.
+        // leaving reincarnated, milestones and System Points untouched — so nothing earned
+        // is lost and the milestone catch-up cannot double-grant. No need to reset the
+        // one-shot flag: we deliberately bypass the boot trigger and open the menu
+        // directly.
         //
         // Since v14 it also hands the body back. A FULL blessing used to be permanent in
-        // practice — the level, skills and attributes it granted stayed whatever the
-        // blessing made them, so "reboot to a Shattered run" left an ASCENDED physique
-        // behind and the choice meant very little. The baseline captured at the first
-        // grant is restored first, so the new blessing applies to the mortal the character
-        // actually was.
+        // practice — the skills and attributes it granted stayed whatever the blessing
+        // made them, so "reboot to a Shattered run" left an ASCENDED physique behind and
+        // the choice meant very little. The baseline captured at the first grant is
+        // restored first, so the new blessing applies to the mortal the character actually
+        // was.
+        //
+        // The skill tree is refunded rather than kept. Re-applying the blessing re-reads
+        // NodeCostScale into the snapshot that State::nodeCostScale exists to freeze, so a
+        // tree still standing from the old prices would be respec-able at the new ones —
+        // free points if the scale went up, stolen points if it went down. Refunding
+        // BEFORE anything re-snapshots gives every node back at exactly what it cost, and
+        // the new scale then applies to an empty tree. The points are kept; only their
+        // allocation is undone.
         const bool restored = RestoreBaseline();
+        const bool refunded = SkillTree::Respec();
         logger::info("System reboot — re-opening blessing choice (earned progress kept, "
-                     "baseline {})",
-                     restored ? "restored" : "not available");
+                     "baseline {}, skill tree {})",
+                     restored ? "restored" : "not available",
+                     refunded ? "refunded" : "nothing to refund");
         ShowPowerSelection();
     }
 

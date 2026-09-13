@@ -227,7 +227,7 @@
         {
           "id": "fNodeEffectScale:Progression",
           "text": "Node strength",
-          "help": "Multiplies every skill-tree bonus. Applies immediately, to this character too — node effects are recomputed from scratch on every load.",
+          "help": "Multiplies every skill-tree bonus. Applies immediately, to this character too — node effects are recomputed from scratch on every load. Node descriptions show the unscaled numbers, so at 2.0 a node reading +25 Health actually grants 50.",
           "type": "slider",
           "valueOptions": { "min": 0.1, "max": 10.0, "step": 0.1, "formatString": "{1}", "sourceType": "ModSettingFloat", "defaultValue": 1.0 }
         },

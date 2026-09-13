@@ -8,6 +8,7 @@
 #include "UI/LevelUpEffect.h"
 
 #include <algorithm>
+#include <cmath>
 #include <mutex>
 #include <string>
 #include <vector>

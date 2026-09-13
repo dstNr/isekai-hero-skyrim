@@ -27,7 +27,7 @@ namespace Isekai {
     enum class PowerLevel {
         Normal,    // no boost, pure challenge
         Hero,      // maxed skills, some perks
-        Ascended,  // maxed everything, level 255, many perks
+        Ascended,  // maxed skills, the largest body, many perks
     };
 
     // Which skills the past life mastered.
@@ -60,7 +60,7 @@ namespace Isekai {
         SkillFocus skills = SkillFocus::Balanced;
 
         // "Shattered" awakening: keep the blessing's TIER (reward scale + the deeper
-        // skill tree it unlocks) but skip the flat starting grant — skills, level,
+        // skill tree it unlocks) but skip the flat starting grant — skills, body,
         // gear, gold, the seeded points. A HERO/ASCENDED who wants the higher ceiling
         // without the handed-out floor earns every step at the blessing's pace.
         bool shattered = false;
