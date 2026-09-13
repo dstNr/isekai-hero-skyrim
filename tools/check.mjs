@@ -1079,6 +1079,20 @@ check("system: the blessing grants no character level", () => {
   return "no level grant";
 });
 
+check("skill tree: every node price goes through NodeCost", () => {
+  // RespecRefund gives back what RankCost charged. If one of them reads Node::cost raw
+  // while the other applies the character's price scale, a respec refunds at a different
+  // rate than was paid — which is exactly the promise MasteryCostToRank exists to keep.
+  const src = read("src/SkillTree.cpp");
+  const helper = src.match(/std::int32_t NodeCost\(const Node& a_node\)[\s\S]*?\n        \}/);
+  need(helper, "NodeCost() not found in SkillTree.cpp");
+  const raw = [...src.replace(helper[0], "").matchAll(/\b[A-Za-z_]\w*\.cost\b/g)]
+    .map((m) => m[0]);
+  need(raw.length === 0,
+       `these read a node's price directly instead of through NodeCost(): ${raw.join(", ")}`);
+  return "all prices scaled";
+});
+
 /* -- 6. the ESP's form IDs -------------------------------------------------
    Four separate tables in three files name local FormIDs in IsekaiHero.esp. They
    must not collide: two features pointing at one record means one of them is

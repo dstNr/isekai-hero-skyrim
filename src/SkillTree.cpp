@@ -1,5 +1,6 @@
 #include "SkillTree.h"
 
+#include "Config.h"
 #include "Loc.h"
 #include "Passives.h"
 #include "Sounds.h"
@@ -243,11 +244,26 @@ namespace Isekai::SkillTree {
             return std::min(kTierCount, (a_rank - 1) / kRanksPerTier + 1);
         }
 
+        // Every node price in the tree goes through here.
+        //
+        // The scale comes from the co-save, not from Config: it was fixed when this
+        // character was reincarnated, because RespecRefund reads a node's price as it
+        // stands at the moment of the refund. A live scale would refund at a rate the
+        // purchase was never made at. See State::nodeCostScale.
+        //
+        // Never free: a scale the player set very low must still leave a price, or the
+        // tree stops being a choice.
+        [[nodiscard]] std::int32_t NodeCost(const Node& a_node) {
+            const float scale = GetState().nodeCostScale;
+            const float scaled = static_cast<float>(a_node.cost) * (scale > 0.0f ? scale : 1.0f);
+            return std::max(1, static_cast<std::int32_t>(std::lround(scaled)));
+        }
+
         // What buying rank a_rank of a mastery node costs: base cost x that rank's
         // tier, so Novice ranks are cheap and Grandmaster ranks cost 5x. Flat cost for
         // everything else.
         [[nodiscard]] std::int32_t RankCost(const Node& a_node, std::int32_t a_rank) {
-            return IsMasteryNode(a_node) ? a_node.cost * TierOfRank(a_rank) : a_node.cost;
+            return IsMasteryNode(a_node) ? NodeCost(a_node) * TierOfRank(a_rank) : NodeCost(a_node);
         }
 
         // Total SP sunk into a mastery node at a_rank — the sum of every tiered
@@ -266,7 +282,7 @@ namespace Isekai::SkillTree {
         // figure, so mastery's tiered pricing and Perk Synthesis's flat pricing don't
         // need separate call sites.
         [[nodiscard]] std::int32_t RepeatableCostToRank(const Node& a_node, std::int32_t a_rank) {
-            return IsMasteryNode(a_node) ? MasteryCostToRank(a_node, a_rank) : a_node.cost * a_rank;
+            return IsMasteryNode(a_node) ? MasteryCostToRank(a_node, a_rank) : NodeCost(a_node) * a_rank;
         }
 
         // Only nodes whose effect can be fully undone may be refunded — see the note on
@@ -513,7 +529,8 @@ namespace Isekai::SkillTree {
                         if (b.av == AV::kNone) {
                             continue;
                         }
-                        avOwner->SetBaseActorValue(b.av, a_node.baseline + b.amount * rank);
+                        avOwner->SetBaseActorValue(
+                            b.av, a_node.baseline + b.amount * Config::NodeEffectScale() * rank);
                     }
                 }
                 break;
@@ -722,7 +739,8 @@ namespace Isekai::SkillTree {
             }
             for (const auto& bonus : node.bonus) {
                 if (bonus.av != AV::kNone) {
-                    a_totals[bonus.av] += bonus.amount * static_cast<float>(times);
+                    a_totals[bonus.av] +=
+                        bonus.amount * Config::NodeEffectScale() * static_cast<float>(times);
                 }
             }
         }
@@ -792,7 +810,7 @@ namespace Isekai::SkillTree {
         std::int32_t total = 0;
         for (const auto& node : kNodes) {
             total += node.repeatable ? RepeatableCostToRank(node, RankNoLock(node.key))
-                                     : (IsUnlockedNoLock(node.key) ? node.cost : 0);
+                                     : (IsUnlockedNoLock(node.key) ? NodeCost(node) : 0);
         }
         return total;
     }
@@ -805,7 +823,7 @@ namespace Isekai::SkillTree {
                 continue;
             }
             total += node.repeatable ? RepeatableCostToRank(node, RankNoLock(node.key))
-                                     : (IsUnlockedNoLock(node.key) ? node.cost : 0);
+                                     : (IsUnlockedNoLock(node.key) ? NodeCost(node) : 0);
         }
         return total;
     }
@@ -831,7 +849,7 @@ namespace Isekai::SkillTree {
                     if (!IsUnlockedNoLock(node.key)) {
                         continue;
                     }
-                    refund += node.cost;
+                    refund += NodeCost(node);
                     unlocked.erase(std::remove(unlocked.begin(), unlocked.end(), node.key),
                                    unlocked.end());
                 }
