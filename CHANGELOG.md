@@ -102,6 +102,18 @@ All notable changes to Isekai Hero are documented here. The format follows
   report does not apply there. The VR scale is clamped so a frame can never grow out of
   its band into the one above it, and distance falloff stays off in VR, where the
   billboard already shrinks in world space. **Untested — there is no VR install here.**
+- **A second Dimensional Storage chest no longer appears at your feet when you open it.**
+  `Open()` moves the chest into the player's cell and then asked `Is3DLoaded()` on the very
+  next line to decide whether the reference was still alive. `MoveTo` updates a reference's
+  cell and position at once but hands the 3D attach to the engine's queue, so a perfectly
+  healthy chest reads as having none — and every open in a cell it had not been in was
+  treated as an orphaned reference, rebuilt, and the fresh one `PlaceObjectAtMe` drops at
+  the player's feet is the chest players saw appear. The check never protected the
+  activation it was guarding either: the rebuild branch went straight on to activate its
+  fresh chest without asking about 3D, and that path worked. A genuinely orphaned
+  reference is a disabled or deleted one, which `Open()` and `ResolveChest` still catch —
+  that is the cell-reset repair from 0.5.0, and it is unchanged. Contents were never at
+  risk: each false rebuild migrated them.
 - **The Dimensional Storage is the player's property.** Transferring items in or out while
   standing in an NPC-owned cell — an inn, a shop, a house — was a crime: a bounty, items
   flagged stolen, and witnesses turning hostile, a follower included. A reference that

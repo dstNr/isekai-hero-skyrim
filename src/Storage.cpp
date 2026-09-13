@@ -775,23 +775,21 @@ namespace Isekai::Storage {
         // far below the floor, where its model can never be seen. The activation is a
         // direct call, not a look-at, so where it sits makes no difference.
         chest->MoveTo(player);
-        auto pos = player->GetPosition();
+        const auto pos = player->GetPosition();
         chest->SetPosition(pos.x, pos.y, pos.z - 3000.0f);
 
-        // If the move still didn't attach 3D, the ref is orphaned some other way — rebuild
-        // and place the fresh one, which PlaceObjectAtMe drops into the loaded cell.
+        // Missing 3D right here is NOT a broken reference, and this used to rebuild on it.
+        // MoveTo updates the reference's cell and position at once but hands the 3D attach
+        // to the engine's queue, so one line later a perfectly healthy chest reads as
+        // having none — every open in a cell it had not been in rebuilt it, and the fresh
+        // reference PlaceObjectAtMe drops at the player's feet was the chest players saw
+        // appear in front of them. The check never protected the activation either: the
+        // rebuild branch went straight on to activate its fresh chest without ever asking
+        // about 3D, and that path worked. A genuinely orphaned reference is a disabled or
+        // deleted one, and those are caught above and in ResolveChest.
         if (!chest->Is3DLoaded()) {
-            logger::warn("Storage: chest {:#x} has no 3D after move — rebuilding",
-                         chest->GetFormID());
-            chest = RebuildChest(player, chest);
-            if (!chest) {
-                RE::SendHUDMessage::ShowHUDMessage(L("storage.reanchoring",
-                                        "[ SYSTEM ] storage is re-anchoring — try again in a moment."));
-                return;
-            }
-            chest->MoveTo(player);
-            pos = player->GetPosition();
-            chest->SetPosition(pos.x, pos.y, pos.z - 3000.0f);
+            logger::debug("Storage: chest {:#x} has no 3D yet — the move is queued",
+                          chest->GetFormID());
         }
 
         Sounds::Play(Sounds::Sfx::WindowOpen);

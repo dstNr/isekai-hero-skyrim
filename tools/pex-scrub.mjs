@@ -4,7 +4,7 @@
  * compiled, the Windows account that ran it, and the machine name. The account here is
  * the author's real name, so a freshly compiled .pex trips package.ps1's privacy gate:
  *
- *     Privacy gate: 'Dustin Reymendt' is still present in: ...\Scripts\IsekaiHeroMCM.pex
+ *     Privacy gate: '<your Windows account name>' is still present in: ...\Scripts\IsekaiHeroMCM.pex
  *
  * That gate is correct and must not be loosened, so the leak is fixed instead. There is no
  * compiler switch for it and no build path that avoids it — the account name is stamped in
