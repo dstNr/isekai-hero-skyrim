@@ -138,6 +138,24 @@ namespace Isekai {
         // because the save was reloaded.
         std::int32_t questsGiven = 0;
 
+        // v16: the skill-tree price scale this character was created under.
+        //
+        // Config::NodeCostScale() may be changed in the ini at any time, but
+        // SkillTree::RespecRefund gives back what RankCost charged, and MasteryCostToRank
+        // sums every individual tier purchase so that a respec returns exactly what was
+        // paid. A live scale would break that promise — buy at 1.0, refund at 2.0. So it
+        // is read once, here, the way questReward is snapshotted when an objective is
+        // handed out. REBOOT is how an existing character gets a new one.
+        float nodeCostScale = 1.0f;
+
+        // v16: the one-shot level migration has run.
+        //
+        // Before this build the blessing wrote actorData.level and re-asserted it after
+        // every load, because that field does not persist for the player. The grant is
+        // gone, so the number has to come down exactly once. A save with no v14 baseline
+        // has nothing to come down to and is marked done without being touched.
+        bool levelGrantRetired = false;
+
         // Lifetime kills per quarry type, by the same stable key the objectives use, and
         // counted whether or not an objective is standing. Every kKillsPerBounty of a type
         // pays a bounty: the System noticing what you actually hunt (#30).

@@ -46,7 +46,7 @@ namespace Isekai {
         // 12: its snapshotted target/reward, and when the next one is due
         // 13: how many objectives this character has been given
         // 14: the pre-blessing baseline, so REBOOT can hand the body back
-        constexpr std::uint32_t kVersion = 15;
+        constexpr std::uint32_t kVersion = 16;
 
         void SystemMsg(const char* a_text) {
             RE::SendHUDMessage::ShowHUDMessage(a_text);
@@ -129,6 +129,39 @@ namespace Isekai {
                          g_state.preMagicka, g_state.preStamina);
         }
 
+        // Put the character back on the level they had before their blessing — once.
+        //
+        // Until this build the blessing wrote actorData.level and re-asserted it after
+        // every load. The grant is gone, and rather than wager on what the engine leaves
+        // behind when nothing re-asserts it, the answer is stated here: the v14 baseline
+        // is what this character was, so that is what they go back to.
+        //
+        // A save with no baseline (from before v14, or a SHATTERED start, which captures
+        // none) has nothing to go back to. It is marked done and left alone; REBOOT
+        // already tells such a character it cannot hand the body back.
+        void RetireLevelGrant() {
+            if (!g_state.reincarnated || g_state.levelGrantRetired) {
+                return;
+            }
+            if (g_state.preLevel == 0) {
+                g_state.levelGrantRetired = true;
+                logger::info("Level grant retired: no baseline in this save — level left as it is");
+                return;
+            }
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            auto* base = player ? player->GetActorBase() : nullptr;
+            if (!base) {
+                // Not marked done: try again on the next load rather than losing the
+                // migration to a moment the player form was not ready.
+                return;
+            }
+            const auto before = base->actorData.level;
+            base->actorData.level = g_state.preLevel;
+            g_state.levelGrantRetired = true;
+            logger::info("Level grant retired: level {} -> {} (one-shot migration)", before,
+                         g_state.preLevel);
+        }
+
         float ApplyBlessing(const Blessing& b) {
             auto* player = RE::PlayerCharacter::GetSingleton();
             if (!player) {
@@ -196,6 +229,9 @@ namespace Isekai {
             // blessing, HERO/ASCENDED the corresponding table. reward pace (power) and tree
             // depth (treeTier) are separate; on a preset all three agree, on CUSTOM they may
             // not. A DORMANT start is NORMAL here and its grant arrives later via AwakenTo.
+            // Fix the tree's prices for this character before a single point can be spent.
+            // See State::nodeCostScale.
+            g_state.nodeCostScale = Config::NodeCostScale();
             const Blessing b = BlessingFor(g_state.grantTier);
             const float attrBonus = ApplyBlessing(b);
             // No crafting stock here any more: the Dimensional Storage starts empty for
@@ -768,6 +804,11 @@ namespace Isekai {
             }
             a_intf->WriteRecordData(g_state.professionActions);
 
+            // v16: the price scale this character bought at, and whether the old level
+            // grant has already been undone for them.
+            a_intf->WriteRecordData(g_state.nodeCostScale);
+            a_intf->WriteRecordData(g_state.levelGrantRetired);
+
             logger::info(
                 "State saved (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={}, "
                 "dormant={}, custom={}, grant={}, tree={})",
@@ -961,6 +1002,23 @@ namespace Isekai {
                     }
                     a_intf->ReadRecordData(g_state.professionActions);
                 }
+
+                // v16: an older save bought its nodes at 1.0 — that is what it paid, and
+                // that is what a respec has to give back. A character from before this
+                // build still holds a granted level, so the migration has not run.
+                g_state.nodeCostScale = 1.0f;
+                g_state.levelGrantRetired = false;
+                if (version >= 16) {
+                    a_intf->ReadRecordData(g_state.nodeCostScale);
+                    a_intf->ReadRecordData(g_state.levelGrantRetired);
+                    if (!(g_state.nodeCostScale > 0.0f)) {
+                        // A corrupt or zeroed scale would make the tree free. Read out of
+                        // a file, so bounded before it is used.
+                        logger::error("Co-save: node price scale read as {} — using 1.0",
+                                      g_state.nodeCostScale);
+                        g_state.nodeCostScale = 1.0f;
+                    }
+                }
             }
 
             logger::info(
@@ -1125,6 +1183,9 @@ namespace Isekai {
                 // as whatever the ESP says (zero) on every load. Rebuild them from the
                 // milestones the save *does* remember.
                 Passives::Refresh();
+                // One-shot: undo the character level earlier builds granted and kept
+                // re-asserting. After this the mod never touches the level again.
+                RetireLevelGrant();
                 // Chests stocked by earlier builds still hold the Creation Club
                 // ingredients that made the crafting shuttle stutter — clean them out.
                 Storage::PruneForeignStock();
