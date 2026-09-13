@@ -138,6 +138,32 @@ All notable changes to Isekai Hero are documented here. The format follows
   border, so highlights inside the subject survive.
 
 ### Fixed
+- **The VR in-headset layer now ships off, because with it the game crashed on load.** A VR
+  player reported that installing this mod alongside ImGuiVRHelper sends Skyrim VR to the
+  desktop as the mods finish loading - every time, on a load order of five mods, and
+  without writing a crash log. Their two logs place it precisely: without the helper,
+  `DrawVRFrame()` returns immediately because no client is connected, and the mod runs and
+  the menus work; with it, that same function does real D3D work on every `Present` call.
+  The correlation is exact, and it is the only thing that differs.
+  The cause is **not** known. The hook is installed by patching the `IDXGISwapChain` vtable
+  in `dxgi.dll`, which every swap chain in the process shares, and it does not check which
+  one it was called for - so calling into the helper from a frame that is not the game's is
+  one candidate among several. A silent exit with no crash log is itself a clue: it points
+  at a stack overflow or a fail-fast rather than an ordinary access violation. None of that
+  is proof, and there is no VR install here to get proof on.
+  So `VRInHeadsetLayer` is a new ini setting, and it is **0**. Off, the mod behaves exactly
+  as the working log shows and ImGuiVRHelper can stay installed for other mods; on, you get
+  the world-anchored threat labels, the HUD-plane notifications and the B+Y chord, and you
+  are the person helping find this. Shipping it on would have handed every VR player a
+  guaranteed crash instead.
+  Two things came out of the same reading. `Config::Load()` now also runs at
+  `kPostPostLoad`: the VR handshake has to happen there (it is the first message after
+  every plugin's `kPostLoad`, so the helper is listening whatever order the DLLs loaded
+  in), but settings were not read until `kDataLoaded`, so the new gate would only ever have
+  seen its compiled default and turning it on would have done nothing. And the VR overlay's
+  log line claimed "drawing goes to ImGuiVRHelper" whether or not the helper was installed,
+  which in a log from a machine without it reads as a path taken that never was; it now
+  says what the hook actually is.
 - **`UiScale` now reaches the threat labels in VR** (#26). It was the one surface the
   setting did not cover: the VR path drew its frames at a fixed size. The flat path has
   scaled with both resolution and `UiScale` since 0.8.0, so the 4K complaint behind the

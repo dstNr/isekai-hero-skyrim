@@ -424,8 +424,14 @@ namespace Isekai::UI {
                               "PrismaUI.");
                 return;
             }
-            logger::info("UI: Skyrim VR — swap-chain vtable found by probe, drawing goes to "
-                         "ImGuiVRHelper rather than the desktop mirror");
+            // Says what this hook IS, not what someone else might do with it. The old
+            // wording claimed drawing goes to ImGuiVRHelper, and printed that whether or
+            // not the helper was installed — which reads, in a log from a machine without
+            // it, as though a path had been taken that never was.
+            logger::info("UI: Skyrim VR — swap-chain vtable found by probe; Present is the "
+                         "per-frame tick ({})",
+                         VROverlayReady() ? "in-headset layer drawing through ImGuiVRHelper"
+                                          : "no in-headset layer, tick only");
         } else {
             auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
             if (!renderer) {

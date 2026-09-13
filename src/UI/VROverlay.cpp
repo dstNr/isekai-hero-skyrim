@@ -1,5 +1,6 @@
 #include "UI/VROverlay.h"
 
+#include "Config.h"       // VRInHeadsetLayer, the gate on registering at all
 #include "Progression.h"  // OpenStatusPanel, what the VR controller chord opens
 #include "UI/Style.h"
 #include "UI/ThreatLabels.h"
@@ -226,6 +227,24 @@ namespace Isekai::UI {
         if (!REL::Module::IsVR()) {
             return;
         }
+        // Off by default, and the ini says why at length. Short version: a VR player
+        // reported that this mod alongside ImGuiVRHelper sends the game to the desktop as
+        // the mods finish loading, every time, with no crash log written. Without the
+        // helper the mod runs and the menus work — and this layer is the one thing that
+        // does any work only when the helper is present, which is what points at it.
+        //
+        // The gate sits HERE, before Connect(), rather than in DrawVRFrame: not connecting
+        // is the state the working log shows, and it also leaves the helper free for the
+        // other mods that use it. The cause is still unknown; this is a way around it, not
+        // a repair.
+        if (!Config::VRInHeadsetLayer()) {
+            logger::info("VR: in-headset layer is off (VRInHeadsetLayer = 0) — no labels or "
+                         "toasts in the headset, and no controller chord. Menus still run "
+                         "through the PrismaUI patch. It ships off because it crashed for "
+                         "the one player who tried it; turn it on to help find out why.");
+            return;
+        }
+
         if (!VRH::IsHelperInstalled()) {
             logger::info("VR: ImGuiVRHelper is not installed — no in-headset labels or "
                          "toasts. Menus still run through the PrismaUI patch. Install "

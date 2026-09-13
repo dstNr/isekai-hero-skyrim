@@ -1137,6 +1137,13 @@ namespace Isekai {
             // matter which order the two DLLs happen to load in. No-op outside VR, and
             // no-op in VR without the helper installed.
             case SKSE::MessagingInterface::kPostPostLoad:
+                // Settings first, and this is the reason the call is here rather than only
+                // at kDataLoaded: InstallVROverlay reads VRInHeadsetLayer, and kDataLoaded
+                // fires long after this. Without this line the gate would only ever see
+                // the compiled default, and a player who turned the layer on would find it
+                // still off. Load() resets to defaults and re-reads both inis, so running
+                // it twice is what ReloadSettings already does on a settings change.
+                Config::Load();
                 UI::InstallVROverlay();
                 break;
 

@@ -103,7 +103,7 @@ It [b]starts empty for every blessing[/b] — you stock it from the System Shop'
 [list]
 [*][b]Keyboard[/b] — Right Shift + S opens the System panel, F10 toggles the threat display. Both remappable.
 [*][b]Controller[/b] — hold [b]LB[/b] and tap [b]Back[/b] for the System menu; the left stick moves the cursor, [b]A[/b] clicks, [b]B[/b] closes. A combination rather than a single button because a controller has none spare — every face button, both shoulders and both sticks are already bound in vanilla. Both bindings are in the ini, and `None` switches the controller off.
-[*][b]Skyrim VR[/b] — with the optional [url=https://www.nexusmods.com/skyrimspecialedition/mods/149180]ImGui VR Helper[/url] the interface comes into the headset: threat labels stand in the world over the actors they belong to, notifications sit on the HUD layer, and pressing [b]B + Y[/b] on both controllers at once opens the System menu without touching a keyboard. The chord is rebindable.
+[*][b]Skyrim VR[/b] — the menus come into the headset through the PrismaUI patch, and the keyboard and controller bindings above work there. The in-headset layer that would add threat labels standing in the world, notifications on the HUD plane and a [b]B + Y[/b] controller chord is [b]switched off by default[/b]: a VR player found that it sends the game to the desktop as the mods finish loading, and the cause is not yet found. Set [font=Courier New]VRInHeadsetLayer = 1[/font] in the ini to try it, and please report what happens.
 [/list]
 
 [size=4][b]Translations[/b][/size]
@@ -145,7 +145,11 @@ The plugin is [b]ESL-flagged[/b] (no load order slot), adds only new records and
 
 [b]Hotkey:[/b] Right Shift + S opens the System status panel; storage, shop and skill tree sit behind the icon buttons in its corner. F10 switches the threat display off and on. Both are remappable in the ini.
 
-[b]Skyrim VR:[/b] the mod loads and runs. With the optional [url=https://www.nexusmods.com/skyrimspecialedition/mods/149180]ImGui VR Helper[/url] installed you get the threat labels and notifications inside the headset and a controller chord that opens the menu; without it the mod still runs and falls back to the game's own corner notifications. The PrismaUI option (VR build) also works there. [i]The headset side is new in 0.8.0 and has not yet been confirmed by a VR player — reports very welcome.[/i]
+[b]Skyrim VR:[/b] the mod loads and runs, and the menus work — a VR player confirmed that much. They go through the PrismaUI option (VR build), which is the one to tick in the installer.
+
+The [b]in-headset layer[/b] — threat labels as billboards in the world, notifications on a head-locked plane, and a controller chord that opens the menu — needs the optional [url=https://www.nexusmods.com/skyrimspecialedition/mods/149180]ImGui VR Helper[/url] and is [b]off by default[/b]. The same player reported that with the helper installed the game goes to the desktop as the mods finish loading: every time, on a five-mod load order, and without writing a crash log. Turning the layer off restores the working setup and leaves the helper installed for other mods that use it.
+
+[i]The cause is not known. There is no VR install on the author's machine, so this one is being chased through player reports — if you turn [font=Courier New]VRInHeadsetLayer = 1[/font] on and it works, or crashes, saying so is genuinely the fastest way to get it fixed.[/i]
 
 [size=4][b]Status[/b][/size]
 Early release. Feedback is very welcome, especially from heavily modded setups. If something misbehaves, attach [i]Documents\My Games\Skyrim Special Edition\SKSE\IsekaiHeroSKSE.log[/i] to your report — the mod logs everything it does.
