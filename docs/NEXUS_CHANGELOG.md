@@ -7,6 +7,42 @@ are still in the older, longer style — that is how they already sit on Nexus.)
 
 ---
 
+## 0.9.0
+
+Added: **Skyrim 1.7.104 support** — one download still covers SE, AE and VR.
+
+Added: **a Mod Configuration Menu** — an optional installer component that puts 28 of the mod's settings in SkyUI, each with the explanation the ini gives it (needs SkyUI and MCM Helper).
+
+Added: **the System notices what you actually do** — kills are tallied by enemy type and pay System Points every 50, and harvesting, smelting, tanning, smithing, alchemy and enchanting pay a point every 25 actions.
+
+Added: **the right stick scrolls**, closing the last place a controller could not reach.
+
+Added: **six settings for the power curve** — what each blessing grants, plus multipliers for every skill-tree price and every skill-tree bonus.
+
+Added: **`QuestRewardScale`** — make the System's objectives worth more or less.
+
+Added: **an API other SKSE plugins can use**, so other mods can read your System state and grant points.
+
+Changed: **the System no longer sets your character level** — it grants the body instead, so enemies stop being dragged to their ceiling the moment you reincarnate. Existing characters are corrected once on the next load; your attributes, skills, perks and points are untouched.
+
+Changed: **ASCENDED starts with 10 System Points instead of 500.**
+
+Changed: **REBOOT now refunds your skill tree** instead of carrying it over, at what each node actually cost.
+
+Changed: **the threat frame is one line over one underline** — only the health bar carries colour now.
+
+Fixed: **ESC closes the System panel** instead of opening Skyrim's menu underneath it.
+
+Fixed: **a second Dimensional Storage chest no longer appears at your feet** when you open it.
+
+Fixed: **the Dimensional Storage is yours** — using it in an inn or a shop is no longer a crime, and no longer marks your items stolen.
+
+Fixed: **the interface scale now reaches the threat labels in VR.**
+
+Note: **the VR in-headset layer ships off** after a VR player reported it crashing the game on load; set `VRInHeadsetLayer = 1` to turn it back on.
+
+---
+
 ## 0.8.0
 
 Added: **the mod can be translated** — every line of text it shows goes through a language file; drop one next to the plugin and set `Language` in the ini.

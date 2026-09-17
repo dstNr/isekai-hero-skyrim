@@ -4,7 +4,7 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
-## [Unreleased]
+## [0.9.0] — 2026-09-17
 
 ### Changed
 - **The Flameforged Oathblade is out of the shop for now.** Its balance is not settled, so
@@ -97,6 +97,14 @@ All notable changes to Isekai Hero are documented here. The format follows
     value rather than resetting. Nothing is ever written back.
   - Settings take hold when the journal closes, which is where SkyUI's MCM lives. Hotkeys
     are the exception: they are registered once at load and still need a restart.
+  - SkyUI only lists a mod that owns a quest carrying an MCM Helper script, and that was
+    the one step waiting on the Creation Kit — which Steam's 2026-09-04 update replaced
+    with 1.7.99.0, an editor that dies with an access violation on creating a quest, and
+    CKPE has no build for it. So `QUST 0xD90` was written into the plugin directly, every
+    field modelled on a plugin whose MCM demonstrably works, matching it in subrecord
+    sequence, DNAM, alias fill and VMAD layout. The quest ships in the main plugin while
+    its script ships with the optional component, so leaving the component unticked costs
+    one Papyrus "cannot open store" line and nothing else.
   - `Language`, the controller buttons and the VR wand button stay ini-only. MCM Helper
     stores engine settings, which have no string type, and the pad buttons are masks the
     keymap control cannot capture. The menu says so on the page where they would have been.
@@ -130,11 +138,14 @@ All notable changes to Isekai Hero are documented here. The format follows
   attributed source; a state-changed message is dispatched for listeners. Nothing mutates
   structure, and there is no Papyrus surface — the mod stays script-free. Ships as the
   single dependency-free header `include/IsekaiHeroAPI.h`.
-- **The Flameforged Oathblade**, the first weapon the System sells — a new ARMAMENTS shelf
-  in the shop, at 40 System Points. The mesh is generated geometry converted to a Skyrim
-  NIF with collision, BSX flags and an attachment point built from measured numbers rather
-  than copied blocks (`tools/add-weapon-collision.py`); the pipeline is written up in
-  `docs/WEAPON_ASSET_GUIDE.md`.
+- **The Flameforged Oathblade**, the first weapon this mod ships as a mesh rather than as
+  code. The mesh is generated geometry converted to a Skyrim NIF with collision, BSX flags
+  and an attachment point built from measured numbers rather than copied blocks; the
+  pipeline is written up in the
+  [asset pipeline repository](https://github.com/dstNr/isekai-asset-pipeline).
+  **It cannot be bought in this release** — see *Changed*. The record, the mesh, the
+  textures and the icon all ship, so the blade is one console command away, but the shop
+  card and the ARMAMENTS shelf it lived on are parked until its numbers are settled.
 - A weapon's shop card shows its **damage and critical damage**. `DescribeEffects()` used
   to return early for anything that is not a potion, which would have left a 40-point item
   showing a name and a price and nothing else.
@@ -143,6 +154,20 @@ All notable changes to Isekai Hero are documented here. The format follows
   border, so highlights inside the subject survive.
 
 ### Fixed
+- **ESC closes the status panel again.** `DismissSystemWindow` only acted on a panel
+  carrying exactly one text choice, in which case it pressed that button. The status
+  panel's three buttons are all icon-only and NEW TASK is off unless `QuestRerollButton`
+  is set, so the count was zero, the function returned having done nothing, and the press
+  fell through to Skyrim's own menu — which is the sound players heard under a panel that
+  stayed open. With the reroll button switched on it was worse: ESC fired NEW TASK. A
+  single text choice still answers that choice, because that is what dismissing an "OK"
+  prompt means; anything else is a view rather than a question and now simply closes.
+- **The menu guard really goes to the front of the handler chain now.** Its move only ran
+  when `AddHandler` happened to append it last, and the success line was logged either
+  way. `MenuControls` queues registrations while it is dispatching and flushes them later,
+  so that test could miss and leave the guard mid-chain while the log claimed otherwise.
+  It now finds its own index, rotates from there, and logs where it moved from — or logs
+  an error if it is not in the chain at all.
 - **The VR in-headset layer now ships off, because with it the game crashed on load.** A VR
   player reported that installing this mod alongside ImGuiVRHelper sends Skyrim VR to the
   desktop as the mods finish loading - every time, on a load order of five mods, and
@@ -197,10 +222,36 @@ All notable changes to Isekai Hero are documented here. The format follows
   are repaired on the next open. Reported on Nexus by two players independently.
   Items already flagged stolen stay flagged: clearing the flag on anything put into the
   storage would make it a laundering machine, which a vanilla container is not.
+- **A deleted, empty weapon record left the plugin.** Part K's duplicate `WEAP 0xD8E` was
+  deleted in the Creation Kit, which keeps the shell rather than removing it: the plugin
+  shipped a record carrying the Deleted flag, no editor ID and a zero-byte body. Not
+  cosmetic — the editor loaded it as a weapon and read fields out of a body that was not
+  there, which is the `Bad reach value (0.00) found for weapon ''` warning every session
+  opened with. The record is gone, the WEAP group and `HEDR`'s record count shrank with it
+  (45 → 44), and nothing referenced it.
 - `package.ps1` and the FOMOD now carry `meshes\` and `textures\`. Without them the ESP
   would have shipped pointing at a mesh that was not in the archive.
 
 ### Notes
+- **The repository is public, and the licence now says what it actually grants.** It used
+  to offer reuse of everything under `icons/`, 40 files of which are a purchased
+  third-party pack. `LICENSE` and the README name the two asset carve-outs separately —
+  the sound effects (CC BY 4.0, with their author credited) and the purchased frames — and
+  state that the remaining 34 icons are ours under the MIT terms. The generated 3D assets
+  are carved out too. The archived Papyrus implementation left `main`; the `papyrus-v1.0`
+  tag preserves it whole.
+- **The asset pipeline moved to its own repository.** Blender, ComfyUI, Meshy, Outfit
+  Studio and BodySlide share nothing with an SKSE plugin but the finished meshes, so the
+  specs, the weapon guide, the ComfyUI workflows, the mannequin renderer and the collision
+  script now live in
+  [dstNr/isekai-asset-pipeline](https://github.com/dstNr/isekai-asset-pipeline). The
+  shipped meshes and textures stay here.
+- **The compiled MCM script is scrubbed before it ships.** `PapyrusCompiler.exe` stamps the
+  Windows account name and the machine name into every `.pex` header, and there is no
+  switch for it. The privacy gate caught it on the first packaging run, so
+  `tools/pex-scrub.mjs` rewrites those two header strings and verifies the result by
+  walking the string table rather than asserting the rewrite was safe. Run it after every
+  recompile — the gate says so if it is forgotten.
 - The Creation Kit assigned the two new records FormIDs above the ESL ceiling (`0x2311`
   and `0x2313`) and blanked their object bounds. Both were repaired and the failure is
   documented as Part K of `docs/CREATION_KIT_ESP.md`; `tools/check.mjs` is what caught the
@@ -945,6 +996,7 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[0.9.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.9.0
 [0.8.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.8.0
 [0.7.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.7.1
 [0.7.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.7.0
