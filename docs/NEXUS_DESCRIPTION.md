@@ -131,13 +131,15 @@ An optional ini at [i]Data/SKSE/Plugins/IsekaiHero.ini[/i] — ships with sane d
 
 [size=4][b]Requirements[/b][/size]
 [list]
-[*]Skyrim Special Edition / Anniversary Edition (built against 1.6.1170)
+[*]Skyrim Special Edition / Anniversary Edition / VR — one DLL covers all of them, up to and including runtime [b]1.7.104[/b]
 [*][url=https://skse.silverlock.org/]SKSE64[/url]
 [*][url=https://www.nexusmods.com/skyrimspecialedition/mods/32444]Address Library for SKSE Plugins[/url]
 [/list]
 
 [size=4][b]Installation & Compatibility[/b][/size]
 Install with your mod manager. The archive is a [b]FOMOD[/b] and asks three things — which interface, whether the System boots itself or waits for your hotkey, and whether you want the threat readings. Everything it sets is one line in the ini and can be changed afterwards.
+
+The first page also offers the optional [b]Mod Configuration Menu[/b]: 28 of the mod's settings in SkyUI, each with the explanation the ini gives it. It needs [url=https://www.nexusmods.com/skyrimspecialedition/mods/12604]SkyUI[/url] and [url=https://www.nexusmods.com/skyrimspecialedition/mods/53000]MCM Helper[/url], which is why it is optional — leave it unticked and nothing is lost, the settings simply stay in the ini file.
 
 The plugin is [b]ESL-flagged[/b] (no load order slot), adds only new records and [b]overrides nothing[/b] — load order position does not matter. No patches needed.
 
