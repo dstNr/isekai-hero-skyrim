@@ -153,6 +153,19 @@ The [b]in-headset layer[/b] — threat labels as billboards in the world, notifi
 
 [i]The cause is not known. There is no VR install on the author's machine, so this one is being chased through player reports — if you turn [font=Courier New]VRInHeadsetLayer = 1[/font] on and it works, or crashes, saying so is genuinely the fastest way to get it fixed.[/i]
 
+[size=4][b]Source code and bug reports[/b][/size]
+This mod is open source (MIT). Everything is on GitHub — the full source, the developer
+changelog, the roadmap and the issue tracker:
+[url=https://github.com/dstNr/isekai-hero-skyrim][b]github.com/dstNr/isekai-hero-skyrim[/b][/url]
+
+[list]
+[*][url=https://github.com/dstNr/isekai-hero-skyrim/releases]Releases[/url] — every version, with the technical notes behind each change
+[*][url=https://github.com/dstNr/isekai-hero-skyrim/issues]Issues[/url] — what is known, what is planned, and where to report something
+[*][url=https://github.com/dstNr/isekai-hero-skyrim/blob/main/CHANGELOG.md]CHANGELOG.md[/url] — the long form of this page's changelog tab
+[/list]
+
+Bug reports are welcome either here on Nexus or as a GitHub issue, whichever you prefer.
+
 [size=4][b]Status[/b][/size]
 Early release. Feedback is very welcome, especially from heavily modded setups. If something misbehaves, attach [i]Documents\My Games\Skyrim Special Edition\SKSE\IsekaiHeroSKSE.log[/i] to your report — the mod logs everything it does.
 

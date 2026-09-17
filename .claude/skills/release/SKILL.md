@@ -90,6 +90,21 @@ drifted apart before, with the release notes missing entries the changelog had.
   check.
 - Create the next milestone and move anything unfinished or unconfirmed onto it.
 
+## 9b. The two pages players actually read
+
+Both drift every release, and neither is covered by `check.mjs`.
+
+- **`README.md`** is the GitHub landing page. The version badge, the runtime
+  badge, the Requirements table, the Installation paragraph and the Status
+  section all name facts that a release changes. So does any feature table
+  carrying numbers — the blessing table has been wrong before.
+- **`docs/NEXUS_DESCRIPTION.md`** must carry a link to the GitHub repository:
+  source, releases, issues. It is where bug reports come from and where players
+  find the changelog in full. Check that its requirements and installation text
+  still match what the FOMOD actually asks.
+
+Read both against the new `CHANGELOG.md` section, not from memory.
+
 ## 10. Hand over the Nexus upload
 
 The user uploads to Nexus themselves. Point them at `docs/NEXUS_CHANGELOG.md`

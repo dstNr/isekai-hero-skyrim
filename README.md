@@ -4,14 +4,14 @@
 
 <br>
 
-![Skyrim](https://img.shields.io/badge/Skyrim-SE%20%2F%20AE%201.6.1170-0b2942?style=flat-square)
+![Skyrim](https://img.shields.io/badge/Skyrim-SE%20%2F%20AE%20%2F%20VR%20up%20to%201.7.104-0b2942?style=flat-square)
 ![SKSE64](https://img.shields.io/badge/requires-SKSE64-1f4e79?style=flat-square)
 ![CommonLibSSE-NG](https://img.shields.io/badge/built%20with-CommonLibSSE--NG-2d82c8?style=flat-square)
-![Version](https://img.shields.io/badge/version-0.8.0%20pre--release-59ccff?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.9.0%20pre--release-59ccff?style=flat-square)
 ![Licence](https://img.shields.io/badge/licence-MIT-3fb950?style=flat-square)
 
 **An Isekai / "reincarnated hero" system for Skyrim Special Edition** — a native
-**SKSE C++ plugin** built on [CommonLibSSE-NG](https://github.com/CharmedBaryon/CommonLibSSE-NG),
+**SKSE C++ plugin** built on [CommonLibSSE-NG](https://github.com/alandtse/CommonLibSSE-NG),
 with its own ImGui UI drawn straight into the game's D3D11 swap chain.
 
 [**Nexus page**](https://www.nexusmods.com/skyrimspecialedition/mods/185548) ·
@@ -57,12 +57,19 @@ the blessing choice.
 | | NORMAL | HERO | ASCENDED |
 |---|---|---|---|
 | Skills | — | 50 | 100 |
-| Level (+ matching attributes) | — | 25 | 150 |
+| Health / Magicka / Stamina, raised *to* | — | 180 | 600 |
 | Perk points | — | 10 | 255 (engine max) |
-| Gold / Dragon souls / System Points | — | 2k / 3 / 5 | 25k / 20 / 500\* |
+| Gold / Dragon souls / System Points | — | 2k / 3 / 5 | 25k / 20 / 10 |
 | Reward scale on everything below | ×1 | ×2 | ×4 |
 
-<sub>\*current test value — will be rebalanced.</sub>
+**A blessing grants a body, never a character level.** Skyrim's levelled lists key off the
+character level, so the old level-150 grant dragged every scaling enemy to its ceiling the
+moment you reincarnated — which is why the world felt impossible and then trivial. Your
+skills, attributes and perks make you stronger; the world stays where it is. Every number
+in that table is an ini setting, and all eight are in the MCM.
+
+<sub>Raised *to* a target, never past it and never twice — so a DORMANT character awakening
+at level 80 receives only what they are missing.</sub>
 
 <details>
 <summary><b>Full, Shattered, Dormant, Custom — and Reboot</b></summary>
@@ -156,7 +163,8 @@ TRIVIAL/MANAGEABLE/DANGEROUS/LETHAL floating over what you are aiming at and ove
 fighting you, shrinking and dimming with distance. `F10` switches it off and on, and
 `IsekaiHero.ini` decides who gets a label.
 
-> *SE/AE only — it is drawn by the same overlay as the panels, which Skyrim VR does not get.*
+> *In VR the labels are billboards in the world rather than an overlay, and they ship
+> **off** — see the VR box under Requirements.*
 
 ### Dimensional Storage
 
@@ -192,6 +200,15 @@ creatures added by other mods count too. No quest markers and no busywork: it ti
 the background of however you were already playing, and it is what keeps System Points
 coming in once the 79 milestones run out.
 
+### Kill bounties and professions
+
+Beside the objectives, the System simply watches. Every kill is tallied against the quarry
+types it matches — the same keywords the objectives use — and each time a type crosses
+another 50 it pays out. Harvesting, smelting, tanning, smithing, alchemy and enchanting
+count as one track: every 25 of them pays a System Point. Neither needs an objective
+standing, and both thresholds are settings. A character who never fights and only crafts
+still earns.
+
 ### System Shop
 
 A third button beside Skill Tree and Storage in the status panel, opening its own screen of
@@ -212,6 +229,12 @@ flourish — as an HTML/CSS view instead of ImGui. Auto-detected at load, with a
 fallback whenever the patch or the framework is absent. The base mod depends on neither.
 See `prisma-patch/`, `src/UI/Prisma.cpp` and `package-prisma-patch.ps1`.
 
+An optional **MCM** component puts 28 of the 32 ini settings into SkyUI, each row carrying
+the explanation the ini gives it. It needs [SkyUI](https://www.nexusmods.com/skyrimspecialedition/mods/12604)
+and [MCM Helper](https://www.nexusmods.com/skyrimspecialedition/mods/53000); the plugin
+itself uses no MCM Helper API — the menu writes a plain ini that `Config` layers over the
+shipped one, so a key the menu never mentions falls through rather than resetting.
+
 ### Optional SkyrimNet integration *(experimental, untested)*
 
 When [SkyrimNet](https://github.com/MinLL/SkyrimNet-GamePlugin) (AI-driven NPCs) is
@@ -229,10 +252,11 @@ without SkyrimNet, and can be switched off in `IsekaiHero.ini`.
 
 | | |
 |---|---|
-| **Game** | Skyrim Special Edition / Anniversary Edition (developed against 1.6.1170) |
+| **Game** | Skyrim SE / AE / VR — one DLL covers all three, up to and including runtime **1.7.104** |
 | **Required** | [SKSE64](https://skse.silverlock.org/) |
 | **Required** | [Address Library for SKSE Plugins](https://www.nexusmods.com/skyrimspecialedition/mods/32444) |
 | **Optional** | [PrismaUI](https://www.nexusmods.com/skyrimspecialedition/mods/148718) — for the HTML/CSS UI patch |
+| **Optional** | [SkyUI](https://www.nexusmods.com/skyrimspecialedition/mods/12604) + [MCM Helper](https://www.nexusmods.com/skyrimspecialedition/mods/53000) — for the MCM component |
 | **Optional** | [SkyrimNet](https://github.com/MinLL/SkyrimNet-GamePlugin) — for AI NPC awareness |
 
 <details>
@@ -248,7 +272,17 @@ The built-in **ImGui overlay is disabled in VR** (it hooks the desktop swap chai
 crashes on the VR renderer and would never appear in the headset anyway), so in VR **all UI
 goes through the PrismaUI patch** — which needs PrismaUI's **1.5.0 VR build** (the stable
 1.4.x has no VR). Without it, the System menu cannot be shown in VR and the mod holds off
-the reincarnation prompt rather than stranding the character.
+the reincarnation prompt rather than stranding the character. A VR player has confirmed
+the menus work this way.
+
+The separate **in-headset layer** — threat labels as world billboards, notifications on a
+head-locked plane, and a controller chord — draws through
+[ImGui VR Helper](https://www.nexusmods.com/skyrimspecialedition/mods/149180) and **ships
+off** (`VRInHeadsetLayer = 0`). The same player reported that with the helper installed the
+game exits to the desktop as the mods finish loading, every time, without writing a crash
+log. The cause is not known and there is no VR install here to find it on, so it is off
+until it is. Turn it on and you are helping find it — see
+[#35](https://github.com/dstNr/isekai-hero-skyrim/issues/35).
 
 Still community-testing; see [docs/VR.md](docs/VR.md) for status, requirements and the test
 checklist.
@@ -259,8 +293,10 @@ checklist.
 
 ## Installation
 
-Install `dist/IsekaiHero-v*.7z` with your mod manager (data-relative layout) and activate
-`IsekaiHero.esp`. The plugin is **ESL-flagged** — it takes no load order slot, overrides no
+Install `dist/IsekaiHero-v*.7z` with your mod manager and activate `IsekaiHero.esp`. The
+archive is a **FOMOD**: it asks which interface you want (with the MCM offered beside it),
+whether the System boots itself or waits for your hotkey, and whether you want the threat
+readings. Everything it sets is one line in `IsekaiHero.ini` and can be changed afterwards. The plugin is **ESL-flagged** — it takes no load order slot, overrides no
 vanilla records, and its position in the load order does not matter.
 
 > **Safe to install mid-playthrough.** On an existing save the System boots on the next
@@ -395,9 +431,12 @@ keep returning V1.
 
 ## Status
 
-🧪 **Pre-release (v0.8.0).** Feature-complete for full-modlist test runs; balance values
-(starting System Points, node costs) are explicitly in a testing configuration. Version
-history in [CHANGELOG.md](CHANGELOG.md).
+🧪 **Pre-release (v0.9.0).** Feature-complete for full-modlist test runs. The balance
+values are no longer a testing configuration — 0.9.0 replaced the character-level grant
+with attribute targets and cut ASCENDED's 500 starting System Points to 10 — but they are
+now all ini settings, so disagreeing with them is a number, not a fork. Version history in
+[CHANGELOG.md](CHANGELOG.md), player-facing in
+[docs/NEXUS_CHANGELOG.md](docs/NEXUS_CHANGELOG.md).
 
 ## Licence
 
