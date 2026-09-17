@@ -21,6 +21,21 @@ with its own ImGui UI drawn straight into the game's D3D11 swap chain.
 
 </div>
 
+> ### ⚙️ Skyrim updated. **0.9.0 runs on the new runtime.**
+>
+> Steam's update took Skyrim to **1.7.104**, and SKSE plugins built against the old
+> library stopped loading with it — that library identifies a runtime by its minor
+> version, so `1.7` was read as plain SE, and its address-library reader only knows
+> database formats 1 and 2 while 1.7.99 and later ship format 5.
+>
+> **0.9.0 is built against [CommonLibSSE-NG](https://github.com/alandtse/CommonLibSSE-NG)
+> 7.5.4 and loads on 1.7.104 again.** Nothing was dropped to get there: the same single
+> DLL still serves **SE, AE and VR**, and older runtimes — 1.6.1170 included — are
+> unaffected. Update your **Address Library** along with the game; that is the one
+> requirement 1.7 changes.
+>
+> Staying on an older runtime? Nothing to do — install 0.9.0 like any other version.
+
 ---
 
 ## What it looks like
@@ -254,7 +269,7 @@ without SkyrimNet, and can be switched off in `IsekaiHero.ini`.
 |---|---|
 | **Game** | Skyrim SE / AE / VR — one DLL covers all three, up to and including runtime **1.7.104** |
 | **Required** | [SKSE64](https://skse.silverlock.org/) |
-| **Required** | [Address Library for SKSE Plugins](https://www.nexusmods.com/skyrimspecialedition/mods/32444) |
+| **Required** | [Address Library for SKSE Plugins](https://www.nexusmods.com/skyrimspecialedition/mods/32444) — on 1.7.x this has to be a current build; in VR, the VR Address Library for SKSEVR |
 | **Optional** | [PrismaUI](https://www.nexusmods.com/skyrimspecialedition/mods/148718) — for the HTML/CSS UI patch |
 | **Optional** | [SkyUI](https://www.nexusmods.com/skyrimspecialedition/mods/12604) + [MCM Helper](https://www.nexusmods.com/skyrimspecialedition/mods/53000) — for the MCM component |
 | **Optional** | [SkyrimNet](https://github.com/MinLL/SkyrimNet-GamePlugin) — for AI NPC awareness |

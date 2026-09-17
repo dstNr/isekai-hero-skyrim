@@ -12,6 +12,11 @@ You died. The System chose you. Begin your new life in Skyrim as a reincarnated 
 ## Description (BBCode)
 
 ```
+[size=4][b]⚙ Skyrim updated — version 0.9.0 runs on the new runtime[/b][/size]
+Steam's update took Skyrim to [b]1.7.104[/b], and SKSE plugins built against the older library stopped loading with it. [b]0.9.0 is rebuilt and loads on 1.7.104 again[/b] — still one download for [b]SE, AE and VR[/b], and older runtimes such as 1.6.1170 are unaffected. Update your [b]Address Library[/b] along with the game; that is the one requirement 1.7 changes. If you are staying on an older version of Skyrim, there is nothing to do.
+
+[line]
+
 [size=5][b]The System has chosen you. Your new life begins.[/b][/size]
 
 Isekai Hero turns your next playthrough into a reincarnation story: you arrive in Skyrim as a soul from another world, the [b]System[/b] binds itself to you, and from that moment on it rewards everything you achieve — with a UI and feel inspired by Solo Leveling and classic isekai progression fantasies.
@@ -131,9 +136,9 @@ An optional ini at [i]Data/SKSE/Plugins/IsekaiHero.ini[/i] — ships with sane d
 
 [size=4][b]Requirements[/b][/size]
 [list]
-[*]Skyrim Special Edition / Anniversary Edition / VR — one DLL covers all of them, up to and including runtime [b]1.7.104[/b]
+[*]Skyrim Special Edition / Anniversary Edition / VR — one download covers all of them, up to and including runtime [b]1.7.104[/b]
 [*][url=https://skse.silverlock.org/]SKSE64[/url]
-[*][url=https://www.nexusmods.com/skyrimspecialedition/mods/32444]Address Library for SKSE Plugins[/url]
+[*][url=https://www.nexusmods.com/skyrimspecialedition/mods/32444]Address Library for SKSE Plugins[/url] — on 1.7.x this has to be a current build; in VR, the VR Address Library for SKSEVR
 [/list]
 
 [size=4][b]Installation & Compatibility[/b][/size]
