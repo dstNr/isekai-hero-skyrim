@@ -13,6 +13,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <format>
 #include <mutex>
 #include <unordered_map>
 #include <utility>
@@ -582,7 +583,7 @@ namespace Isekai::UI {
 
     void RegisterVRHotkey(std::uint32_t a_button, std::function<void()> a_fn) {
         if (a_button == 0) {
-            logger::info("UI: no VR hotkey (VRMenuButton = 0)");
+            logger::debug("UI: no VR hotkey (VRMenuButton = 0)");
             return;
         }
         // Registered on BOTH hands. Which controller an event arrives under is a detail of
@@ -600,7 +601,7 @@ namespace Isekai::UI {
     void RegisterGamepadHotkey(std::uint32_t a_button, std::function<void()> a_fn,
                                std::uint32_t a_modifier) {
         if (a_button == 0) {
-            logger::info("UI: no gamepad hotkey (button = 0)");
+            logger::debug("UI: no gamepad hotkey (button = 0)");
             return;
         }
         // Same reasoning as ESC and Tab on the keyboard: B closes our panels, so a
@@ -625,25 +626,37 @@ namespace Isekai::UI {
 
     void LogHotkeys() {
         std::scoped_lock lock(g_hotkeyMutex);
-        if (g_hotkeys.empty()) {
-            logger::warn("UI: no hotkeys armed at all");
-            return;
-        }
-        std::string list;
+        // Sorted by id: the map's iteration order is not promised to survive a clear and
+        // re-insert, and the same table must always read as the same text.
+        std::vector<std::uint32_t> ids;
+        ids.reserve(g_hotkeys.size());
         for (const auto& [id, hk] : g_hotkeys) {
+            ids.push_back(id);
+        }
+        std::ranges::sort(ids);
+        std::string list;
+        for (const auto id : ids) {
             list += (list.empty() ? "" : ", ") + HotkeyName(id);
-            if (hk.modifier != 0) {
-                list += " + " + HotkeyName(hk.modifier);
+            if (const auto mod = g_hotkeys.at(id).modifier; mod != 0) {
+                list += " + " + HotkeyName(mod);
             }
         }
         // Every settings reload rebinds, and almost all of them rebind the same keys; a
-        // line per journal close would bury the one that says something changed.
+        // line per journal close would bury the one that says something changed. The empty
+        // table is remembered too, so its warning does not repeat either.
         static std::string s_last;
-        if (list == s_last) {
+        const std::string  text = ids.empty()
+            ? "UI: no hotkeys armed at all"
+            : std::format("UI: {} hotkey(s) armed: {}", ids.size(), list);
+        if (text == s_last) {
             return;
         }
-        s_last = list;
-        logger::info("UI: {} hotkey(s) armed: {}", g_hotkeys.size(), list);
+        s_last = text;
+        if (ids.empty()) {
+            logger::warn("{}", text);
+        } else {
+            logger::info("{}", text);
+        }
     }
 
     void InstallInput() {

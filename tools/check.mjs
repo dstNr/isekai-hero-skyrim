@@ -1355,10 +1355,14 @@ check("hotkeys: every registration is rebindable, and a settings reload rebinds"
   const from = sys.indexOf("void ReloadSettings()");
   need(from >= 0, "ReloadSettings not found — parser stale?");
   const reload = sys.slice(from, sys.indexOf("\n        }", from));
-  need(reload.includes("BindAllHotkeys();"),
+  need(reload.includes("BindAllHotkeys("),
        "ReloadSettings does not call BindAllHotkeys — a rebound key waits for a restart");
+  need(/BindAllHotkeys\(\s*(?:\/\*[^*]*\*\/\s*)?false\s*\)/.test(reload),
+       "ReloadSettings must call BindAllHotkeys(false) — a rebind stays out of the log");
+  need(/kDataLoaded:[\s\S]*?BindAllHotkeys\(\s*(?:\/\*[^*]*\*\/\s*)?true\s*\)/.test(sys),
+       "the kDataLoaded block must call BindAllHotkeys(true) so load logs what it bound");
   // The definition, not the forward declaration ReloadSettings needs above it.
-  const bindAll = sys.slice(sys.indexOf("void BindAllHotkeys() {"));
+  const bindAll = sys.slice(sys.indexOf("void BindAllHotkeys(bool a_log) {"));
   need(/ClearHotkeys\(\)/.test(bindAll.slice(0, 800)),
        "BindAllHotkeys does not clear the table first — a key set to 0 would stay armed");
 

@@ -36,8 +36,9 @@ namespace Isekai::Progression {
     void Install();
 
     // Register the system-menu hotkeys from the current Config. Call after
-    // UI::ClearHotkeys(), at load and again whenever the settings are re-read.
-    void BindHotkeys();
+    // UI::ClearHotkeys(), at load and again whenever the settings are re-read. a_log is
+    // true at load only; a rebind stays quiet so a journal close does not write to the log.
+    void BindHotkeys(bool a_log);
 
     // Open the System status screen — exactly what the hotkey does, including the choice
     // between the web view and the built-in panel. Exported so another entry point (the

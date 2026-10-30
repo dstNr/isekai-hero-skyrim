@@ -233,19 +233,23 @@ namespace Isekai::UI {
         constexpr std::size_t kMaxLabels = 12;
     }
 
-    void BindThreatLabelHotkeys() {
+    void BindThreatLabelHotkeys(bool a_log) {
         // The key is armed in VR too now. It used to be skipped because VR had no overlay
         // to draw on at all; the labels exist there as world billboards, so the toggle has
         // something to toggle. A VR player without a keyboard simply never presses it —
         // that is a reason to also offer a controller binding, not to withhold the key.
         const auto key = Config::ThreatLabelKey();
         if (key == 0) {
-            logger::info("UI: no threat-label key (ThreatLabelKey = 0)");
+            if (a_log) {
+                logger::info("UI: no threat-label key (ThreatLabelKey = 0)");
+            }
             return;
         }
         RegisterHotkey(key, []() { ToggleThreatLabels(); });
-        logger::info("UI: {} toggles the threat labels (currently {})", Config::KeyName(key),
-                     ThreatLabelsVisible() ? "on" : "off");
+        if (a_log) {
+            logger::info("UI: {} toggles the threat labels (currently {})", Config::KeyName(key),
+                         ThreatLabelsVisible() ? "on" : "off");
+        }
     }
 
     bool ThreatLabelsVisible() {

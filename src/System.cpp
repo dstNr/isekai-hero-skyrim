@@ -693,14 +693,14 @@ namespace Isekai {
         // reincarnation runs exactly once per character.
         // ------------------------------------------------------------------
 
-        void BindAllHotkeys();
+        void BindAllHotkeys(bool a_log);
 
         // Re-read both inis and re-push the handful of values that are cached rather than
         // read live. Hotkeys are among them: they rebind here too, so nothing in [Hotkey]
         // needs a restart any more.
         void ReloadSettings() {
             Config::Load();
-            BindAllHotkeys();
+            BindAllHotkeys(/*a_log=*/false);  // a rebind is silent; load already said it all
             ::Isekai::UI::Style::g_userScale = Config::UiScale();
         }
 
@@ -1118,25 +1118,28 @@ namespace Isekai {
         // The same grant on a key, for when a panel of ours owns the screen: the console
         // cannot be opened then, but hotkeys still arrive (the input sink dispatches them
         // before it checks whether a panel is capturing). Off unless the ini names a key.
-        void BindDebugPointsKey() {
+        void BindDebugPointsKey(bool a_log) {
             const auto key = Config::DebugPointsKey();
             if (key == 0) {
                 return;
             }
             constexpr std::int32_t kGrant = 100;
             UI::RegisterHotkey(key, []() { GrantDebugPoints(kGrant); });
-            logger::info("Debug: hotkey {} grants {} System Points", Config::KeyName(key), kGrant);
+            if (a_log) {
+                logger::info("Debug: hotkey {} grants {} System Points", Config::KeyName(key),
+                             kGrant);
+            }
         }
 
         // Every hotkey the mod owns, bound from the current Config. The table is emptied
         // first so a key the player switched off (set to 0) or moved does not stay armed
         // under its old code. Runs at load and again from ReloadSettings.
-        void BindAllHotkeys() {
+        void BindAllHotkeys(bool a_log) {
             UI::ClearHotkeys();
-            Progression::BindHotkeys();
-            SelfTest::BindHotkeys();       // diagnostic hotkey, off unless the ini sets one
-            UI::BindThreatLabelHotkeys();  // the on/off key for the floating verdicts
-            BindDebugPointsKey();          // the grant on a key, off unless the ini sets one
+            Progression::BindHotkeys(a_log);
+            SelfTest::BindHotkeys(a_log);       // diagnostic hotkey, off unless the ini sets one
+            UI::BindThreatLabelHotkeys(a_log);  // the on/off key for the floating verdicts
+            BindDebugPointsKey(a_log);          // the grant on a key, off unless the ini sets one
             UI::LogHotkeys();              // the table the input handler actually consults
         }
 
@@ -1181,7 +1184,7 @@ namespace Isekai {
                 Quests::Install();      // watches kills for the standing objective
                 Professions::Install();  // harvesting and crafting feed the System
                 InstallConsoleCommand();  // IsekaiPoints [n]
-                BindAllHotkeys();       // every hotkey, from the ini just read
+                BindAllHotkeys(/*a_log=*/true);  // every hotkey, from the ini just read
 
                 if (auto* ui = RE::UI::GetSingleton()) {
                     ui->AddEventSink<RE::MenuOpenCloseEvent>(MenuWatcher::GetSingleton());

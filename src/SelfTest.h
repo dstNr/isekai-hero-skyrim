@@ -16,8 +16,9 @@
 namespace Isekai::SelfTest {
 
     // Register the self-test hotkey (see Config::SelfTestKey). Call after
-    // UI::ClearHotkeys(), at load and again whenever the settings are re-read.
-    void BindHotkeys();
+    // UI::ClearHotkeys(), at load and again whenever the settings are re-read. a_log is
+    // true at load only; a rebind stays quiet so a journal close does not write to the log.
+    void BindHotkeys(bool a_log);
 
     // Run every check and write the report to the log. Main thread only.
     // Safe at any time: it only reads state, never changes it.

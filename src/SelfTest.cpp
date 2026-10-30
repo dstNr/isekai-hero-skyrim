@@ -588,17 +588,21 @@ namespace Isekai::SelfTest {
         }
     }
 
-    void BindHotkeys() {
+    void BindHotkeys(bool a_log) {
         // Scan code 0 means "off" — registering it armed a hotkey no key can ever produce
         // and then logged "hotkey 0x00 runs the self-test", which reads as if it were
         // ready. That line is the first thing anyone checks when the key does nothing.
         const auto key = Config::SelfTestKey();
         if (key == 0) {
-            logger::info("SelfTest: no hotkey (SelfTestKey = 0). The report is written "
-                         "automatically after every game load anyway.");
+            if (a_log) {
+                logger::info("SelfTest: no hotkey (SelfTestKey = 0). The report is written "
+                             "automatically after every game load anyway.");
+            }
             return;
         }
         UI::RegisterHotkey(key, []() { Run(/*a_notify=*/true); });
-        logger::info("SelfTest: hotkey {} runs the self-test", Config::KeyName(key));
+        if (a_log) {
+            logger::info("SelfTest: hotkey {} runs the self-test", Config::KeyName(key));
+        }
     }
 }

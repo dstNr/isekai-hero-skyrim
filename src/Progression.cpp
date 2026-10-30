@@ -839,7 +839,7 @@ namespace Isekai::Progression {
         }
     }
 
-    void BindHotkeys() {
+    void BindHotkeys(bool a_log) {
         UI::RegisterHotkey(Config::SystemMenuKey(), ShowStatusPanel,
                            Config::SystemMenuModifier());
         UI::RegisterGamepadHotkey(Config::GamepadMenuButton(), ShowStatusPanel,
@@ -848,8 +848,10 @@ namespace Isekai::Progression {
         if constexpr (kEnableDebugGrant) {
             UI::RegisterHotkey(kDebugGrantKey, DebugGrantNext);
         }
-        logger::info("Progression: system-menu hotkey registered (key={:#x}, modifier={:#x})",
-                     Config::SystemMenuKey(), Config::SystemMenuModifier());
+        if (a_log) {
+            logger::info("Progression: system-menu hotkey registered (key={:#x}, modifier={:#x})",
+                         Config::SystemMenuKey(), Config::SystemMenuModifier());
+        }
     }
 
     void CatchUpOnLoad() {

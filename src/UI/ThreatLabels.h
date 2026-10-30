@@ -22,8 +22,9 @@
 namespace Isekai::UI {
 
     // Arm the on/off key (Config::ThreatLabelKey) from the current Config. Call after
-    // UI::ClearHotkeys(), at load and again whenever the settings are re-read.
-    void BindThreatLabelHotkeys();
+    // UI::ClearHotkeys(), at load and again whenever the settings are re-read. a_log is
+    // true at load only; a rebind stays quiet so a journal close does not write to the log.
+    void BindThreatLabelHotkeys(bool a_log);
 
     // Draw the labels. Called by the overlay once per frame, inside an ImGui frame.
     // Cheap no-op when the feature is switched off in the ini or by the key.
