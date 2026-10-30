@@ -28,6 +28,39 @@ Log lines to keep an eye on throughout: the mod writes what it does, so a test t
 
 ## Priority 1 — changed most recently, least proven
 
+### 1.0 The 0.9.1 fixes (#36, #37, #38)
+
+Three reports, three checks. Test from the packaged archive in MO2 — `build.bat` does not
+reach it. The log for all three is the modlist's:
+`Documents\My Games\Skyrim.INI\SKSE\IsekaiHeroSKSE.log`.
+
+**A rebound hotkey takes hold when the MCM closes (#37).** MCM, **Hotkeys** page.
+
+| Step | Expected |
+|---|---|
+| Set **Toggle threat labels** to F9, close the MCM. | The log gains a `UI: N hotkey(s) armed:` line that lists F9. |
+| Press F9 in game. | The threat labels toggle. |
+| Press F10 (the old key). | Nothing happens. |
+| Set **Toggle threat labels** to unmapped, close the MCM, press F9. | Nothing happens, and the next `hotkey(s) armed` line no longer lists F9. |
+| Open and close the journal twice, changing nothing. | The log gains **no** new `hotkey(s) armed` line - an unchanged table stays quiet. |
+
+**The chest stays out of sight (#38).** On a **0.9.0 save that already has a chest.**
+
+| Step | Expected |
+|---|---|
+| Open the storage from the status panel five times in an interior, and five times in an exterior. Each time, look around. | The chest is never visible, never standing next to you. |
+| Take an item out and put one in. | Both work as before. |
+| Read the log: each open and each close wrote a `Storage: chest 0x... after open` or `... at close` line (cell, z, player z, 3D loaded or not). | Present for every open. |
+| Search the log for `is not where it was sunk`. | **No match.** If there is one, keep the file and send it: the line says how far above the sink depth the chest stood. |
+
+**Readiness names what it waits for (#36).** Start a **new game** with `AutoStart` on.
+
+| Step | Expected |
+|---|---|
+| Play through the intro, then read the log. | `Readiness: not ready — ...` lines during the intro, each naming the blocker (`3D not loaded`, `character creation open`, `loading screen`, `movement controls locked` with an `enabledControls=` mask, ...). One line per change, not one per tick. |
+| Look for the line after the last blocker. | `Readiness: ready` appears **once**. |
+| Look at what follows it. | The boot sequence starts only after that line. |
+
 ### 1.1 System Quests (new, and it touched the save format)
 
 **Setting up.** Objectives now arrive on a **timer** — 12 game hours for the first of a
