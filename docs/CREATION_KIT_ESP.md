@@ -180,9 +180,18 @@ Change on the duplicate:
 | **Name** | `Dimensional Storage` |
 | **Respawns** | ❌ **ABSOLUTELY UNTICK** |
 | Contents (item list) | delete everything — the chest starts empty |
+| **Model** | `isekai\storage\empty.nif` — replaces the inherited chest mesh |
 
 > ⚠️ **`Respawns` is the critical checkbox.** If it stays set, **Skyrim empties your chest
 > automatically every few in-game days.** Your items would be gone.
+
+> **The model is deliberately empty.** The chest is a real placed reference, parked 3000
+> units below the player, and players still saw it standing beside them now and then
+> (#38). `meshes/isekai/storage/empty.nif` holds a single `BSFadeNode` with no geometry
+> and no collision, so wherever the reference ends up there is nothing to see or bump
+> into. Anyone rebuilding this record
+> in the CK must set the model back to `isekai\storage\empty.nif` — the duplicated chest
+> mesh is exactly what this replaces. `node tools/check.mjs` fails if it is anything else.
 
 ---
 

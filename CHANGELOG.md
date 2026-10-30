@@ -12,6 +12,13 @@ All notable changes to Isekai Hero are documented here. The format follows
   re-read the inis, so a rebound key kept its old binding until the game restarted. The
   reload now clears the table and rebinds every hotkey from the fresh values, which also
   disarms a key set to 0.
+- **The Dimensional Storage chest has nothing left to see** (refs #38). The chest is a real
+  reference parked 3000 units below the player, yet players sometimes found it standing
+  beside them. Its base record (`IsekaiStorageContainer`, CONT `0xD7A`) now uses
+  `meshes/isekai/storage/empty.nif` — a single `BSFadeNode` with no geometry and no
+  collision, written byte by byte as a minimal SSE NIF — so wherever the reference ends up,
+  nothing shows. The chest's position is now also logged after it opens and closes, so a
+  report of it surfacing again says where it actually was.
 
 ## [0.9.0] — 2026-09-17
 

@@ -1178,9 +1178,10 @@ function parseEsp() {
         const dsize = buf.readUInt32LE(off + 4);
         const rflags = buf.readUInt32LE(off + 8);
         const fid = buf.readUInt32LE(off + 12);
-        // Compressed records are rare here and we only need the EDID; skip if so.
+        // Compressed records are rare here and nothing reads into them; their body stays
+        // empty rather than half-parsed.
         const body = (rflags & 0x00040000) ? Buffer.alloc(0) : buf.subarray(off + 24, off + 24 + dsize);
-        recs.push({ sig, formID: fid, local: fid & 0x00ffffff, edid: edidOf(body) });
+        recs.push({ sig, formID: fid, local: fid & 0x00ffffff, edid: edidOf(body), body });
         off += 24 + dsize;
       }
     }
@@ -1245,6 +1246,56 @@ check("ESP: the ability and sound tables have their expected sizes", () => {
        `Passives lists ${abilities} abilities but the self-test expects ${expected[1]}`);
   need(sounds === 4, `Sounds lists ${sounds} descriptors, expected 4`);
   return `${abilities} abilities, ${sounds} sounds`;
+});
+
+check("ESP: the storage chest's model is empty and ships", () => {
+  // The Dimensional Storage chest is a real reference parked under the player. Players
+  // still saw it beside them now and then (#38), so the base record carries a model with
+  // nothing in it: wherever the reference ends up, there is nothing to see. Rebuilding the
+  // record in the Creation Kit would quietly put a chest mesh back.
+  const { recs } = parseEsp();
+  const chest = recs.find((r) => r.sig === "CONT" && r.local === 0xd7a);
+  need(chest, "CONT 0xD7A (IsekaiStorageContainer) is missing from the ESP");
+  need(chest.body.length > 0, "CONT 0xD7A is compressed, so its MODL cannot be read");
+  let modl = null;
+  for (let i = 0; i + 6 <= chest.body.length;) {
+    const sig = chest.body.subarray(i, i + 4).toString("ascii");
+    const size = chest.body.readUInt16LE(i + 4);
+    if (sig === "MODL") modl = chest.body.subarray(i + 6, i + 6 + size).toString("latin1").replace(/\0.*$/s, "");
+    i += 6 + size;
+  }
+  need(modl !== null, "CONT 0xD7A has no MODL");
+  const want = "isekai\\storage\\empty.nif";
+  need(modl.toLowerCase() === want, `the chest's model is ${modl}, expected ${want}`);
+
+  const nifPath = join(ROOT, "meshes/isekai/storage/empty.nif");
+  need(existsSync(nifPath), "meshes/isekai/storage/empty.nif does not exist");
+  const nif = readFileSync(nifPath);
+  const head = "Gamebryo File Format, Version 20.2.0.7\n";
+  need(nif.subarray(0, head.length).toString("latin1") === head,
+       "empty.nif does not start with the 20.2.0.7 header string");
+  // Header after the string: version, endian, user version, block count, BS version, then
+  // three byte-length-prefixed export strings, then the block-type table.
+  let o = head.length;
+  need(nif.readUInt32LE(o) === 0x14020007, "empty.nif is not version 20.2.0.7");
+  o += 4 + 1;
+  need(nif.readUInt32LE(o) === 12, "empty.nif user version is not 12");
+  o += 4;
+  const blocks = nif.readUInt32LE(o); o += 4;
+  need(nif.readUInt32LE(o) === 100, "empty.nif BS version is not 100 (Skyrim SE)");
+  o += 4;
+  for (let s = 0; s < 3; s++) o += 1 + nif[o];
+  const nTypes = nif.readUInt16LE(o); o += 2;
+  const types = [];
+  for (let t = 0; t < nTypes; t++) {
+    const len = nif.readUInt32LE(o);
+    types.push(nif.subarray(o + 4, o + 4 + len).toString("latin1"));
+    o += 4 + len;
+  }
+  need(blocks === 1, `empty.nif has ${blocks} blocks, expected 1`);
+  need(types.length === 1 && types[0] === "BSFadeNode",
+       `empty.nif block types are [${types.join(", ")}], expected [BSFadeNode]`);
+  return `MODL ${modl}; empty.nif is 1 × BSFadeNode, ${nif.length} bytes`;
 });
 
 /* -- 7. milestones --------------------------------------------------------- */
