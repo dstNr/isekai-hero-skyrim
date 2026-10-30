@@ -588,7 +588,7 @@ namespace Isekai::SelfTest {
         }
     }
 
-    void Install() {
+    void BindHotkeys() {
         // Scan code 0 means "off" — registering it armed a hotkey no key can ever produce
         // and then logged "hotkey 0x00 runs the self-test", which reads as if it were
         // ready. That line is the first thing anyone checks when the key does nothing.

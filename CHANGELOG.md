@@ -4,6 +4,15 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
 
+## [Unreleased]
+
+### Fixed
+- **A changed hotkey takes effect when the MCM closes, not after a restart** (refs #37).
+  Hotkeys were registered once at load while the settings reload on a journal close only
+  re-read the inis, so a rebound key kept its old binding until the game restarted. The
+  reload now clears the table and rebinds every hotkey from the fresh values, which also
+  disarms a key set to 0.
+
 ## [0.9.0] — 2026-09-17
 
 ### Changed

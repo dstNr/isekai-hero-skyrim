@@ -233,7 +233,7 @@ namespace Isekai::UI {
         constexpr std::size_t kMaxLabels = 12;
     }
 
-    void InstallThreatLabels() {
+    void BindThreatLabelHotkeys() {
         // The key is armed in VR too now. It used to be skipped because VR had no overlay
         // to draw on at all; the labels exist there as world billboards, so the toggle has
         // something to toggle. A VR player without a keyboard simply never presses it —

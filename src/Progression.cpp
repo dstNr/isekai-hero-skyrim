@@ -837,7 +837,9 @@ namespace Isekai::Progression {
             source->AddEventSink<RE::TESQuestStartStopEvent>(QuestWatcher::GetSingleton());
             logger::info("Progression: quest watcher armed (stage + start/stop)");
         }
+    }
 
+    void BindHotkeys() {
         UI::RegisterHotkey(Config::SystemMenuKey(), ShowStatusPanel,
                            Config::SystemMenuModifier());
         UI::RegisterGamepadHotkey(Config::GamepadMenuButton(), ShowStatusPanel,

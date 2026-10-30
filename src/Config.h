@@ -45,7 +45,7 @@ namespace Isekai::Config {
     [[nodiscard]] float TextSpeed();
 
     // The key that opens the [ SYSTEM ] menu, as a DirectInput scan code. Default 0x1F
-    // (S). Read once at load; the hotkey is registered from it.
+    // (S). Re-read, and the hotkey rebound, whenever the journal (and so the MCM) closes.
     [[nodiscard]] std::uint32_t SystemMenuKey();
 
     // Scan code that must be held with the key above. Default 0x36 (Right Shift);

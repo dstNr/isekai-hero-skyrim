@@ -35,6 +35,10 @@ namespace Isekai::Progression {
     // Register the quest watcher. Call once, at kDataLoaded.
     void Install();
 
+    // Register the system-menu hotkeys from the current Config. Call after
+    // UI::ClearHotkeys(), at load and again whenever the settings are re-read.
+    void BindHotkeys();
+
     // Open the System status screen — exactly what the hotkey does, including the choice
     // between the web view and the built-in panel. Exported so another entry point (the
     // status screen's own "new task" button, which has to come back to a refreshed panel)

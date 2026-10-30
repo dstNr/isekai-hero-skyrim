@@ -33,7 +33,12 @@ namespace Isekai::UI {
     void RegisterGamepadHotkey(std::uint32_t a_button, std::function<void()> a_fn,
                                std::uint32_t a_modifier = 0);
 
-    // Log every hotkey that ended up armed. Call once, after everything has registered.
+    // Forget every registered hotkey, ready for a rebind from the current Config. The
+    // keys currently held down are left alone: a key held through a rebind is still held.
+    void ClearHotkeys();
+
+    // Log every hotkey that ended up armed. Call after everything has registered; it says
+    // nothing when the table is the same as the last time it logged.
     // Each module logs its own registration already, but those lines are scattered
     // through the load log and say what a module INTENDED — this is the table the input
     // handler actually consults, which is the only thing that answers "why does my key

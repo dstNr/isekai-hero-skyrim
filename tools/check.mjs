@@ -1350,6 +1350,32 @@ check("api: every node key the public header publishes still exists", () => {
   return `${published.length} keys published, all live`;
 });
 
+check("hotkeys: every registration is rebindable, and a settings reload rebinds", () => {
+  const sys = read("src/System.cpp");
+  const from = sys.indexOf("void ReloadSettings()");
+  need(from >= 0, "ReloadSettings not found — parser stale?");
+  const reload = sys.slice(from, sys.indexOf("\n        }", from));
+  need(reload.includes("BindAllHotkeys();"),
+       "ReloadSettings does not call BindAllHotkeys — a rebound key waits for a restart");
+  // The definition, not the forward declaration ReloadSettings needs above it.
+  const bindAll = sys.slice(sys.indexOf("void BindAllHotkeys() {"));
+  need(/ClearHotkeys\(\)/.test(bindAll.slice(0, 800)),
+       "BindAllHotkeys does not clear the table first — a key set to 0 would stay armed");
+
+  // Every Register*Hotkey call outside Input.cpp must sit in a function named Bind*.
+  const offenders = [];
+  for (const f of cppSources().filter((p) => !p.endsWith("UI/Input.cpp"))) {
+    const src = read(f);
+    for (const m of src.matchAll(/Register(?:Gamepad|VR)?Hotkey\(/g)) {
+      const before = src.slice(0, m.index);
+      const fn = [...before.matchAll(/\n\s*(?:void|bool)\s+(\w+)\s*\(/g)].pop();
+      if (!fn || !fn[1].startsWith("Bind")) offenders.push(`${f} (in ${fn ? fn[1] : "?"})`);
+    }
+  }
+  need(offenders.length === 0, `hotkeys registered outside a Bind* function: ${offenders.join(", ")}`);
+  return "reload rebinds, all registrations rebindable";
+});
+
 /* -- report ---------------------------------------------------------------- */
 
 const pad = Math.max(...results.map((r) => r.name.length));

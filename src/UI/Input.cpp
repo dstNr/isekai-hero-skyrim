@@ -130,6 +130,15 @@ namespace Isekai::UI {
         std::mutex                               g_hotkeyMutex;
         std::unordered_map<std::uint32_t, Hotkey> g_hotkeys;
 
+        // Two settings on one key used to resolve silently: the later registration just
+        // overwrote the earlier one, and the feature that lost looked broken. Call with
+        // g_hotkeyMutex held, before the write.
+        void WarnIfBound(std::uint32_t a_id) {
+            if (g_hotkeys.contains(a_id)) {
+                logger::warn("UI: {} is bound twice — the later binding wins", HotkeyName(a_id));
+            }
+        }
+
         // Buttons currently held down, keyboard and gamepad alike, maintained from the
         // same event stream the hotkeys use — so modifier checks cannot drift from what
         // the game sees. Keyed by HotkeyId for the reason given above.
@@ -563,7 +572,9 @@ namespace Isekai::UI {
             return;
         }
         std::scoped_lock lock(g_hotkeyMutex);
-        g_hotkeys[HotkeyId(RE::INPUT_DEVICE::kKeyboard, a_scanCode)] = Hotkey{
+        const auto id = HotkeyId(RE::INPUT_DEVICE::kKeyboard, a_scanCode);
+        WarnIfBound(id);
+        g_hotkeys[id] = Hotkey{
             std::move(a_fn),
             a_modifier == 0 ? 0 : HotkeyId(RE::INPUT_DEVICE::kKeyboard, a_modifier)
         };
@@ -580,7 +591,9 @@ namespace Isekai::UI {
         // no way of telling which hand produced which number anyway.
         std::scoped_lock lock(g_hotkeyMutex);
         for (auto device : kVRDevices) {
-            g_hotkeys[HotkeyId(device, a_button)] = Hotkey{ a_fn, 0 };
+            const auto id = HotkeyId(device, a_button);
+            WarnIfBound(id);
+            g_hotkeys[id] = Hotkey{ a_fn, 0 };
         }
     }
 
@@ -598,8 +611,16 @@ namespace Isekai::UI {
             return;
         }
         std::scoped_lock lock(g_hotkeyMutex);
-        g_hotkeys[PadId(a_button)] = Hotkey{ std::move(a_fn),
-                                             a_modifier == 0 ? 0 : PadId(a_modifier) };
+        const auto id = PadId(a_button);
+        WarnIfBound(id);
+        g_hotkeys[id] = Hotkey{ std::move(a_fn), a_modifier == 0 ? 0 : PadId(a_modifier) };
+    }
+
+    void ClearHotkeys() {
+        // g_held stays as it is: a key still down through a rebind is still down, and
+        // forgetting it would make its release look like a fresh press of something else.
+        std::scoped_lock lock(g_hotkeyMutex);
+        g_hotkeys.clear();
     }
 
     void LogHotkeys() {
@@ -615,6 +636,13 @@ namespace Isekai::UI {
                 list += " + " + HotkeyName(hk.modifier);
             }
         }
+        // Every settings reload rebinds, and almost all of them rebind the same keys; a
+        // line per journal close would bury the one that says something changed.
+        static std::string s_last;
+        if (list == s_last) {
+            return;
+        }
+        s_last = list;
         logger::info("UI: {} hotkey(s) armed: {}", g_hotkeys.size(), list);
     }
 
