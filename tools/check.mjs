@@ -459,6 +459,28 @@ check("readiness: every blocker has a name, and System.cpp no longer owns the ch
   return `${names.length} blockers named`;
 });
 
+check("vr startup: the probe, the first Present and each PrismaUI call are logged", () => {
+  // #35: a VR game died silently between "overlay armed" and the next line we always log.
+  // Each step in that gap must leave a line, or the next report narrows nothing.
+  const ov = read("src/UI/Overlay.cpp");
+  const pr = read("src/UI/Prisma.cpp");
+  need(ov.includes("VR probe — creating") && ov.includes("VR probe — released"),
+       "the swap-chain probe must log before creating and after releasing");
+  need(ov.includes("Present before our patch is"), "Present's owning module must be logged before patching");
+  const hook = ov.slice(ov.indexOf("HRESULT WINAPI HookedPresent"));
+  const vr = hook.slice(0, hook.indexOf("static bool initTried"));
+  need(vr.includes("LogVRPresentSeen(") && vr.includes("first call returned"),
+       "the VR branch of HookedPresent must log the first call in and out");
+  const inst = pr.slice(pr.indexOf("void Install()"));
+  const req = inst.indexOf("requesting the API");
+  const api = inst.indexOf("RequestPluginAPI");
+  const crt = inst.indexOf("creating the view");
+  const view = inst.indexOf("CreateView(");
+  need(req >= 0 && req < api, "Prisma::Install must log before RequestPluginAPI");
+  need(crt >= 0 && crt < view, "Prisma::Install must log before CreateView");
+  return "probe, Present and Prisma steps logged";
+});
+
 check("shop: visible catalog matches the playground", () => {
   const cpp = parseShopCatalog();
   const visible = cpp.filter((e) => e.kind !== "OurItem" || e.localID);

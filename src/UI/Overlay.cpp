@@ -20,10 +20,14 @@
 #include <imgui.h>
 #include <imgui_impl_dx11.h>
 
+#include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <mutex>
 #include <string>
 
 namespace Isekai::UI {
@@ -194,14 +198,51 @@ namespace Isekai::UI {
         // and the helper's own frame callback is explicitly not it.
         bool g_vrMode = false;
 
+        // #35: a VR player's game dies silently right after the hook goes in, and the log
+        // could not say whether our Present was ever reached. These lines say it: every
+        // distinct swap chain that comes through (up to kMaxLoggedSwapChains — the
+        // "more than one swap chain in VR" suspect), and whether the very first call made
+        // it back out of the original. Logged from the render thread; the sink is _mt.
+        constexpr std::size_t kMaxLoggedSwapChains = 4;
+
+        void LogVRPresentSeen(IDXGISwapChain* a_swapChain) {
+            static std::atomic<bool> done{ false };
+            if (done.load(std::memory_order_relaxed)) {
+                return;
+            }
+            static std::mutex                                       lock;
+            static std::array<IDXGISwapChain*, kMaxLoggedSwapChains> seen{};
+            static std::size_t                                      count = 0;
+            const std::scoped_lock guard{ lock };
+            if (std::ranges::find(seen, a_swapChain) != seen.end() || done.load()) {
+                return;
+            }
+            seen[count++] = a_swapChain;
+            logger::info("UI: VR Present #{} reached our hook — swap chain {:p} (thread {})",
+                         count, static_cast<const void*>(a_swapChain), GetCurrentThreadId());
+            if (count == kMaxLoggedSwapChains) {
+                logger::info("UI: VR Present — {} swap chains seen, logging no more",
+                             kMaxLoggedSwapChains);
+                done.store(true, std::memory_order_relaxed);
+            }
+        }
+
         HRESULT WINAPI HookedPresent(IDXGISwapChain* a_swapChain, UINT a_syncInterval, UINT a_flags) {
             if (g_vrMode) {
+                LogVRPresentSeen(a_swapChain);
                 DrawVRFrame();
                 // Quests never ticked in VR before, because the only caller sat inside the
                 // flat overlay's frame. The System handing out work on its own schedule is
                 // not a flat-screen feature.
                 PollGameClock();
-                return g_originalPresent(a_swapChain, a_syncInterval, a_flags);
+                const HRESULT hr = g_originalPresent(a_swapChain, a_syncInterval, a_flags);
+                static std::atomic<bool> firstReturned{ false };
+                if (!firstReturned.exchange(true)) {
+                    logger::info("UI: VR Present — the first call returned from the original "
+                                 "({:#x})",
+                                 static_cast<std::uint32_t>(hr));
+                }
+                return hr;
             }
 
             static bool initTried = false;
@@ -284,6 +325,26 @@ namespace Isekai::UI {
                 return nullptr;
             }
         }
+
+        // Which module a code address belongs to, by file name only (never the path: it
+        // can carry the player's user name). If Present already points outside dxgi.dll
+        // before we patch it, another plugin hooked it first — the #35 question.
+        [[nodiscard]] std::string ModuleOf(const void* a_address) {
+            HMODULE module = nullptr;
+            if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                                        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                                    static_cast<LPCWSTR>(a_address), &module) ||
+                !module) {
+                return "no module";
+            }
+            wchar_t path[MAX_PATH]{};
+            if (!GetModuleFileNameW(module, path, MAX_PATH)) {
+                return "unnamed module";
+            }
+            // u8string, not string(): the latter throws on a name the code page can't hold.
+            const auto name = std::filesystem::path(path).filename().u8string();
+            return { reinterpret_cast<const char*>(name.data()), name.size() };
+        }
     }
 
     namespace {
@@ -330,6 +391,10 @@ namespace Isekai::UI {
             desc.Windowed = TRUE;
             desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
+            // #35: if another plugin hooks swap-chain creation to find the game's chain,
+            // this throwaway one is what it would catch. Both ends are logged so a crash
+            // between them, or right after the release, is visible as such.
+            logger::info("UI: VR probe — creating a throwaway D3D11 device and swap chain");
             IDXGISwapChain*      swapChain = nullptr;
             ID3D11Device*        device = nullptr;
             ID3D11DeviceContext* context = nullptr;
@@ -356,6 +421,8 @@ namespace Isekai::UI {
             }
             DestroyWindow(window);
             UnregisterClassA(wc.lpszClassName, wc.hInstance);
+            logger::info("UI: VR probe — released (swap chain was {:p}, vtable {:p})",
+                         static_cast<const void*>(swapChain), static_cast<const void*>(vtable));
             return vtable;
         }
     }
@@ -473,6 +540,7 @@ namespace Isekai::UI {
             return;
         }
         g_originalPresent = reinterpret_cast<PresentFn>(present);
+        logger::info("UI: Present before our patch is {:p} in {}", present, ModuleOf(present));
 
         REL::safe_write(reinterpret_cast<std::uintptr_t>(&vtable[kPresentVTableIndex]),
                         reinterpret_cast<std::uintptr_t>(&HookedPresent));

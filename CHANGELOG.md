@@ -25,6 +25,13 @@ All notable changes to Isekai Hero are documented here. The format follows
   ready check moved out of `System.cpp` into `Readiness`, runs the same tests in the same
   order, and now says which one failed (once per change) instead of just "not ready yet".
   When movement controls are the blocker, the raw `enabledControls` mask is logged too.
+- **VR startup logs every step between the overlay hook and the PrismaUI view** (refs #35).
+  A VR game with `VRInHeadsetLayer = 0` still died silently right after `overlay armed`,
+  and nothing after it was logged. The swap-chain probe now logs before creating and after
+  releasing its throwaway chain, the module that owns `Present` is named before we patch it
+  (anything other than `dxgi.dll` means another plugin hooked it first), the first VR
+  `Present` call is logged on the way in and out along with every distinct swap chain (up
+  to four), and each call into PrismaUI is marked before it is made.
 
 ## [0.9.0] — 2026-09-17
 

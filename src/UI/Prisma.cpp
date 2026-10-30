@@ -383,6 +383,10 @@ namespace Isekai::UI::Prisma {
     }
 
     void Install() {
+        // #35: a VR crash landed between the overlay hook and the next line we always log,
+        // and every exit below logs only once it is done. These mark each call into
+        // PrismaUI, so a crash inside one of them names it.
+        logger::info("Prisma: requesting the API");
         g_api = PRISMA_UI_API::RequestPluginAPI<PRISMA_UI_API::IVPrismaUI1>();
         if (!g_api) {
             logger::info("Prisma: PrismaUI not loaded — using the ImGui UI");
@@ -398,7 +402,9 @@ namespace Isekai::UI::Prisma {
             return;
         }
 
+        logger::info("Prisma: creating the view");
         g_view = g_api->CreateView(kViewPath, OnDomReady);
+        logger::info("Prisma: view {} created, registering listeners", g_view);
         if (!g_api->IsValid(g_view)) {
             logger::error("Prisma: CreateView failed — falling back to the ImGui UI");
             g_api = nullptr;
