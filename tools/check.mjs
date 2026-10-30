@@ -401,6 +401,20 @@ check("skill tree: no link is drawn through an unrelated node", () => {
 
 /* -- 3. shop catalog ------------------------------------------------------- */
 
+check("storage: the chest's position is logged after open and at close", () => {
+  // #38: players see the chest standing next to them. These two log lines decide whether
+  // the engine's queued half of MoveTo lands after the SetPosition in Open().
+  const src = read("src/Storage.cpp");
+  const open = src.indexOf("void Open(");
+  const act = src.indexOf("ActivateRef(", open);
+  need(open >= 0 && act >= 0, "Open() / its ActivateRef call not found");
+  need(src.indexOf('LogChestPosition(chest, "after open")', act) > act,
+       'Open() must call LogChestPosition(chest, "after open") after ActivateRef');
+  const w = src.indexOf("class ChestWatcher");
+  need(w >= 0, "ChestWatcher sink not found");
+  need(src.indexOf("LogChestPosition(", w) > w, "ChestWatcher must call LogChestPosition");
+});
+
 check("shop: visible catalog matches the playground", () => {
   const cpp = parseShopCatalog();
   const visible = cpp.filter((e) => e.kind !== "OurItem" || e.localID);

@@ -307,6 +307,68 @@ namespace Isekai::Storage {
             g_craftLoan.clear();
         }
 
+        // Where the chest is, as the engine sees it right now (#38).
+        //
+        // Open() buries the chest 3000 units under the player, and players report it
+        // standing next to them anyway. The suspect is the queued half of MoveTo landing
+        // after the SetPosition. This logs the chest right after Open() and again when its
+        // menu closes; a chest that is in the player's cell yet far above the sink depth
+        // gets a warning, and that one line settles the question.
+        void LogChestPosition(RE::TESObjectREFR* a_chest, std::string_view a_when) {
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            if (!a_chest || !player) {
+                return;
+            }
+
+            const auto* cell = a_chest->GetParentCell();
+            const auto chestZ = a_chest->GetPositionZ();
+            const auto playerZ = player->GetPositionZ();
+            logger::info("Storage: chest {:#x} {}: cell {:#x}, z {:.0f}, player z {:.0f}, 3D {}",
+                         a_chest->GetFormID(), a_when, cell ? cell->GetFormID() : 0, chestZ,
+                         playerZ, a_chest->Is3DLoaded() ? "loaded" : "not loaded");
+
+            const auto aboveTarget = chestZ - (playerZ - 3000.0f);
+            if (cell && cell == player->GetParentCell() && aboveTarget > 100.0f) {
+                logger::warn("Storage: chest {:#x} is not where it was sunk ({:.0f} units above target)",
+                             a_chest->GetFormID(), aboveTarget);
+            }
+        }
+
+        // Tells the storage chest's container menu apart from every other one (corpses,
+        // barrels, merchants) so the close-time position log fires for ours alone. The menu
+        // event carries no reference; the open menu's target handle is the only link.
+        class ChestWatcher : public RE::BSTEventSink<RE::MenuOpenCloseEvent> {
+        public:
+            static ChestWatcher* GetSingleton() {
+                static ChestWatcher singleton;
+                return std::addressof(singleton);
+            }
+
+            RE::BSEventNotifyControl ProcessEvent(
+                const RE::MenuOpenCloseEvent* a_event,
+                RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override {
+                if (!a_event || a_event->menuName != RE::ContainerMenu::MENU_NAME) {
+                    return RE::BSEventNotifyControl::kContinue;
+                }
+
+                if (a_event->opening) {
+                    RE::TESObjectREFR* chest = ResolveChest();
+                    RE::TESObjectREFRPtr target;
+                    RE::TESObjectREFR::LookupByHandle(RE::ContainerMenu::GetTargetRefHandle(),
+                                                      target);
+                    m_ours = chest && target && target.get() == chest;
+                } else if (m_ours) {
+                    m_ours = false;
+                    LogChestPosition(ResolveChest(), "at close");
+                }
+                return RE::BSEventNotifyControl::kContinue;
+            }
+
+        private:
+            ChestWatcher() = default;
+            bool m_ours = false;
+        };
+
         class CraftWatcher : public RE::BSTEventSink<RE::MenuOpenCloseEvent> {
         public:
             static CraftWatcher* GetSingleton() {
@@ -794,6 +856,7 @@ namespace Isekai::Storage {
 
         Sounds::Play(Sounds::Sfx::WindowOpen);
         chest->ActivateRef(player, 0, nullptr, 1, false);
+        LogChestPosition(chest, "after open");
     }
 
     void Install() {
@@ -817,6 +880,7 @@ namespace Isekai::Storage {
 
         if (auto* ui = RE::UI::GetSingleton()) {
             ui->AddEventSink<RE::MenuOpenCloseEvent>(CraftWatcher::GetSingleton());
+            ui->AddEventSink<RE::MenuOpenCloseEvent>(ChestWatcher::GetSingleton());
         }
         if (auto* holder = RE::ScriptEventSourceHolder::GetSingleton()) {
             holder->AddEventSink<RE::TESEquipEvent>(CodexWatcher::GetSingleton());
