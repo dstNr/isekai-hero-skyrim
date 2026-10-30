@@ -7,7 +7,7 @@ All notable changes to Isekai Hero are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
-- **A changed hotkey takes effect when the MCM closes, not after a restart** (refs #37).
+- **A changed hotkey takes effect when the MCM closes, not after a restart, and an unmapped key in the MCM now means "no key"** (refs #37).
   Hotkeys were registered once at load while the settings reload on a journal close only
   re-read the inis, so a rebound key kept its old binding until the game restarted. The
   reload now clears the table and rebinds every hotkey from the fresh values, which also

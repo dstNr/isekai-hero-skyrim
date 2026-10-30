@@ -157,6 +157,9 @@ namespace Isekai::Config {
 
         // A DirectInput scan code: a name ("F11"), hex ("0x1F") or decimal ("31"). Base 0
         // lets the same parse handle the last two. On garbage, keep the default passed in.
+        // SkyUI / MCM Helper stores -1 for an unmapped keymap: parse signed and read any
+        // negative as 0 ("off"), or stoul would wrap it to 0xFFFFFFFF, a "real" key. Large
+        // positive values are left alone, VRMenuButton ids go through here too.
         [[nodiscard]] std::uint32_t AsScanCode(const std::string& a_val, std::uint32_t a_def) {
             const std::string v = Lower(Trim(a_val));
             for (const auto& e : kKeyNames) {
@@ -165,7 +168,11 @@ namespace Isekai::Config {
                 }
             }
             try {
-                return static_cast<std::uint32_t>(std::stoul(a_val, nullptr, 0));
+                const long long n = std::stoll(a_val, nullptr, 0);
+                if (n < 0) {
+                    return 0;
+                }
+                return static_cast<std::uint32_t>(n);
             } catch (...) {
                 return a_def;
             }
@@ -443,6 +450,7 @@ namespace Isekai::Config {
         g_ascendedSystemPoints = 10;
         g_questRerollButton = false;
         g_selfTestKey = 0;
+        g_debugPointsKey = 0;
         g_logInputDiag = false;
 
         if (!ReadIni(kIniPath, false)) {

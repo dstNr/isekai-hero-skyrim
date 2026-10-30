@@ -42,6 +42,7 @@ reach it. The log for all three is the modlist's:
 | Press F9 in game. | The threat labels toggle. |
 | Press F10 (the old key). | Nothing happens. |
 | Set **Toggle threat labels** to unmapped, close the MCM, press F9. | Nothing happens, and the next `hotkey(s) armed` line no longer lists F9. |
+| Unmap the System menu **Modifier** in the MCM, close it, press S alone. | The System panel opens (an unmapped key means no modifier, not a bogus key). |
 | Open and close the journal twice, changing nothing. | The log gains **no** new `hotkey(s) armed` line - an unchanged table stays quiet. |
 
 **The chest stays out of sight (#38).** On a **0.9.0 save that already has a chest.**
@@ -58,8 +59,8 @@ reach it. The log for all three is the modlist's:
 | Step | Expected |
 |---|---|
 | Play through the intro, then read the log. | `Readiness: not ready — ...` lines during the intro, each naming the blocker (`3D not loaded`, `character creation open`, `loading screen`, `movement controls locked` with an `enabledControls=` mask, ...). One line per change, not one per tick. |
-| Look for the line after the last blocker. | `Readiness: ready` appears **once**. |
-| Look at what follows it. | The boot sequence starts only after that line. |
+| Look for the line after the last blocker. | `Readiness: ready` appears. A later blocker (for example the loading screen when an alternate start teleports out of its chargen room) may log again, followed by another ready. |
+| Look at what follows the first ready. | The boot sequence starts only after a `Readiness: ready` line. |
 
 ### 1.1 System Quests (new, and it touched the save format)
 

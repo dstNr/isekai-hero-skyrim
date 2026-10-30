@@ -880,7 +880,13 @@ namespace Isekai::Storage {
 
         if (auto* ui = RE::UI::GetSingleton()) {
             ui->AddEventSink<RE::MenuOpenCloseEvent>(CraftWatcher::GetSingleton());
-            ui->AddEventSink<RE::MenuOpenCloseEvent>(ChestWatcher::GetSingleton());
+            // ChestWatcher reads the menu's target through GetTargetRefHandle and
+            // LookupByHandle, which resolve via 2-argument relocation IDs. docs/VR.md
+            // forbids those on VR until verified, so VR skips the watcher; the "after open"
+            // log in Open() still runs on every runtime.
+            if (!REL::Module::IsVR()) {
+                ui->AddEventSink<RE::MenuOpenCloseEvent>(ChestWatcher::GetSingleton());
+            }
         }
         if (auto* holder = RE::ScriptEventSourceHolder::GetSingleton()) {
             holder->AddEventSink<RE::TESEquipEvent>(CodexWatcher::GetSingleton());

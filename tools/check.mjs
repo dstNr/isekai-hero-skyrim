@@ -415,6 +415,28 @@ check("storage: the chest's position is logged after open and at close", () => {
   need(src.indexOf("LogChestPosition(", w) > w, "ChestWatcher must call LogChestPosition");
 });
 
+check("config: an unmapped key (-1 from the MCM) reads as 0, not 0xFFFFFFFF", () => {
+  // #37: SkyUI stores -1 for "unmapped". stoul("-1") wraps to 0xFFFFFFFF, which every Bind*
+  // would take for a real key. AsScanCode must parse signed and map negatives to 0.
+  const src = read("src/Config.cpp");
+  const at = src.indexOf("std::uint32_t AsScanCode(");
+  need(at >= 0, "AsScanCode not found");
+  const end = src.indexOf("[[nodiscard]]", at);  // the next helper; CRLF-safe
+  const body = src.slice(at, end);
+  need(!/stoul\(/.test(body), "AsScanCode must not parse the raw value with stoul");
+  need(/stoll\(/.test(body), "AsScanCode must parse signed (stoll) first");
+  need(/<\s*0\s*\)\s*\{\s*return 0;/.test(body), "AsScanCode needs a negative branch that returns 0");
+});
+
+check("storage: the chest watcher is not registered on VR", () => {
+  // Its menu-target lookups resolve through 2-argument relocation IDs (docs/VR.md).
+  const src = read("src/Storage.cpp");
+  const reg = src.indexOf("AddEventSink<RE::MenuOpenCloseEvent>(ChestWatcher");
+  need(reg >= 0, "ChestWatcher registration not found");
+  need(/IsVR\(\)/.test(src.slice(Math.max(0, reg - 400), reg)),
+       "ChestWatcher must be registered only when !REL::Module::IsVR()");
+});
+
 check("readiness: every blocker has a name, and System.cpp no longer owns the check", () => {
   // #36: the log only said "not ready yet". The check lives in Readiness now and names
   // the condition that failed; System.cpp must not keep a second copy that stays silent.
