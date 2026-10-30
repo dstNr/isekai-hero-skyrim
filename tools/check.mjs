@@ -415,6 +415,28 @@ check("storage: the chest's position is logged after open and at close", () => {
   need(src.indexOf("LogChestPosition(", w) > w, "ChestWatcher must call LogChestPosition");
 });
 
+check("readiness: every blocker has a name, and System.cpp no longer owns the check", () => {
+  // #36: the log only said "not ready yet". The check lives in Readiness now and names
+  // the condition that failed; System.cpp must not keep a second copy that stays silent.
+  const h = read("src/Readiness.h");
+  const cpp = read("src/Readiness.cpp");
+  const en = h.match(/enum class Blocker[^{]*\{([^}]*)\}/);
+  need(en, "Blocker enum not found in Readiness.h");
+  const names = [...en[1].matchAll(/\bk\w+/g)].map((m) => m[0]);
+  need(names.length >= 2, "Blocker enum parsed to nothing");
+  const nameFn = cpp.slice(cpp.indexOf("Name(Blocker"));
+  for (const n of names) {
+    need(new RegExp(`case\\s+Blocker::${n}\\s*:`).test(nameFn), `Name() has no case for Blocker::${n}`);
+  }
+  const sys = read("src/System.cpp");
+  need(!/bool\s+IsPlayerReady\s*\(/.test(sys), "System.cpp still defines IsPlayerReady");
+  need(!sys.includes("g_firstReadyCell"), "System.cpp still owns g_firstReadyCell");
+  const hot = sys.indexOf("requested by hotkey, but the player is not ready yet");
+  need(hot >= 0 && sys.slice(hot, hot + 300).includes("Readiness::Name("),
+       "the not-ready log line must format Readiness::Name(");
+  return `${names.length} blockers named`;
+});
+
 check("shop: visible catalog matches the playground", () => {
   const cpp = parseShopCatalog();
   const visible = cpp.filter((e) => e.kind !== "OurItem" || e.localID);

@@ -38,6 +38,8 @@ add_commonlibsse_plugin(
         src/Config.h
         src/System.cpp
         src/System.h
+        src/Readiness.cpp
+        src/Readiness.h
         src/Passives.cpp
         src/Passives.h
         src/Plugin.cpp

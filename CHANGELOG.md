@@ -20,6 +20,12 @@ All notable changes to Isekai Hero are documented here. The format follows
   nothing shows. The chest's position is now also logged after it opens and closes, so a
   report of it surfacing again says where it actually was.
 
+### Changed
+- **The log names which readiness condition holds the awakening back** (refs #36). The
+  ready check moved out of `System.cpp` into `Readiness`, runs the same tests in the same
+  order, and now says which one failed (once per change) instead of just "not ready yet".
+  When movement controls are the blocker, the raw `enabledControls` mask is logged too.
+
 ## [0.9.0] — 2026-09-17
 
 ### Changed

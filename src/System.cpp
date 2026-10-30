@@ -9,6 +9,7 @@
 #include "Progression.h"
 #include "Professions.h"
 #include "Quests.h"
+#include "Readiness.h"
 #include "SelfTest.h"
 #include "SkillTree.h"
 #include "Shop.h"
@@ -610,36 +611,8 @@ namespace Isekai {
             DelayedMainThread(4500, []() { ShowPowerSelection(); });
         }
 
-        // True once the player is really playing: 3D loaded, not paused, past
-        // character creation, not on a loading screen, and in control (so we do
-        // not fire during the Helgen cart ride or any forced-walk cutscene).
-        [[nodiscard]] bool IsPlayerReady() {
-            auto* player = RE::PlayerCharacter::GetSingleton();
-            if (!player || !player->Is3DLoaded()) {
-                return false;
-            }
-
-            auto* ui = RE::UI::GetSingleton();
-            if (!ui || ui->GameIsPaused()) {
-                return false;
-            }
-            if (ui->IsMenuOpen("RaceSex Menu"sv) || ui->IsMenuOpen("Loading Menu"sv)) {
-                return false;
-            }
-
-            auto* controls = RE::ControlMap::GetSingleton();
-            if (!controls || !controls->IsMovementControlsEnabled()) {
-                return false;
-            }
-
-            return true;
-        }
-
-        // The cell the player was FIRST ready in. 0 = not seen yet.
-        RE::FormID g_firstReadyCell = 0;
-
         void TryTrigger() {
-            if (g_state.reincarnated || !IsPlayerReady()) {
+            if (g_state.reincarnated || !Readiness::IsPlayerReady()) {
                 return;
             }
 
@@ -658,30 +631,9 @@ namespace Isekai {
                 return;
             }
 
-            // "Ready" alone is not "in the game world". Character-creation start
-            // rooms (NYA, Alternate Start, ...) hand the player full control while
-            // they are still picking a face — the System fired the moment the room
-            // spawned. The tell: those rooms are interiors, and the real start
-            // arrives via a teleport out of them. So: if the first cell the player
-            // is ready in is an exterior, fire right away (vanilla starts, coc);
-            // if it is an interior, hold until the player reaches a DIFFERENT cell.
-            auto* player = RE::PlayerCharacter::GetSingleton();
-            auto* cell = player ? player->GetParentCell() : nullptr;
-            if (!cell) {
+            // "Ready" alone is not "in the game world" — see Readiness::InGameWorld.
+            if (!Readiness::InGameWorld()) {
                 return;
-            }
-
-            if (g_firstReadyCell == 0) {
-                g_firstReadyCell = cell->GetFormID();
-                if (cell->IsInteriorCell()) {
-                    logger::info(
-                        "Reincarnation armed, holding: first ready in interior {:#x} "
-                        "(likely a chargen room) — waiting for a cell change",
-                        g_firstReadyCell);
-                    return;
-                }
-            } else if (cell->GetFormID() == g_firstReadyCell && cell->IsInteriorCell()) {
-                return;  // still in the start room
             }
 
             BeginReincarnation();
@@ -1047,7 +999,7 @@ namespace Isekai {
 
         void RevertCallback(SKSE::SerializationInterface*) {
             g_state = State{};
-            g_firstReadyCell = 0;  // the next game gets a fresh chargen-room detection
+            Readiness::Reset();
             logger::info("State reverted to defaults (new game / pre-load)");
         }
 
@@ -1253,8 +1205,9 @@ namespace Isekai {
         // told us they are where they want the System to find them, which is the whole
         // point of AutoStart = 0. Readiness is still checked — a boot sequence during
         // character creation would be no more welcome for having been asked for.
-        if (!IsPlayerReady()) {
-            logger::info("Reincarnation requested by hotkey, but the player is not ready yet");
+        if (!Readiness::IsPlayerReady()) {
+            logger::info("Reincarnation requested by hotkey, but the player is not ready yet: {}",
+                         Readiness::Name(Readiness::Check()));
             return;
         }
         BeginReincarnation();
