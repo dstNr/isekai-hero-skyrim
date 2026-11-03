@@ -260,6 +260,28 @@ namespace Isekai {
                 PowerName(g_state.power), b.skillLevel, b.attrTarget, b.perkPoints, attrBonus,
                 b.gold, b.dragonSouls);
 
+            // Signal other plugins (e.g. a background picker) that the rebirth windows are
+            // done. Once per rebirth: the three ApplyReincarnation callers are mutually
+            // exclusive branches of the one selection chain, and a save load never reaches
+            // here. strArg = blessing (power tier) name, numArg = tier (0 NORMAL, 1 HERO,
+            // 2 ASCENDED; a DORMANT start reports NORMAL). Queued to the main thread so the
+            // event source is only ever touched there.
+            {
+                const std::string blessing = PowerName(g_state.power);
+                const float tier = static_cast<float>(static_cast<int>(g_state.power));
+                if (auto* task = SKSE::GetTaskInterface()) {
+                    task->AddTask([blessing, tier]() {
+                        if (auto* src = SKSE::GetModCallbackEventSource()) {
+                            SKSE::ModCallbackEvent ev{ "IsekaiHero_RebirthComplete", blessing.c_str(),
+                                                     tier, nullptr };
+                            src->SendEvent(&ev);
+                            logger::info("RebirthComplete sent: strArg={} numArg={}", blessing,
+                                         tier);
+                        }
+                    });
+                }
+            }
+
             // Tell SkyrimNet (if present) who the player now is, so AI NPCs can react to
             // the reincarnation. Persistent world-knowledge, third person. No-op without
             // SkyrimNet.

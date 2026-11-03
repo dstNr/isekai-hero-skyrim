@@ -21,6 +21,12 @@ All notable changes to Isekai Hero are documented here. The format follows
   report of it surfacing again says where it actually was.
 
 ### Changed
+- **A finished rebirth now signals other plugins with the `IsekaiHero_RebirthComplete` ModEvent.**
+  Sent through `SKSE::GetModCallbackEventSource()` right after the "Reincarnation applied" log
+  line, once per rebirth (all three selection paths end in the one `ApplyReincarnation`; a
+  save load never reaches it). `strArg` is the blessing's power name (NORMAL / HERO /
+  ASCENDED), `numArg` its tier (0 / 1 / 2; a DORMANT start reports NORMAL). The send is queued
+  to the main thread, and the log line `RebirthComplete sent: strArg=... numArg=...` marks it.
 - **The log names which readiness condition holds the awakening back** (refs #36). The
   ready check moved out of `System.cpp` into `Readiness`, runs the same tests in the same
   order, and now says which one failed (once per change) instead of just "not ready yet".
