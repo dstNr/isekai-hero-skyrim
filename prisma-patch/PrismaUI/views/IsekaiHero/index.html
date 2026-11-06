@@ -1808,8 +1808,23 @@ window.addEventListener("resize", () => {
   fitTree();
   if ($("screen-tree").classList.contains("active")) renderTree();
 });
+/* Esc. Ultralight's WebKit can deliver the key as keyCode 27 or keyIdentifier "U+001B"
+   without e.key being "Escape", so accept every form of it. */
+function isEscKey(e) {
+  return e.key === "Escape" || e.key === "Esc" || e.keyCode === 27 || e.which === 27 ||
+         e.keyIdentifier === "U+001B";
+}
+/* Diagnostics: the last eight keydowns, newest first, in the hidden #keyDiag, so a test
+   can read what actually reached the page (key|keyCode|which|keyIdentifier|code). */
+const KEY_LOG = [];
+window.addEventListener("keydown", (e) => {
+  KEY_LOG.unshift([e.key, e.keyCode, e.which, e.keyIdentifier, e.code].join("|"));
+  KEY_LOG.length = Math.min(KEY_LOG.length, 8);
+  const d = $("keyDiag");
+  if (d) d.textContent = KEY_LOG.join(" ; ");
+}, true);
 document.addEventListener("keydown", (e) => {
-  if (e.key !== "Escape") return;
+  if (!isEscKey(e)) return;
   if ($("screen-tree").classList.contains("active")) { closeTree(); return; }
   if ($("screen-shop").classList.contains("active")) { shopClose(); return; }
   if ($("screen-status").classList.contains("active")) { statusAction("close"); return; }
@@ -1820,5 +1835,6 @@ document.addEventListener("keydown", (e) => {
 });
 fitTree();
 </script>
+<div id="keyDiag" hidden></div>
 </body>
 </html>
