@@ -30,4 +30,8 @@ namespace Isekai::CraftHooks {
     // ingredients / soul gems in place. Same fallback contract as above: if they did not
     // install, the shuttle keeps covering those stations.
     [[nodiscard]] bool IterationHooksActive();
+
+    // Papyrus natives (script IsekaiHeroCraft, source in papyrus-api/Source/Scripts).
+    // Pass to SKSE::GetPapyrusInterface()->Register right after SKSE::Init.
+    bool RegisterPapyrus(RE::BSScript::IVirtualMachine* a_vm);
 }

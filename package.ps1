@@ -115,6 +115,15 @@ $mcmScripts = Join-Path $stage "Scripts"
 New-Item -ItemType Directory -Force $mcmScripts | Out-Null
 Copy-Item (Join-Path $root "mcm-patch\Scripts\IsekaiHeroMCM.pex") $mcmScripts
 
+# --- Papyrus API: IsekaiHeroCraft (the natives live in the DLL) ---
+# Always installed (requiredInstallFiles), unlike the MCM script above. The .pex binds the
+# natives for other mods' scripts; the .psc ships so a patch author can compile against
+# it. Run tools/pex-scrub.mjs on the .pex after every recompile.
+Copy-Item (Join-Path $root "papyrus-api\Scripts\IsekaiHeroCraft.pex") $mcmScripts
+$apiSource = Join-Path $stage "Source\Scripts"
+New-Item -ItemType Directory -Force $apiSource | Out-Null
+Copy-Item (Join-Path $root "papyrus-api\Source\Scripts\IsekaiHeroCraft.psc") $apiSource
+
 # --- panel icons ---
 $icons = Join-Path $plugins "IsekaiHero\icons"
 New-Item -ItemType Directory -Force $icons | Out-Null

@@ -7,6 +7,17 @@ All notable changes to Isekai Hero are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Ordinator's "Recycle Materials" no longer duplicates the crafting tokens, and "Fuel the Inferno" no longer burns a dragon soul for them.**
+  On menu close the token return moves up to a few hundred materials out of the player's
+  inventory into the storage chest. Every move raises `OnItemRemoved` on the player's
+  scripts; Ordinator's recycle effect (active while seated at an advanced bench) re-added
+  half of them with a "Materials Recycled" message each, and its refund effect counted the
+  return as a craft. The DLL now exports the Papyrus native
+  `IsekaiHeroCraft.IsStorageTransfer(ObjectReference)` — true when the container is the
+  Dimensional Storage chest — and ships `Scripts\IsekaiHeroCraft.pex` plus its source. A
+  listener patch passes `akDestContainer` and skips the move. It is keyed on the event's own
+  container rather than a "lending now" flag because the queued events can run long after
+  the return finished. The Ordinator patch itself is not part of this mod.
 - **A changed hotkey takes effect when the MCM closes, not after a restart, and an unmapped key in the MCM now means "no key"** (refs #37).
   Hotkeys were registered once at load while the settings reload on a journal close only
   re-read the inis, so a rebound key kept its old binding until the game restarted. The

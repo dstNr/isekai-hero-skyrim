@@ -88,6 +88,8 @@ const xml = `<?xml version="1.0" encoding="utf-8"?>
     <file   source="LICENSE"                           destination="LICENSE"/>
     <file   source="SKSE\\Plugins\\IsekaiHeroSKSE.dll"   destination="SKSE\\Plugins\\IsekaiHeroSKSE.dll"/>
     <folder source="SKSE\\Plugins\\IsekaiHero"           destination="SKSE\\Plugins\\IsekaiHero"/>
+    <file   source="Scripts\\IsekaiHeroCraft.pex"        destination="Scripts\\IsekaiHeroCraft.pex"/>
+    <file   source="Source\\Scripts\\IsekaiHeroCraft.psc" destination="Source\\Scripts\\IsekaiHeroCraft.psc"/>
     <folder source="Sound"                             destination="Sound"/>
     <folder source="meshes"                            destination="meshes"/>
     <folder source="textures"                          destination="textures"/>

@@ -88,6 +88,12 @@ namespace Isekai::CraftHooks {
         std::atomic<long long>             g_contextExpiryMs{ 0 };    // backstop for an aborted activate
         std::atomic<RE::InventoryChanges*> g_playerInvChanges{ nullptr };  // captured on the main thread
 
+        // FormID of the storage chest the tokens are lent from and returned to, published
+        // on the main thread whenever a lend/return resolves the chest. Read by the
+        // Papyrus native IsekaiHeroCraft.IsStorageTransfer, which runs on a VM thread —
+        // hence the atomic, and hence no ChestRef() call there (that one repairs state).
+        std::atomic<RE::FormID> g_tokenChestId{ 0 };
+
         std::mutex                                            g_cacheMutex;
         std::unordered_map<RE::TESBoundObject*, std::int32_t> g_chestCache;  // guarded by g_cacheMutex
 
@@ -226,6 +232,10 @@ namespace Isekai::CraftHooks {
                              g_lentTokens.size(), player ? "storage chest" : "player");
                 return;  // keep the list: a lost entry can never be reclaimed
             }
+            // Published BEFORE the moves: each RemoveItem below raises OnItemRemoved on
+            // the player's scripts with the chest as akDestContainer, and those handlers
+            // may ask IsStorageTransfer long after this function has returned.
+            g_tokenChestId.store(chest->GetFormID(), std::memory_order_relaxed);
 
             const auto before = player->GetInventoryCounts();
             int        spent = 0;
@@ -288,6 +298,7 @@ namespace Isekai::CraftHooks {
             if (!player || !chest) {
                 return;
             }
+            g_tokenChestId.store(chest->GetFormID(), std::memory_order_relaxed);
             const bool enchant = IsEnchantBench(a_bench);
             const auto held = player->GetInventoryCounts();
             // GetInventoryCounts hands back a copy, so removing from the chest inside the
@@ -510,7 +521,36 @@ namespace Isekai::CraftHooks {
             MenuWatcher() = default;
         };
 
+        // --- Papyrus: IsekaiHeroCraft.IsStorageTransfer ---
+        // The token return moves items out of the player's inventory, and to every script
+        // listening on the player that looks like the player losing them. Ordinator's
+        // "Recycle Materials" re-adds half of them (duplicates), "Fuel the Inferno" burns a
+        // dragon soul. A patched listener asks this before reacting: true when the other
+        // side of the move is the storage chest, i.e. a lend or a return, not a craft.
+        //
+        // Keyed on the event's own akDestContainer rather than on a "lending now" flag:
+        // the events are queued and may run seconds after ReturnTokens finished (the VM
+        // was hundreds of stacks behind in the field), and a flag would already be reset
+        // by then. The destination travels with the event, so there is no window to time.
+        // Pure atomic read plus a FormID compare, so it is safe to run in the tasklet.
+        bool IsStorageTransfer(RE::StaticFunctionTag*, RE::TESObjectREFR* a_otherContainer) {
+            if (!a_otherContainer) {
+                return false;
+            }
+            const auto id = g_tokenChestId.load(std::memory_order_relaxed);
+            return id != 0 && a_otherContainer->GetFormID() == id;
+        }
+
     }  // namespace
+
+    bool RegisterPapyrus(RE::BSScript::IVirtualMachine* a_vm) {
+        if (!a_vm) {
+            return false;
+        }
+        a_vm->RegisterFunction("IsStorageTransfer", "IsekaiHeroCraft", IsStorageTransfer, true);
+        logger::info("CraftHooks: Papyrus native IsekaiHeroCraft.IsStorageTransfer registered");
+        return true;
+    }
 
     bool ItemCraftingHooksActive() {
         return s_itemActive;
