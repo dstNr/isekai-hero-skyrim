@@ -212,8 +212,8 @@ Game logic keeps its call sites through a facade (`UI/Screens.h`, `UI/Hud.h`). D
 **Interfaces:**
 - `theme.css`:
   - All spec 7.1 tokens as custom properties on `:root`.
-  - `[data-tone="gold|red|violet"]` overrides recolour border, glow, scanlines, cone, title and caret.
-  - Classes: `.proj` (window), `.proj-beam` (cone), `.proj-title`, `.caret`, `.card`, `.card.on`, `.btn`, `.mono`.
+  - `[data-tone="gold|red|violet"]` overrides recolour border, glow, scanlines, title and caret.
+  - Classes: `.proj` (window), `.proj-title`, `.caret`, `.card`, `.card.on`, `.btn`, `.mono`.
   - Animations use `transform`/`opacity` only.
 - `common.js` (`window.isekaiUi`):
   - `send(type, arg?)` → `magelight.send('isekai.action', arg === undefined ? type : type + ':' + arg)`.

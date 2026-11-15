@@ -207,7 +207,7 @@ polled during menus before must be checked by the builder against `PollGameClock
   - 4 px scanlines `repeating-linear-gradient(0deg, rgba(110,230,255,.07) 0 1px, transparent 1px 4px)`.
   - Slight tilt away from the viewer: `perspective(800px) rotateX(8deg)`, origin bottom.
   - Corner brackets top-left and bottom-right in `#6ee6ff`.
-- **Light cone** under each window. Gradient `rgba(90,220,255,.26) → transparent`, clipped to a cone from a point below the window. Subtle, so the window reads as *projected* from below.
+- **No light cone.** The user ruled out a beam or cone of light under the window (2026-11-15 look review). The tilt, glow and scanlines carry the projection look.
 - **Titles.** `// TITLE`, letter-spacing 5px, `#6ee6ff`, chromatic fringe `text-shadow: -1px 0 rgba(255,60,140,.55), 1px 0 rgba(60,255,240,.55)`.
 - **Numbers and codes** in a monospace face. **Body text** in a sans face.
 - **Typewriter** with a block caret for story/system text. Click, Enter or pad A completes it at once.
@@ -224,7 +224,7 @@ polled during menus before must be checked by the builder against `PollGameClock
 | red | builder's call within the language (e.g. `#ff6b7a`) | warnings, Shattered, penalties, dangerous threat tiers, errors, FAIL in the self-test |
 | violet | builder's call (e.g. `#c49bff`) | Dormant, Custom blessing |
 
-A tone recolours the whole window: border, glow, scanlines, cone, title and caret, as in the gold mockup. Within a cyan window it can also mark a single element, such as one gold card or one red label. The tone of a panel is passed from C++ (`tone` field), not guessed by the page.
+A tone recolours the whole window: border, glow, scanlines, title and caret, as in the gold mockup. Within a cyan window it can also mark a single element, such as one gold card or one red label. The tone of a panel is passed from C++ (`tone` field), not guessed by the page.
 
 ### 7.3 Per screen
 
