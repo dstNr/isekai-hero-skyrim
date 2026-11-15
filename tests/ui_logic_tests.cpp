@@ -97,6 +97,16 @@ namespace {
         EXPECT(!ParseAction("choose:" + std::string(250, '1')));
     }
 
+    void ParseLengthCap() {
+        // Would parse as choose:1 if the cap did not apply.
+        EXPECT(!ParseAction("choose:" + std::string(300, '0') + "1"));
+        EXPECT(!ParseAction("choose:" + std::string(249, '0') + "1"));  // 257 chars
+        const std::string atCap = "choose:" + std::string(248, '0') + "1";  // exactly 256 chars
+        EXPECT(atCap.size() == 256);
+        const auto a = ParseAction(atCap);
+        EXPECT(a && a->type == Action::Type::Choose && a->number == 1);
+    }
+
     void ReadyGateQueues() {
         ReadyGate g;
         EXPECT(!g.Ready());
@@ -206,6 +216,34 @@ namespace {
         EXPECT(g.Update(f, W, H) == LabelPush::Full);
     }
 
+    void LabelPushEdges() {
+        constexpr float W = 1920.0f, H = 1080.0f;
+        const std::vector<LabelFrame> f{ { 1, 0.5f, 0.5f, 1.0f, 11 } };
+
+        LabelPushGate yOnly;
+        yOnly.Update(f, W, H);
+        auto m = f;
+        m[0].y += 0.6f / H;
+        EXPECT(yOnly.Update(m, W, H) == LabelPush::Positions);
+
+        LabelPushGate scaleOnly;
+        scaleOnly.Update(f, W, H);
+        m = f;
+        m[0].scale += 0.01f;
+        EXPECT(scaleOnly.Update(m, W, H) == LabelPush::Positions);
+
+        // Two +0.4 px steps: each is under the threshold on its own, but movement is
+        // measured from the last pushed frame, so the second one (0.8 px total) pushes.
+        LabelPushGate drift;
+        drift.Update(f, W, H);
+        auto step1 = f;
+        step1[0].x += 0.4f / W;
+        EXPECT(drift.Update(step1, W, H) == LabelPush::None);
+        auto step2 = f;
+        step2[0].x += 0.8f / W;
+        EXPECT(drift.Update(step2, W, H) == LabelPush::Positions);
+    }
+
     void PageBuild() {
         EXPECT(PageMatchesBuild("a1b2c3", "a1b2c3"));
         EXPECT(!PageMatchesBuild("", ""));
@@ -225,6 +263,7 @@ int main() {
         { "Verdicts", Verdicts },
         { "ParseValid", ParseValid },
         { "ParseInvalid", ParseInvalid },
+        { "ParseLengthCap", ParseLengthCap },
         { "ReadyGateQueues", ReadyGateQueues },
         { "ReadyGateDropsOldest", ReadyGateDropsOldest },
         { "ReadyGateReset", ReadyGateReset },
@@ -232,6 +271,7 @@ int main() {
         { "DecisionNothingPending", DecisionNothingPending },
         { "DecisionOfferSemantics", DecisionOfferSemantics },
         { "LabelPushDecisions", LabelPushDecisions },
+        { "LabelPushEdges", LabelPushEdges },
         { "PageBuild", PageBuild },
     };
 
