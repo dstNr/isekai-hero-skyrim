@@ -9,6 +9,7 @@
 #include "Sounds.h"
 #include "Storage.h"  // Storage::Open from the status screen's storage button
 #include "System.h"   // PowerName, kMaxPerkPoints, DelayedMainThread, RebootSystem
+#include "UI/Payloads.h"
 #include "UI/Style.h"  // g_userScale, pushed into the view as its UI scale
 
 #include <algorithm>
@@ -37,118 +38,6 @@ namespace Isekai::UI::Prisma {
         bool                     g_panelMulti = false;
         std::string              g_pendingCall;     // guarded by g_panelMutex
 
-        // --- JSON helpers ---
-
-        [[nodiscard]] std::string Esc(const char* a_s) {
-            std::string out;
-            for (const char* p = a_s; p && *p; ++p) {
-                switch (*p) {
-                case '"':  out += "\\\""; break;
-                case '\\': out += "\\\\"; break;
-                case '\n': out += "\\n"; break;
-                case '\r': break;
-                case '\t': out += "\\t"; break;
-                default:
-                    if (static_cast<unsigned char>(*p) >= 0x20) {
-                        out += *p;
-                    }
-                    break;
-                }
-            }
-            return out;
-        }
-
-        [[nodiscard]] const char* Bool(bool a_b) { return a_b ? "true" : "false"; }
-
-        // Just the file name of an icon path ("...\\icons\\x.png" -> "x.png"); the web
-        // view loads icons relative to itself as "icons/<name>".
-        [[nodiscard]] std::string IconFile(const std::string& a_path) {
-            const auto pos = a_path.find_last_of("\\/");
-            return pos == std::string::npos ? a_path : a_path.substr(pos + 1);
-        }
-
-        // Whole tree + header. Reads game state (perk pool) — MAIN THREAD ONLY.
-        [[nodiscard]] std::string BuildTreeJson() {
-            std::size_t count = 0;
-            const auto* nodes = SkillTree::Nodes(count);
-
-            std::string j = "{";
-            j += "\"points\":" + std::to_string(SkillTree::Points()) + ",";
-            j += "\"perks\":" + std::to_string(SkillTree::PerkPool()) + ",";
-            j += "\"perkMax\":" + std::to_string(Isekai::kMaxPerkPoints) + ",";
-            j += "\"respec\":" + std::to_string(SkillTree::RespecRefund()) + ",";
-            j += "\"nodes\":[";
-            for (std::size_t i = 0; i < count; ++i) {
-                const auto&        n = nodes[i];
-                const std::int32_t rank = SkillTree::Rank(n.key);
-                const bool         maxed = n.repeatable && n.maxRank > 0 && rank >= n.maxRank;
-                const bool         owned = n.repeatable ? maxed : SkillTree::IsUnlocked(n.key);
-                const std::int32_t tier = SkillTree::Tier(n.key);
-
-                if (i != 0) {
-                    j += ",";
-                }
-                j += "{";
-                j += "\"key\":" + std::to_string(n.key) + ",";
-                j += "\"name\":\"" + Esc(SkillTree::Name(n)) + "\",";
-                j += "\"desc\":\"" + Esc(SkillTree::Desc(n)) + "\",";
-                j += "\"icon\":\"" + Esc(n.icon) + "\",";
-                j += "\"x\":" + std::to_string(static_cast<int>(n.x)) + ",";
-                j += "\"y\":" + std::to_string(static_cast<int>(n.y)) + ",";
-                // The NEXT purchase's price, not the flat table value — mastery nodes
-                // (capped repeatables) rise per tier, so what buying costs right now
-                // depends on the rank already owned.
-                j += "\"cost\":" + std::to_string(SkillTree::NextCost(n.key)) + ",";
-                j += "\"owned\":" + std::string(Bool(owned)) + ",";
-                j += "\"tierMet\":" + std::string(Bool(SkillTree::TierMet(n.key))) + ",";
-                j += "\"prereqMet\":" + std::string(Bool(SkillTree::PrereqsMet(n.key))) + ",";
-                j += "\"repeatable\":" + std::string(Bool(n.repeatable)) + ",";
-                j += "\"rank\":" + std::to_string(rank) + ",";
-                j += "\"maxRank\":" + std::to_string(n.maxRank) + ",";
-                j += "\"masteryTier\":" + std::to_string(tier) + ",";
-                j += "\"masteryTierName\":\"" + Esc(SkillTree::TierName(tier)) + "\",";
-                // Display grouping and size — the view frames the graph as labelled
-                // zones and draws the landmarks (hub, capstone, gifts) larger.
-                j += "\"zone\":\"" + Esc(SkillTree::ZoneName(n.zone)) + "\",";
-                j += "\"scale\":" + std::to_string(n.scale) + ",";
-                j += "\"reqPower\":\"" +
-                     Esc(Isekai::PowerName(SkillTree::RequiredPower(n.key)).c_str()) + "\",";
-                // >0 only for a DORMANT blessing: the seal is a level away, not a
-                // rebirth away, and the tooltip should say so.
-                j += "\"reqLevel\":" +
-                     std::to_string(Isekai::AwakeningLevelFor(SkillTree::RequiredPower(n.key))) +
-                     ",";
-                j += "\"prereq\":[" + std::to_string(n.prereq[0]) + "," +
-                     std::to_string(n.prereq[1]) + "]";
-                j += "}";
-            }
-            j += "]}";
-            return j;
-        }
-
-        [[nodiscard]] std::string BuildPanelJson(const std::string& a_title,
-                                                 const std::string& a_body,
-                                                 const std::vector<Choice>& a_choices,
-                                                 float a_reveal, float a_width) {
-            std::string j = "{";
-            j += "\"title\":\"" + Esc(a_title.c_str()) + "\",";
-            j += "\"body\":\"" + Esc(a_body.c_str()) + "\",";
-            j += "\"reveal\":" + std::to_string(static_cast<int>(a_reveal)) + ",";
-            j += "\"width\":" + std::to_string(static_cast<int>(a_width)) + ",";
-            j += "\"buttons\":[";
-            for (std::size_t i = 0; i < a_choices.size(); ++i) {
-                const auto& c = a_choices[i];
-                if (i != 0) {
-                    j += ",";
-                }
-                j += "{\"label\":\"" + Esc(c.label.c_str()) + "\",";
-                j += "\"icon\":\"" + Esc(IconFile(c.icon).c_str()) + "\",";
-                j += "\"iconOnly\":" + std::string(Bool(c.iconOnly)) + "}";
-            }
-            j += "]}";
-            return j;
-        }
-
         void Invoke(const std::string& a_call) {
             if (!g_api) {
                 return;
@@ -164,41 +53,9 @@ namespace Isekai::UI::Prisma {
             }
         }
 
-        void PushTree() { Invoke("window.isekaiShowTree(" + BuildTreeJson() + ")"); }
+        void PushTree() { Invoke("window.isekaiShowTree(" + Payloads::Tree() + ")"); }
 
-        // The shop catalog + the current balance. Reads game state — MAIN THREAD ONLY.
-        [[nodiscard]] std::string BuildShopJson() {
-            std::string j = "{\"points\":" + std::to_string(GetState().systemPoints) + ",";
-
-            // The shelves come over as their own list, in order, so an empty category
-            // (potions before their ESP records exist) still holds its place in the rail
-            // instead of vanishing and reordering the ones around it.
-            j += "\"shelves\":[";
-            const auto shelves = Isekai::Shop::Shelves();
-            for (std::size_t i = 0; i < shelves.size(); ++i) {
-                j += (i ? "," : "") + ("\"" + Esc(shelves[i].c_str()) + "\"");
-            }
-            j += "],\"items\":[";
-
-            const auto items = Isekai::Shop::Catalog();
-            for (std::size_t i = 0; i < items.size(); ++i) {
-                if (i != 0) {
-                    j += ",";
-                }
-                j += "{\"name\":\"" + Esc(items[i].name.c_str()) + "\",";
-                j += "\"qty\":\"" + Esc(items[i].qty.c_str()) + "\",";
-                // One effect per line; Esc turns the newlines into \n and the card renders
-                // them with white-space: pre-line.
-                j += "\"fx\":\"" + Esc(items[i].effects.c_str()) + "\",";
-                j += "\"cost\":" + std::to_string(items[i].cost) + ",";
-                j += "\"shelf\":\"" + Esc(items[i].shelf.c_str()) + "\",";
-                j += "\"icon\":\"" + Esc(IconFile(items[i].icon).c_str()) + "\"}";
-            }
-            j += "]}";
-            return j;
-        }
-
-        void PushShop() { Invoke("window.isekaiShowShop(" + BuildShopJson() + ")"); }
+        void PushShop() { Invoke("window.isekaiShowShop(" + Payloads::Shop() + ")"); }
 
         // Unfocus + hide the whole view. MAIN THREAD.
         void HideView() {
@@ -461,9 +318,14 @@ namespace Isekai::UI::Prisma {
             return;
         }
         const bool multi = a_choices.size() > 1;
-        const std::string json = BuildPanelJson(a_title, a_body, a_choices,
-                                                std::max(a_revealCharsPerSec, 1.0f),
-                                                std::max(a_width, 300.0f));
+        const std::string json = Payloads::Panel(
+            { .title = a_title,
+              .body = a_body,
+              .choices = a_choices,
+              .revealCharsPerSec = std::max(a_revealCharsPerSec, 1.0f),
+              .widthHint = std::max(a_width, 300.0f),
+              .tone = Logic::Tone::Cyan,
+              .emblemTone = Logic::Tone::Cyan });
         {
             std::scoped_lock lock(g_panelMutex);
             g_panelOnSelect = std::move(a_onSelect);
@@ -503,8 +365,8 @@ namespace Isekai::UI::Prisma {
         if (!Active()) {
             return;
         }
-        std::string json = "{\"title\":\"" + Esc(a_title.c_str()) + "\",\"subtitle\":\"" +
-                           Esc(a_subtitle.c_str()) + "\"}";
+        std::string json = "{\"title\":\"" + Payloads::Escape(a_title.c_str()) + "\",\"subtitle\":\"" +
+                           Payloads::Escape(a_subtitle.c_str()) + "\"}";
         Invoke("window.isekaiFlourish(" + json + ")");
 
         // A flourish is decoration, not a screen. When a real one already owns the view

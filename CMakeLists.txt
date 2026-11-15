@@ -78,6 +78,8 @@ add_commonlibsse_plugin(
         src/UI/LevelUpEffect.h
         src/UI/Overlay.cpp
         src/UI/Overlay.h
+        src/UI/Payloads.cpp
+        src/UI/Payloads.h
         src/UI/Prisma.cpp
         src/UI/Prisma.h
         src/UI/ShopWindow.cpp
