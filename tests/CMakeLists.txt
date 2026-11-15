@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 enable_testing()
 
-foreach(name readiness selftest_format)
+foreach(name readiness selftest_format ui_logic)
     add_executable(${name}_tests ${name}_tests.cpp)
     if(MSVC)
         target_compile_options(${name}_tests PRIVATE /W4 /WX /utf-8 /permissive-)

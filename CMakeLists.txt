@@ -89,6 +89,7 @@ add_commonlibsse_plugin(
         src/UI/SkillTreeWindow.cpp
         src/UI/SkillTreeWindow.h
         src/UI/Style.h
+        src/UI/UiLogic.h
         src/UI/SystemWindow.cpp
         src/UI/SystemWindow.h
         src/UI/Textures.cpp

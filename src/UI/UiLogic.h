@@ -1,0 +1,279 @@
+#pragma once
+
+// Engine-free logic of the Magelight UI: tones, threat verdicts, the JS-to-plugin
+// action wire format, the page ready gate, decision re-offer and the label push gate.
+//
+// Standard library only, on purpose: the plugin and the bare-MSVC unit tests
+// (tests/ui_logic_tests.cpp) both compile this header.
+
+#include <algorithm>
+#include <charconv>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <deque>
+#include <iterator>
+#include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+namespace Isekai::UI::Logic {
+
+    // --- Tones ---------------------------------------------------------------------
+
+    enum class Tone : std::uint8_t { Cyan, Gold, Red, Violet };
+
+    constexpr std::string_view ToneName(Tone a_tone) {
+        switch (a_tone) {
+            case Tone::Gold: return "gold";
+            case Tone::Red: return "red";
+            case Tone::Violet: return "violet";
+            case Tone::Cyan: break;
+        }
+        return "cyan";
+    }
+
+    enum class Blessing : std::uint8_t { Normal, Hero, Ascended, Full, Shattered, Dormant, Custom };
+
+    constexpr Tone ToneFor(Blessing a_blessing) {
+        switch (a_blessing) {
+            case Blessing::Ascended: return Tone::Gold;
+            case Blessing::Shattered: return Tone::Red;
+            case Blessing::Dormant:
+            case Blessing::Custom: return Tone::Violet;
+            case Blessing::Normal:
+            case Blessing::Hero:
+            case Blessing::Full: break;
+        }
+        return Tone::Cyan;
+    }
+
+    constexpr Tone ToneForRank(char a_rank) {
+        return a_rank == 'S' ? Tone::Gold : Tone::Cyan;
+    }
+
+    // --- Threat verdict ------------------------------------------------------------
+
+    enum class Verdict : std::uint8_t { Trivial, Manageable, Dangerous, Lethal };
+
+    // a_levelDiff = enemy level minus player level.
+    constexpr Verdict VerdictFor(std::int32_t a_levelDiff) {
+        if (a_levelDiff >= 20) return Verdict::Lethal;
+        if (a_levelDiff >= 5) return Verdict::Dangerous;
+        if (a_levelDiff <= -15) return Verdict::Trivial;
+        return Verdict::Manageable;
+    }
+
+    constexpr Tone ToneFor(Verdict a_verdict) {
+        return (a_verdict == Verdict::Dangerous || a_verdict == Verdict::Lethal) ? Tone::Red : Tone::Cyan;
+    }
+
+    // --- Action wire format --------------------------------------------------------
+
+    struct Action {
+        enum class Type : std::uint8_t { Choose, Buy, Respec, ShopBuy, Status, Close, Nav };
+        Type type;
+        std::uint32_t number = 0;
+        std::string word;
+    };
+
+    namespace detail {
+        constexpr std::size_t kMaxActionLength = 256;
+
+        inline bool ParseUInt(std::string_view a_text, std::uint32_t& a_out) {
+            if (a_text.empty()) return false;
+            const char* first = a_text.data();
+            const char* last = first + a_text.size();
+            std::uint32_t value = 0;
+            const auto [ptr, ec] = std::from_chars(first, last, value);
+            if (ec != std::errc{} || ptr != last) return false;
+            a_out = value;
+            return true;
+        }
+
+        template <std::size_t N>
+        constexpr bool OneOf(std::string_view a_word, const std::string_view (&a_set)[N]) {
+            return std::ranges::find(a_set, a_word) != std::end(a_set);
+        }
+    }
+
+    // "type" or "type:arg". Anything malformed gives nullopt; never throws.
+    inline std::optional<Action> ParseAction(std::string_view a_text) {
+        if (a_text.empty() || a_text.size() > detail::kMaxActionLength) return std::nullopt;
+
+        const auto colon = a_text.find(':');
+        const bool hasArg = colon != std::string_view::npos;
+        const std::string_view type = a_text.substr(0, colon);
+        const std::string_view arg = hasArg ? a_text.substr(colon + 1) : std::string_view{};
+
+        Action action{};
+        if (type == "close" || type == "respec") {
+            if (hasArg) return std::nullopt;
+            action.type = type == "close" ? Action::Type::Close : Action::Type::Respec;
+            return action;
+        }
+        if (!hasArg) return std::nullopt;
+
+        if (type == "choose" || type == "shopBuy" || type == "buy") {
+            if (!detail::ParseUInt(arg, action.number)) return std::nullopt;
+            if (type == "buy") {
+                if (action.number == 0) return std::nullopt;
+                action.type = Action::Type::Buy;
+            } else {
+                action.type = type == "choose" ? Action::Type::Choose : Action::Type::ShopBuy;
+            }
+            return action;
+        }
+        if (type == "status") {
+            static constexpr std::string_view kWords[] = { "tree", "storage", "shop", "reroll", "reboot", "close" };
+            if (!detail::OneOf(arg, kWords)) return std::nullopt;
+            action.type = Action::Type::Status;
+            action.word = std::string(arg);
+            return action;
+        }
+        if (type == "nav") {
+            static constexpr std::string_view kWords[] = { "status", "tree", "shop" };
+            if (!detail::OneOf(arg, kWords)) return std::nullopt;
+            action.type = Action::Type::Nav;
+            action.word = std::string(arg);
+            return action;
+        }
+        return std::nullopt;
+    }
+
+    // --- Ready gate ----------------------------------------------------------------
+
+    // JS calls made before the page reports ready are queued (bounded) and flushed in
+    // order once it does. Reset is for a page reload.
+    class ReadyGate {
+    public:
+        static constexpr std::size_t kMaxPending = 64;
+
+        // Before ready: queues and returns nullopt. After ready: returns the call to run now.
+        std::optional<std::string> Submit(std::string a_call) {
+            if (ready_) return a_call;
+            if (pending_.size() >= kMaxPending) pending_.pop_front();
+            pending_.push_back(std::move(a_call));
+            return std::nullopt;
+        }
+
+        std::vector<std::string> MarkReady() {
+            ready_ = true;
+            std::vector<std::string> out(std::make_move_iterator(pending_.begin()),
+                                         std::make_move_iterator(pending_.end()));
+            pending_.clear();
+            return out;
+        }
+
+        void Reset() {
+            ready_ = false;
+            pending_.clear();
+        }
+
+        bool Ready() const { return ready_; }
+
+    private:
+        bool ready_ = false;
+        std::deque<std::string> pending_;
+    };
+
+    // --- Pending decision ----------------------------------------------------------
+
+    // The one open decision (for example a blessing choice). If the UI mode is lost
+    // while it is open, it has to be offered again once the UI is back.
+    class PendingDecision {
+    public:
+        // Replaces any current decision. Offering the same id again is the re-offer: it
+        // clears NeedsReoffer.
+        void Offer(std::uint32_t a_id) {
+            id_ = a_id;
+            reoffer_ = false;
+        }
+
+        // A wrong id is a no-op.
+        void Resolve(std::uint32_t a_id) {
+            if (id_ && *id_ == a_id) Reset();
+        }
+
+        void OnUiModeLost() {
+            if (id_) reoffer_ = true;
+        }
+
+        bool NeedsReoffer() const { return reoffer_; }
+        std::optional<std::uint32_t> Current() const { return id_; }
+
+        void Reset() {
+            id_.reset();
+            reoffer_ = false;
+        }
+
+    private:
+        std::optional<std::uint32_t> id_;
+        bool reoffer_ = false;
+    };
+
+    // --- Label push gate -----------------------------------------------------------
+
+    struct LabelFrame {
+        std::uint32_t id;
+        float x, y, scale;  // x/y normalised 0..1
+        std::uint64_t content;  // hash of everything that is not a position
+    };
+
+    enum class LabelPush : std::uint8_t { None, Positions, Full };
+
+    // Decides per frame what, if anything, has to be sent to the page: nothing, only
+    // positions, or the full label set. Movement is measured against the last frame that
+    // was pushed, so slow drift cannot stay under the threshold forever.
+    class LabelPushGate {
+    public:
+        LabelPush Update(std::span<const LabelFrame> a_frames, float a_screenW, float a_screenH,
+                         float a_minMovePx = 0.5f) {
+            if (a_frames.empty()) {
+                if (last_.empty()) return LabelPush::None;
+                last_.clear();
+                return LabelPush::Full;
+            }
+
+            bool full = a_frames.size() != last_.size();
+            bool moved = false;
+            if (!full) {
+                for (std::size_t i = 0; i < a_frames.size(); ++i) {
+                    const LabelFrame& now = a_frames[i];
+                    const LabelFrame& was = last_[i];
+                    if (now.id != was.id || now.content != was.content) {
+                        full = true;
+                        break;
+                    }
+                    const float dx = (now.x - was.x) * a_screenW;
+                    const float dy = (now.y - was.y) * a_screenH;
+                    if (std::abs(dx) > a_minMovePx || std::abs(dy) > a_minMovePx ||
+                        std::abs(now.scale - was.scale) > kScaleEpsilon) {
+                        moved = true;
+                    }
+                }
+            }
+
+            if (full || moved) last_.assign(a_frames.begin(), a_frames.end());
+            if (full) return LabelPush::Full;
+            return moved ? LabelPush::Positions : LabelPush::None;
+        }
+
+        void Reset() { last_.clear(); }
+
+    private:
+        static constexpr float kScaleEpsilon = 0.005f;
+        std::vector<LabelFrame> last_;
+    };
+
+    // --- Page / build match --------------------------------------------------------
+
+    // The page reports the build it was made for; both must be present and equal.
+    constexpr bool PageMatchesBuild(std::string_view a_page, std::string_view a_build) {
+        return !a_page.empty() && !a_build.empty() && a_page == a_build;
+    }
+
+}  // namespace Isekai::UI::Logic
