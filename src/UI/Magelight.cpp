@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <exception>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -41,7 +42,12 @@ namespace Isekai::UI::Magelight {
             std::mutex mx;
             Logic::ReadyGate gate;  // mx
             std::string version;    // mx: what the page sent with its last isekai.ready
+            std::function<std::vector<std::string>()> prelude;  // mx: copied out, run outside the lock
         };
+
+        // Sent once, ungated, after a reload: a page that already reported ready before the
+        // reload event was handled reports again (page contract in Magelight.h).
+        constexpr const char* kHello = "window.isekai && isekai.hello && isekai.hello()";
 
         Slot g_slots[2]{ { "system", "system.html" }, { "hud", "hud.html" } };
 
@@ -171,19 +177,38 @@ namespace Isekai::UI::Magelight {
         // Game thread, while the gate's mutex is NOT held by this thread.
         void MarkPageReady(View a_view, std::string a_version) {
             Slot& s = SlotOf(a_view);
+            // The prelude is built outside the lock: it may read game state or even call Run,
+            // which takes the same lock.
+            std::function<std::vector<std::string>()> build;
+            {
+                std::scoped_lock lock(s.mx);
+                build = s.prelude;
+            }
+            std::vector<std::string> prelude;
+            if (build) {
+                try {
+                    prelude = build();
+                } catch (const std::exception& e) {
+                    logger::error("Magelight: {} prelude: {}", s.name, e.what());
+                } catch (...) {
+                    logger::error("Magelight: {} prelude: unknown exception", s.name);
+                }
+            }
             std::size_t sent = 0;
             {
-                // Under the lock, so a Run from another thread cannot slip in between the
-                // queued calls: the page sees them in the order they were made.
+                // Under the lock, so a Run from another thread cannot slip in between: the
+                // page sees the prelude first, then the queued calls in the order they were
+                // made, then everything later.
                 std::scoped_lock lock(s.mx);
                 s.version = a_version;
-                const auto calls = s.gate.MarkReady();
                 const auto id = s.id.load();
+                for (const auto& js : prelude) g_api->InvokeJS(id, js.c_str());
+                const auto calls = s.gate.MarkReady();
                 for (const auto& js : calls) g_api->InvokeJS(id, js.c_str());
                 sent = calls.size();
             }
-            logger::info("Magelight: {} page ready, version '{}', {} queued call(s) sent", s.name,
-                         Clip(a_version.c_str(), 64), sent);
+            logger::info("Magelight: {} page ready, version '{}', {} prelude and {} queued call(s) sent", s.name,
+                         Clip(a_version.c_str(), 64), prelude.size(), sent);
             Screens::detail::OnPageReady(a_view, std::move(a_version));
         }
 
@@ -285,13 +310,16 @@ namespace Isekai::UI::Magelight {
                         break;
                     case ml::Event::ViewReloaded:
                         // The page was replaced: its state is gone, so calls wait for its
-                        // next isekai.ready again.
+                        // next isekai.ready again. That ready may already have been handled
+                        // (page messages and page events keep no common order), so ask the
+                        // page once, ungated, to send it again; a second ready is harmless.
                         if (slot) {
                             std::scoped_lock lock(slot->mx);
                             slot->gate.Reset();
                             slot->version.clear();
+                            g_api->InvokeJS(slot->id.load(), kHello);
                         }
-                        logger::info("Magelight: {} page reloaded, waiting for it to report ready", name);
+                        logger::info("Magelight: {} page reloaded, asked it to report ready again", name);
                         break;
                     case ml::Event::FocusDenied:
                         logger::info("Magelight: {} asked for UI mode while Isekai Hero holds it", Clip(a_ev->detail));
@@ -518,6 +546,12 @@ namespace Isekai::UI::Magelight {
     }
 
     bool HudBelowPanels() { return g_ready.load(std::memory_order_acquire) && g_hudBelow; }
+
+    void SetPrelude(View a_view, std::function<std::vector<std::string>()> a_build) {
+        Slot& s = SlotOf(a_view);
+        std::scoped_lock lock(s.mx);
+        s.prelude = std::move(a_build);
+    }
 
     void Run(View a_view, std::string a_js) {
         if (!Available()) return;

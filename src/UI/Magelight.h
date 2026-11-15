@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 // Magelight UI host wrapper (spec 6.2, 6.4, 6.5, 8, 9): the mod "isekai-hero" with two
 // fullscreen views, and the only file that talks to the Magelight C++ API.
@@ -16,6 +18,21 @@
 // Page messages and host events are forwarded to Screens::detail (Screens.h) on the game
 // thread. Unless a comment says otherwise, every function here may be called from any
 // thread; none touches RE:: state.
+//
+// Page contract (system.html and hud.html):
+//   - Once its scripts can take calls, the page sends magelight.send("isekai.ready", <page
+//     version>). Until then every Run for that view is queued.
+//   - It defines isekai.hello(), which sends "isekai.ready" again with the same version.
+//     After a reload (ViewReloaded) the wrapper resets the view to not-ready and calls
+//     `window.isekai && isekai.hello && isekai.hello()` once, bypassing the queue: the
+//     page's first ready may have been handled before the reload event, and would then be
+//     lost. Sending ready twice is harmless.
+//   - The system page sends magelight.send("isekai.action", "<type>[:<arg>]") for every
+//     user action (parsed by Screens, see Logic::ParseAction).
+//
+// On every ready (the first one and each after a reload) the wrapper sends, in order:
+// the view's prelude calls (SetPrelude), then the queued calls, then it calls
+// Screens::detail::OnPageReady.
 namespace Isekai::UI::Magelight {
 
     enum class View : std::uint8_t { System, Hud };
@@ -42,6 +59,13 @@ namespace Isekai::UI::Magelight {
     // The host refused a click-through Popup view and the hud sits on Layer::Hud, below
     // our own panels: the system page then mirrors toasts while it is open (spec 6.2).
     bool HudBelowPanels();
+
+    // Main thread, before or after Install. a_build is called on the game thread each time
+    // the view's page reports ready (initial and after every reload), outside any wrapper
+    // lock; the calls it returns are sent before the queued ones. Used to push what every
+    // fresh page needs first (loc table, UI scale). Each call is built only from
+    // nlohmann::json::dump() output. An empty function clears it.
+    void SetPrelude(View a_view, std::function<std::vector<std::string>()> a_build);
 
     // InvokeJS on the view, from ANY thread (paused game and free camera included). Before
     // the page reports ready the call is queued; once it does, the queue drains in order.
