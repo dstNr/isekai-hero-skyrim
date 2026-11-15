@@ -17,14 +17,13 @@
 #include "SkyrimNet.h"
 #include "Sounds.h"
 #include "Storage.h"
+#include "UI/Hud.h"
 #include "UI/Input.h"
-#include "UI/LevelUpEffect.h"
 #include "UI/Magelight.h"
 #include "UI/Overlay.h"
 #include "UI/Screens.h"
 #include "UI/Style.h"
 #include "UI/ThreatLabels.h"
-#include "UI/VROverlay.h"
 
 #include <algorithm>
 #include <chrono>
@@ -1130,22 +1129,8 @@ namespace Isekai {
 
         void OnSKSEMessage(SKSE::MessagingInterface::Message* a_msg) {
             switch (a_msg->type) {
-            // The ImGuiVRHelper handshake, and it has to be THIS message rather than
-            // kDataLoaded or kPostLoad: kPostPostLoad fires after every plugin's
-            // kPostLoad, so the helper's own messaging listener is registered by then no
-            // matter which order the two DLLs happen to load in. No-op outside VR, and
-            // no-op in VR without the helper installed.
-            case SKSE::MessagingInterface::kPostPostLoad:
-                // Settings first, and this is the reason the call is here rather than only
-                // at kDataLoaded: InstallVROverlay reads VRInHeadsetLayer, and kDataLoaded
-                // fires long after this. Without this line the gate would only ever see
-                // the compiled default, and a player who turned the layer on would find it
-                // still off. Load() resets to defaults and re-reads both inis, so running
-                // it twice is what ReloadSettings already does on a settings change.
-                Config::Load();
-                UI::InstallVROverlay();
-                break;
-
+            // No kPostPostLoad any more: it carried the ImGuiVRHelper handshake, and the
+            // in-headset layer is gone with Magelight UI (spec 8).
             case SKSE::MessagingInterface::kDataLoaded:
                 Config::Load();
                 Loc::Load();  // after Config: it reads Config::Language()
@@ -1162,6 +1147,7 @@ namespace Isekai {
                 UI::Install();
                 UI::Magelight::Install();  // system and hud views; no-op without Magelight UI
                 UI::Screens::Install();    // what every fresh page gets first: loc table, UiScale
+                UI::Hud::Install();        // toasts, flourish, threat labels on the frame tick
                 SkyrimNet::Install();   // optional AI-NPC context; no-op without SkyrimNet
                 Progression::Install();
                 Quests::Install();      // watches kills for the standing objective

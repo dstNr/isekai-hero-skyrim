@@ -1,13 +1,15 @@
 #pragma once
 
 // Engine-free logic of the Magelight UI: tones, threat verdicts, the JS-to-plugin
-// action wire format, the page ready gate, decision re-offer and the label push gate.
+// action wire format, the page ready gate, decision re-offer, the label push gate and
+// the label geometry, content hash and heartbeat.
 //
 // Standard library only, on purpose: the plugin and the bare-MSVC unit tests
 // (tests/ui_logic_tests.cpp) both compile this header.
 
 #include <algorithm>
 #include <charconv>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -267,6 +269,83 @@ namespace Isekai::UI::Logic {
     private:
         static constexpr float kScaleEpsilon = 0.005f;
         std::vector<LabelFrame> last_;
+    };
+
+    // --- Label geometry and content ------------------------------------------------
+
+    // NiCamera::WorldPtToScreenPt3 gives the port's y running UP from the bottom; the hud
+    // page's y runs DOWN from the top (both 0..1).
+    constexpr float PageY(float a_portY) { return 1.0f - a_portY; }
+
+    // The distance factor alone, 1 - 0.32*t with t = distance / range clamped to 0..1. The
+    // page multiplies UiScale in and dims with the same t; this must not do either.
+    constexpr float LabelDistanceScale(float a_distance, float a_range) {
+        const float t = a_range > 0.0f ? std::clamp(a_distance / a_range, 0.0f, 1.0f) : 1.0f;
+        return 1.0f - 0.32f * t;
+    }
+
+    // A projected head point (page space, 0..1, y down) still worth a label on an a_w x
+    // a_h screen: up to 200 px past either side and 100 px past the top or bottom, so a
+    // frame half out of view does not blink off at the edge. NaN fails every comparison.
+    constexpr bool LabelOnScreen(float a_x, float a_y, float a_w, float a_h) {
+        const float px = a_x * a_w;
+        const float py = a_y * a_h;
+        return px > -200.0f && px < a_w + 200.0f && py > -100.0f && py < a_h + 100.0f;
+    }
+
+    // FNV-1a over a label's non-position content (level, name, verdict, pools): what
+    // LabelFrame::content holds. Integers go in as 8 little-endian bytes, text with its
+    // length first, so "ab"+"c" and "a"+"bc" differ.
+    class ContentHash {
+    public:
+        ContentHash& AddInt(std::int64_t a_value) {
+            auto v = static_cast<std::uint64_t>(a_value);
+            for (int i = 0; i < 8; ++i) {
+                Byte(static_cast<std::uint8_t>(v & 0xFFu));
+                v >>= 8;
+            }
+            return *this;
+        }
+
+        ContentHash& AddText(std::string_view a_text) {
+            AddInt(static_cast<std::int64_t>(a_text.size()));
+            for (const char c : a_text) Byte(static_cast<std::uint8_t>(c));
+            return *this;
+        }
+
+        std::uint64_t Value() const { return h_; }
+
+    private:
+        void Byte(std::uint8_t a_byte) {
+            h_ ^= a_byte;
+            h_ *= 1099511628211ull;
+        }
+
+        std::uint64_t h_ = 14695981039346656037ull;
+    };
+
+    // The labels' sign of life. The page hides every label 300 ms after the last labels.*
+    // call (the frame tick stops in free camera and while paused). While labels are up
+    // and a frame sends nothing (the push gate said None), keep() goes out once the last
+    // call is kPeriod old: at most 4 Hz, well inside the 300 ms.
+    class LabelHeartbeat {
+    public:
+        using Clock = std::chrono::steady_clock;
+        static constexpr std::chrono::milliseconds kPeriod{ 250 };
+
+        // A labels.* call went out (full, pos or keep).
+        void Sent(Clock::time_point a_now) { last_ = a_now; }
+
+        // Nothing else went out this frame and labels are on the page: send keep() now?
+        // A clock reading earlier than the last call counts as due rather than wedging.
+        bool KeepDue(Clock::time_point a_now) const {
+            return !last_ || a_now < *last_ || a_now - *last_ >= kPeriod;
+        }
+
+        void Reset() { last_.reset(); }
+
+    private:
+        std::optional<Clock::time_point> last_;
     };
 
     // --- UI-mode exits we owe ourselves ---------------------------------------------

@@ -5,7 +5,7 @@
 #include "Passives.h"
 #include "Sounds.h"
 #include "System.h"
-#include "UI/LevelUpEffect.h"
+#include "UI/Hud.h"
 
 #include <algorithm>
 #include <cmath>

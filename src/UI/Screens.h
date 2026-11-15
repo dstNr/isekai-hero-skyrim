@@ -88,8 +88,9 @@ namespace Isekai::UI {
 
     namespace Screens {
 
-        // kDataLoaded, after Magelight::Install: sets the system and hud preludes (the
-        // translation table and UiScale, sent first on every page ready).
+        // kDataLoaded, after Magelight::Install: sets the system view's prelude (the
+        // translation table and UiScale, sent first on every page ready). The hud's is
+        // set by Hud::Install, built on SettingsCalls.
         void Install();
 
         // The prelude calls: isekai.loc(<table>) and isekai.scale(<UiScale>). A view whose

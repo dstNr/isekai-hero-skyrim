@@ -10,7 +10,7 @@
 #include "Storage.h"
 #include "System.h"
 #include "UI/Input.h"
-#include "UI/LevelUpEffect.h"
+#include "UI/Hud.h"
 #include "UI/Screens.h"
 
 #include <algorithm>

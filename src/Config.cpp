@@ -43,11 +43,6 @@ namespace Isekai::Config {
         // Percent of screen height. Was a hardcoded 8 and measured against the head alone,
         // which is why only aiming at an enemy's face produced a reading.
         std::uint32_t g_threatAimRadius = 15;
-        float         g_vrThreatHeight = 0.15f;
-        // Off by default after a crash report: with ImGuiVRHelper installed the game
-        // went to the desktop as the mods finished loading, every time, and produced no
-        // crash log. See the ini for the full account.
-        bool          g_vrInHeadsetLayer = false;
         std::uint32_t g_threatKey = 0x44;  // DIK_F10
         std::uint32_t g_questFirstTaskHours = 12;
         std::uint32_t g_questIntervalHours = 24;
@@ -292,16 +287,6 @@ namespace Isekai::Config {
                         static_cast<std::uint32_t>(std::stoul(val, nullptr, 0)), 2u, 50u);
                 } catch (...) {
                 }
-            } else if (key == "vrthreatlabelheight") {
-                // Metres, clamped: this is a physical size in the world, and a 0 would
-                // make every billboard degenerate while a large value would put a
-                // house-sized banner over a mudcrab.
-                try {
-                    g_vrThreatHeight = std::clamp(std::stof(val), 0.03f, 1.0f);
-                } catch (...) {
-                }
-            } else if (key == "vrinheadsetlayer") {
-                g_vrInHeadsetLayer = AsBool(val);
             } else if (key == "firsttaskhours") {
                 g_questFirstTaskHours = AsHours(val, g_questFirstTaskHours);
             } else if (key == "taskintervalhours") {
@@ -357,6 +342,8 @@ namespace Isekai::Config {
             } else if (key == "loginputdiagnostics") {
                 g_logInputDiag = AsBool(val);
             }
+            // Any other key is ignored without a word: an old ini that still carries a
+            // retired setting (VRInHeadsetLayer, VRThreatLabelHeight) loads as before.
         }
 
         // Read one ini and hand every key to Apply. a_mcm rewrites MCM Helper's spelling
@@ -431,8 +418,6 @@ namespace Isekai::Config {
         g_threatResources = true;
         g_threatRange = 4000;
         g_threatAimRadius = 15;
-        g_vrThreatHeight = 0.15f;
-        g_vrInHeadsetLayer = false;
         g_threatKey = 0x44;
         g_questFirstTaskHours = 12;
         g_questIntervalHours = 24;
@@ -482,8 +467,7 @@ namespace Isekai::Config {
                      "key={}), "
                      "FirstTaskHours={}, TaskIntervalHours={}, QuestRewardScale={}, QuestRerollButton={}, "
                      "SelfTestKey={}, DebugPointsKey={}, LogInputDiagnostics={}"
-                     ", NodeCostScale={}, NodeEffectScale={}, Hero={}/{}/{}, Ascended={}/{}/{}"
-                     ", VRInHeadsetLayer={}",
+                     ", NodeCostScale={}, NodeEffectScale={}, Hero={}/{}/{}, Ascended={}/{}/{}",
                      g_language, g_autoStart, g_textSpeed,
                      g_hideSealedNodes, KeyName(g_systemMenuKey), KeyName(g_systemMenuModifier),
                      KeyName(g_vrMenuButton), GamepadButtonName(g_padMenuButton),
@@ -499,8 +483,7 @@ namespace Isekai::Config {
                      KeyName(g_debugPointsKey), g_logInputDiag,
                      g_nodeCostScale, g_nodeEffectScale, g_heroSkillLevel,
                      g_heroAttributeTarget, g_heroSystemPoints, g_ascendedSkillLevel,
-                     g_ascendedAttributeTarget, g_ascendedSystemPoints,
-                     g_vrInHeadsetLayer);
+                     g_ascendedAttributeTarget, g_ascendedSystemPoints);
     }
 
     std::string KeyName(std::uint32_t a_scanCode) {
@@ -609,14 +592,6 @@ namespace Isekai::Config {
 
     std::uint32_t ThreatLabelKey() {
         return g_threatKey;
-    }
-
-    float VRThreatLabelHeight() {
-        return g_vrThreatHeight;
-    }
-
-    bool VRInHeadsetLayer() {
-        return g_vrInHeadsetLayer;
     }
 
     std::uint32_t ThreatLabelAimRadius() {

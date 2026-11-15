@@ -145,27 +145,6 @@ namespace Isekai::Config {
     // the actor's whole body, so height is already covered. Default 15, clamped 2..50.
     [[nodiscard]] std::uint32_t ThreatLabelAimRadius();
 
-    // VR only: how tall a threat label stands in the world, in METRES.
-    //
-    // On a flat screen the frame is measured in pixels and shrunk with distance by hand.
-    // In VR it is a billboard of a fixed physical size, so distance shrinks it for free —
-    // this is the one number that decides whether it reads as a nameplate over the actor
-    // or as a signboard hanging in front of it.
-    [[nodiscard]] float VRThreatLabelHeight();
-
-    // VR only: whether to register with ImGuiVRHelper at all.
-    //
-    // Off by default, and not as caution. A VR player reported that this mod alongside
-    // ImGuiVRHelper sends the game to the desktop as the mods finish loading - every
-    // time, on a five-mod load order, with no crash log written. Without the helper the
-    // mod runs and the menus work. The in-headset layer is the one thing that does any
-    // work only when the helper is there, which is what points at it; the cause itself
-    // is not known, and there is no VR install here to find it on.
-    //
-    // So the layer ships off rather than shipping a guaranteed crash, and the helper can
-    // stay installed for other mods. Read once at load.
-    [[nodiscard]] bool  VRInHeadsetLayer();
-
     // System objectives (src/Quests.cpp), in GAME hours.
     //
     // FirstTask is the wait before the very first objective of a character's life;

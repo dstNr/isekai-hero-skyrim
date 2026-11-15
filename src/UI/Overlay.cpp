@@ -4,12 +4,9 @@
 #include "Quests.h"
 #include "SkillTree.h"
 #include "UI/Input.h"
-#include "UI/LevelUpEffect.h"
 #include "UI/Screens.h"
 #include "UI/Style.h"
 #include "UI/Textures.h"
-#include "UI/ThreatLabels.h"
-#include "UI/Toast.h"
 #include "UI/VROverlay.h"
 
 #include <d3d11.h>
@@ -233,14 +230,9 @@ namespace Isekai::UI {
                 ImGui_ImplDX11_NewFrame();
                 ImGui::NewFrame();
 
-                // The flourish never blocks: it plays over normal gameplay, and it is
-                // drawn before the cursor so it can never sit on top of it.
-                DrawLevelUpEffect();
-
-                // HUD layers: they draw over gameplay and over our own panels, take no
-                // input, and pause nothing.
-                DrawThreatLabels();
-                DrawToasts();
+                // Nothing draws here any more: toasts, the flourish and the threat labels
+                // went to the Magelight hud view (UI/Hud.cpp). The hook itself goes with
+                // the rest of the ImGui files.
 
                 ImGui::Render();
                 g_context->OMSetRenderTargets(1, &g_backBufferView, nullptr);

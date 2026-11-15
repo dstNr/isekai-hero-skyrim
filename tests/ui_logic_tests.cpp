@@ -4,6 +4,8 @@
 
 #include "../src/UI/UiLogic.h"
 
+#include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <iterator>
 #include <string>
@@ -316,6 +318,79 @@ namespace {
         EXPECT(drift.Update(step2, W, H) == LabelPush::Positions);
     }
 
+    void LabelGeometry() {
+        // y: the port runs up, the page down.
+        EXPECT(PageY(0.0f) == 1.0f);
+        EXPECT(PageY(1.0f) == 0.0f);
+        EXPECT(PageY(0.25f) == 0.75f);
+        // s: the distance factor alone, 1 at the player, 0.68 at range and beyond.
+        EXPECT(LabelDistanceScale(0.0f, 4000.0f) == 1.0f);
+        EXPECT(std::abs(LabelDistanceScale(2000.0f, 4000.0f) - 0.84f) < 1e-6f);
+        EXPECT(std::abs(LabelDistanceScale(4000.0f, 4000.0f) - 0.68f) < 1e-6f);
+        EXPECT(std::abs(LabelDistanceScale(9000.0f, 4000.0f) - 0.68f) < 1e-6f);
+        EXPECT(LabelDistanceScale(-5.0f, 4000.0f) == 1.0f);
+        EXPECT(std::abs(LabelDistanceScale(10.0f, 0.0f) - 0.68f) < 1e-6f);  // no range: farthest
+        // On screen: 200 px of slack left/right, 100 px top/bottom.
+        constexpr float W = 1920.0f, H = 1080.0f;
+        EXPECT(LabelOnScreen(0.5f, 0.5f, W, H));
+        EXPECT(LabelOnScreen(-190.0f / W, 0.5f, W, H));
+        EXPECT(!LabelOnScreen(-210.0f / W, 0.5f, W, H));
+        EXPECT(LabelOnScreen((W + 190.0f) / W, 0.5f, W, H));
+        EXPECT(!LabelOnScreen((W + 210.0f) / W, 0.5f, W, H));
+        EXPECT(LabelOnScreen(0.5f, -90.0f / H, W, H));
+        EXPECT(!LabelOnScreen(0.5f, -110.0f / H, W, H));
+        EXPECT(!LabelOnScreen(0.5f, (H + 110.0f) / H, W, H));
+        EXPECT(!LabelOnScreen(std::nanf(""), 0.5f, W, H));
+    }
+
+    void LabelContentHash() {
+        const auto h = [](std::int64_t a_level, std::string_view a_name, std::int64_t a_hp) {
+            return ContentHash{}.AddInt(a_level).AddText(a_name).AddInt(a_hp).Value();
+        };
+        EXPECT(h(10, "Bandit", 50) == h(10, "Bandit", 50));
+        EXPECT(h(10, "Bandit", 50) != h(11, "Bandit", 50));
+        EXPECT(h(10, "Bandit", 50) != h(10, "Bandit", 49));
+        EXPECT(h(10, "Bandit", 50) != h(10, "Bandit Chief", 50));
+        // Length-prefixed: moving a character between two texts changes the hash.
+        EXPECT(ContentHash{}.AddText("ab").AddText("c").Value() !=
+               ContentHash{}.AddText("a").AddText("bc").Value());
+        EXPECT(ContentHash{}.Value() != ContentHash{}.AddInt(0).Value());
+    }
+
+    void LabelKeepCadence() {
+        using Clock = LabelHeartbeat::Clock;
+        using std::chrono::milliseconds;
+        const Clock::time_point t0{};
+        LabelHeartbeat hb;
+        EXPECT(hb.KeepDue(t0 + milliseconds(1000)));  // nothing sent yet: due
+        hb.Sent(t0);
+        EXPECT(!hb.KeepDue(t0));
+        EXPECT(!hb.KeepDue(t0 + milliseconds(249)));
+        EXPECT(hb.KeepDue(t0 + milliseconds(250)));   // 4 Hz at most
+        // Every labels.* call restarts the period, so a moving set never gets a keep().
+        hb.Sent(t0 + milliseconds(240));
+        EXPECT(!hb.KeepDue(t0 + milliseconds(260)));
+        EXPECT(hb.KeepDue(t0 + milliseconds(490)));
+        // Well inside the page's 300 ms staleness limit.
+        EXPECT(LabelHeartbeat::kPeriod < milliseconds(300));
+        // A clock that reads earlier is due, never wedged.
+        EXPECT(hb.KeepDue(t0));
+        hb.Reset();
+        EXPECT(hb.KeepDue(t0));
+
+        // Still frames at 60 Hz for one second: keep() goes out 4 times.
+        LabelHeartbeat sim;
+        int keeps = 0;
+        for (int f = 0; f < 60; ++f) {
+            const auto now = t0 + milliseconds(f * 1000 / 60);
+            if (sim.KeepDue(now)) {
+                ++keeps;
+                sim.Sent(now);
+            }
+        }
+        EXPECT(keeps == 4);
+    }
+
     void PageBuild() {
         EXPECT(PageMatchesBuild("a1b2c3", "a1b2c3"));
         EXPECT(!PageMatchesBuild("", ""));
@@ -349,6 +424,9 @@ int main() {
         { "OwnExitsCancelAndReset", OwnExitsCancelAndReset },
         { "LabelPushDecisions", LabelPushDecisions },
         { "LabelPushEdges", LabelPushEdges },
+        { "LabelGeometry", LabelGeometry },
+        { "LabelContentHash", LabelContentHash },
+        { "LabelKeepCadence", LabelKeepCadence },
         { "PageBuild", PageBuild },
     };
 

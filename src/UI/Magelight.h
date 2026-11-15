@@ -71,7 +71,8 @@ namespace Isekai::UI::Magelight {
     // the page reports ready the call is queued (at most Logic::ReadyGate::kMaxPending, the
     // oldest is dropped beyond that, warned once); once it does, the queue drains in order.
     // While !Available() (no Install, RenderDead) calls are dropped, not queued.
-    // Callers build js only from nlohmann::json::dump() output.
+    // Callers build js only from nlohmann::json::dump() output (the one exception: the hud's
+    // per-frame labels.pos, which formats finite numbers and nothing else in place).
     void Run(View a_view, std::string a_js);
 
     // RequestUIMode(system, pause | queue). True = the entry is queued: UIModeEntered or

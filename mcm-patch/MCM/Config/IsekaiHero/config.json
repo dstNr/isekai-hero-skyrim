@@ -125,13 +125,6 @@
           "help": "How close to the crosshair an actor counts as aimed at, as a percentage of the screen. Only the Crosshair mode uses it.",
           "type": "slider",
           "valueOptions": { "min": 2, "max": 50, "step": 1, "formatString": "{0}", "sourceType": "ModSettingInt", "defaultValue": 15 }
-        },
-        {
-          "id": "fVRThreatLabelHeight:Threat",
-          "text": "VR label height",
-          "help": "How tall a label stands in the headset, in metres. Ignored outside VR.",
-          "type": "slider",
-          "valueOptions": { "min": 0.03, "max": 1.0, "step": 0.01, "formatString": "{2}", "sourceType": "ModSettingFloat", "defaultValue": 0.15 }
         }
       ]
     },

@@ -466,6 +466,8 @@
   </div>
 </section>
 
+<!-- Toasts, mirrored here only while the hud sits below our panels (spec 6.2). -->
+<div id="toasts"></div>
 <div id="keyDiag" hidden></div>
 
 <!-- The build id (generated next to the pages by the build). A missing file must not
@@ -925,12 +927,18 @@
      Called by src/UI/Magelight.cpp through InvokeJS. loc and scale arrive before the
      first show (the ready prelude) and again after a settings reload; arriving while
      a screen is up, they re-render it in place. */
+  const toastMirror = ui.toaster($("toasts"));
+
   window.isekai = {
     screens: Object.keys(SCREENS),
     show: (screen, payload) => show(screen, payload),
     loc: (table) => { ui.setLoc(table); rerender(); },
     scale: (s) => { ui.setScale(s); rerender(); },
     hello: () => ui.ready(),
+    // The hud's toast, mirrored while the hud view sits below this one and this one holds
+    // UI mode (Hud.cpp sends it only then). The hud keeps its own copy underneath, which
+    // lives on when this view closes.
+    toast: (p) => toastMirror(p),
   };
 
   ui.applyLoc();

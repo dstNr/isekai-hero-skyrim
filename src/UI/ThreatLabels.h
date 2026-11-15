@@ -8,15 +8,16 @@
 // decision has been made for you. The verdict is now simply visible, always, and the
 // panel it used to live in is gone.
 //
-// Two renderers, one set of labels. On SE/AE the frames are drawn straight onto the
-// screen at a projected point. In VR they are drawn into a helper-owned panel texture and
-// handed to ImGuiVRHelper as world-anchored billboards, which is the only way they stay
-// on the actor instead of swimming with the head — see DrawThreatLabelsVR.
+// This file only SELECTS: which actors get a label and what each one says. The hud page
+// draws them (magelight/IsekaiHero/hud.html) and UI/Hud.cpp pushes them there from the
+// frame tick. On flat screens a label floats over the actor's head at a projected point;
+// in VR, where Magelight cannot pin an element over a moving actor, the page shows the
+// same labels as a head-locked scan list (spec 8).
 
-#include "ImGuiVRHelperTypes.h"  // WorldQuad; header-only, no ImGui/OpenVR dependency
+#include "UI/UiLogic.h"
 
-#include <imgui.h>
-
+#include <cstdint>
+#include <string>
 #include <vector>
 
 namespace Isekai::UI {
@@ -26,26 +27,47 @@ namespace Isekai::UI {
     // true at load only; a rebind stays quiet so a journal close does not write to the log.
     void BindThreatLabelHotkeys(bool a_log);
 
-    // Draw the labels. Called by the overlay once per frame, inside an ImGui frame.
-    // Cheap no-op when the feature is switched off in the ini or by the key.
-    void DrawThreatLabels();
-
-    // The VR path. Draws each frame into its own horizontal band of a a_panel-sized
-    // texture and appends one billboard per label to a_out, positioned at the actor's
-    // head in Skyrim world units — the helper does the projection, so nothing here
-    // depends on a camera.
-    //
-    // One band per label rather than a grid: a band is the full panel width, so a long
-    // name can never bleed into the neighbouring label's sub-rect and end up sampled by
-    // the wrong billboard.
-    //
-    // Call inside the VR client's own ImGui frame. a_out is cleared first; an empty
-    // result must still be submitted, or the helper keeps showing the previous frame.
-    void DrawThreatLabelsVR(const ImVec2&                                     a_panel,
-                            std::vector<ImGuiVRHelperPluginAPI::WorldQuad>&   a_out);
-
     // Off and on again for this session. The ini decides where it starts; this is
-    // deliberately NOT saved — a display toggle is not part of a character.
+    // deliberately NOT saved - a display toggle is not part of a character.
     void ToggleThreatLabels();
     [[nodiscard]] bool ThreatLabelsVisible();
+
+    // A point in the hud page's space: 0..1 of the view, y running DOWN.
+    struct ScreenPt {
+        float x = 0.0f;
+        float y = 0.0f;
+    };
+
+    // One resource pool's worth of numbers.
+    struct LabelPool {
+        std::int32_t now = 0;
+        std::int32_t max = 0;  // 0 = this actor has none
+    };
+
+    // One label, already judged.
+    struct LabelData {
+        std::uint32_t  id = 0;    // the actor's FormID, stable while it stays labelled
+        ScreenPt       pos;       // the head point; {0, 0} when not projected (VR)
+        float          distance = 0.0f;
+        Logic::Verdict verdict = Logic::Verdict::Manageable;
+        const char*    tag = "";  // the verdict word, already translated
+        std::int32_t   level = 0;
+        LabelPool      hp;
+        LabelPool      mp;
+        LabelPool      sp;
+        std::string    name;      // empty = unnamed; the page says "Unknown"
+    };
+
+    // Main thread. The labels for this frame, nearest first, at most 12. Empty when there
+    // is nothing to label: no player in the world, the game paused, no camera.
+    //
+    // a_project: project each head point to the screen (flat screens). The projection
+    // also filters (off screen = no label) and drives the crosshair cone of the
+    // Crosshair and Aggro modes. Without it (VR) range and line of sight are the whole
+    // filter and pos stays {0, 0}.
+    [[nodiscard]] std::vector<LabelData> SelectLabels(bool a_project);
+
+    // Main thread, flat screens. The game's render size in pixels (1920 x 1080 if it
+    // cannot be read): what the projection and LabelPushGate measure pixels in.
+    void LabelScreenSize(float& a_width, float& a_height);
 }

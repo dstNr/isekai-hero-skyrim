@@ -1034,10 +1034,20 @@ check("ui: UiScale reaches both pages", () => {
   need(/"isekai\.scale\("\s*\+\s*nlohmann::json\(scale\)\.dump\(\)/.test(screens) &&
        /const float scale = Config::UiScale\(\)/.test(screens),
        "Screens.cpp no longer builds isekai.scale from Config::UiScale()");
-  for (const view of ["System", "Hud"]) {
-    need(new RegExp(`SetPrelude\\(Magelight::View::${view},\\s*&SettingsCalls\\)`).test(screens),
-         `the ${view.toLowerCase()} view's prelude no longer carries the settings calls`);
-  }
+  need(/SetPrelude\(Magelight::View::System,\s*&SettingsCalls\)/.test(screens),
+       "the system view's prelude no longer carries the settings calls");
+  // The hud's prelude belongs to Hud.cpp (SetPrelude replaces, one owner per view) and is
+  // built on the same calls, plus the VR switch.
+  const hudCpp = read("src/UI/Hud.cpp");
+  const hudPrelude = hudCpp.match(/std::vector<std::string> HudPrelude\(\) \{([\s\S]*?)\n        \}/);
+  need(/SetPrelude\(Magelight::View::Hud,\s*&HudPrelude\)/.test(hudCpp) && hudPrelude,
+       "Hud.cpp no longer sets the hud view's prelude (HudPrelude) — parser stale?");
+  need(/Screens::SettingsCalls\(\)/.test(hudPrelude[1]),
+       "the hud view's prelude no longer carries the settings calls");
+  need(/IsVR\(\)/.test(hudCpp) && /isekai\.vr\(/.test(hudPrelude[1]),
+       "the hud view's prelude no longer switches the page to the VR scan list");
+  need(!/SetPrelude\(Magelight::View::Hud/.test(screens),
+       "Screens.cpp sets the hud prelude too — SetPrelude replaces, whichever runs last wins");
   need(/UI::Screens::OnSettingsReloaded\(\)/.test(read("src/System.cpp")),
        "a settings reload no longer re-sends UiScale to the pages");
   return "system and hud pages, prelude and reload";
@@ -1186,6 +1196,15 @@ check("ui: the web view's rank insignia is actually on screen", () => {
    whole rewrite is about (spec 9). The CSS helpers strip comments first: a comment
    that mentions "transition: width" is not a transition. */
 const cssOf = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "");
+// common.js run against a fake window and document; returns its isekaiUi.
+const commonUi = (doc = {}) => {
+  const win = {};
+  new Function("window", "document", read(PAGE_COMMON))(win, {
+    querySelectorAll: () => [], addEventListener: () => {}, readyState: "loading",
+    documentElement: { style: { setProperty: () => {} } }, ...doc,
+  });
+  return win.isekaiUi;
+};
 const hudStyle = () => cssOf([...read(HUD_PAGE).matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join("\n"));
 const hudScript = () => [...read(HUD_PAGE).matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]).join("\n");
 
@@ -1300,7 +1319,12 @@ check("hud: threat labels take the plugin's verdict tones", () => {
     grab(/function verdictTone\(v\) \{[\s\S]*?\n  \}/, "verdictTone(v)"),
     grab(/function labelTone\(l\) \{[^\n]*\}/, "labelTone(l)"),
   ].join("\n");
-  const page = new Function("TONES", `${src}\nreturn { VERDICTS, verdictTone, labelTone };`)({ cyan: 1, gold: 1, red: 1, violet: 1 });
+  // The page's own TONES: hud.html takes common.js's, so run common.js and hand that in.
+  need(/\bconst TONES = ui\.TONES;/.test(js), "hud.html no longer takes its TONES from common.js (ui.TONES) — update this check");
+  const tones = commonUi().TONES;
+  need(tones && Object.getPrototypeOf(tones) === null,
+       "common.js's TONES has a prototype — a payload tone of \"constructor\" would pass as a tone");
+  const page = new Function("TONES", `${src}\nreturn { VERDICTS, verdictTone, labelTone };`)(tones);
   need(JSON.stringify(page.VERDICTS) === JSON.stringify(names.map((n) => n.toLowerCase())),
        `the page's VERDICTS ${JSON.stringify(page.VERDICTS)} are not Logic::Verdict in order (${names.join(", ")})`);
   names.forEach((n, i) => {
@@ -1311,6 +1335,7 @@ check("hud: threat labels take the plugin's verdict tones", () => {
   });
   need(page.labelTone({ verdict: "trivial", tone: "gold" }) === "gold", "the page ignores the plugin's tone");
   need(page.labelTone({ verdict: "lethal", tone: "bogus" }) === "red", "an unknown tone must fall back to the verdict's own");
+  need(page.labelTone({ verdict: "lethal", tone: "constructor" }) === "red", "a prototype name passes as a tone");
   // At most as many labels as the plugin selects.
   const cap = read("src/UI/ThreatLabels.cpp").match(/kMaxLabels\s*=\s*(\d+)/);
   need(cap, "kMaxLabels not found in ThreatLabels.cpp — parser stale?");
@@ -1336,16 +1361,90 @@ check("hud: the page speaks the plugin's contract and keeps the ImGui timings", 
   need(/\bui\.ready\(\);\s*\}\)\(\);$/.test(js.trim()), "hud.html no longer sends isekai.ready when it loads");
   need(!/\bui\.send\(|magelight\.send|escapeCapture/.test(js), "hud.html sends something besides isekai.ready — the hud has no actions");
   // spec / constraints: toast line 3.2 s, banner 5.5 s, fade 0.8 s, rise 0.22 s; flourish 3.2 s, fade 0.7 s.
-  const num = (name) => { const m = js.match(new RegExp(`\\b${name}\\s*=\\s*(\\d+)`)); need(m, `${name} not found in hud.html`); return +m[1]; };
-  const want = { LINE_MS: 3200, BANNER_MS: 5500, FADE_MS: 800, FLOURISH_MS: 3200, FLOURISH_FADE_MS: 700 };
-  for (const [k, v] of Object.entries(want)) need(num(k) === v, `${k} is ${num(k)}, the timings say ${v}`);
-  need(/\.toast\s*\{[^}]*animation:\s*toast-rise\s+220ms/.test(hudStyle()), "the toast no longer rises in 220 ms");
-  need(/\.toast \.tin\s*\{[^}]*animation:\s*toast-fade\s+800ms/.test(hudStyle()), "the toast fade is no longer 800 ms");
+  // The toast strip is shared with the system page: its script is common.js's, its
+  // styles theme.css's.
+  need(/\bui\.toaster\(\$\("toasts"\)\)/.test(js) && /id="toasts"/.test(html), "hud.html no longer runs common.js's toaster on its #toasts");
+  const common = read(PAGE_COMMON);
+  const num = (src, file, name) => { const m = src.match(new RegExp(`\\b${name}\\s*=\\s*(\\d+)`)); need(m, `${name} not found in ${file}`); return +m[1]; };
+  const want = [[common, PAGE_COMMON, { LINE_MS: 3200, BANNER_MS: 5500, FADE_MS: 800 }],
+                [js, HUD_PAGE, { FLOURISH_MS: 3200, FLOURISH_FADE_MS: 700 }]];
+  for (const [src, file, vals] of want) {
+    for (const [k, v] of Object.entries(vals)) need(num(src, file, k) === v, `${file}: ${k} is ${num(src, file, k)}, the timings say ${v}`);
+  }
+  const theme = cssOf(read(PAGE_THEME));
+  need(/\.toast\s*\{[^}]*animation:\s*toast-rise\s+220ms/.test(theme), "the toast no longer rises in 220 ms");
+  need(/\.toast \.tin\s*\{[^}]*animation:\s*toast-fade\s+800ms/.test(theme), "the toast fade is no longer 800 ms");
+  need(/#toasts\s*\{[^}]*pointer-events:\s*none/.test(theme), "#toasts takes clicks — on the system page it would sit over the buttons");
+  // Run the toaster: a key replaces in place, a fifth toast pushes the oldest out.
+  {
+    const made = [];
+    const mk = (tag) => {
+      const e = { tagName: tag, children: [], parentNode: null, style: {}, attrs: {}, className: "", textContent: "",
+                  setAttribute(k, v) { this.attrs[k] = v; },
+                  appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
+                  removeChild(c) { this.children.splice(this.children.indexOf(c), 1); c.parentNode = null; return c; },
+                  replaceChild(n, o) { const i = this.children.indexOf(o); this.children[i] = n; n.parentNode = this; o.parentNode = null; return o; },
+                  get firstElementChild() { return this.children[0]; } };
+      made.push(e);
+      return e;
+    };
+    const ui = commonUi({ createElement: mk });
+    const box = mk("div");
+    const toast = ui.toaster(box);
+    const texts = () => box.children.map((c) => c.children[0].children.at(-1).textContent);
+    toast({ text: "Wolves 1/5", key: "q" });
+    toast({ text: "[ SYSTEM ] New objective", banner: true, tone: "gold" });
+    toast({ text: "Wolves 2/5", key: "q" });
+    need(JSON.stringify(texts()) === JSON.stringify(["Wolves 2/5", "New objective"]),
+         `a keyed toast did not replace in place: ${JSON.stringify(texts())}`);
+    need(box.children[1].attrs["data-tone"] === "gold" && /banner/.test(box.children[1].className),
+         "the toaster drops the banner flag or the plugin's tone");
+    toast({ text: "x", tone: "constructor" });
+    need(box.children[2].attrs["data-tone"] === "cyan", "a prototype name passes as a toast tone");
+    toast({ text: "a" }); toast({ text: "b" }); toast({ text: "   " });
+    need(box.children.length === 4 && texts()[0] === "New objective", `more than four toasts, or the wrong one went: ${JSON.stringify(texts())}`);
+  }
+  // The system page mirrors toasts (spec 6.2), and the plugin sends there exactly then.
+  const sys = read(SYSTEM_PAGE);
+  need(/\btoast\s*:\s*\([^)]*\)\s*=>/.test(sys) && /ui\.toaster\(\$\("toasts"\)\)/.test(sys) && /id="toasts"/.test(sys),
+       "system.html no longer mirrors toasts through common.js's toaster");
+  const hudCpp = read("src/UI/Hud.cpp");
+  need(/HudBelowPanels\(\)\s*&&\s*Magelight::HoldsUiMode\(\)[\s\S]{0,200}View::System,\s*js\)/.test(hudCpp),
+       "Hud.cpp no longer mirrors a toast to the system view while the hud sits below it");
+  for (const call of ["isekai.toast(", "isekai.flourish(", "isekai.labels.full(", "isekai.labels.pos(", "isekai.labels.keep()"]) {
+    need(hudCpp.includes(`"${call}`), `Hud.cpp no longer calls ${call}`);
+  }
   need(/\.fl\s*\{[^}]*animation:\s*fl-out\s+700ms/.test(hudStyle()), "the flourish fade is no longer 700 ms");
   // No light cone or beam (user look ruling, spec 7.1).
   need(!/\b(beam|cone|pillar)\b/i.test(cssOf(html).replace(/<!--[\s\S]*?-->/g, "").replace(/\/\/.*$/gm, "")),
        "hud.html draws a beam/cone/pillar — the look ruling says no light cone anywhere");
-  return "loc/scale/vr/hello/toast/flourish/labels{full,pos,keep}, ready only, timings as the ImGui strip";
+  return "loc/scale/vr/hello/toast/flourish/labels{full,pos,keep}, ready only, timings as the ImGui strip; toaster shared with the system page";
+});
+
+check("hud: the plugin sends labels the way the page reads them", () => {
+  // hud.html's label contract (its header): y runs DOWN, s is the distance factor alone
+  // (the page multiplies UiScale in), nums:false hides the health figures, pools with max
+  // 0 draw nothing. And the liveness: keep() while nothing moves, and a pausing menu or
+  // the console clears the labels at once (the frame tick stops there).
+  const hud = read("src/UI/Hud.cpp");
+  const sel = read("src/UI/ThreatLabels.cpp");
+  need(/Logic::PageY\(/.test(sel), "ThreatLabels.cpp no longer flips the port's y into the page's (Logic::PageY)");
+  need(/Logic::LabelDistanceScale\(/.test(hud), "Hud.cpp no longer sends s = Logic::LabelDistanceScale");
+  need(!/UiScale|g_userScale|g_scale/.test(hud), "Hud.cpp scales labels by UiScale — the page does that, it would apply twice");
+  need(/j\["nums"\]\s*=/.test(hud) && /ThreatLabelNumbers\(\)/.test(hud), "Hud.cpp no longer sends nums (ThreatLabelNumbers)");
+  need(/ThreatLabelResources\(\)/.test(hud) && /a_res \? PoolJson\(l\.mp\)/.test(hud),
+       "Hud.cpp no longer drops magicka/stamina when ThreatLabelResources is off");
+  need(/LabelHeartbeat/.test(hud) && /KeepDue\(/.test(hud), "Hud.cpp no longer sends the keep() heartbeat");
+  need(/BSTEventSink<RE::MenuOpenCloseEvent>/.test(hud) && /PausesGame\(\)/.test(hud) && /Console::MENU_NAME/.test(hud),
+       "Hud.cpp no longer clears the labels when a pausing menu or the console opens");
+  need(/FrameTick::Add\(&OnFrame\)/.test(hud), "the label pass is no longer on the frame tick");
+  // Toasts and the flourish are NOT on the frame tick: it stops while paused and in tfc.
+  const onFrame = hud.slice(hud.indexOf("void OnFrame()"), hud.indexOf("class MenuWatcher"));
+  need(onFrame.length > 0 && !/toast|flourish/i.test(onFrame), "OnFrame sends toasts or the flourish — they would stop while paused");
+  // The page's 300 ms staleness vs the heartbeat period.
+  const period = read("src/UI/UiLogic.h").match(/kPeriod\{\s*(\d+)\s*\}/);
+  need(period && +period[1] < 300, `the keep() period (${period && period[1]} ms) is not inside the page's 300 ms`);
+  return `y down, s unscaled, nums/resources, keep() every ${period[1]} ms, menu clear`;
 });
 
 check("icons: every shipped PNG is 512x512", () => {

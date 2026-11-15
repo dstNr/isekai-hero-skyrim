@@ -75,10 +75,10 @@ add_commonlibsse_plugin(
         include/IsekaiHeroAPI.h
         src/Logger.h
         src/PCH.h
+        src/UI/Hud.cpp
+        src/UI/Hud.h
         src/UI/Input.cpp
         src/UI/Input.h
-        src/UI/LevelUpEffect.cpp
-        src/UI/LevelUpEffect.h
         src/UI/Magelight.cpp
         src/UI/Magelight.h
         src/UI/Overlay.cpp
@@ -91,8 +91,6 @@ add_commonlibsse_plugin(
         src/UI/Screens.h
         src/UI/ThreatLabels.cpp
         src/UI/ThreatLabels.h
-        src/UI/Toast.cpp
-        src/UI/Toast.h
         src/UI/Style.h
         src/UI/UiLogic.h
         src/UI/Textures.cpp

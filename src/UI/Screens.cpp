@@ -477,8 +477,9 @@ namespace Isekai::UI {
         }
 
         void Install() {
+            // The hud's prelude is Hud::Install's: these calls plus its own (SetPrelude
+            // replaces, so only one owner per view).
             Magelight::SetPrelude(Magelight::View::System, &SettingsCalls);
-            Magelight::SetPrelude(Magelight::View::Hud, &SettingsCalls);
         }
 
         void OnSettingsReloaded() {
