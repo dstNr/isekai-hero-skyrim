@@ -1,7 +1,6 @@
 #include "UI/LevelUpEffect.h"
 
 #include "Sounds.h"
-#include "UI/Prisma.h"
 #include "UI/Style.h"
 
 #include <imgui.h>
@@ -55,20 +54,12 @@ namespace Isekai::UI {
     }
 
     void PlayLevelUpEffect(std::string a_title, std::string a_subtitle) {
-        // Route the flourish through the web view when the PrismaUI patch is live.
-        if (Prisma::Active()) {
-            // The flourish almost always follows a panel choice, i.e. the frame in
-            // which PrismaUI hands control back and the game leaves menu-pause. A
-            // sting started in that frame is discarded by the engine's resume pass,
-            // which is exactly why the level-up sound went missing under Prisma.
-            Sounds::PlayDelayed(Sounds::Sfx::LevelUp, Sounds::kResumeGraceMs);
-            Prisma::Flourish(std::move(a_title), std::move(a_subtitle));
-            return;
-        }
         // The sting belongs to the flourish, not to whoever triggers it — keeping it
         // here means a new call site cannot forget it, and cannot get the timing
-        // above wrong.
-        Sounds::Play(Sounds::Sfx::LevelUp);
+        // wrong. Delayed: the flourish almost always follows a panel choice, i.e. the
+        // frame in which the System view lets go and the game leaves menu-pause, and a
+        // sting started in that frame is discarded by the engine's resume pass.
+        Sounds::PlayDelayed(Sounds::Sfx::LevelUp, Sounds::kResumeGraceMs);
         {
             std::scoped_lock lock(g_mutex);
             g_title = std::move(a_title);

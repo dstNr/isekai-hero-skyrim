@@ -178,6 +178,22 @@ namespace {
         EXPECT(!d.Current() && !d.NeedsReoffer());
     }
 
+    // The sequence Screens.cpp runs for a decision panel whose UI mode was lost: the
+    // re-shown panel offers the same serial again, which clears the re-offer flag, and the
+    // choice that finally arrives resolves it.
+    void DecisionScreensReoffer() {
+        PendingDecision d;
+        d.Offer(1);
+        d.OnUiModeLost();
+        EXPECT(d.NeedsReoffer());
+        d.Offer(1);
+        EXPECT(!d.NeedsReoffer());
+        EXPECT(d.Current() == 1u);
+        d.Resolve(1);
+        EXPECT(!d.Current());
+        EXPECT(!d.NeedsReoffer());
+    }
+
     void LabelPushDecisions() {
         constexpr float W = 1920.0f, H = 1080.0f;
         LabelPushGate g;
@@ -270,6 +286,7 @@ int main() {
         { "DecisionReoffer", DecisionReoffer },
         { "DecisionNothingPending", DecisionNothingPending },
         { "DecisionOfferSemantics", DecisionOfferSemantics },
+        { "DecisionScreensReoffer", DecisionScreensReoffer },
         { "LabelPushDecisions", LabelPushDecisions },
         { "LabelPushEdges", LabelPushEdges },
         { "PageBuild", PageBuild },

@@ -2,10 +2,7 @@
 
 #include "Config.h"
 #include "UI/Overlay.h"
-#include "UI/Prisma.h"
-#include "UI/ShopWindow.h"
-#include "UI/SkillTreeWindow.h"
-#include "UI/SystemWindow.h"
+#include "UI/Screens.h"
 
 #include <imgui.h>
 
@@ -78,19 +75,6 @@ namespace Isekai::UI {
 
         // B closes our panels, the way ESC and Tab do on a keyboard.
         constexpr std::uint32_t kPadB = 0x2000;
-
-        // The handful of buttons the web view understands, or nullptr for the rest.
-        [[nodiscard]] constexpr const char* PadName(std::uint32_t a_button) {
-            switch (a_button) {
-            case 0x1000: return "a";
-            case kPadB:  return "b";
-            case 0x0001: return "up";
-            case 0x0002: return "down";
-            case 0x0004: return "left";
-            case 0x0008: return "right";
-            default:     return nullptr;
-            }
-        }
 
         // A HotkeyId back in words, for the log.
         [[nodiscard]] std::string HotkeyName(std::uint32_t a_id) {
@@ -241,18 +225,6 @@ namespace Isekai::UI {
 
                     if (!button->IsDown()) {
                         continue;
-                    }
-
-                    // With the PrismaUI patch installed the web view owns the screen, and
-                    // PrismaUI gives its view the keyboard and mouse but not a controller.
-                    // So the pad's buttons are forwarded into the page, which navigates by
-                    // moving DOM focus — see window.isekaiPad in the view. (The built-in
-                    // renderer does the opposite and drives a cursor; a DOM has elements
-                    // to focus and an ImGui canvas does not.)
-                    if (device == RE::INPUT_DEVICE::kGamepad) {
-                        if (const char* pad = PadName(button->GetIDCode())) {
-                            Prisma::SendGamepad(pad);
-                        }
                     }
 
                     FireHotkey(id);
@@ -446,13 +418,7 @@ namespace Isekai::UI {
 
                 if (IsCapturingInput()) {
                     if (dismissKey && a_event->IsDown()) {
-                        if (IsSkillTreeOpen()) {
-                            DismissSkillTree();
-                        } else if (IsShopWindowOpen()) {
-                            DismissShopWindow();
-                        } else {
-                            DismissSystemWindow();
-                        }
+                        DismissSystemWindow();  // whichever screen is up; a decision ignores it
                         // The panel closes on the key's DOWN — but Skyrim's journal
                         // listens for its release. By the time the UP arrives, we no
                         // longer capture, the up sailed through, and the journal opened

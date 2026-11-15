@@ -5,10 +5,8 @@
 #include "SkillTree.h"
 #include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
-#include "UI/ShopWindow.h"
-#include "UI/SkillTreeWindow.h"
+#include "UI/Screens.h"
 #include "UI/Style.h"
-#include "UI/SystemWindow.h"
 #include "UI/Textures.h"
 #include "UI/ThreatLabels.h"
 #include "UI/Toast.h"
@@ -238,22 +236,11 @@ namespace Isekai::UI {
                 // The flourish never blocks: it plays over normal gameplay, and it is
                 // drawn before the cursor so it can never sit on top of it.
                 DrawLevelUpEffect();
-                DrawSystemWindow();
-                DrawSkillTree();
-                DrawShopWindow();
 
                 // HUD layers: they draw over gameplay and over our own panels, take no
                 // input, and pause nothing.
                 DrawThreatLabels();
                 DrawToasts();
-
-                // Only while we own the input, and above everything else — otherwise
-                // it would sit on screen next to Skyrim's own cursor whenever the game
-                // opens a menu of its own (a Survival Mode prompt, say).
-                if (IsCapturingInput()) {
-                    Style::DrawSystemCursor(ImGui::GetForegroundDrawList(), io.MousePos,
-                                            Style::g_scale, Style::kAccent);
-                }
 
                 ImGui::Render();
                 g_context->OMSetRenderTargets(1, &g_backBufferView, nullptr);
@@ -401,7 +388,8 @@ namespace Isekai::UI {
     }
 
     bool IsCapturingInput() {
-        return IsSystemWindowOpen() || IsSkillTreeOpen() || IsShopWindowOpen();
+        // The screens are Magelight pages now; the ImGui ones are gone.
+        return HoldsInput();
     }
 
     void SetGameHold(bool a_hold) {

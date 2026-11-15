@@ -487,8 +487,9 @@
 
   /* Every kind of pad/keyboard target: buttons and choice cards (panel), icon actions,
      skill-tree nodes and mastery rows, shop cards (.card) and shelves. All are
-     <button>s, so they take focus without a tabindex; Magelight's navigation-style pad
-     moves that focus, the arrow keys below do the same for a keyboard.
+     <button>s, so they take focus without a tabindex. The arrow keys below move that
+     focus; Magelight's pad arrives as the same keys (key style: d-pad and left stick
+     the arrows, A Enter, B Escape), so one handler serves both.
      tools/check.mjs holds this list to the markup. */
   const FOCUSABLE = ".btn, .card, .iconBtn, .node, .mrow, .shelf";
 

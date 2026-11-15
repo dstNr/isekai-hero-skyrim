@@ -21,10 +21,8 @@
 #include "UI/LevelUpEffect.h"
 #include "UI/Magelight.h"
 #include "UI/Overlay.h"
-#include "UI/Prisma.h"
-#include "UI/SkillTreeWindow.h"
+#include "UI/Screens.h"
 #include "UI/Style.h"
-#include "UI/SystemWindow.h"
 #include "UI/ThreatLabels.h"
 #include "UI/VROverlay.h"
 
@@ -600,22 +598,19 @@ namespace Isekai {
                 return;
             }
 
-            // In VR the ImGui overlay is disabled (it crashes on the VR renderer), so the
-            // blessing menu can ONLY come from PrismaUI. If it is not active yet, do not
-            // consume the one-shot flag below — otherwise the character would be marked
-            // reincarnated with no way ever to pick a blessing (a soft-brick of the core
-            // feature). Bail instead; the menu-close watcher calls back in, and once the
-            // player has the PrismaUI VR build the flow starts normally. A single note
-            // (native notification — those DO render in the headset) says what is needed.
-            if (REL::Module::IsVR() && !UI::Prisma::Active()) {
+            // Every screen is a Magelight page, on every runtime (spec 6.5). Without it,
+            // do not consume the one-shot flag below — otherwise the character would be
+            // marked reincarnated with no way ever to pick a blessing (a soft-brick of the
+            // core feature). Bail instead; the menu-close watcher calls back in, and once
+            // Magelight UI is there the flow starts normally. A single note (a native
+            // notification, which renders everywhere) says what is needed.
+            if (!UI::Available()) {
                 static bool warned = false;
                 if (!warned) {
                     warned = true;
-                    logger::warn("Reincarnation held: VR without an active PrismaUI view — the "
-                                 "ImGui UI is disabled in VR, so the menu needs PrismaUI.");
-                    SystemMsg(L("vr.needsPrisma",
-                                "[ SYSTEM ] Isekai Hero needs PrismaUI (1.5.0 VR build) to "
-                                "show its menu in VR."));
+                    logger::warn("Reincarnation held: Magelight UI is not available, so the "
+                                 "blessing choice could not be shown.");
+                    UI::ShowNeedsMagelight();
                 }
                 return;
             }
@@ -686,6 +681,7 @@ namespace Isekai {
             const bool changed = BindAllHotkeys(/*a_log=*/false);
             SelfTest::OnHotkeysRebound(changed);
             ::Isekai::UI::Style::g_userScale = Config::UiScale();
+            UI::Screens::OnSettingsReloaded();  // the pages re-render at a changed UiScale
         }
 
         class MenuWatcher : public RE::BSTEventSink<RE::MenuOpenCloseEvent>,
@@ -1165,7 +1161,7 @@ namespace Isekai {
                 FrameTick::Install();   // main-thread clock: quests and the mod API publish
                 UI::Install();
                 UI::Magelight::Install();  // system and hud views; no-op without Magelight UI
-                UI::Prisma::Install();  // optional web UI; no-op without the patch
+                UI::Screens::Install();    // what every fresh page gets first: loc table, UiScale
                 SkyrimNet::Install();   // optional AI-NPC context; no-op without SkyrimNet
                 Progression::Install();
                 Quests::Install();      // watches kills for the standing objective
@@ -1189,6 +1185,9 @@ namespace Isekai {
             // populated and the catch-up knows what it already owes.
             case SKSE::MessagingInterface::kPostLoadGame:
             case SKSE::MessagingInterface::kNewGame:
+                // The loaded save has its own state: a decision or screen from before the
+                // load must not answer into it.
+                UI::Screens::OnGameLoaded();
                 Progression::CatchUpOnLoad();
                 // A dormant blessing that came due while the mod was off (or whose
                 // threshold the ini has just lowered) is settled on load.

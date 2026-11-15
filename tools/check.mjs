@@ -34,6 +34,7 @@ const SYSTEM_PAGE = "magelight/IsekaiHero/system.html";
 const PAGE_THEME = "magelight/IsekaiHero/theme.css";
 const PAGE_COMMON = "magelight/IsekaiHero/common.js";
 const PAGE_SCREENS = "magelight/IsekaiHero/screens";
+const HUD_PAGE = "magelight/IsekaiHero/hud.html";
 const screenScripts = () => existsSync(join(ROOT, PAGE_SCREENS))
   ? readdirSync(join(ROOT, PAGE_SCREENS)).filter((n) => n.endsWith(".js")).sort().map((n) => `${PAGE_SCREENS}/${n}`)
   : [];
@@ -1000,18 +1001,21 @@ check("fomod: the installer offers files that exist, and presets that are curren
   return `${PRESETS.length} presets, ${sources.length} sources`;
 });
 
-check("ui: UiScale reaches both renderers", () => {
-  // The setting is one number that has to arrive in two places by two different routes:
-  // Style::g_userScale for the built-in interface, and a CSS variable pushed into the web
-  // view. Either half can rot on its own without anything failing - the interface simply
-  // stops resizing for half the players, and only the half using that renderer notice.
-  // This is an accessibility setting, so silent half-coverage is the wrong failure.
+check("ui: UiScale reaches both pages", () => {
+  // The setting is one number that has to arrive in two pages: the system page (every
+  // screen) and the hud (toasts, flourish, threat labels). Either half can rot on its own
+  // without anything failing - half the interface simply stops resizing. This is an
+  // accessibility setting, so silent half-coverage is the wrong failure.
   const view = systemPage();
-  need(/\bscale\s*[:=]\s*(function\b|\([^)]*\)\s*=>)/.test(read(SYSTEM_PAGE)),
-       "the page no longer defines isekai.scale");
+  const hud = read(HUD_PAGE);
+  for (const [name, html] of [[SYSTEM_PAGE, read(SYSTEM_PAGE)], [HUD_PAGE, hud]]) {
+    need(/\bscale\s*[:=]\s*(function\b|\([^)]*\)\s*=>)/.test(html), `${name} no longer defines isekai.scale`);
+  }
   need(/--ui-scale/.test(read(PAGE_COMMON)), "setScale no longer writes the --ui-scale variable");
   need(/transform:\s*scale\(var\(--ui-scale/.test(view),
-       "nothing in the page applies --ui-scale, so the plugin would push a number nowhere");
+       "nothing in the system page applies --ui-scale, so the plugin would push a number nowhere");
+  need(/transform:\s*scale\(var\(--ui-scale/.test(hud),
+       "nothing in the hud applies --ui-scale, so the plugin would push a number nowhere");
   // A value arriving from outside the page: a 0 would make the whole interface vanish
   // with no way left to reach the setting that did it. Run the clamp, don't just read it.
   let pushed = null;
@@ -1024,12 +1028,19 @@ check("ui: UiScale reaches both renderers", () => {
   need(pushed === 0.5, `setScale(0) wrote ${pushed}, not the 0.5 floor`);
   win.isekaiUi.setScale("garbage");
   need(pushed === 1, `setScale("garbage") wrote ${pushed}, not 1`);
-  need(/isekaiScale/.test(read("src/UI/Prisma.cpp")),
-       "the plugin no longer pushes the scale into the view");
-  need(/g_userScale/.test(read("src/UI/Style.h")) &&
-       /g_userScale\s*=\s*Config::UiScale\(\)/.test(read("src/System.cpp")),
-       "the built-in renderer no longer picks up Config::UiScale");
-  return "built-in and web view";
+  // The plugin side: the scale goes into the prelude every fresh page gets first, for
+  // both views, and again after a settings reload.
+  const screens = read("src/UI/Screens.cpp");
+  need(/"isekai\.scale\("\s*\+\s*nlohmann::json\(scale\)\.dump\(\)/.test(screens) &&
+       /const float scale = Config::UiScale\(\)/.test(screens),
+       "Screens.cpp no longer builds isekai.scale from Config::UiScale()");
+  for (const view of ["System", "Hud"]) {
+    need(new RegExp(`SetPrelude\\(Magelight::View::${view},\\s*&SettingsCalls\\)`).test(screens),
+         `the ${view.toLowerCase()} view's prelude no longer carries the settings calls`);
+  }
+  need(/UI::Screens::OnSettingsReloaded\(\)/.test(read("src/System.cpp")),
+       "a settings reload no longer re-sends UiScale to the pages");
+  return "system and hud pages, prelude and reload";
 });
 
 check("ui: every skill-tree link in the web view is visibly drawn", () => {
@@ -1073,8 +1084,8 @@ check("ui: the controller's focus ring can reach every kind of target", () => {
   // shop silently stops being reachable by controller, with nothing failing anywhere.
   // Nobody here plays on a pad, so nobody would notice.
   //
-  // The Magelight page: its navigation-style pad moves native focus between focusable
-  // controls, and the page's own arrow keys walk the FOCUSABLE list. Every kind of
+  // The Magelight page: the pad arrives as keys (Magelight's key style), and the page's
+  // own arrow keys walk the FOCUSABLE list. Every kind of
   // target is a <button> (focusable without a tabindex), every class in the list must
   // exist, and theme.css must draw a ring on :focus.
   const page = systemPage();
@@ -1096,12 +1107,12 @@ check("ui: the controller's focus ring can reach every kind of target", () => {
   return `${kinds.length} kinds, all present, all buttons`;
 });
 
-check("ui: the status screen colours a System Rank in the plugin's tone", () => {
+check("ui: the status payload's rank tone comes from ToneForRank", () => {
   // The rank's colour is the part you are meant to trust without reading the letter, so
   // the page and the plugin must never disagree about it. The plugin decides the tone
-  // (Logic::ToneForRank, sent as rankTone); the page falls back to the same rule for a
-  // plugin that does not send it. RUN the page's rankTone() against every rank the
-  // plugin can return, and against the field.
+  // (Logic::ToneForRank, sent as rankTone by BuildStatusJson); the page falls back to the
+  // same rule for a plugin that does not send it. RUN the page's rankTone() against every
+  // rank the plugin can return, and against the field.
   //
   // It also has to reach the screen. The old view shipped six correct colours that all
   // rendered white because an id rule outranked them — so the letter must take its
@@ -1120,6 +1131,17 @@ check("ui: the status screen colours a System Rank in the plugin's tone", () => 
   const letters = [...new Set([...cpp.slice(from, cpp.indexOf("\n    }", from))
     .matchAll(/return "(\w)";/g)].map((m) => m[1]))];
   need(letters.length > 0, "no rank letters parsed — parser stale?");
+
+  // The payload: rankTone from ToneForRank on the rank it sends, blessingTone from
+  // ToneFor(Blessing), and the level the page shows beside them.
+  const at = cpp.indexOf("std::string BuildStatusJson()");
+  need(at >= 0, "BuildStatusJson not found in Progression.cpp");
+  const body = cpp.slice(at, cpp.indexOf("\n        }\n", at));
+  need(/\\"rankTone\\"[\s\S]{0,160}ToneName\(UI::Logic::ToneForRank\(rank/.test(body),
+       "BuildStatusJson no longer sends rankTone from Logic::ToneForRank");
+  need(/\\"blessingTone\\"[\s\S]{0,160}ToneName\(UI::Logic::ToneFor\(BlessingOf/.test(body),
+       "BuildStatusJson no longer sends blessingTone from Logic::ToneFor(Blessing)");
+  need(/\\"level\\"/.test(body), "BuildStatusJson no longer sends the character level");
 
   const html = systemPage();
   const src = html.match(/function rankTone\(s\) \{[\s\S]*?\n\s*\}/);
@@ -1163,7 +1185,6 @@ check("ui: the web view's rank insignia is actually on screen", () => {
    It plays over live gameplay and never closes, so what it costs per frame is what the
    whole rewrite is about (spec 9). The CSS helpers strip comments first: a comment
    that mentions "transition: width" is not a transition. */
-const HUD_PAGE = "magelight/IsekaiHero/hud.html";
 const cssOf = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "");
 const hudStyle = () => cssOf([...read(HUD_PAGE).matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join("\n"));
 const hudScript = () => [...read(HUD_PAGE).matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]).join("\n");
@@ -1471,48 +1492,6 @@ check("shop: the shelf list agrees across C++, the view and the playground", () 
   const view = systemPage();
   need(/SHOP\.shelves/.test(view), "the view no longer reads SHOP.shelves — rail parser stale?");
   return cpp.join(" / ");
-});
-
-check("shop: the built-in window still fits a 1080p screen", () => {
-  // The ImGui shop sizes itself from the catalog, so growing the catalog grows the
-  // window. With the potions wired it reached 18 cards, and at the original four columns
-  // that was a 1454px-tall window on a 1080p display - taller than the screen, with no
-  // scrolling to fall back on. Now it sizes from the BIGGEST SHELF rather than the whole
-  // catalog (so switching category never resizes it) plus the rail.
-  const src = read("src/UI/ShopWindow.cpp");
-  const num = (re, what) => {
-    const m = src.match(re);
-    need(m, `could not read ${what} from ShopWindow.cpp`);
-    return parseFloat(m[1]);
-  };
-  const cardW = num(/kCardW = ([\d.]+)f/, "kCardW");
-  const cardH = num(/kCardH = ([\d.]+)f/, "kCardH");
-  const gap = num(/kCardGap = ([\d.]+)f/, "kCardGap");
-  const pad = num(/kPad = ([\d.]+)f/, "kPad");
-  const head = num(/kHeadH = ([\d.]+)f/, "kHeadH");
-  const foot = num(/kFootH = ([\d.]+)f/, "kFootH");
-  const railW = num(/kRailW = ([\d.]+)f/, "kRailW");
-  const railGap = num(/kRailGap = ([\d.]+)f/, "kRailGap");
-  const railRowH = num(/kRailRowH = ([\d.]+)f/, "kRailRowH");
-  const cols = num(/kCols = (\d+)/, "kCols");
-
-  const live = parseShopCatalog().filter((e) => e.kind !== "OurItem" || e.localID);
-  const shelves = parseShelfNames();
-  const widest = Math.max(1, ...shelves.map(
-    (n) => live.filter((e) => e.shelf.toUpperCase() === n).length));
-  const rows = Math.max(1, Math.ceil(widest / cols));
-  const w = pad * 2 + railW + railGap + cols * cardW + (cols - 1) * gap;
-  const h = head + rows * cardH + (rows - 1) * gap + foot;
-
-  need(w <= 1920 && h <= 1080,
-       `${widest} cards on the biggest shelf makes a ${w}x${h} window, which does not fit ` +
-       `1920x1080`);
-  // The rail lives in the same vertical band as the cards; more shelves than fit there
-  // would run off the bottom, and it does not scroll.
-  const railH = shelves.length * railRowH;
-  need(railH <= h - head - foot + rows * cardH,
-       `${shelves.length} shelves need ${railH} units of rail, more than the card area offers`);
-  return `${live.length} cards, biggest shelf ${widest} -> ${cols}x${rows} -> ${w}x${h}`;
 });
 
 /* -- 4. cross-layer JSON contracts ----------------------------------------- */

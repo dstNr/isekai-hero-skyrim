@@ -11,10 +11,7 @@
 #include "System.h"
 #include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
-#include "UI/Prisma.h"
-#include "UI/SkillTreeWindow.h"
-#include "UI/Style.h"
-#include "UI/SystemWindow.h"
+#include "UI/Screens.h"
 
 #include <algorithm>
 #include <cctype>
@@ -193,18 +190,6 @@ namespace Isekai::Progression {
                 earned += AlreadyGranted(m.key) ? 1 : 0;
             }
             return earned;
-        }
-
-        // The insignia PNG for the current System Rank ("S" -> icons\rank_s.png). Derived
-        // from the letter rather than kept as a second table, so retuning the thresholds
-        // in SystemRank can never leave the emblem showing a rank the text disagrees with.
-        [[nodiscard]] std::string RankIcon() {
-            std::string letter = SystemRank();
-            if (letter.empty()) {
-                return {};
-            }
-            letter[0] = static_cast<char>(std::tolower(static_cast<unsigned char>(letter[0])));
-            return "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\rank_" + letter.substr(0, 1) + ".png";
         }
 
         [[nodiscard]] const Milestone* FindByQuest(const RE::TESQuest* a_quest) {
@@ -403,13 +388,6 @@ namespace Isekai::Progression {
             }
         }
 
-        [[nodiscard]] std::string PadTo(std::string a_text, std::size_t a_width) {
-            if (a_text.size() < a_width) {
-                a_text.append(a_width - a_text.size(), ' ');
-            }
-            return a_text;
-        }
-
         // JSON string escaping for the status payload — passive titles and quest names
         // can hold quotes/backslashes.
         [[nodiscard]] std::string JsonEsc(const std::string& a_s) {
@@ -428,9 +406,22 @@ namespace Isekai::Progression {
             return o;
         }
 
-        // Structured status data for the PrismaUI status screen — the same numbers the
-        // monospace ImGui ledger shows, handed over as JSON so the web view can lay them
-        // out as a proper dashboard.
+        // The blessing as the tone table knows it. The mode wins over the tier, in the
+        // order the status payload's "mode" field uses.
+        [[nodiscard]] UI::Logic::Blessing BlessingOf(const State& a_st) {
+            using B = UI::Logic::Blessing;
+            if (a_st.custom) return B::Custom;
+            if (a_st.dormant) return B::Dormant;
+            if (a_st.shattered) return B::Shattered;
+            switch (a_st.power) {
+            case PowerLevel::Hero:     return B::Hero;
+            case PowerLevel::Ascended: return B::Ascended;
+            default:                   return B::Normal;
+            }
+        }
+
+        // The status screen's payload (screens/status.js): rank, blessing, milestones,
+        // points, the standing objective, attunement totals and the titles earned.
         [[nodiscard]] std::string BuildStatusJson() {
             const auto& st = GetState();
 
@@ -445,7 +436,18 @@ namespace Isekai::Progression {
 
             std::string j = "{";
             j += "\"tier\":\"" + JsonEsc(PowerName(st.power)) + "\",";
-            j += "\"rank\":\"" + JsonEsc(SystemRank()) + "\",";
+            const std::string rank = SystemRank();
+            j += "\"rank\":\"" + JsonEsc(rank) + "\",";
+            // Tones are the plugin's call (spec 7.2): the rank's (S is gold) and the
+            // blessing's, from the mode first and the tier after.
+            j += "\"rankTone\":\"" +
+                 std::string(UI::Logic::ToneName(UI::Logic::ToneForRank(rank.empty() ? 'E' : rank[0]))) +
+                 "\",";
+            j += "\"blessingTone\":\"" + std::string(UI::Logic::ToneName(UI::Logic::ToneFor(BlessingOf(st)))) +
+                 "\",";
+            if (const auto* player = RE::PlayerCharacter::GetSingleton()) {
+                j += "\"level\":" + std::to_string(player->GetLevel()) + ",";
+            }
             j += "\"mode\":\"" +
                  std::string(st.custom     ? "CUSTOM"
                              : st.dormant   ? "DORMANT"
@@ -506,25 +508,36 @@ namespace Isekai::Progression {
 
         void ShowStatusPanel() {
             // Diagnostic: confirms the hotkey actually reached the handler (it did not in
-            // VR before the input fix). If this logs but nothing appears, the panel was
-            // handed to the renderer and the problem is downstream (e.g. PrismaUI not
-            // painting in VR without its VR build).
-            logger::info("System hotkey fired — opening status (prisma={}, paused={})",
-                         UI::Prisma::Active(),
+            // VR before the input fix). If this logs but nothing appears, the screen was
+            // handed to Magelight and the problem is downstream.
+            logger::info("System hotkey fired — opening status (magelight={}, paused={})",
+                         UI::Available(),
                          RE::UI::GetSingleton() ? RE::UI::GetSingleton()->GameIsPaused() : false);
 
-            // Never replace a live panel: opening over the blessing selection would
-            // throw away its callback, and the reincarnation would hang half-finished.
-            if (UI::IsSystemScreenOpen()) {
+            // No Magelight, no screens: say so instead of doing nothing (spec 6.5).
+            if (!UI::Available()) {
+                UI::ShowNeedsMagelight();
                 return;
             }
 
             // Don't pop up over a game menu. The hotkey's 'S' collides with typing —
             // searching the inventory for "Salmon", entering a console command, naming an
             // enchantment — and every one of those menus pauses the game, so a paused game
-            // means "a menu already has the keyboard; leave it alone". (A live PrismaUI
-            // screen also pauses, so this same guard stops a re-open over the web UI.)
+            // means "a menu already has the keyboard; leave it alone". (Our own open view
+            // pauses too, so this also stops a re-open over it.)
             if (auto* ui = RE::UI::GetSingleton(); ui && ui->GameIsPaused()) {
+                return;
+            }
+
+            // A decision (the blessing choice) whose screen was lost, refused or taken
+            // over by another mod comes back on this key instead of the status screen.
+            if (UI::ReofferPendingDecision()) {
+                return;
+            }
+
+            // Never replace a live screen: opening over the blessing selection would
+            // throw away its callback, and the reincarnation would hang half-finished.
+            if (UI::IsSystemScreenOpen()) {
                 return;
             }
 
@@ -536,187 +549,7 @@ namespace Isekai::Progression {
                 return;
             }
 
-            // The dedicated, richer status screen when the PrismaUI patch is present;
-            // the monospace ImGui ledger below otherwise.
-            if (UI::Prisma::Active()) {
-                UI::Prisma::ShowStatus(BuildStatusJson());
-                return;
-            }
-
-            std::string body;
-
-            // The label columns are part of the translatable text, padding and all: this
-            // is a monospace ledger, so a translator has to be able to re-align it. Every
-            // one of these is measured, not wrapped.
-            body += LF("status.powerLevel", "POWER LEVEL   {}{}\n", PowerName(GetState().power),
-                       GetState().custom      ? L("status.mode.custom", "  (CUSTOM)")
-                       : GetState().dormant   ? L("status.mode.dormant", "  (DORMANT)")
-                       : GetState().shattered ? L("status.mode.shattered", "  (SHATTERED)")
-                                              : "");
-            body += LF("status.systemRank", "SYSTEM RANK   {}\n", SystemRank());
-            if (GetState().custom) {
-                body += LF("status.customAxes", "  rewards {} / tree {} / gift {}\n",
-                           PowerName(GetState().power), PowerName(GetState().treeTier),
-                           PowerName(GetState().grantTier));
-            }
-            // A dormant blessing's whole point is the promise of the next rung — show
-            // it, otherwise the panel just reads as a permanently weaker NORMAL.
-            if (const auto next = NextAwakeningLevel(); next > 0) {
-                body += LF("status.nextAwakening", "NEXT AWAKENING at level {}\n", next);
-            }
-
-            const std::size_t earned = MilestonesEarned();
-            body += LF("status.milestones", "MILESTONES    {} / {}\n", earned,
-                       std::size(kMilestones));
-            body += LF("status.points", "SYSTEM POINTS {}\n", GetState().systemPoints);
-
-            if (Quests::Active()) {
-                body += LF("status.objective", "OBJECTIVE     {}   {} / {}   (+{} SP)\n",
-                           Quests::Text(), Quests::Progress(), Quests::Target(),
-                           Quests::Reward());
-            } else if (const float wait = Quests::DaysUntilNext(); wait > 0.0f) {
-                // An idle System should read as waiting, not broken. Hours rather than a
-                // fraction of a day, because "0.4 days" is not something anyone thinks in.
-                const int hours = std::max(1, static_cast<int>(std::lround(wait * 24.0f)));
-                body += LF("status.objectiveQuiet",
-                           "OBJECTIVE     none — the System is quiet for another {}h\n", hours);
-            }
-
-            // The aggregated totals — the same numbers the abilities carry in the
-            // magic menu, so the two views can be checked against each other.
-            std::map<RE::ActorValue, float> totals;
-            for (const auto* p : EarnedPassives()) {
-                totals[p->actorValue] += PassiveAmount(*p);
-            }
-            if (!totals.empty()) {
-                body += std::string("\n") + L("status.attunements", "ATTUNEMENTS") + "\n";
-                for (const auto& [av, total] : totals) {
-                    body += "  " + PadTo(StatName(av), 16) + "+" +
-                            std::to_string(static_cast<int>(total)) + "\n";
-                }
-            }
-
-            // The ledger: every earned passive with the deed it came from.
-            if (earned > 0) {
-                body += std::string("\n") + L("status.passives", "PASSIVES") + "\n";
-                for (const auto& m : kMilestones) {
-                    if (!AlreadyGranted(m.key)) {
-                        continue;
-                    }
-                    body += "  " + PadTo(PassiveName(m), 20) +
-                            PadTo(PassiveEffectText(m.passive), 22) + QuestName(m) + "\n";
-                }
-            } else {
-                body += std::string("\n") + L("status.noDeeds", "No deeds recognised yet.");
-            }
-
-            // The storage lives behind a panel button, not an inventory item. Earlier
-            // attempts as a consumable token and as a ring both fought the engine
-            // (menu-on-menu, biped slot conflicts, phantom heal visuals); a button in
-            // our own UI has none of those problems — after the panel closes there is
-            // no menu in the way, and the chest opens directly into gameplay.
-            // Icon actions stack top-right; their callback indices follow their
-            // position in the list. The tree is open to every reincarnated soul
-            // (NORMAL earns souls through milestones too); the storage stays a
-            // blessing privilege.
-            std::vector<UI::Choice>            choices;
-            std::vector<std::function<void()>> actions;
-
-            if (GetState().reincarnated) {
-                choices.push_back({ L("button.skillTree", "SKILL TREE"),
-                                    "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\ui_skilltree.png",
-                                    /*iconOnly=*/true });
-                actions.emplace_back([]() {
-                    // Web tree if the optional PrismaUI patch is installed, else ImGui.
-                    if (UI::Prisma::Active()) {
-                        UI::Prisma::OpenTree();
-                    } else {
-                        UI::ShowSkillTree();
-                    }
-                });
-            }
-            if (Storage::Available()) {
-                choices.push_back({ L("button.storage", "STORAGE"),
-                                    "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\ui_storage.png",
-                                    /*iconOnly=*/true });
-                actions.emplace_back([]() { Storage::Open(); });
-            }
-            if (Shop::Available()) {
-                choices.push_back({ L("button.shop", "SHOP"),
-                                    "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\ui_shop.png",
-                                    /*iconOnly=*/true });
-                actions.emplace_back([]() { Shop::Open(); });
-            }
-            // Throw the standing objective away and roll another one. A TESTING TOOL, and
-            // hidden unless the ini asks for it (Config::QuestRerollButton): it is free
-            // and instant, so it undoes the thing it is used to test — objectives are
-            // supposed to arrive when the System decides, and re-rolling until an easy
-            // quarry appears is the shortest way around that. docs/MANUAL_TESTS.md turns
-            // it on, because walking the objective table otherwise means hunting whatever
-            // the dice picked, one quarry at a time. Reopens the panel so the new
-            // objective is visible immediately.
-            if (Quests::Active() && Config::QuestRerollButton()) {
-                choices.push_back({ L("button.newTask", "NEW TASK"), {} });
-                actions.emplace_back([]() {
-                    Quests::Reroll();
-                    ShowStatusPanel();
-                });
-            }
-            // Reboot: re-open the blessing choice on this character (e.g. HERO -> a
-            // Shattered Dormant run) without the fragile uninstall/reinstall dance that
-            // drops the co-save's milestone list. Guarded behind a confirm; earned
-            // progress is kept (see RebootSystem).
-            if (GetState().reincarnated) {
-                choices.push_back({ L("button.reboot", "REBOOT"), {} });
-                actions.emplace_back([]() {
-                    UI::ShowSystemWindow(
-                        L("window.system", "[ SYSTEM ]"),
-                        L("reboot.confirm",
-                          "REBOOT THE SYSTEM?\n"
-                          "\n"
-                          "Re-opens the blessing choice, so you can pick a different path\n"
-                          "(tier, Full/Shattered, Dormant).\n"
-                          "\n"
-                          "KEPT:    milestones, System Points, storage. The skill\n"
-                          "         tree is refunded, not lost — every point spent\n"
-                          "         on it comes back to spend again.\n"
-                          "UNDONE:  the skills and attributes a previous blessing\n"
-                          "         granted — you return to the mortal you were\n"
-                          "         when the System first bound itself. Your\n"
-                          "         character level is left alone.\n"
-                          "NOTE:    gold and perk points already spent stay spent.\n"
-                          "         A character from before this update has no such\n"
-                          "         record, and keeps what it was given."),
-                        std::vector<std::string>{ L("button.cancel", "CANCEL"),
-                                                  L("button.reboot", "REBOOT") },
-                        [](int a_confirm) {
-                            if (a_confirm == 1) {
-                                RebootSystem();
-                            }
-                        });
-                });
-            }
-            choices.push_back({ L("button.close", "CLOSE"), {} });
-
-            auto onSelect = [actions = std::move(actions)](int a_idx) {
-                if (a_idx >= 0 && static_cast<std::size_t>(a_idx) < actions.size()) {
-                    actions[static_cast<std::size_t>(a_idx)]();
-                }
-            };
-
-            // Instant reveal: this is a ledger, not a story beat — nobody wants to
-            // watch half a minute of typewriter before they can read their own stats.
-            // Wider than the story panels: the ledger rows run to ~70 monospace
-            // characters, and at the default width the quest names wrapped mid-word.
-            // The rank block rides in the header's left margin: crest, and the rank
-            // spelled out beside it in the rank's own colour. It duplicates the SYSTEM
-            // RANK line on purpose — the line is the precise readout, this is the thing
-            // you register at a glance (E is dull, S blazes).
-            const std::string rank = SystemRank();
-            UI::ShowSystemWindow(L("window.status", "[ SYSTEM ] STATUS"), std::move(body),
-                                 std::move(choices), std::move(onSelect), 100000.0f, 980.0f,
-                                 UI::Emblem{ RankIcon(), LF("status.rankEmblem", "RANK {}", rank),
-                                             UI::Style::RankColor(rank.empty() ? 'E' : rank[0]) });
+            UI::ShowStatus(BuildStatusJson());
         }
 
         // F11: pay out the next milestone still owed, exactly as a real quest would.
@@ -790,6 +623,10 @@ namespace Isekai::Progression {
 
     void OpenStatusPanel() {
         ShowStatusPanel();
+    }
+
+    std::string StatusJson() {
+        return BuildStatusJson();
     }
 
     void Install() {

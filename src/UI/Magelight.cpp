@@ -481,8 +481,11 @@ namespace Isekai::UI::Magelight {
                 ml::GamepadConfig pad{};
                 pad.size = sizeof(pad);
                 pad.enabled = true;
-                pad.style = ml::kGamepadStyleNavigation;
-                pad.allowCursor = true;  // right-stick click: a pointer for anything outside a scope
+                // The pad as keys (A Enter, B Escape, d-pad and left stick the arrows): the
+                // page already moves focus on the arrows and presses on Enter itself, and
+                // attaches no navigation scopes, so the navigation style would move nothing.
+                pad.style = ml::kGamepadStyleKeys;
+                pad.allowCursor = true;  // right-stick click: a pointer, the fallback for the tree
                 pad.startInCursorMode = false;
                 r = api->SetViewGamepad(sysId, &pad);
                 if (r != ml::Result::Ok) logger::warn("Magelight: SetViewGamepad ({}): {}", ResultName(r), LastError());

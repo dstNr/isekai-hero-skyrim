@@ -15,8 +15,7 @@
 #include "Storage.h"
 #include "System.h"
 #include "UI/Input.h"
-#include "UI/Prisma.h"
-#include "UI/SystemWindow.h"
+#include "UI/Screens.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -466,14 +465,14 @@ namespace Isekai::SelfTest {
 
         void CheckEnvironment(std::vector<Result>& out) {
             const bool vr = REL::Module::IsVR();
-            const bool prisma = UI::Prisma::Active();
             Add(out, true, false, "runtime", vr ? "Skyrim VR" : "Skyrim SE/AE");
-            // In VR a missing PrismaUI means there is no UI at all — that IS a failure.
-            Add(out, !vr || prisma, true, "PrismaUI view",
-                prisma ? "active"
-                       : (vr ? "inactive — in VR this leaves NO usable UI (needs the "
-                               "PrismaUI patch + PrismaUI 1.5.0 VR)"
-                             : "inactive (built-in ImGui UI is in use — normal)"));
+            // Without Magelight UI there is no interface at all, on every runtime (spec
+            // 6.5). The views and the page version get their own lines in Task 12.
+            const bool ui = UI::Available();
+            Add(out, ui, true, "magelight host",
+                ui ? "Magelight UI " + std::string(UI::Magelight::HostVersion())
+                   : "unavailable — no Isekai Hero screens (needs Magelight UI 1.7.0 or newer; "
+                     "the Magelight lines in this log say why)");
 
             const auto& st = GetState();
             Add(out, true, false, "character",
@@ -644,8 +643,10 @@ namespace Isekai::SelfTest {
 
         // Instant reveal and a wide panel, same as the status ledger: this is a table, and
         // nobody wants to watch a typewriter spell out a diagnostic.
+        // Red when a line FAILs (spec 7.2); warnings alone keep the window cyan.
         UI::ShowSystemWindow("[ SYSTEM ] SELF-TEST", std::move(body),
-                             std::vector<std::string>{ "CLOSE" }, [](int) {}, 100000.0f, 900.0f);
+                             std::vector<std::string>{ "CLOSE" }, [](int) {}, 100000.0f, 900.0f,
+                             fatal > 0 ? UI::Logic::Tone::Red : UI::Logic::Tone::Cyan);
     }
 
     void RunOnLoad() {

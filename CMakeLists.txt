@@ -89,18 +89,12 @@ add_commonlibsse_plugin(
         src/UI/Prisma.h
         src/UI/Screens.cpp
         src/UI/Screens.h
-        src/UI/ShopWindow.cpp
-        src/UI/ShopWindow.h
         src/UI/ThreatLabels.cpp
         src/UI/ThreatLabels.h
         src/UI/Toast.cpp
         src/UI/Toast.h
-        src/UI/SkillTreeWindow.cpp
-        src/UI/SkillTreeWindow.h
         src/UI/Style.h
         src/UI/UiLogic.h
-        src/UI/SystemWindow.cpp
-        src/UI/SystemWindow.h
         src/UI/Textures.cpp
         src/UI/Textures.h
         src/UI/VROverlay.cpp

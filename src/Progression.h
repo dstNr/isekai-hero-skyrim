@@ -40,12 +40,14 @@ namespace Isekai::Progression {
     // true at load only; a rebind stays quiet so a journal close does not write to the log.
     void BindHotkeys(bool a_log);
 
-    // Open the System status screen — exactly what the hotkey does, including the choice
-    // between the web view and the built-in panel. Exported so another entry point (the
-    // status screen's own "new task" button, which has to come back to a refreshed panel)
-    // does not have to rebuild the status JSON or re-decide which renderer to use.
-    // Main thread only.
+    // Open the System status screen — exactly what the hotkey does, guards included (a
+    // paused game, an open screen, a decision waiting to be offered again). For entry
+    // points that stand in for the hotkey, like the codex. Main thread only.
     void OpenStatusPanel();
+
+    // The status screen's payload (screens/status.js), for the screens facade's in-view
+    // switches back to it and its refresh after a reroll. Reads game state: main thread only.
+    [[nodiscard]] std::string StatusJson();
 
     // Pay out anything the player already earned before the mod was installed (or
     // while it was disabled). Call on kPostLoadGame / kNewGame, after the co-save

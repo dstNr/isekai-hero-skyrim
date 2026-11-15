@@ -5,9 +5,7 @@
 #include "Sounds.h"
 #include "Storage.h"
 #include "System.h"
-#include "UI/Prisma.h"
-#include "UI/ShopWindow.h"
-#include "UI/SystemWindow.h"
+#include "UI/Screens.h"
 
 namespace Isekai::Shop {
 
@@ -329,8 +327,8 @@ namespace Isekai::Shop {
     }
 
     void Open() {
-        // Same guard Storage::Open() uses: reached as a status-panel action, so the
-        // panel that led here has already dismissed itself by the time this runs.
+        // Same guard Storage::Open() uses: never over a panel. Reached from the status
+        // screen, it switches screens inside the open view.
         if (UI::IsSystemWindowOpen()) {
             return;
         }
@@ -339,12 +337,6 @@ namespace Isekai::Shop {
             return;
         }
 
-        // Same split every other screen uses: the web patch when it is installed, the
-        // built-in window otherwise.
-        if (UI::Prisma::Active()) {
-            UI::Prisma::OpenShop();
-        } else {
-            UI::ShowShopWindow();
-        }
+        UI::ShowShop();
     }
 }

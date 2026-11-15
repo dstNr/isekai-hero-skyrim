@@ -171,15 +171,8 @@ passive.3507 = Tribute Taker
 
 ; --- src/Progression.cpp ---
 button.accept = ACCEPT
-button.cancel = CANCEL
-button.newTask = NEW TASK
-button.reboot = REBOOT
-button.shop = SHOP
-button.skillTree = SKILL TREE
-button.storage = STORAGE
 flourish.milestone = MILESTONE
 flourish.questComplete = QUEST COMPLETE
-reboot.confirm = REBOOT THE SYSTEM?\n\nRe-opens the blessing choice, so you can pick a different path\n(tier, Full/Shattered, Dormant).\n\nKEPT:    milestones, System Points, storage. The skill\n         tree is refunded, not lost — every point spent\n         on it comes back to spend again.\nUNDONE:  the skills and attributes a previous blessing\n         granted — you return to the mortal you were\n         when the System first bound itself. Your\n         character level is left alone.\nNOTE:    gold and perk points already spent stay spent.\n         A character from before this update has no such\n         record, and keeps what it was given.
 reward.header = QUEST COMPLETE\n\n  {}\n\n
 reward.passive = REWARDS\n\n  Passive   {}\n            {}
 reward.perks = \n  Perk Points   +{}
@@ -194,19 +187,6 @@ stat.resistFrost = Frost Resist
 stat.resistMagic = Magic Resist
 stat.resistShock = Shock Resist
 stat.stamina = Stamina
-status.attunements = ATTUNEMENTS
-status.customAxes =   rewards {} / tree {} / gift {}\n
-status.milestones = MILESTONES    {} / {}\n
-status.nextAwakening = NEXT AWAKENING at level {}\n
-status.noDeeds = No deeds recognised yet.
-status.objective = OBJECTIVE     {}   {} / {}   (+{} SP)\n
-status.objectiveQuiet = OBJECTIVE     none — the System is quiet for another {}h\n
-status.passives = PASSIVES
-status.points = SYSTEM POINTS {}\n
-status.powerLevel = POWER LEVEL   {}{}\n
-status.rankEmblem = RANK {}
-status.systemRank = SYSTEM RANK   {}\n
-window.status = [ SYSTEM ] STATUS
 
 ; --- src/Quests.cpp (quarries) ---
 quarry.1 = Draugr
@@ -366,36 +346,10 @@ path.dormant = The dormant blessing stirs.\nHow will each awakening reach you?\n
 status.mode.custom =   (CUSTOM)
 status.mode.dormant =   (DORMANT)
 status.mode.shattered =   (SHATTERED)
-vr.needsPrisma = [ SYSTEM ] Isekai Hero needs PrismaUI (1.5.0 VR build) to show its menu in VR.
 window.system = [ SYSTEM ]
 
-; --- src/UI/ShopWindow.cpp ---
-shop.catalogEmpty = The catalog is empty.
-shop.footer = Delivered into your Dimensional Storage
-shop.noEffects = No magical effect — goods, not a potion.
-shop.price = {} SP
-shop.shelfEmpty = Nothing on this shelf yet.
-
-; --- src/UI/SkillTreeWindow.cpp ---
-button.close = CLOSE
-button.confirm = CONFIRM?
-button.respec = RESPEC  +{}
-tree.cost = COST   {} system point(s)
-tree.grandmaster = GRANDMASTER
-tree.locked = LOCKED — requires a connected node
-tree.maxed = MAXED
-tree.perkPoints = PERK POINTS     {} / {}
-tree.perkPoolFull = PERK POOL FULL — spend some perk points first
-tree.points = SYSTEM POINTS   {}
-tree.rank =    RANK {}
-tree.rankOf =    RANK {} / {}
-tree.sealedLevel = SEALED — awakens at level {}
-tree.sealedRebirth = SEALED — requires {} rebirth
-tree.tierTag =   [{}]
-tree.unlocked = UNLOCKED
-
-; --- src/UI/SystemWindow.cpp ---
-vr.needsPrismaShort = [ SYSTEM ] Needs the PrismaUI patch (1.5.0 VR build) to show its menu in VR.
+; --- src/UI/Screens.cpp ---
+ui.needsMagelight = [ SYSTEM ] Isekai Hero needs Magelight UI (1.7.0 or newer). The System will wait.
 
 ; --- src/UI/ThreatLabels.cpp ---
 threat.toggleOff = Threat display  OFF
