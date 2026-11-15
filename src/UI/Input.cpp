@@ -624,7 +624,18 @@ namespace Isekai::UI {
         g_hotkeys.clear();
     }
 
-    void LogHotkeys() {
+    bool IsKeyboardHotkeyArmed(std::uint32_t a_scanCode, std::uint32_t a_modifier) {
+        std::scoped_lock lock(g_hotkeyMutex);
+        const auto it = g_hotkeys.find(HotkeyId(RE::INPUT_DEVICE::kKeyboard, a_scanCode));
+        if (it == g_hotkeys.end()) {
+            return false;
+        }
+        const std::uint32_t wantMod =
+            a_modifier == 0 ? 0 : HotkeyId(RE::INPUT_DEVICE::kKeyboard, a_modifier);
+        return it->second.modifier == wantMod;
+    }
+
+    std::string ArmedHotkeysText() {
         std::scoped_lock lock(g_hotkeyMutex);
         // Sorted by id: the map's iteration order is not promised to survive a clear and
         // re-insert, and the same table must always read as the same text.
@@ -641,22 +652,27 @@ namespace Isekai::UI {
                 list += " + " + HotkeyName(mod);
             }
         }
+        return ids.empty() ? std::string{}
+                           : std::format("{} hotkey(s) armed: {}", ids.size(), list);
+    }
+
+    bool LogHotkeys() {
         // Every settings reload rebinds, and almost all of them rebind the same keys; a
         // line per journal close would bury the one that says something changed. The empty
         // table is remembered too, so its warning does not repeat either.
         static std::string s_last;
-        const std::string  text = ids.empty()
-            ? "UI: no hotkeys armed at all"
-            : std::format("UI: {} hotkey(s) armed: {}", ids.size(), list);
+        const auto         armed = ArmedHotkeysText();
+        const std::string  text = armed.empty() ? "UI: no hotkeys armed at all" : "UI: " + armed;
         if (text == s_last) {
-            return;
+            return false;
         }
         s_last = text;
-        if (ids.empty()) {
+        if (armed.empty()) {
             logger::warn("{}", text);
         } else {
             logger::info("{}", text);
         }
+        return true;
     }
 
     void InstallInput() {

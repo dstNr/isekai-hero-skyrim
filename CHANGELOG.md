@@ -7,6 +7,19 @@ All notable changes to Isekai Hero are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **The self-test also writes machine-readable lines, and scripts can start it.**
+  Every run (after each load, the hotkey, or the new Papyrus native
+  `IsekaiHeroCraft.RunSelfTest()`) ends with one `[SELFTEST] isekai.<test-id> PASS|FAIL
+  <detail>` line per check and `[SELFTEST] ENDE`, so a test runner can grade a log without
+  reading the human table (a warning counts as FAIL there). Two checks are new: `readiness`
+  (says whether the character still waits for its reincarnation, refs #36) and `hotkeys
+  armed` (every configured keyboard key is in the table the input handler uses, with its
+  modifier). Outside the full run, a few events write their own block — the test line, then
+  ENDE: the storage chest after open and at close (`storage-chest-after-open`/`-at-close`,
+  FAIL when it stands in the player's cell above its sink depth, refs #38), the crafting
+  token return (`craft-token-return`, FAIL when a token would not move) and a settings
+  reload that changed the hotkey table (`hotkeys-rebind`, refs #37). The line format and
+  the sink rule live in the engine-free `src/SelfTestFormat.h` and are unit-tested.
 - **Unit tests for the readiness gate and the automatic reincarnation trigger** (refs #36).
   The decisions moved into `src/ReadinessLogic.h`, which has no engine dependency:
   `Evaluate` (blocker order), `ChangeReporter` (one log line per change), `WorldGate`

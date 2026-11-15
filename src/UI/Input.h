@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <string>
 
 struct ImGuiIO;
 
@@ -43,7 +44,15 @@ namespace Isekai::UI {
     // through the load log and say what a module INTENDED — this is the table the input
     // handler actually consults, which is the only thing that answers "why does my key
     // do nothing".
-    void LogHotkeys();
+    // Returns true when it logged, i.e. the table differs from the last one logged.
+    bool LogHotkeys();
+
+    // The armed table as LogHotkeys writes it, without the "UI: " prefix ("" when empty).
+    [[nodiscard]] std::string ArmedHotkeysText();
+
+    // Is this keyboard key armed, with exactly this modifier (0 = none)? For the
+    // self-test, which checks the table against the settings after a rebind (#37).
+    [[nodiscard]] bool IsKeyboardHotkeyArmed(std::uint32_t a_scanCode, std::uint32_t a_modifier);
 
     // Subscribe to Skyrim's own input event stream.
     //

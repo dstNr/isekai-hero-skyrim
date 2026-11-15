@@ -672,14 +672,17 @@ namespace Isekai {
         // reincarnation runs exactly once per character.
         // ------------------------------------------------------------------
 
-        void BindAllHotkeys(bool a_log);
+        bool BindAllHotkeys(bool a_log);
 
         // Re-read both inis and re-push the handful of values that are cached rather than
         // read live. Hotkeys are among them: they rebind here too, so nothing in [Hotkey]
         // needs a restart any more.
         void ReloadSettings() {
             Config::Load();
-            BindAllHotkeys(/*a_log=*/false);  // a rebind is silent; load already said it all
+            // A rebind is silent unless the table changed; then the self-test says whether
+            // the new keys are the ones armed (#37).
+            const bool changed = BindAllHotkeys(/*a_log=*/false);
+            SelfTest::OnHotkeysRebound(changed);
             ::Isekai::UI::Style::g_userScale = Config::UiScale();
         }
 
@@ -1113,13 +1116,14 @@ namespace Isekai {
         // Every hotkey the mod owns, bound from the current Config. The table is emptied
         // first so a key the player switched off (set to 0) or moved does not stay armed
         // under its old code. Runs at load and again from ReloadSettings.
-        void BindAllHotkeys(bool a_log) {
+        // True when the armed table differs from the one logged last.
+        bool BindAllHotkeys(bool a_log) {
             UI::ClearHotkeys();
             Progression::BindHotkeys(a_log);
             SelfTest::BindHotkeys(a_log);       // diagnostic hotkey, off unless the ini sets one
             UI::BindThreatLabelHotkeys(a_log);  // the on/off key for the floating verdicts
             BindDebugPointsKey(a_log);          // the grant on a key, off unless the ini sets one
-            UI::LogHotkeys();              // the table the input handler actually consults
+            return UI::LogHotkeys();       // the table the input handler actually consults
         }
 
         // ------------------------------------------------------------------

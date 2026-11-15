@@ -5,6 +5,8 @@
 #include "Loc.h"
 #include "Plugin.h"
 #include "Progression.h"
+#include "SelfTest.h"
+#include "SelfTestFormat.h"
 #include "Sounds.h"
 #include "System.h"
 #include "UI/SystemWindow.h"
@@ -327,11 +329,18 @@ namespace Isekai::Storage {
                          a_chest->GetFormID(), a_when, cell ? cell->GetFormID() : 0, chestZ,
                          playerZ, a_chest->Is3DLoaded() ? "loaded" : "not loaded");
 
-            const auto aboveTarget = chestZ - (playerZ - 3000.0f);
-            if (cell && cell == player->GetParentCell() && aboveTarget > 100.0f) {
+            const auto aboveTarget = SelfTest::Format::AboveSinkTarget(chestZ, playerZ);
+            const bool inPlayerCell = cell && cell == player->GetParentCell();
+            const bool sunk = SelfTest::Format::ChestIsSunk(inPlayerCell, chestZ, playerZ);
+            if (!sunk) {
                 logger::warn("Storage: chest {:#x} is not where it was sunk ({:.0f} units above target)",
                              a_chest->GetFormID(), aboveTarget);
             }
+            // #38 for test runners: one block per open and per close.
+            SelfTest::Event(std::string("storage-chest-") + std::string(a_when), sunk,
+                            std::format("chest {:#x} {:.0f} units above sink target{}",
+                                        a_chest->GetFormID(), aboveTarget,
+                                        inPlayerCell ? "" : " (not in the player's cell)"));
         }
 
         // Tells the storage chest's container menu apart from every other one (corpses,

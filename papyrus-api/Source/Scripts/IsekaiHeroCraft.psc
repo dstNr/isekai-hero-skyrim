@@ -20,3 +20,11 @@ Scriptname IsekaiHeroCraft Hidden
 
 ; True when akOtherContainer is the Dimensional Storage chest.
 Bool Function IsStorageTransfer(ObjectReference akOtherContainer) global native
+
+; Run Isekai Hero's self-test now, as it runs after every game load: the report
+; goes to IsekaiHeroSKSE.log, including the machine-readable lines
+;   [SELFTEST] isekai.<test-id> PASS|FAIL <detail>
+;   [SELFTEST] ENDE
+; The run is queued for the next frame, so the lines appear shortly after the
+; call returns. True when it was queued. No on-screen panel.
+Bool Function RunSelfTest() global native

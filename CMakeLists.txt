@@ -40,6 +40,7 @@ add_commonlibsse_plugin(
         src/System.h
         src/Readiness.cpp
         src/Readiness.h
+        src/ReadinessLogic.h
         src/Passives.cpp
         src/Passives.h
         src/Plugin.cpp
@@ -51,6 +52,7 @@ add_commonlibsse_plugin(
         src/Quests.h
         src/SelfTest.cpp
         src/SelfTest.h
+        src/SelfTestFormat.h
         src/Progression.h
         src/SkillTree.cpp
         src/SkillTree.h

@@ -440,13 +440,16 @@ check("storage: the chest watcher is not registered on VR", () => {
 check("readiness: every blocker has a name, and System.cpp no longer owns the check", () => {
   // #36: the log only said "not ready yet". The check lives in Readiness now and names
   // the condition that failed; System.cpp must not keep a second copy that stays silent.
-  const h = read("src/Readiness.h");
-  const cpp = read("src/Readiness.cpp");
+  // The enum and Name() live in the engine-free ReadinessLogic.h (unit-tested there);
+  // Readiness.h includes it.
+  const h = read("src/ReadinessLogic.h");
+  need(read("src/Readiness.h").includes('#include "ReadinessLogic.h"'),
+       "Readiness.h must include ReadinessLogic.h");
   const en = h.match(/enum class Blocker[^{]*\{([^}]*)\}/);
-  need(en, "Blocker enum not found in Readiness.h");
+  need(en, "Blocker enum not found in ReadinessLogic.h");
   const names = [...en[1].matchAll(/\bk\w+/g)].map((m) => m[0]);
   need(names.length >= 2, "Blocker enum parsed to nothing");
-  const nameFn = cpp.slice(cpp.indexOf("Name(Blocker"));
+  const nameFn = h.slice(h.indexOf("Name(Blocker"));
   for (const n of names) {
     need(new RegExp(`case\\s+Blocker::${n}\\s*:`).test(nameFn), `Name() has no case for Blocker::${n}`);
   }
@@ -774,6 +777,8 @@ check("fomod: the installer offers files that exist, and presets that are curren
     "SKSE\\Plugins\\IsekaiHero\\icons": "icons",
     "MCM\\Config\\IsekaiHero": "mcm-patch/MCM/Config/IsekaiHero",
     "Scripts\\IsekaiHeroMCM.pex": "mcm-patch/Scripts/IsekaiHeroMCM.pex",
+    "Scripts\\IsekaiHeroCraft.pex": "papyrus-api/Scripts/IsekaiHeroCraft.pex",
+    "Source\\Scripts\\IsekaiHeroCraft.psc": "papyrus-api/Source/Scripts/IsekaiHeroCraft.psc",
   };
   const sources = [...new Set([...xml.matchAll(/source="([^"]+)"/g)].map((m) => m[1]))];
   need(sources.length >= 5, "ModuleConfig lists almost nothing — generator stale?");
@@ -1493,7 +1498,7 @@ check("hotkeys: every registration is rebindable, and a settings reload rebinds"
   need(/kDataLoaded:[\s\S]*?BindAllHotkeys\(\s*(?:\/\*[^*]*\*\/\s*)?true\s*\)/.test(sys),
        "the kDataLoaded block must call BindAllHotkeys(true) so load logs what it bound");
   // The definition, not the forward declaration ReloadSettings needs above it.
-  const bindAll = sys.slice(sys.indexOf("void BindAllHotkeys(bool a_log) {"));
+  const bindAll = sys.slice(sys.search(/(?:void|bool) BindAllHotkeys\(bool a_log\) \{/));
   need(/ClearHotkeys\(\)/.test(bindAll.slice(0, 800)),
        "BindAllHotkeys does not clear the table first — a key set to 0 would stay armed");
 

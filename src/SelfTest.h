@@ -12,6 +12,11 @@
 // — its counter simply never moves, which looks like "the feature is broken" and is
 // almost impossible to report usefully. This runs the checks explicitly and writes a
 // PASS/FAIL block to the log, so a tester can press one key and send the result.
+//
+// Each run also writes the same results as [SELFTEST] lines for test runners; the
+// format is in SelfTestFormat.h.
+
+#include <string_view>
 
 namespace Isekai::SelfTest {
 
@@ -33,4 +38,18 @@ namespace Isekai::SelfTest {
     // the whole friction: a bug report needs this report, and it needed an ini edit and a
     // restart to get one.
     void RunOnLoad();
+
+    // One test outside the full run — the storage chest on open and close, the token
+    // return, a hotkey rebind — as its own block: the [SELFTEST] line, then ENDE
+    // (SelfTestFormat.h says why). Any thread; it only writes to the log.
+    void Event(std::string_view a_id, bool a_pass, std::string_view a_detail);
+
+    // After a settings reload rebound the hotkeys (refs #37): is every configured key in
+    // the table the input handler consults? Writes an Event only when the table changed,
+    // so a journal close that rebinds the same keys stays silent.
+    void OnHotkeysRebound(bool a_tableChanged);
+
+    // The Papyrus native IsekaiHeroCraft.RunSelfTest(): queue a full run (no on-screen
+    // panel) on the main thread. Lets a test runner start the self-test by script call.
+    bool RegisterPapyrus(RE::BSScript::IVirtualMachine* a_vm);
 }

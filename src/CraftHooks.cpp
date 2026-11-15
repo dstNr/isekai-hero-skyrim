@@ -1,6 +1,7 @@
 #include "CraftHooks.h"
 
 #include "Plugin.h"
+#include "SelfTest.h"
 #include "Storage.h"
 
 #include <MinHook.h>
@@ -283,6 +284,12 @@ namespace Isekai::CraftHooks {
                 }
                 logger::warn("CraftHooks: still on loan: {}", names);
             }
+            // For test runners (IS1, the Ordinator storage patch): every token that was not
+            // spent crafting went back to the chest.
+            SelfTest::Event("craft-token-return", g_lentTokens.empty(),
+                            std::format("returned {} of {} token(s), {} spent crafting, {} would not move",
+                                        lent - g_lentTokens.size() - static_cast<std::size_t>(spent),
+                                        lent, spent, g_lentTokens.size()));
         }
 
         // Lend one of each stored material the player is not already carrying, so a foreign
@@ -549,6 +556,8 @@ namespace Isekai::CraftHooks {
         }
         a_vm->RegisterFunction("IsStorageTransfer", "IsekaiHeroCraft", IsStorageTransfer, true);
         logger::info("CraftHooks: Papyrus native IsekaiHeroCraft.IsStorageTransfer registered");
+        // The self-test's native lives on the same script, so one .pex carries the API.
+        SelfTest::RegisterPapyrus(a_vm);
         return true;
     }
 

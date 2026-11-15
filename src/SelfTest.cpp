@@ -7,6 +7,8 @@
 #include "Plugin.h"
 #include "Progression.h"
 #include "Quests.h"
+#include "Readiness.h"
+#include "SelfTestFormat.h"
 #include "Sounds.h"
 #include "Shop.h"
 #include "SkillTree.h"
@@ -483,6 +485,70 @@ namespace Isekai::SelfTest {
                 Storage::Available() ? "available" : "unavailable (not reincarnated)");
         }
 
+        // #36: the readiness gate only runs while the character still waits for its
+        // reincarnation, so a reincarnated save never logs "Readiness: ready" — by design.
+        // Informational: says which of the two cases this log is.
+        void CheckReadiness(std::vector<Result>& out) {
+            if (GetState().reincarnated) {
+                Add(out, true, false, "readiness",
+                    "not polled: character is reincarnated (by design)");
+                return;
+            }
+            Add(out, true, false, "readiness",
+                std::string("waiting for reincarnation, current: ") +
+                    std::string(Readiness::Name(Readiness::Check())));
+        }
+
+        // #37: every key the settings name is in the table the input handler consults,
+        // with its modifier. Keyboard keys only; pad and VR buttons have no ini scan code
+        // to compare against here.
+        [[nodiscard]] bool HotkeysMatchConfig(std::string& a_detail) {
+            struct Want {
+                const char*   what;
+                std::uint32_t key;
+                std::uint32_t mod;
+            };
+            const Want wants[] = {
+                { "System menu", Config::SystemMenuKey(), Config::SystemMenuModifier() },
+                { "self-test", Config::SelfTestKey(), 0 },
+            };
+
+            std::string missing;
+            for (const auto& w : wants) {
+                if (w.key == 0) {
+                    continue;  // switched off in the ini
+                }
+                if (!UI::IsKeyboardHotkeyArmed(w.key, w.mod)) {
+                    missing += (missing.empty() ? "" : ", ") + std::string(w.what) + " " +
+                               Config::KeyName(w.key) +
+                               (w.mod ? " + " + Config::KeyName(w.mod) : std::string{});
+                }
+            }
+            const auto armed = UI::ArmedHotkeysText();
+            a_detail = armed.empty() ? "no hotkeys armed" : armed;
+            if (!missing.empty()) {
+                a_detail = "NOT armed: " + missing + " — table: " + a_detail;
+            }
+            return missing.empty();
+        }
+
+        void CheckHotkeys(std::vector<Result>& out) {
+            std::string detail;
+            const bool  ok = HotkeysMatchConfig(detail);
+            Add(out, ok, true, "hotkeys armed", std::move(detail));
+        }
+
+        void WriteSelfTestLines(const std::vector<Result>& out) {
+            for (const auto& r : out) {
+                // A warning is a check that did not pass; a runner that only knows PASS
+                // and FAIL must see it as one.
+                const std::string detail =
+                    r.pass ? r.detail : std::string(r.fatal ? "" : "(warn) ") + r.detail;
+                logger::info("{}", Format::Line(r.name, r.pass, detail));
+            }
+            logger::info("{}", Format::kEnd);
+        }
+
         // The public API, asked the way a foreign plugin asks it. Deliberately goes
         // through the real export and a real GetProcAddress rather than our internal
         // pointer: if the export ever loses its undecorated name, nothing else in this
@@ -526,6 +592,8 @@ namespace Isekai::SelfTest {
         CheckUiIcons(out);
         CheckCrafting(out);
         CheckModApi(out);
+        CheckReadiness(out);
+        CheckHotkeys(out);
 
         std::size_t failed = 0;
         std::size_t fatal = 0;
@@ -546,6 +614,7 @@ namespace Isekai::SelfTest {
         logger::info("  {} of {} checks passed{}", out.size() - failed, out.size(),
                      fatal > 0 ? " — SOMETHING IS BROKEN, see FAIL above" : "");
         logger::info("=======================================================");
+        WriteSelfTestLines(out);
 
         // The in-game half of the report, on OUR panel rather than the engine's message
         // box. DebugMessageBox goes through Skyrim's menu queue, and in gameplay that
@@ -604,5 +673,44 @@ namespace Isekai::SelfTest {
         if (a_log) {
             logger::info("SelfTest: hotkey {} runs the self-test", Config::KeyName(key));
         }
+    }
+
+    void Event(std::string_view a_id, bool a_pass, std::string_view a_detail) {
+        logger::info("{}", Format::Line(a_id, a_pass, a_detail));
+        logger::info("{}", Format::kEnd);
+    }
+
+    void OnHotkeysRebound(bool a_tableChanged) {
+        if (!a_tableChanged) {
+            return;
+        }
+        std::string detail;
+        const bool  ok = HotkeysMatchConfig(detail);
+        Event("hotkeys-rebind", ok, detail);
+    }
+
+    namespace {
+        // IsekaiHeroCraft.RunSelfTest(): a VM thread may not run the checks (they walk
+        // forms and UI state), so this only queues the run and answers whether it could.
+        bool RunSelfTestNative(RE::StaticFunctionTag*) {
+            auto* task = SKSE::GetTaskInterface();
+            if (!task) {
+                return false;
+            }
+            task->AddTask([]() {
+                logger::info("SelfTest: run requested by script (IsekaiHeroCraft.RunSelfTest)");
+                Run(/*a_notify=*/false);
+            });
+            return true;
+        }
+    }
+
+    bool RegisterPapyrus(RE::BSScript::IVirtualMachine* a_vm) {
+        if (!a_vm) {
+            return false;
+        }
+        a_vm->RegisterFunction("RunSelfTest", "IsekaiHeroCraft", RunSelfTestNative);
+        logger::info("SelfTest: Papyrus native IsekaiHeroCraft.RunSelfTest registered");
+        return true;
     }
 }
