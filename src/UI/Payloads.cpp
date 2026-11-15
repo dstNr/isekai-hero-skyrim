@@ -85,8 +85,13 @@ namespace Isekai::UI::Payloads {
             // zones and draws the landmarks (hub, capstone, gifts) larger.
             j += "\"zone\":\"" + Escape(SkillTree::ZoneName(n.zone)) + "\",";
             j += "\"scale\":" + std::to_string(n.scale) + ",";
+            // The tier gate, or "" when there is none: every node opens at Normal, so a
+            // Normal gate is no gate, and the view says "none" rather than "NORMAL rebirth".
+            const PowerLevel gate = SkillTree::RequiredPower(n.key);
             j += "\"reqPower\":\"" +
-                 Escape(Isekai::PowerName(SkillTree::RequiredPower(n.key)).c_str()) + "\",";
+                 (gate == PowerLevel::Normal ? std::string()
+                                             : Escape(Isekai::PowerName(gate).c_str())) +
+                 "\",";
             // >0 only for a DORMANT blessing: the seal is a level away, not a
             // rebirth away, and the tooltip should say so.
             j += "\"reqLevel\":" +

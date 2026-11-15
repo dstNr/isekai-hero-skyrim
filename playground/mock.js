@@ -26,7 +26,9 @@
 
   /* --- rebirth tiers (PowerLevel in the plugin: Normal < Hero < Ascended) --- */
   var TIER = { Normal: 0, Hero: 1, Ascended: 2 };
-  var TIER_NAME = ["Normal", "Hero", "Ascended"];
+  // PowerName(): the plugin sends the tier names in upper case, and no gate name for
+  // a Normal gate (Payloads::Tree), since every node opens at Normal.
+  var TIER_NAME = ["NORMAL", "HERO", "ASCENDED"];
 
   /* --- the real tree ------------------------------------------------------
      Transcribed from kNodes in src/SkillTree.cpp. `req` is the minimum rebirth
@@ -196,7 +198,7 @@
           maxRank: n.maxRank || 0,
           masteryTier: tierOf(n),
           masteryTierName: MASTERY_TIER_NAMES[tierOf(n) - 1] || "",
-          reqPower: TIER_NAME[n.req],
+          reqPower: n.req ? TIER_NAME[n.req] : "",
           reqLevel: awakeningLevelFor(n.req),
           prereq: [n.prereq[0] || 0, n.prereq[1] || 0]
         };

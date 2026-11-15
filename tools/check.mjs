@@ -820,8 +820,10 @@ check("ui: every action the page sends is one the plugin parses", () => {
 check("ui: the web view's status buttons name real icons", () => {
   const html = systemPage();
   // The label argument goes through t("key", "English"), so it holds commas of its own —
-  // anything up to the PNG rather than "one comma-free argument".
-  const icons = [...html.matchAll(/addIcon\([\s\S]*?,\s*"([\w.]+\.png)"/g)].map((m) => m[1]);
+  // anything up to the PNG rather than "one comma-free argument". Calls only: not the
+  // definition, and never across a line, or the definition's match would swallow the
+  // first call's icon and that call would go unchecked.
+  const icons = [...html.matchAll(/(?<!function\s+)\baddIcon\(([^;\n]*?),\s*"([\w.]+\.png)"/g)].map((m) => m[2]);
   need(icons.length >= 3, `${icons.length} addIcon calls parsed (tree, storage, shop expected) — parser stale?`);
   for (const i of icons) {
     need(existsSync(join(ROOT, "icons", i)), `icons/${i} is missing — that button renders bare`);
@@ -1028,6 +1030,40 @@ check("ui: UiScale reaches both renderers", () => {
        /g_userScale\s*=\s*Config::UiScale\(\)/.test(read("src/System.cpp")),
        "the built-in renderer no longer picks up Config::UiScale");
   return "built-in and web view";
+});
+
+check("ui: every skill-tree link in the web view is visibly drawn", () => {
+  // The web view's first net routed every link straight from its parent's name to the
+  // child's tile; between a branch's two rows that left 0-18 px of a faint dashed line,
+  // so 9 of 14 links could not be seen. This RUNS the page's own routing over the real
+  // node table and measures, per link, how much of it lies outside every tile and name.
+  const MIN = 12;
+  const win = {};
+  new Function("window", read(`${PAGE_SCREENS}/tree.js`))(win);
+  const geo = win.isekaiScreens && win.isekaiScreens.treeGeometry;
+  need(geo && typeof geo.layout === "function" && typeof geo.links === "function" &&
+       typeof geo.sample === "function" && typeof geo.footprints === "function",
+       "tree.js no longer publishes isekaiScreens.treeGeometry { layout, links, sample, footprints }");
+  const graph = parseSkillTreeNodes().filter((n) => n.zone !== "MASTERY");
+  const L = geo.layout(graph);
+  need(L, "the page laid out no net");
+  const links = geo.links(L, graph);
+  const expected = graph.reduce((a, n) => a + n.prereq.length, 0);
+  need(links.length === expected, `${links.length} links routed, ${expected} prerequisites in SkillTree.cpp`);
+  const boxes = graph.flatMap((n) => { const f = geo.footprints(L, n); return [f.tile, f.label]; });
+  const inside = (q) => boxes.some((b) => q.x >= b[0] && q.x <= b[2] && q.y >= b[1] && q.y <= b[3]);
+  let worst = Infinity, who = "";
+  for (const lk of links) {
+    const pts = geo.sample(lk.route);
+    let vis = 0;
+    for (let i = 1; i < pts.length; i++) {
+      if (!inside(pts[i - 1]) && !inside(pts[i])) vis += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    }
+    const name = `${lk.from.name} -> ${lk.to.name}`;
+    need(vis >= MIN, `"${name}" shows only ${vis.toFixed(1)} px outside tiles and names (at least ${MIN})`);
+    if (vis < worst) { worst = vis; who = name; }
+  }
+  return `${links.length} links, shortest ${who} at ${worst.toFixed(0)} px`;
 });
 
 check("ui: the controller's focus ring can reach every kind of target", () => {

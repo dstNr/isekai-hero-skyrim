@@ -47,6 +47,8 @@
 
       const rail = $("shRail"), grid = $("shGrid");
       const railWas = focusedId(rail), gridWas = focusedId(grid);
+      // A re-push of the shelf on screen (a purchase) keeps the scroll; a new shelf starts at the top.
+      const scrollWas = !fresh && grid.dataset.shelf === String(shelf) ? grid.scrollTop : 0;
       rail.innerHTML = "";
       shelves.forEach((name, z) => {
         const held = items.filter((it) => it.shelf === name).length;
@@ -62,7 +64,7 @@
       const active = shelves[shelf];
       const top = topTierOf(items);
       grid.innerHTML = "";
-      grid.scrollTop = 0;
+      grid.dataset.shelf = String(shelf);
       const visible = items.map((it, i) => ({ it: it, i: i })).filter((v) => !active || v.it.shelf === active);
       if (!visible.length) {
         grid.innerHTML = '<div class="shEmpty mono">' + esc(items.length ? t("view.shelfEmpty", "Nothing on this shelf yet.")
@@ -89,6 +91,7 @@
         b.onclick = () => { if (canAfford(it)) ui.send("shopBuy", i); };
         grid.appendChild(b);
       });
+      grid.scrollTop = scrollWas;
       refocus(rail, railWas);
       refocus(grid, gridWas);
       showShopInfo();
