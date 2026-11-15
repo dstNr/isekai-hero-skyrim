@@ -2,8 +2,8 @@
    Isekai Hero — projection theme (shared by every Magelight page)
    ----------------------------------------------------------------------------
    The System Window looks projected into the world: a translucent tinted pane
-   with scanlines, tilted slightly away from the viewer, lit by a cone of light
-   from a point below it (spec 7.1). Cyan is the default; gold, red and violet
+   with scanlines and a soft glow, tilted slightly away from the viewer, with
+   corner brackets (spec 7.1). Cyan is the default; gold, red and violet
    recolour the whole window when C++ passes a tone (spec 7.2).
 
    Rendered by Ultralight (WebKit, CPU or GPU, no WebGL guaranteed):
@@ -26,7 +26,6 @@
   --proj-scan:   repeating-linear-gradient(0deg, rgba(110, 230, 255, .07) 0 1px, transparent 1px 4px);
   --proj-tilt:   perspective(800px) rotateX(8deg);
   --proj-fringe: -1px 0 rgba(255, 60, 140, .55), 1px 0 rgba(60, 255, 240, .55);
-  --proj-cone:   rgba(90, 220, 255, .26);
   --tone:        #6ee6ff;
 
   /* The same tone as an rgb triplet, for the states that need it at other alphas
@@ -69,7 +68,7 @@
   --ui-scale: 1;
 }
 
-/* ---- tones: each recolours border, glow, scanlines, cone, title and caret ----
+/* ---- tones: each recolours border, glow, scanlines, title and caret ----
    Applied to a window (.proj, .stage) or to a single element inside one (a gold
    card in a cyan window). Every derived colour reads these variables, so one
    attribute is the whole recolour. */
@@ -78,7 +77,6 @@
   --proj-border: rgba(110, 230, 255, .8);
   --proj-glow:   0 0 18px rgba(80, 220, 255, .35);
   --proj-scan:   repeating-linear-gradient(0deg, rgba(110, 230, 255, .07) 0 1px, transparent 1px 4px);
-  --proj-cone:   rgba(90, 220, 255, .26);
   --tone: #6ee6ff; --tone-rgb: 110, 230, 255; --text: #dff9ff; --dim: #9cc9d6;
 }
 /* gold: from the approved mockup's gold variant */
@@ -87,7 +85,6 @@
   --proj-border: rgba(255, 214, 140, .8);
   --proj-glow:   0 0 18px rgba(255, 190, 90, .35);
   --proj-scan:   repeating-linear-gradient(0deg, rgba(255, 214, 140, .07) 0 1px, transparent 1px 4px);
-  --proj-cone:   rgba(255, 200, 110, .24);
   --tone: #ffd27a; --tone-rgb: 255, 210, 122; --text: #fff4df; --dim: #e0c79c;
 }
 /* red: a warm alarm red with enough blue in it to stay in the projected-light family
@@ -97,7 +94,6 @@
   --proj-border: rgba(255, 128, 142, .8);
   --proj-glow:   0 0 18px rgba(255, 70, 95, .35);
   --proj-scan:   repeating-linear-gradient(0deg, rgba(255, 128, 142, .07) 0 1px, transparent 1px 4px);
-  --proj-cone:   rgba(255, 90, 110, .24);
   --tone: #ff6b7a; --tone-rgb: 255, 107, 122; --text: #ffe7ea; --dim: #dba5ad;
 }
 /* violet: the sleeping blessing; cooler and quieter than gold, never mistaken for it */
@@ -106,7 +102,6 @@
   --proj-border: rgba(196, 155, 255, .8);
   --proj-glow:   0 0 18px rgba(150, 100, 255, .35);
   --proj-scan:   repeating-linear-gradient(0deg, rgba(196, 155, 255, .07) 0 1px, transparent 1px 4px);
-  --proj-cone:   rgba(170, 120, 255, .24);
   --tone: #c49bff; --tone-rgb: 196, 155, 255; --text: #f2eaff; --dim: #b9a8d8;
 }
 
@@ -148,14 +143,14 @@ img { display: block; }
               rgba(2, 8, 14, .48), rgba(2, 8, 14, .22) 62%, rgba(2, 8, 14, .5));
 }
 
-/* ---- the stage: window + cone, animated together ---- */
+/* ---- the stage: the window's animated wrapper (open, swap, close) ---- */
 .stage { position: relative; }
 .stage.opening { animation: proj-on var(--t-open) linear both; transform-origin: 50% 100%; }
 .stage.swapping { animation: proj-swap var(--t-swap) var(--ease) both; }
 .stage.closing { opacity: 0; transition: opacity var(--t-close) ease-in; }
 
-/* Projector warm-up: the pane unfolds upward from its base line, then the lamp
-   catches with two dips of brightness before it holds. Opacity and transform only. */
+/* Projector warm-up: the pane unfolds upward from its base line, then the image
+   steadies with two dips of brightness before it holds. Opacity and transform only. */
 @keyframes proj-on {
   0%   { opacity: 0;   transform: scaleY(.03); }
   32%  { opacity: .85; transform: scaleY(1.015); }
@@ -167,25 +162,6 @@ img { display: block; }
 @keyframes proj-swap {
   0%   { opacity: .35; transform: translateY(4px); }
   100% { opacity: 1;   transform: none; }
-}
-
-/* ---- .proj-beam: the light cone ----
-   Starts at a point well below the window and widens to the window's base, behind
-   it. The gradient runs bright at the source and fades upward, as in the mockup. */
-.proj-beam {
-  position: absolute; left: 4%; right: 4%; top: 42%;
-  height: calc(58% + 26vh);
-  pointer-events: none;
-  background: linear-gradient(0deg, var(--proj-cone), transparent 85%);
-  -webkit-clip-path: polygon(47% 100%, 53% 100%, 100% 0, 0 0);
-          clip-path: polygon(47% 100%, 53% 100%, 100% 0, 0 0);
-  opacity: .9;
-}
-/* The emitter: a small lens of light where the cone starts. */
-.proj-beam::after {
-  content: ""; position: absolute; left: 50%; bottom: -3px;
-  width: 26px; height: 6px; margin-left: -13px; border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(var(--tone-rgb), .9), rgba(var(--tone-rgb), 0) 70%);
 }
 
 /* ---- .proj: the window ---- */

@@ -816,14 +816,27 @@ check("ui: the panel's button labels are wrapped in the element their CSS styles
        "below its content and the row overflows the panel instead");
   need(/#pButtons \.btn\s*\{[^}]*flex-direction:\s*column/.test(view),
        "#pButtons .btn is no longer stacked; icon beside label does not fit five choices");
+  // The page's functions sit indented inside an IIFE, so the next function at any
+  // indent ends buildButtons — not the next one at column 0, which does not exist.
   const from = view.indexOf("function buildButtons()");
   need(from >= 0, "buildButtons not found in the view — parser stale?");
-  const build = view.slice(from, view.indexOf("\nfunction ", from + 1));
-  const spans = build.match(/class="lbl">'\s*\+\s*esc\(b\.label\)/g) || [];
-  need(spans.length >= 2,
-       "buildButtons emits a card or row label that is not inside a .lbl span " +
-       `(${spans.length} of 2 builders wrap it)`);
-  return "stacked, clipped, and the span exists";
+  const next = view.slice(from + 1).search(/\n[ \t]*function \w/);
+  need(next >= 0, "nothing follows buildButtons — the delimiter is stale");
+  const build = view.slice(from, from + 1 + next);
+  // Each builder on its own: from its className assignment to the next one (or to the
+  // end of the loop body). Dropping the span from either must fail this rule.
+  const branch = (cls) => {
+    const at = build.indexOf(`el.className = "${cls}`);
+    need(at >= 0, `buildButtons no longer builds .${cls} elements — parser stale?`);
+    const rest = build.slice(at + 1);
+    const end = Math.min(...[rest.indexOf("el.className ="), rest.indexOf("el.querySelectorAll(")]
+      .filter((i) => i >= 0));
+    return build.slice(at, at + 1 + (Number.isFinite(end) ? end : rest.length));
+  };
+  const lbl = /class="lbl">'\s*\+\s*esc\(b\.label\)/;
+  need(lbl.test(branch("card")), "the card builder emits a label that is not inside a .lbl span");
+  need(lbl.test(branch("btn")), "the row builder emits a label that is not inside a .lbl span");
+  return "stacked, clipped, and both builders wrap the label";
 });
 
 check("loc: the translation template matches the strings in the source", () => {

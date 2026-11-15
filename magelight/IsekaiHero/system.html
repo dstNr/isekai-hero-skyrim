@@ -120,7 +120,6 @@
 <section id="screen-panel" class="screen" data-screen="panel">
   <div class="scale">
     <div class="stage" id="pStage" data-tone="cyan">
-      <div class="proj-beam"></div>
       <div class="proj" id="panel" tabindex="-1" role="dialog" aria-labelledby="pTitle">
         <div id="pHead" class="proj-title">
           <span class="slashes">//</span><span class="name" id="pTitle"></span><span class="rule"></span>
@@ -221,9 +220,17 @@
     const stage = section && section.querySelector(".stage");
     if (stage) play(stage, "closing");
     clearTimeout(reopenTimer);
-    // Only the fade is undone: the next show still counts as an open (flicker-on),
-    // since the view was most likely hidden in between.
-    reopenTimer = setTimeout(() => { if (!open && stage) stage.classList.remove("closing"); }, 1500);
+    reopenTimer = setTimeout(() => {
+      if (open || !stage) return;
+      // The plugin hid the view: stay faded, so the stale screen cannot flash up
+      // for a frame when the view is shown again; the next show resets it anyway.
+      if (document.hidden) return;
+      // Still on screen, so the plugin refused the action: give the screen back,
+      // answerable again (a dead blessing choice would strand the character). The
+      // next show still counts as an open (flicker-on).
+      stage.classList.remove("closing");
+      chosen = false;
+    }, 1500);
   }
 
   function rerender() {
@@ -234,7 +241,7 @@
   /* ======================= SYSTEM PANEL ======================= */
   let PANEL = null;
   let typer = null;
-  let typedAt = 0;      // when an input finished the typewriter (its click must not act)
+  let typedAt = -Infinity;  // when an input finished the typewriter (its click must not act)
   let chosen = false;   // one answer per panel
 
   function textButtons(p) { return (p.buttons || []).filter((b) => !b.iconOnly); }
@@ -271,7 +278,8 @@
     // One way on: the button gets focus, so Enter or A continues. A decision gets
     // none — the player moves to an answer on purpose.
     const tb = $("pButtons").querySelectorAll(".btn, .card");
-    if (tb.length === 1 && !document.activeElement.matches(FOCUSABLE)) tb[0].focus();
+    const active = document.activeElement;
+    if (tb.length === 1 && !(active && active.matches && active.matches(FOCUSABLE))) tb[0].focus();
   }
 
   function finishTyping() {
