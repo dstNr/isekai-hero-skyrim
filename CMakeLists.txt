@@ -115,7 +115,22 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${STB_INCLUDE_DIRS})
 
 # So sources can say #include "UI/Overlay.h", and #include "ImGuiVRHelperClientSDK.h"
 # without spelling out the vendor path at every call site.
-target_include_directories(${PROJECT_NAME} PRIVATE src extern/imgui-vr-helper)
+target_include_directories(${PROJECT_NAME} PRIVATE src extern/imgui-vr-helper extern/magelight
+                                                   ${CMAKE_BINARY_DIR}/generated)
+
+# UI build id: IsekaiBuildId.h (plugin) and version.js (pages) get the same id from the
+# same run. The target runs on every build and rewrites a file only when its id changed;
+# the plugin depends on it so the header exists before compilation. Also run once at
+# configure time so the files exist for IDEs and first-time dependency scans.
+set(ISEKAI_BUILD_ID_ARGS -DSOURCE_DIR=${CMAKE_SOURCE_DIR} -DOUT_DIR=${CMAKE_BINARY_DIR}/generated
+                         -P ${CMAKE_SOURCE_DIR}/cmake/BuildId.cmake)
+execute_process(COMMAND ${CMAKE_COMMAND} ${ISEKAI_BUILD_ID_ARGS})
+add_custom_target(IsekaiBuildId
+    COMMAND ${CMAKE_COMMAND} ${ISEKAI_BUILD_ID_ARGS}
+    BYPRODUCTS ${CMAKE_BINARY_DIR}/generated/IsekaiBuildId.h ${CMAKE_BINARY_DIR}/generated/version.js
+    COMMENT "Stamping UI build id"
+    VERBATIM)
+add_dependencies(${PROJECT_NAME} IsekaiBuildId)
 
 # The mod version, as the VR helper surfaces it in its "Registered Clients" table — so a
 # tester's screenshot of that table says which build they are on. Taken from the project
