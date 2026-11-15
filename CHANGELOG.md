@@ -66,7 +66,10 @@ All notable changes to Isekai Hero are documented here. The format follows
   `PlayerCharacter::Update`, so the interface needs no new Address Library IDs and the same
   DLL still serves SE, AE and VR.
 - **New look: a holographic "projection".** A translucent cyan window with scanlines, a
-  glow and a slight tilt toward the player; a gold tone for rewards. The timings carry over
+  glow and a slight tilt toward the player. Each panel gets its tone from the plugin (spec 7.2):
+  gold for the blessing choice, AWAKENED / TRANSCENDED and milestone payouts, red for the
+  Full/Shattered choice, the reboot confirmation and a failing self-test, violet for the
+  Dormant path and the Custom builder. The timings carry over
   from the old overlay (toast line 3.2 s, banner 5.5 s, flourish 3.2 s). Threat labels keep
   their four verdicts and the 12-label cap.
 - **Magelight UI 1.7.0 or newer is a new requirement.** Without it the mod does not start
@@ -84,14 +87,13 @@ All notable changes to Isekai Hero are documented here. The format follows
   the self-test checks them there.
 - **`package.ps1` stages the complete page set** (pages, theme, shared and screen scripts,
   `version.js`, icons) and `tools/check.mjs` fails when a file a page loads is not staged.
-
-### Removed
-- **The ImGui overlay, the PrismaUI bridge and view, and the ImGui VR Helper layer.** The
-  `Present` hook, the `imgui` dependency, `extern/imgui-vr-helper/`, `prisma-patch/` and the
-  PrismaUI installer option are gone. The ini keys `VRInHeadsetLayer` and
-  `VRThreatLabelHeight` are retired (an old ini that still has them loads as before), and
-  so is the two-button controller chord that came from the VR helper.
-
+- **A choice the System is waiting for no longer waits unseen, and the controller drives the
+  screens by focus.** A decision panel (the blessing choice, the reboot confirmation) that
+  loses its window and is not offered again by itself shows one native HUD note naming the
+  System-menu key, once per decision. The pad works the pages as keys through Magelight's
+  controller layer (d-pad and left stick move the focus, A presses, B closes everything
+  but a decision, a right-stick click swaps to a pointer); the ini, the Nexus text and
+  `docs/MANUAL_TESTS.md` say so instead of describing the old cursor bridge.
 - **A finished rebirth now signals other plugins with the `IsekaiHero_RebirthComplete` ModEvent.**
   Sent through `SKSE::GetModCallbackEventSource()` right after the "Reincarnation applied" log
   line, once per rebirth (all three selection paths end in the one `ApplyReincarnation`; a
@@ -110,7 +112,14 @@ All notable changes to Isekai Hero are documented here. The format follows
   `Present` call is logged on the way in and out along with every distinct swap chain (up
   to four), and each call into PrismaUI is marked before it is made.
   *Superseded within this release: the overlay and PrismaUI bridge this logging covered
-  were removed, see above.*
+  were removed, see Removed below.*
+
+### Removed
+- **The ImGui overlay, the PrismaUI bridge and view, and the ImGui VR Helper layer.** The
+  `Present` hook, the `imgui` dependency, `extern/imgui-vr-helper/`, `prisma-patch/` and the
+  PrismaUI installer option are gone. The ini keys `VRInHeadsetLayer` and
+  `VRThreatLabelHeight` are retired (an old ini that still has them loads as before), and
+  so is the two-button controller chord that came from the VR helper.
 
 ## [0.9.0] — 2026-09-17
 

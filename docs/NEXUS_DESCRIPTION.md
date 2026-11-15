@@ -107,7 +107,7 @@ It [b]starts empty for every blessing[/b] — you stock it from the System Shop'
 [size=4][b]Keyboard, controller or headset[/b][/size]
 [list]
 [*][b]Keyboard[/b] — Right Shift + S opens the System panel, F10 toggles the threat display. Both remappable.
-[*][b]Controller[/b] — hold [b]LB[/b] and tap [b]Back[/b] for the System menu; the left stick moves the cursor, [b]A[/b] clicks, [b]B[/b] closes. A combination rather than a single button because a controller has none spare — every face button, both shoulders and both sticks are already bound in vanilla. Both bindings are in the ini, and `None` switches the controller off.
+[*][b]Controller[/b] — hold [b]LB[/b] and tap [b]Back[/b] for the System menu. Inside it the d-pad or the left stick moves from button to button, [b]A[/b] presses, [b]B[/b] closes (a choice the System is waiting for stays until you answer it), and clicking the right stick swaps to a pointer for the skill tree. This is Magelight UI's controller support, so it is there on flat screens with it switched on in Magelight. A combination rather than a single button because a controller has none spare — every face button, both shoulders and both sticks are already bound in vanilla. Both bindings are in the ini, and `None` switches the controller off.
 [*][b]Skyrim VR[/b] — [b]experimental and untested[/b]: the menus use Magelight UI's own VR panels, laser pointer and keyboard. Threat readings cannot float over each actor in a headset, so they show as a head-locked [b]scan list[/b] of the nearest actors, most dangerous first. The System menu opens from a controller button you set in the ini ([font=Courier New]VRMenuButton[/font], off by default).
 [/list]
 

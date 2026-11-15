@@ -224,8 +224,9 @@ long after the skill tree is bought out.
 ### Custom UI and sound
 
 Solo-Levelling-inspired panels in a holographic "projection" look (a translucent cyan
-window with scanlines and a glow, tilted slightly toward the player; a gold tone for
-rewards), custom SFX routed through the game's audio system, icon buttons, ESC handled
+window with scanlines and a glow, tilted slightly toward the player; gold for the blessing,
+awakenings and milestone rewards, red for warnings, the Shattered path and the reboot
+confirmation, violet for Dormant and the Custom builder), custom SFX routed through the game's audio system, icon buttons, ESC handled
 properly.
 
 The **whole UI** — the tree, the System dialog panels, toasts, the level-up flourish and

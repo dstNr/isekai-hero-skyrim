@@ -110,13 +110,8 @@ add_custom_target(IsekaiBuildId
     VERBATIM)
 add_dependencies(${PROJECT_NAME} IsekaiBuildId)
 
-# The mod version, as the VR helper surfaces it in its "Registered Clients" table — so a
-# tester's screenshot of that table says which build they are on. Taken from the project
-# version above rather than written out again.
-target_compile_definitions(${PROJECT_NAME} PRIVATE ISEKAI_VERSION="${PROJECT_VERSION}")
-
-# Pulling in d3d11.h drags in windows.h; keep its macros from colliding with
-# CommonLibSSE (which deliberately avoids including it).
+# The Magelight header (MagelightUI_API.h) pulls in windows.h; keep its macros from
+# colliding with CommonLibSSE (which deliberately avoids including it).
 target_compile_definitions(${PROJECT_NAME} PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
 
 # CommonLibSSE-NG expects its setup header (SKSE/Impl/PCH.h, which defines
