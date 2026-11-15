@@ -62,12 +62,14 @@ namespace Isekai::UI {
                 j["tone"] = std::string(Logic::ToneName(Logic::Tone::Cyan));
                 const std::string js = "isekai.toast(" + Dump(j) + ")";
                 // The host refused a click-through Popup view, so the hud sits under our
-                // own panels: while the system view holds UI mode, it shows the toast too
-                // (spec 6.2), or a purchase toast would be hidden behind the shop.
+                // own panels: while the system view holds UI mode, the toast goes there
+                // INSTEAD (spec 6.2), or a purchase toast would be hidden behind the shop.
+                // One view only, so the player never sees it twice.
                 if (Magelight::HudBelowPanels() && Magelight::HoldsUiMode()) {
                     Magelight::Run(Magelight::View::System, js);
+                } else {
+                    Magelight::Run(Magelight::View::Hud, js);
                 }
-                Magelight::Run(Magelight::View::Hud, js);
             } catch (const std::exception& e) {
                 logger::error("Hud: toast not sent ({})", e.what());
             }
@@ -81,7 +83,6 @@ namespace Isekai::UI {
         Logic::LabelPushGate    g_gate;
         Logic::LabelHeartbeat   g_heartbeat;
         std::vector<Logic::LabelFrame> g_frames;  // reused: no allocation per frame once warm
-        std::string             g_posJs;          // reused, likewise
 
         // Labels are on the page (the last push was a non-empty set). Written under
         // g_labelMx, read without it by the fast path and the menu watcher.
@@ -93,20 +94,47 @@ namespace Isekai::UI {
 
         [[nodiscard]] bool Finite(float a_v) { return std::isfinite(a_v); }
 
+        // A pool as the page gets it: exact when its figures are shown (health with
+        // ThreatLabelNumbers on), else at bar resolution, [step, kPoolSteps]: combat regen
+        // would otherwise change magicka and stamina, and so the content, every frame.
+        // No pool stays [0, 0], which the page draws as no bar.
+        [[nodiscard]] LabelPool Sent(const LabelPool& a_pool, bool a_exact) {
+            if (a_exact) {
+                return a_pool;
+            }
+            if (a_pool.max <= 0) {
+                return {};
+            }
+            return { Logic::PoolStep(a_pool.now, a_pool.max), Logic::kPoolSteps };
+        }
+
+        // What the page draws for one label, and therefore what the content hash covers.
+        struct Shown {
+            LabelPool hp;
+            LabelPool mp;
+            LabelPool sp;
+        };
+
+        [[nodiscard]] Shown ShownOf(const LabelData& a_label, bool a_nums, bool a_res) {
+            // ThreatLabelResources off: no pools, so the page draws no strip.
+            return { Sent(a_label.hp, a_nums), a_res ? Sent(a_label.mp, false) : LabelPool{},
+                     a_res ? Sent(a_label.sp, false) : LabelPool{} };
+        }
+
         [[nodiscard]] std::uint64_t ContentOf(const LabelData& a_label, bool a_nums, bool a_res) {
+            const Shown shown = ShownOf(a_label, a_nums, a_res);
             Logic::ContentHash h;
             h.AddInt(a_label.level)
                 .AddText(a_label.name)
                 .AddInt(static_cast<std::int64_t>(a_label.verdict))
                 .AddText(a_label.tag ? a_label.tag : "")
-                .AddInt(a_label.hp.now)
-                .AddInt(a_label.hp.max)
-                .AddInt(a_nums ? 1 : 0);
-            if (a_res) {
-                h.AddInt(a_label.mp.now).AddInt(a_label.mp.max).AddInt(a_label.sp.now).AddInt(a_label.sp.max);
-            } else {
-                h.AddInt(-1);
-            }
+                .AddInt(a_nums ? 1 : 0)
+                .AddInt(shown.hp.now)
+                .AddInt(shown.hp.max)
+                .AddInt(shown.mp.now)
+                .AddInt(shown.mp.max)
+                .AddInt(shown.sp.now)
+                .AddInt(shown.sp.max);
             return h.Value();
         }
 
@@ -132,10 +160,10 @@ namespace Isekai::UI {
                 j["tag"] = std::string(l.tag ? l.tag : "");
                 j["verdict"] = std::string(kVerdicts[static_cast<std::size_t>(l.verdict)]);
                 j["tone"] = std::string(Logic::ToneName(Logic::ToneFor(l.verdict)));
-                j["hp"] = PoolJson(l.hp);
-                // ThreatLabelResources off: no pools, so the page draws no strip.
-                j["mp"] = a_res ? PoolJson(l.mp) : Json::array({ 0, 0 });
-                j["sp"] = a_res ? PoolJson(l.sp) : Json::array({ 0, 0 });
+                const Shown shown = ShownOf(l, a_nums, a_res);
+                j["hp"] = PoolJson(shown.hp);
+                j["mp"] = PoolJson(shown.mp);
+                j["sp"] = PoolJson(shown.sp);
                 j["nums"] = a_nums;
                 arr.push_back(std::move(j));
             }
@@ -143,35 +171,37 @@ namespace Isekai::UI {
         }
 
         // isekai.labels.pos([[id, x, y, s], ...]): the per-frame call while labels move.
-        // Numbers only, formatted in place into a reused buffer rather than through a
-        // json tree, because this one runs every frame; a non-finite value never reaches
-        // the gate (OnFrame drops it), so the text is always a valid JS literal.
-        void BuildPosJs(const std::vector<Logic::LabelFrame>& a_frames) {
-            g_posJs.clear();
-            g_posJs.append("isekai.labels.pos([");
-            auto out = std::back_inserter(g_posJs);
+        // Numbers only, formatted in place into one buffer sized up front rather than
+        // through a json tree, because this one runs every frame; the buffer is moved into
+        // Run, so it is the only allocation. A non-finite value never reaches the gate
+        // (OnFrame drops it), so the text is always a valid JS literal.
+        [[nodiscard]] std::string PosJs(const std::vector<Logic::LabelFrame>& a_frames) {
+            std::string js;
+            js.reserve(24 + a_frames.size() * 40);
+            js.append("isekai.labels.pos([");
+            auto out = std::back_inserter(js);
             for (std::size_t i = 0; i < a_frames.size(); ++i) {
                 const auto& f = a_frames[i];
                 std::format_to(out, "{}[{},{:.4f},{:.4f},{:.3f}]", i ? "," : "", f.id, f.x, f.y, f.scale);
             }
-            g_posJs.append("])");
+            js.append("])");
+            return js;
         }
 
         // Under g_labelMx. Runs the frames (possibly none) through the gate and sends what
         // it asks for; with nothing to send while labels are up, the heartbeat.
-        void PushLocked(const std::vector<LabelData>& a_labels, float a_w, float a_h) {
+        // a_nums / a_res: the settings the frames' content was hashed with.
+        void PushLocked(const std::vector<LabelData>& a_labels, float a_w, float a_h, bool a_nums,
+                        bool a_res) {
             const auto now = Logic::LabelHeartbeat::Clock::now();
             switch (g_gate.Update(g_frames, a_w, a_h)) {
                 case Logic::LabelPush::Full:
-                    Magelight::Run(Magelight::View::Hud,
-                                   FullJs(a_labels, g_frames, Config::ThreatLabelNumbers(),
-                                          Config::ThreatLabelResources()));
+                    Magelight::Run(Magelight::View::Hud, FullJs(a_labels, g_frames, a_nums, a_res));
                     g_heartbeat.Sent(now);
                     g_live.store(!g_frames.empty());
                     break;
                 case Logic::LabelPush::Positions:
-                    BuildPosJs(g_frames);
-                    Magelight::Run(Magelight::View::Hud, g_posJs);
+                    Magelight::Run(Magelight::View::Hud, PosJs(g_frames));
                     g_heartbeat.Sent(now);
                     break;
                 case Logic::LabelPush::None:
@@ -198,7 +228,7 @@ namespace Isekai::UI {
             std::scoped_lock lock(g_labelMx);
             ResyncLocked();
             g_frames.clear();
-            PushLocked({}, 1.0f, 1.0f);
+            PushLocked({}, 1.0f, 1.0f, false, false);
         }
 
         // The frame tick: main thread, only while the player's update runs.
@@ -209,6 +239,12 @@ namespace Isekai::UI {
                 return;
             }
             if (!Magelight::Available()) {
+                return;
+            }
+            // Until the hud page is ready every call queues, and a label push each frame
+            // would evict the queued toasts (ReadyGate keeps the newest 64). The ready
+            // raises g_resync, so the first frame after it sends the full set.
+            if (!Magelight::PageReady(Magelight::View::Hud)) {
                 return;
             }
             if (!on) {
@@ -253,7 +289,7 @@ namespace Isekai::UI {
                 ++kept;
             }
             labels.resize(kept);
-            PushLocked(labels, w, h);
+            PushLocked(labels, w, h, nums, res);
         }
 
         // ---- the menu watcher ------------------------------------------------------

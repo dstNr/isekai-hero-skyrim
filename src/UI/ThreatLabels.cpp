@@ -275,6 +275,14 @@ namespace Isekai::UI {
 
         std::vector<RE::Actor*> seen;  // the crosshair target is usually also in the sweep
 
+        // Sized once for the sweep, so neither vector regrows during it: every high actor
+        // (plus the aimed one) can be seen, and each can at most become a label.
+        if (const auto* lists = RE::ProcessLists::GetSingleton()) {
+            const std::size_t candidates = lists->highActorHandles.size() + 1;
+            seen.reserve(candidates);
+            labels.reserve(candidates);
+        }
+
         const auto considerAs = [&](RE::Actor* actor, Config::ThreatTargets rule) {
             if (!Eligible(actor, player, rule)) {
                 return;

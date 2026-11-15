@@ -293,6 +293,18 @@ namespace Isekai::UI::Logic {
         return px > -200.0f && px < a_w + 200.0f && py > -100.0f && py < a_h + 100.0f;
     }
 
+    // A pool at bar resolution: now/max as 0..kPoolSteps, rounded, 0 when there is no pool
+    // (max <= 0). Magicka and stamina regenerate every frame in combat; hashed and sent
+    // exactly, they would turn every frame into a full push for a change no bar can show.
+    // Sent as [step, kPoolSteps], the page's fill (now / max) is the same bar.
+    inline constexpr std::int32_t kPoolSteps = 200;
+
+    constexpr std::int32_t PoolStep(std::int32_t a_now, std::int32_t a_max) {
+        if (a_max <= 0) return 0;
+        const std::int64_t now = std::clamp<std::int64_t>(a_now, 0, a_max);
+        return static_cast<std::int32_t>((now * kPoolSteps + a_max / 2) / a_max);
+    }
+
     // FNV-1a over a label's non-position content (level, name, verdict, pools): what
     // LabelFrame::content holds. Integers go in as 8 little-endian bytes, text with its
     // length first, so "ab"+"c" and "a"+"bc" differ.

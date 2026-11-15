@@ -935,9 +935,9 @@
     loc: (table) => { ui.setLoc(table); rerender(); },
     scale: (s) => { ui.setScale(s); rerender(); },
     hello: () => ui.ready(),
-    // The hud's toast, mirrored while the hud view sits below this one and this one holds
-    // UI mode (Hud.cpp sends it only then). The hud keeps its own copy underneath, which
-    // lives on when this view closes.
+    // The hud's toast, shown here instead of on the hud while the hud view sits below
+    // this one and this one holds UI mode (Hud.cpp then sends it here only, never to
+    // both, so a toast is never seen twice).
     toast: (p) => toastMirror(p),
   };
 

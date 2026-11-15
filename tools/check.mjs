@@ -1409,8 +1409,8 @@ check("hud: the page speaks the plugin's contract and keeps the ImGui timings", 
   need(/\btoast\s*:\s*\([^)]*\)\s*=>/.test(sys) && /ui\.toaster\(\$\("toasts"\)\)/.test(sys) && /id="toasts"/.test(sys),
        "system.html no longer mirrors toasts through common.js's toaster");
   const hudCpp = read("src/UI/Hud.cpp");
-  need(/HudBelowPanels\(\)\s*&&\s*Magelight::HoldsUiMode\(\)[\s\S]{0,200}View::System,\s*js\)/.test(hudCpp),
-       "Hud.cpp no longer mirrors a toast to the system view while the hud sits below it");
+  need(/HudBelowPanels\(\)\s*&&\s*Magelight::HoldsUiMode\(\)\)\s*\{\s*Magelight::Run\(Magelight::View::System,\s*js\);\s*\}\s*else\s*\{\s*Magelight::Run\(Magelight::View::Hud,\s*js\);\s*\}/.test(hudCpp),
+       "Hud.cpp must send a toast to the system view INSTEAD of the hud while the hud sits below it, never to both");
   for (const call of ["isekai.toast(", "isekai.flourish(", "isekai.labels.full(", "isekai.labels.pos(", "isekai.labels.keep()"]) {
     need(hudCpp.includes(`"${call}`), `Hud.cpp no longer calls ${call}`);
   }
@@ -1432,14 +1432,29 @@ check("hud: the plugin sends labels the way the page reads them", () => {
   need(/Logic::LabelDistanceScale\(/.test(hud), "Hud.cpp no longer sends s = Logic::LabelDistanceScale");
   need(!/UiScale|g_userScale|g_scale/.test(hud), "Hud.cpp scales labels by UiScale — the page does that, it would apply twice");
   need(/j\["nums"\]\s*=/.test(hud) && /ThreatLabelNumbers\(\)/.test(hud), "Hud.cpp no longer sends nums (ThreatLabelNumbers)");
-  need(/ThreatLabelResources\(\)/.test(hud) && /a_res \? PoolJson\(l\.mp\)/.test(hud),
+  need(/ThreatLabelResources\(\)/.test(hud) && /a_res \? Sent\(a_label\.mp, false\) : LabelPool\{\}/.test(hud) &&
+       /a_res \? Sent\(a_label\.sp, false\) : LabelPool\{\}/.test(hud),
        "Hud.cpp no longer drops magicka/stamina when ThreatLabelResources is off");
+  // Combat regen changes magicka and stamina every frame: hashed and sent exactly, every
+  // frame would be a full push. Pools without figures go at bar resolution; health keeps
+  // its exact figures only while they are shown. Hash and payload come from one place.
+  need(/Logic::PoolStep\(/.test(hud) && /Sent\(a_label\.hp, a_nums\)/.test(hud),
+       "Hud.cpp no longer quantises the pools whose figures are not shown (Logic::PoolStep)");
+  const contentOf = hud.match(/std::uint64_t ContentOf\([^)]*\) \{([\s\S]*?)\n        \}/);
+  const fullJs = hud.match(/std::string FullJs\([\s\S]*?\n        \}/);
+  need(contentOf && /ShownOf\(/.test(contentOf[1]) && !/a_label\.(hp|mp|sp)/.test(contentOf[1]) &&
+       fullJs && /ShownOf\(/.test(fullJs[0]) && !/PoolJson\(l\./.test(fullJs[0]),
+       "the content hash and labels.full must both use ShownOf — a raw pool would let regen defeat the gate");
+  // Before the hud page is ready every call queues (newest 64 kept): label pushes would evict toasts.
+  const onFrameSrc = hud.slice(hud.indexOf("void OnFrame()"), hud.indexOf("SelectLabels("));
+  need(/PageReady\(Magelight::View::Hud\)/.test(onFrameSrc), "OnFrame pushes labels before the hud page is ready");
   need(/LabelHeartbeat/.test(hud) && /KeepDue\(/.test(hud), "Hud.cpp no longer sends the keep() heartbeat");
   need(/BSTEventSink<RE::MenuOpenCloseEvent>/.test(hud) && /PausesGame\(\)/.test(hud) && /Console::MENU_NAME/.test(hud),
        "Hud.cpp no longer clears the labels when a pausing menu or the console opens");
   need(/FrameTick::Add\(&OnFrame\)/.test(hud), "the label pass is no longer on the frame tick");
   // Toasts and the flourish are NOT on the frame tick: it stops while paused and in tfc.
-  const onFrame = hud.slice(hud.indexOf("void OnFrame()"), hud.indexOf("class MenuWatcher"));
+  // Code only: a comment may well explain why toasts are not here.
+  const onFrame = hud.slice(hud.indexOf("void OnFrame()"), hud.indexOf("class MenuWatcher")).replace(/\/\/.*$/gm, "");
   need(onFrame.length > 0 && !/toast|flourish/i.test(onFrame), "OnFrame sends toasts or the flourish — they would stop while paused");
   // The page's 300 ms staleness vs the heartbeat period.
   const period = read("src/UI/UiLogic.h").match(/kPeriod\{\s*(\d+)\s*\}/);

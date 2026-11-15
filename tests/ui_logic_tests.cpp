@@ -343,6 +343,23 @@ namespace {
         EXPECT(!LabelOnScreen(std::nanf(""), 0.5f, W, H));
     }
 
+    void LabelPoolSteps() {
+        EXPECT(PoolStep(0, 0) == 0);      // no pool
+        EXPECT(PoolStep(50, -1) == 0);
+        EXPECT(PoolStep(0, 300) == 0);
+        EXPECT(PoolStep(300, 300) == kPoolSteps);
+        EXPECT(PoolStep(150, 300) == kPoolSteps / 2);
+        EXPECT(PoolStep(-20, 300) == 0);  // clamped
+        EXPECT(PoolStep(900, 300) == kPoolSteps);
+        // Regen of under half a step does not change the step; a full step does.
+        EXPECT(PoolStep(1000, 2000) == PoolStep(1004, 2000));
+        EXPECT(PoolStep(1000, 2000) != PoolStep(1010, 2000));
+        // Rounded, not truncated: 2/3 of 200 = 133.3 -> 133, 1/3 = 66.7 -> 67.
+        EXPECT(PoolStep(2, 3) == 133);
+        EXPECT(PoolStep(1, 3) == 67);
+        static_assert(PoolStep(1, 2) == kPoolSteps / 2);
+    }
+
     void LabelContentHash() {
         const auto h = [](std::int64_t a_level, std::string_view a_name, std::int64_t a_hp) {
             return ContentHash{}.AddInt(a_level).AddText(a_name).AddInt(a_hp).Value();
@@ -425,6 +442,7 @@ int main() {
         { "LabelPushDecisions", LabelPushDecisions },
         { "LabelPushEdges", LabelPushEdges },
         { "LabelGeometry", LabelGeometry },
+        { "LabelPoolSteps", LabelPoolSteps },
         { "LabelContentHash", LabelContentHash },
         { "LabelKeepCadence", LabelKeepCadence },
         { "PageBuild", PageBuild },
