@@ -1159,6 +1159,174 @@ check("ui: the web view's rank insignia is actually on screen", () => {
   return "scoped, and both parts are rendered";
 });
 
+/* ---- the hud page (toasts, flourish, threat labels) --------------------------------
+   It plays over live gameplay and never closes, so what it costs per frame is what the
+   whole rewrite is about (spec 9). The CSS helpers strip comments first: a comment
+   that mentions "transition: width" is not a transition. */
+const HUD_PAGE = "magelight/IsekaiHero/hud.html";
+const cssOf = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "");
+const hudStyle = () => cssOf([...read(HUD_PAGE).matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join("\n"));
+const hudScript = () => [...read(HUD_PAGE).matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]).join("\n");
+
+/* Every property a stylesheet animates: the @keyframes bodies and the transition lists.
+   Returns [[where, property], ...], how many @keyframes were read, and whether any
+   animation loops forever. */
+function animatedProps(css) {
+  const out = [];
+  let keyframes = 0;
+  for (const m of css.matchAll(/@keyframes\s+([\w-]+)\s*\{((?:[^{}]*\{[^{}]*\})*)\s*\}/g)) {
+    keyframes++;
+    for (const step of m[2].matchAll(/\{([^{}]*)\}/g)) {
+      for (const d of step[1].matchAll(/(^|;)\s*([\w-]+)\s*:/g)) out.push([`@keyframes ${m[1]}`, d[2]]);
+    }
+  }
+  const noKeyframes = css.replace(/@keyframes\s+[\w-]+\s*\{(?:[^{}]*\{[^{}]*\})*\s*\}/g, "");
+  for (const m of noKeyframes.matchAll(/(?:^|[;{\s])transition(?:-property)?\s*:\s*([^;}]+)/g)) {
+    for (const part of m[1].split(/,(?![^(]*\))/)) {
+      const prop = part.trim().split(/\s+/)[0];
+      if (prop && !/^\d/.test(prop)) out.push(["transition", prop]);
+    }
+  }
+  const loops = /(?:^|[;{\s])animation(?:-iteration-count)?\s*:[^;}]*\binfinite\b/.test(noKeyframes);
+  return { out, keyframes, loops };
+}
+
+check("hud: the page animates only transform and opacity", () => {
+  // Anything else — width, top, a colour, a filter — makes Ultralight lay out or re-raster
+  // the view on every frame of the animation, over a running game, and an `infinite`
+  // keeps it doing that forever. theme.css counts: the hud loads it.
+  const ALLOWED = new Set(["transform", "opacity", "none"]);
+  // The scanner itself must catch a bad sheet, or it verifies nothing.
+  const probe = animatedProps("@keyframes x { 0% { opacity: 0; } to { width: 2px; } } .a { transition: opacity 1s, left 2s; animation: x 1s infinite; }");
+  need(probe.out.some((p) => p[1] === "width") && probe.out.some((p) => p[1] === "left") && probe.loops,
+       "the animation scanner no longer sees keyframe or transition properties — parser stale?");
+
+  let total = 0, frames = 0;
+  for (const [name, css] of [[HUD_PAGE, hudStyle()], [PAGE_THEME, cssOf(read(PAGE_THEME))]]) {
+    const { out, keyframes, loops } = animatedProps(css);
+    need(keyframes > 0, `no @keyframes parsed in ${name} — parser stale?`);
+    for (const [where, prop] of out) {
+      need(ALLOWED.has(prop), `${name}: ${where} animates "${prop}" — only transform and opacity may move`);
+    }
+    need(!loops, `${name}: an animation loops forever (infinite) — every hud animation must end`);
+    total += out.length; frames += keyframes;
+  }
+  // The script may switch a transition off (a frame handed to a new actor must not slide)
+  // and must not set any other.
+  for (const m of hudScript().matchAll(/\.style\.(transition\w*)\s*=\s*([^;\n]+)/g)) {
+    need(/^(fresh \? "none" : ""|"none"|"")$/.test(m[2].trim()),
+         `hud.html sets style.${m[1]} = ${m[2].trim()} — the script may only switch a transition off`);
+  }
+  return `${frames} keyframes and ${total} animated properties, all transform/opacity, none looping`;
+});
+
+check("hud: a label position push writes one transform and nothing else", () => {
+  // labels.pos runs every frame while labels move. A layout read there (offsetWidth,
+  // getBoundingClientRect, innerWidth) forces a synchronous layout per call, DOM creation
+  // or a class change restyles the page — at 60 Hz, over the game. The view's size is
+  // cached on resize instead.
+  const js = hudScript();
+  const body = (name) => {
+    const at = js.search(new RegExp(`function ${name}\\(`));
+    need(at >= 0, `function ${name}( not found in hud.html — parser stale?`);
+    const open = js.indexOf("{", at);
+    let depth = 0, i = open;
+    for (; i < js.length; i++) {
+      if (js[i] === "{") depth++;
+      else if (js[i] === "}" && --depth === 0) break;
+    }
+    return js.slice(open, i + 1);
+  };
+  const FORBIDDEN = /createElement|appendChild|insertBefore|replaceChild|removeChild|innerHTML|textContent|classList|setAttribute|getBoundingClientRect|getComputedStyle|\b(offset|client|scroll)(Width|Height|Top|Left)\b|innerWidth|innerHeight|querySelector|getElementById/;
+  for (const name of ["pos", "place"]) {
+    const src = body(name);
+    const bad = src.match(FORBIDDEN);
+    need(!bad, `${name}() uses ${bad && bad[0]} — the per-frame label path may only write transforms`);
+    for (const m of src.matchAll(/\.style\.(\w+)\s*=/g)) {
+      need(m[1] === "transform" || m[1] === "opacity", `${name}() writes style.${m[1]} per frame`);
+    }
+  }
+  need(/style\.transform\s*=/.test(body("place")), "place() no longer moves the label by transform");
+  need(/\bplace\(/.test(body("pos")), "pos() no longer goes through place()");
+  // Liveness: any labels.* call keeps the labels, 300 ms without one hides them.
+  need(/\bconst\b[^;]*\bSTALE_MS\s*=\s*300\b/.test(js), "the 300 ms staleness limit is gone from hud.html");
+  for (const name of ["full", "pos", "keep"]) {
+    need(/\balive\(\)/.test(body(name)), `labels.${name}() is not a sign of life (alive())`);
+  }
+  return "pos/place: transforms and opacity only; full/pos/keep keep labels alive for 300 ms";
+});
+
+check("hud: threat labels take the plugin's verdict tones", () => {
+  // The tone IS the verdict at a glance, so the page and Logic::ToneFor(Verdict) must
+  // never disagree. The plugin sends the tone; the page falls back to the same rule for a
+  // label without one. RUN the page's functions against every Logic::Verdict.
+  const logic = read("src/UI/UiLogic.h");
+  const en = logic.match(/enum class Verdict\s*:\s*[\w:]+\s*\{([^}]*)\}/);
+  need(en, "enum class Verdict not found in UiLogic.h — parser stale?");
+  const names = en[1].split(",").map((s) => s.trim()).filter(Boolean);
+  const fn = logic.match(/constexpr Tone ToneFor\(Verdict a_verdict\)\s*\{([\s\S]*?)\n    \}/);
+  need(fn, "ToneFor(Verdict) not found in UiLogic.h — parser stale?");
+  need(/\?\s*Tone::Red\s*:\s*Tone::Cyan/.test(fn[1]),
+       "ToneFor(Verdict) is no longer `verdicts ? Red : Cyan` — update this check with it");
+  const red = [...fn[1].matchAll(/Verdict::(\w+)/g)].map((m) => m[1]);
+  need(red.length > 0, "no red verdict parsed from ToneFor(Verdict) — parser stale?");
+
+  const js = hudScript();
+  const grab = (re, what) => { const m = js.match(re); need(m, `${what} not found in hud.html — parser stale?`); return m[0]; };
+  const src = [
+    grab(/const VERDICTS = \[[^\]]*\];/, "VERDICTS"),
+    grab(/function verdictName\(v\) \{[\s\S]*?\n  \}/, "verdictName(v)"),
+    grab(/function verdictTone\(v\) \{[\s\S]*?\n  \}/, "verdictTone(v)"),
+    grab(/function labelTone\(l\) \{[^\n]*\}/, "labelTone(l)"),
+  ].join("\n");
+  const page = new Function("TONES", `${src}\nreturn { VERDICTS, verdictTone, labelTone };`)({ cyan: 1, gold: 1, red: 1, violet: 1 });
+  need(JSON.stringify(page.VERDICTS) === JSON.stringify(names.map((n) => n.toLowerCase())),
+       `the page's VERDICTS ${JSON.stringify(page.VERDICTS)} are not Logic::Verdict in order (${names.join(", ")})`);
+  names.forEach((n, i) => {
+    const want = red.includes(n) ? "red" : "cyan";
+    for (const v of [n.toLowerCase(), n.toUpperCase(), i]) {
+      need(page.verdictTone(v) === want, `verdict ${JSON.stringify(v)}: the plugin says ${want}, the page ${page.verdictTone(v)}`);
+    }
+  });
+  need(page.labelTone({ verdict: "trivial", tone: "gold" }) === "gold", "the page ignores the plugin's tone");
+  need(page.labelTone({ verdict: "lethal", tone: "bogus" }) === "red", "an unknown tone must fall back to the verdict's own");
+  // At most as many labels as the plugin selects.
+  const cap = read("src/UI/ThreatLabels.cpp").match(/kMaxLabels\s*=\s*(\d+)/);
+  need(cap, "kMaxLabels not found in ThreatLabels.cpp — parser stale?");
+  need(new RegExp(`\\bMAX_LABELS\\s*=\\s*${cap[1]}\\b`).test(js), `hud.html's MAX_LABELS is not the plugin's ${cap[1]}`);
+  return `${names.join("/")}: ${red.join(", ")} red, the rest cyan; plugin tone honoured; cap ${cap[1]}`;
+});
+
+check("hud: the page speaks the plugin's contract and keeps the ImGui timings", () => {
+  // The hud is driven entirely by InvokeJS calls the plugin makes by name; a renamed entry
+  // point is a toast that silently never appears. The page answers with isekai.ready and
+  // nothing else — it has no actions, so a send of anything else is a bug.
+  const html = read(HUD_PAGE);
+  const js = hudScript();
+  need(js.trim(), "no inline script in hud.html — parser stale?");
+  try { new Function(js); } catch (e) { need(false, `hud.html's script does not parse: ${e.message}`); }
+  need(/<script\s+src="version\.js"[^>]*onerror=/.test(html), "hud.html does not load version.js with a failure-tolerant <script>");
+  need(/<script\s+src="common\.js"/.test(html) && /href="theme\.css"/.test(html), "hud.html no longer loads common.js and theme.css");
+  for (const fn of ["loc", "scale", "vr", "hello", "toast", "flourish"]) {
+    need(new RegExp(`\\b${fn}\\s*:\\s*(function\\b|\\([^)]*\\)\\s*=>)`).test(js), `hud.html no longer defines isekai.${fn}`);
+  }
+  need(/labels\s*:\s*\{\s*full\s*:\s*full\s*,\s*pos\s*:\s*pos\s*,\s*keep\s*:\s*keep\s*\}/.test(js), "isekai.labels is not { full, pos, keep }");
+  need(/\bhello\s*:[^\n]*\bready\(\)/.test(js), "isekai.hello() no longer re-sends isekai.ready");
+  need(/\bui\.ready\(\);\s*\}\)\(\);$/.test(js.trim()), "hud.html no longer sends isekai.ready when it loads");
+  need(!/\bui\.send\(|magelight\.send|escapeCapture/.test(js), "hud.html sends something besides isekai.ready — the hud has no actions");
+  // spec / constraints: toast line 3.2 s, banner 5.5 s, fade 0.8 s, rise 0.22 s; flourish 3.2 s, fade 0.7 s.
+  const num = (name) => { const m = js.match(new RegExp(`\\b${name}\\s*=\\s*(\\d+)`)); need(m, `${name} not found in hud.html`); return +m[1]; };
+  const want = { LINE_MS: 3200, BANNER_MS: 5500, FADE_MS: 800, FLOURISH_MS: 3200, FLOURISH_FADE_MS: 700 };
+  for (const [k, v] of Object.entries(want)) need(num(k) === v, `${k} is ${num(k)}, the timings say ${v}`);
+  need(/\.toast\s*\{[^}]*animation:\s*toast-rise\s+220ms/.test(hudStyle()), "the toast no longer rises in 220 ms");
+  need(/\.toast \.tin\s*\{[^}]*animation:\s*toast-fade\s+800ms/.test(hudStyle()), "the toast fade is no longer 800 ms");
+  need(/\.fl\s*\{[^}]*animation:\s*fl-out\s+700ms/.test(hudStyle()), "the flourish fade is no longer 700 ms");
+  // No light cone or beam (user look ruling, spec 7.1).
+  need(!/\b(beam|cone|pillar)\b/i.test(cssOf(html).replace(/<!--[\s\S]*?-->/g, "").replace(/\/\/.*$/gm, "")),
+       "hud.html draws a beam/cone/pillar — the look ruling says no light cone anywhere");
+  return "loc/scale/vr/hello/toast/flourish/labels{full,pos,keep}, ready only, timings as the ImGui strip";
+});
+
 check("icons: every shipped PNG is 512x512", () => {
   // The generator hands back whatever resolution it likes; the first batch of UI art
   // arrived at 1024 and 2048, which is 16 MB of archive for pixels nothing ever

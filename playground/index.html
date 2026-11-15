@@ -30,6 +30,17 @@
       radial-gradient(45% 25% at 85% 90%, rgba(220, 230, 240, .8), transparent),
       linear-gradient(180deg, #b9c7d4 0%, #dfe7ee 55%, #f4f7fa 100%);
   }
+  /* A mid-grey field with darker figures: the label legibility check (labels sit over
+     armour, stone and fur far more often than over sky). */
+  #scene.field {
+    background:
+      radial-gradient(5% 13% at 50% 50%, rgba(40, 42, 44, .75), transparent 70%),
+      radial-gradient(5% 13% at 27% 40%, rgba(40, 42, 44, .7), transparent 70%),
+      radial-gradient(6% 14% at 74% 46%, rgba(40, 42, 44, .7), transparent 70%),
+      radial-gradient(5% 12% at 36% 63%, rgba(40, 42, 44, .7), transparent 70%),
+      radial-gradient(60% 30% at 50% 100%, rgba(150, 140, 120, .45), transparent),
+      linear-gradient(180deg, #8d949b 0%, #7b8086 45%, #6a6a64 70%, #5b5850 100%);
+  }
   #scene.night {
     background:
       radial-gradient(40% 25% at 70% 90%, rgba(200, 120, 50, .25), transparent),
@@ -42,6 +53,11 @@
     background: transparent; transition: opacity .2s ease;
   }
   #view.is-hidden { opacity: 0; pointer-events: none; }
+  /* The hud view: Popup layer, so over the system view; click-through, as in game. */
+  #hud {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: 0;
+    background: transparent; pointer-events: none;
+  }
 
   /* --- control dock (not part of the mod; the playground's own chrome) --- */
   #dock {
@@ -87,6 +103,9 @@
        serve.mjs (?host=mock). Served over http so parent and iframe share an origin. -->
   <iframe id="view" class="is-hidden" src="/magelight/IsekaiHero/system.html?host=mock"
           allowtransparency="true"></iframe>
+  <!-- The real hud page (toasts, flourish, threat labels), always there, on top. -->
+  <iframe id="hud" src="/magelight/IsekaiHero/hud.html?host=mock" allowtransparency="true"
+          tabindex="-1"></iframe>
 
   <div id="dock">
     <button id="btnDock" class="ghost" title="Hide the dock for a clean screenshot">☰</button>
@@ -105,6 +124,7 @@
     <select id="scene-pick">
       <option value="dusk">dusk</option>
       <option value="snow">snow (bright)</option>
+      <option value="field">field (grey)</option>
       <option value="night">night</option>
     </select>
     <strong>Text</strong>
@@ -128,6 +148,9 @@
       <input type="checkbox" id="dormant"> Dormant
     </label>
     <button id="btnReset" class="ghost">Reset</button>
+    <label title="The hud in VR: threat labels become the head-locked scan list (isekai.vr)">
+      <input type="checkbox" id="vr"> VR
+    </label>
     <span class="pts" id="build" title="The build id the page reported with isekai.ready"></span>
   </div>
 
@@ -168,18 +191,6 @@
         host.appendChild(b);
         buttons.push(b);
       });
-      // The hud page (toasts, flourish, threat labels) previews here once it exists.
-      var hud = document.createElement("button");
-      hud.textContent = "Hud";
-      hud.disabled = true;
-      hud.title = "magelight/IsekaiHero/hud.html is not there yet";
-      host.appendChild(hud);
-      fetch("/magelight/IsekaiHero/hud.html", { method: "HEAD" }).then(function (r) {
-        if (!r.ok) return;
-        hud.disabled = false;
-        hud.title = "Open the hud page";
-        hud.onclick = function () { window.open("/magelight/IsekaiHero/hud.html?host=mock", "_blank"); };
-      }).catch(function () {});
     })();
 
     function refresh() {
@@ -189,14 +200,16 @@
       buttons.forEach(function (b) {
         var screen = b.dataset.screen;
         b.disabled = screen !== "panel" && !M.supports(screen);
-        if (b.disabled) b.title = "system.html has no '" + screen + "' screen yet";
+        if (b.disabled) b.title = screen === "hud" ? "hud.html is not ready (yet)"
+                                                   : "system.html has no '" + screen + "' screen yet";
       });
     }
     M.onChange(refresh);
 
     // Direct links for review and screenshots:
-    //   ?open=<scenario id>&tone=<cyan|gold|red|violet>&scene=<dusk|snow|night>&dock=0
+    //   ?open=<scenario id>&tone=<cyan|gold|red|violet>&scene=<dusk|snow|field|night>&dock=0
     //   &instant=1   panels arrive fully typed (a screenshot does not wait for the text)
+    //   &vr=1        the hud in VR mode (labels as the scan list)
     var Q = new URLSearchParams(location.search);
     if (Q.get("instant") === "1") M.setInstant(true);
     if (Q.get("scene")) {
@@ -204,10 +217,15 @@
       document.getElementById("scene-pick").value = Q.get("scene");
     }
     if (Q.get("tone")) { document.getElementById("tone").value = Q.get("tone"); M.setTone(Q.get("tone")); }
+    if (Q.get("vr") === "1") { document.getElementById("vr").checked = true; M.setVr(true); }
     if (Q.get("dock") === "0") {
       document.getElementById("dock").classList.add("collapsed");
       logEl.style.display = "none";
     }
+
+    var hudFrame = document.getElementById("hud");
+    M.attachHud(hudFrame);
+    hudFrame.addEventListener("load", function () { M.attachHud(hudFrame); refresh(); });
 
     M.attach(frame);
     frame.addEventListener("load", function () {
@@ -229,6 +247,7 @@
     document.getElementById("btnP10").onclick = function () { M.addPoints(10); };
     document.getElementById("tier").onchange = function (e) { M.setTier(parseInt(e.target.value, 10)); };
     document.getElementById("dormant").onchange = function (e) { M.setDormant(e.target.checked); };
+    document.getElementById("vr").onchange = function (e) { M.setVr(e.target.checked); };
     document.getElementById("btnReset").onclick = function () {
       M.reset();
       document.getElementById("tier").value = String(M.getTier());

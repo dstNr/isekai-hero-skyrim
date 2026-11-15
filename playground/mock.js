@@ -359,6 +359,133 @@
   }
 
   /* ======================================================================
+     The hud view (hud.html) — toasts, the flourish and the threat labels
+     ----------------------------------------------------------------------
+     What Task 10's src/UI/Hud.cpp sends. Toasts use the real strings from
+     Quests.cpp / Professions.cpp; the labels are a camp of actors around a player
+     of level 30, with the verdict worked out as Logic::VerdictFor does it. Positions
+     drift at 60 Hz (labels.pos every frame while something moves); a still camp gets
+     the labels.keep() heartbeat at 4 Hz instead; "Stall" stops every call, which is
+     what free camera and a pause look like to the page (it hides the labels after
+     300 ms and shows them again on the next call).
+     ====================================================================== */
+
+  var PLAYER_LEVEL = 30;
+
+  /* Logic::VerdictFor(enemy level - player level), the plugin's thresholds. */
+  function verdictFor(diff) {
+    if (diff >= 20) return "lethal";
+    if (diff >= 5) return "dangerous";
+    if (diff <= -15) return "trivial";
+    return "manageable";
+  }
+  var VERDICT_TAG = { lethal: "LETHAL", dangerous: "DANGEROUS", manageable: "MANAGEABLE", trivial: "TRIVIAL" };
+
+  /* name, level, hp, mp, sp ([now, max]; max 0 = the actor has none), x, y (0..1 of the
+     view), t (distance / range), drift phase. The nameless one shows the page's "Unknown". */
+  var CAMP = [
+    ["Bandit Chief",          38, [612, 780],   [0, 0],     [310, 340], .50, .40, .05],
+    ["Draugr Deathlord",      54, [1480, 1480], [120, 150], [420, 420], .27, .30, .30],
+    ["Frost Troll",           33, [455, 980],   [0, 0],     [260, 300], .74, .36, .22],
+    ["Forsworn Briarheart",   36, [500, 560],   [180, 260], [220, 240], .36, .53, .12],
+    ["Bandit Thug",           24, [320, 320],   [0, 0],     [190, 200], .63, .57, .10],
+    ["Wolf",                  10, [83, 140],    [0, 0],     [0, 0],     .84, .64, .40],
+    ["Vampire Nightstalker",  31, [410, 410],   [350, 380], [180, 180], .16, .47, .55],
+    ["Mudcrab",                2, [15, 15],     [0, 0],     [0, 0],     .52, .74, .70],
+    ["Hagraven",              42, [300, 520],   [400, 400], [0, 0],     .87, .24, .66],
+    ["Bandit Archer",         27, [260, 270],   [0, 0],     [140, 260], .10, .27, .80],
+    ["",                      28, [200, 220],   [0, 0],     [0, 0],     .62, .18, .85],
+    ["Skeever",                1, [8, 10],      [0, 0],     [0, 0],     .30, .76, .92]
+  ];
+
+  function campLabels(n) {
+    return CAMP.slice(0, n).map(function (c, i) {
+      var v = verdictFor(c[1] - PLAYER_LEVEL);
+      return {
+        id: 0xFF000800 + i, x: c[5], y: c[6], s: 1 - 0.32 * c[7],
+        level: c[1], name: c[0], tag: VERDICT_TAG[v], verdict: v,
+        tone: v === "lethal" || v === "dangerous" ? "red" : "cyan",
+        hp: c[2], mp: c[3], sp: c[4]
+      };
+    });
+  }
+
+  var hudFrame = null;       // the <iframe> holding hud.html
+  var hudWin = null;         // its window, known from the first message it sends
+  var hudReady = false;
+  var hudQueue = [];
+  var drift = { raf: 0, keep: 0, t0: 0 };
+
+  /* Magelight::Run(View::Hud, ...): straight through once the hud is ready, queued before. */
+  function hudRun(fn) {
+    if (hudReady && hudWin && hudWin.isekai) fn(hudWin.isekai);
+    else hudQueue.push(fn);
+  }
+
+  function stopLabels() {
+    if (drift.raf) cancelAnimationFrame(drift.raf);
+    clearInterval(drift.keep);
+    drift.raf = 0; drift.keep = 0;
+  }
+
+  function sendLabels(set) {
+    hudRun(function (isekai) { isekai.labels.full(set); });
+  }
+
+  /* 60 Hz positions: each actor circles slowly around its spot and walks nearer and
+     farther, so the distance scale and dimming change too. */
+  function driftLabels(n) {
+    stopLabels();
+    var set = campLabels(n);
+    sendLabels(set);
+    drift.t0 = performance.now();
+    function frame(now) {
+      var k = (now - drift.t0) / 1000;
+      var p = set.map(function (l, i) {
+        var c = CAMP[i];
+        var ph = c[7] * 6.283;
+        var tt = Math.min(Math.max(c[7] + 0.18 * Math.sin(k * 0.6 + ph), 0), 1);
+        return [l.id, c[5] + 0.03 * Math.cos(k * 0.9 + ph), c[6] + 0.02 * Math.sin(k * 1.3 + ph),
+                1 - 0.32 * tt];
+      });
+      hudRun(function (isekai) { isekai.labels.pos(p); });
+      drift.raf = requestAnimationFrame(frame);
+    }
+    drift.raf = requestAnimationFrame(frame);
+  }
+
+  /* A still camp: nothing moves, so only the heartbeat arrives (at most 4 Hz). */
+  function holdLabels(n) {
+    stopLabels();
+    if (n) sendLabels(campLabels(n));
+    drift.keep = setInterval(function () {
+      hudRun(function (isekai) { isekai.labels.keep(); });
+    }, 250);
+  }
+
+  function hudToast(text, key, banner, tone) {
+    var d = { text: text, key: key || "", banner: !!banner };
+    if (tone) d.tone = tone;
+    hudRun(function (isekai) { isekai.toast(d); });
+  }
+
+  function later(ms, fn) { setTimeout(fn, ms); }
+
+  /* A burst: a new objective (banner, keyed "quest"), three kills on one tally key (each
+     replaces the line and restarts it), a craft payout, then the objective paid out —
+     the same "quest" key, now gold, replacing the first banner in its slot. */
+  function toastBurst() {
+    hudToast("[ SYSTEM ]  New objective:  slay 3 Bandit", "quest", true);
+    later(350, function () { hudToast("Bandit   1 / 3", "tally"); });
+    later(800, function () { hudToast("Bandit   2 / 3", "tally"); });
+    later(1250, function () { hudToast("Bandit   3 / 3", "tally"); });
+    later(1500, function () { hudToast("[ SYSTEM ]  Craft recognised  —  +1 SP"); });
+    later(1900, function () {
+      hudToast("[ SYSTEM ]  Objective complete.  +5 System Points", "quest", true, "gold");
+    });
+  }
+
+  /* ======================================================================
      Panel scenarios — the real strings from src/System.cpp
      ====================================================================== */
 
@@ -497,14 +624,46 @@
       run: function () { open("shop", buildShop()); } },
     { id: "shop-low", group: "Screens", label: "Shop 12 SP", screen: "shop",
       hint: "Sets the balance to 12 SP: the crates and the hoard cannot be afforded",
-      run: function () { G.points = 12; changed(); open("shop", buildShop()); } }
+      run: function () { G.points = 12; changed(); open("shop", buildShop()); } },
+
+    /* The hud view. Plays over whatever the system view shows (it is the Popup layer). */
+    { id: "hud-toasts", group: "Hud", label: "Toasts", screen: "hud",
+      hint: "A burst: objective banner, a kill tally replacing itself under one key, a payout, the objective paid out in gold",
+      run: function () { toastBurst(); } },
+    { id: "hud-banner", group: "Hud", label: "Banners", screen: "hud",
+      hint: "A gold payout banner, a red banner and a cyan line at once",
+      run: function () {
+        hudToast("[ SYSTEM ]  Objective complete.  +5 System Points", "quest", true, "gold");
+        later(150, function () { hudToast("[ SYSTEM ]  Self-test: page and plugin builds differ", "", true, "red"); });
+        later(300, function () { hudToast("Draugr   4 / 6", "tally"); });
+      } },
+    { id: "hud-flourish", group: "Hud", label: "Flourish", screen: "hud",
+      hint: "The level-up flourish, gold (AWAKENED / HERO)",
+      run: function () { hudRun(function (isekai) { isekai.flourish({ title: "AWAKENED", subtitle: "HERO" }); }); } },
+    { id: "hud-flourish-gm", group: "Hud", label: "Grandmaster", screen: "hud",
+      hint: "A mastery reaching Grandmaster: the node's name as the subtitle",
+      run: function () { hudRun(function (isekai) { isekai.flourish({ title: "GRANDMASTER", subtitle: "Vital Surge" }); }); } },
+    { id: "hud-labels", group: "Hud", label: "Labels", screen: "hud",
+      hint: "Twelve threat labels drifting, positions pushed at 60 Hz",
+      run: function () { driftLabels(12); } },
+    { id: "hud-labels-still", group: "Hud", label: "Still", screen: "hud",
+      hint: "Eight labels, nothing moving: only the keep() heartbeat (4 Hz)",
+      run: function () { holdLabels(8); } },
+    { id: "hud-stall", group: "Hud", label: "Stall", screen: "hud",
+      hint: "No label call at all (free camera, a pause): the page hides them after 300 ms",
+      run: function () { stopLabels(); } },
+    { id: "hud-clear", group: "Hud", label: "Clear", screen: "hud",
+      hint: "labels.full([]): what a pausing menu or the console sends",
+      run: function () { stopLabels(); sendLabels([]); } }
   ];
 
   /* A sample translation, partial on purpose (that is what real ones are). Switching
      it while a screen is up re-renders that screen in place, as a settings reload does. */
   var LOC_DE = {
     "view.panel.skip": "Klicken oder Enter zum Überspringen",
-    "view.close": "Schließen"
+    "view.close": "Schließen",
+    "threat.unknown": "Unbekannt",
+    "view.hud.scan": "Erfassung"
   };
 
   /* ======================================================================
@@ -517,7 +676,7 @@
   var queue = [];            // calls made before ready, in order
   var onSelect = null;       // what the open panel's choice continues with
   var last = null;           // the last screen shown, for the tone override
-  var opts = { lang: "en", scale: 1, tone: "", build: "", instant: false };
+  var opts = { lang: "en", scale: 1, tone: "", build: "", instant: false, vr: false };
   var listeners = [];
 
   function log(m) { if (global.VS_LOG) global.VS_LOG(m); }
@@ -527,6 +686,23 @@
   function run(fn) {
     if (ready && view && view.isekai) fn(view.isekai);
     else queue.push(fn);
+  }
+
+  /* The hud's side of the host: only isekai.ready is ever expected from it. */
+  function isHud(win) {
+    try { return /\/hud\.html$/.test(win.location.pathname); } catch (e) { return false; }
+  }
+  function hudReceive(win, name, payload) {
+    hudWin = win;
+    if (name !== "isekai.ready") { log("hud sent " + name + " " + payload + "  (the plugin listens for ready only)"); return; }
+    hudReady = true;
+    log("hud ready, page build " + payload);
+    win.isekai.loc(opts.lang === "de" ? LOC_DE : {});
+    win.isekai.scale(opts.scale);
+    if (opts.vr) win.isekai.vr(true);
+    var q = hudQueue; hudQueue = [];
+    q.forEach(function (fn) { fn(win.isekai); });
+    changed();
   }
 
   /* The prelude C++ sends on ready, before anything queued (Magelight::SetPrelude). */
@@ -607,6 +783,9 @@
 
     /* Called by the injected window.magelight.send in the page. */
     receive: function (win, name, payload) {
+      // Which view is talking: the hud page by its path (its ready can arrive before the
+      // harness has attached its frame), the system page otherwise.
+      if (isHud(win)) { hudReceive(win, name, payload); return; }
       view = win;
       if (name === "isekai.ready") {
         opts.build = payload;
@@ -635,6 +814,16 @@
       early.forEach(function (m) { Mock.receive(w, m[0], m[1]); });
     },
 
+    /* The hud view's frame, the same way. A reload of it (a new window) starts over:
+       not ready until it says so, as Magelight.cpp resets the gate on ViewReloaded. */
+    attachHud: function (iframeEl) {
+      hudFrame = iframeEl;
+      var w = hudFrame.contentWindow;
+      var early = (w && w.__mlQueue) || [];
+      if (w) w.__mlQueue = [];
+      early.forEach(function (m) { Mock.receive(w, m[0], m[1]); });
+    },
+
     open: function (id, e) {
       for (var i = 0; i < SCENARIOS.length; i++) {
         if (SCENARIOS[i].id === id) { SCENARIOS[i].run(e); return; }
@@ -643,6 +832,7 @@
 
     /* The screens the page has a renderer for (isekai.screens). */
     supports: function (screen) {
+      if (screen === "hud") return hudReady;
       return !!(view && view.isekai && view.isekai.screens &&
                 view.isekai.screens.indexOf(screen) >= 0);
     },
@@ -656,10 +846,18 @@
     setLang: function (lang) {
       opts.lang = lang;
       run(function (isekai) { isekai.loc(lang === "de" ? LOC_DE : {}); });
+      hudRun(function (isekai) { isekai.loc(lang === "de" ? LOC_DE : {}); });
     },
     setScale: function (s) {
       opts.scale = s;
       run(function (isekai) { isekai.scale(s); });
+      hudRun(function (isekai) { isekai.scale(s); });
+    },
+    /* VR: the hud turns the labels into the head-locked scan list (in game Hud::Install
+       pushes isekai.vr(true) on ready when REL::Module::IsVR()). */
+    setVr: function (on) {
+      opts.vr = !!on;
+      hudRun(function (isekai) { isekai.vr(opts.vr); });
     },
 
     /* Game state. A change re-pushes the screen it shows on, as the plugin re-pushes after

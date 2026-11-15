@@ -14,6 +14,11 @@
 ; which keys are new.
 
 ; --- magelight (the pages' own chrome) ---
+threat.dangerous = DANGEROUS
+threat.lethal = LETHAL
+threat.manageable = MANAGEABLE
+threat.trivial = TRIVIAL
+threat.unknown = Unknown
 view.attunements = Attunements
 view.awakensAt = Awakens at level {}
 view.back = Back
@@ -25,6 +30,7 @@ view.confirmReboot = Confirm reboot?
 view.custom.gift = Gift
 view.custom.rewards = Rewards
 view.custom.tree = Tree
+view.hud.scan = Scan
 view.level = Level
 view.milestones = Milestones
 view.newTask = New Task
@@ -392,10 +398,5 @@ tree.unlocked = UNLOCKED
 vr.needsPrismaShort = [ SYSTEM ] Needs the PrismaUI patch (1.5.0 VR build) to show its menu in VR.
 
 ; --- src/UI/ThreatLabels.cpp ---
-threat.dangerous = DANGEROUS
-threat.lethal = LETHAL
-threat.manageable = MANAGEABLE
 threat.toggleOff = Threat display  OFF
 threat.toggleOn = Threat display  ON
-threat.trivial = TRIVIAL
-threat.unknown = Unknown
