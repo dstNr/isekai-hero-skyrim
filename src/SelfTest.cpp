@@ -16,7 +16,10 @@
 #include "Storage.h"
 #include "System.h"
 #include "UI/Input.h"
+#include "UI/Magelight.h"
 #include "UI/Screens.h"
+#include "UI/UiLogic.h"
+#include "IsekaiBuildId.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -464,16 +467,64 @@ namespace Isekai::SelfTest {
             Add(out, missing.empty(), false, "interface icons", std::move(detail));
         }
 
+        // Magelight UI is the only renderer (spec 6.5): without the host there is no
+        // interface at all, so a missing host is a FAIL. The hud riding the fallback layer
+        // still works (toasts are mirrored by the system page), so it passes with a note.
+        // A page built from another DLL build is a WARN (spec 6.4): the UI still runs, it
+        // just may not match what this DLL sends.
+        void CheckMagelight(std::vector<Result>& out) {
+            namespace ML = UI::Magelight;
+            const bool host = ML::Available();
+            Add(out, host, true, "magelight host",
+                host ? "Magelight UI " + std::string(ML::HostVersion())
+                     : "unavailable - no Isekai Hero screens (needs Magelight UI 1.7.0 or newer; "
+                       "the Magelight lines in this log say why)");
+
+            const bool sys = ML::ViewCreated(ML::View::System);
+            Add(out, sys, true, "system view",
+                sys ? "created" : "not created - the interactive screens cannot open");
+
+            const bool hud = ML::ViewCreated(ML::View::Hud);
+            Add(out, hud, true, "hud view",
+                hud ? (ML::HudBelowPanels() ? "created (below panels)" : "created")
+                    : "not created - no toasts, flourish or threat labels");
+
+            // Both pages must have reported ready, and with this DLL's build id.
+            struct PageRow { ML::View view; const char* name; };
+            std::string detail;
+            bool ready = true;
+            bool stale = false;
+            for (const PageRow& row : { PageRow{ ML::View::System, "system" },
+                                        PageRow{ ML::View::Hud, "hud" } }) {
+                if (!ML::ViewCreated(row.view)) {
+                    continue;  // already reported above
+                }
+                if (!ML::PageReady(row.view)) {
+                    ready = false;
+                    detail += std::string(detail.empty() ? "" : "; ") + row.name + " page not ready";
+                    continue;
+                }
+                const std::string version = ML::PageVersion(row.view);
+                if (!UI::Logic::PageMatchesBuild(version, kUiBuildId)) {
+                    stale = true;
+                    detail += std::string(detail.empty() ? "" : "; ") + row.name + " page " +
+                              version + " != dll " + kUiBuildId;
+                }
+            }
+            const bool created = sys && hud;
+            if (detail.empty()) {
+                detail = created ? std::string("both pages ready, build ") + kUiBuildId
+                                 : "no page to check";
+            }
+            // Both outcomes only warn: the self-test can run before a slow page reports
+            // ready, and a stale page still works (spec 6.4).
+            Add(out, ready && !stale, /*fatal=*/false, "page ready", std::move(detail));
+        }
+
         void CheckEnvironment(std::vector<Result>& out) {
             const bool vr = REL::Module::IsVR();
             Add(out, true, false, "runtime", vr ? "Skyrim VR" : "Skyrim SE/AE");
-            // Without Magelight UI there is no interface at all, on every runtime (spec
-            // 6.5). The views and the page version get their own lines in Task 12.
-            const bool ui = UI::Available();
-            Add(out, ui, true, "magelight host",
-                ui ? "Magelight UI " + std::string(UI::Magelight::HostVersion())
-                   : "unavailable — no Isekai Hero screens (needs Magelight UI 1.7.0 or newer; "
-                     "the Magelight lines in this log say why)");
+            CheckMagelight(out);
 
             const auto& st = GetState();
             Add(out, true, false, "character",

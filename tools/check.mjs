@@ -2014,6 +2014,15 @@ check("tick: quests and the mod API run from FrameTick", () => {
   return "both in FrameTick";
 });
 
+check("selftest: the Magelight checks are wired", () => {
+  const src = read("src/SelfTest.cpp");
+  const names = ["magelight host", "system view", "hud view", "page ready"];
+  const missing = names.filter((n) => !src.includes(`"${n}"`));
+  need(missing.length === 0, `SelfTest.cpp lacks the check(s): ${missing.join(", ")}`);
+  need(!src.includes("SKSE\\Plugins\\IsekaiHero\\icons"), "SelfTest.cpp still checks the old icon path");
+  return "host, both views, page version";
+});
+
 /* -- report ---------------------------------------------------------------- */
 
 const pad = Math.max(...results.map((r) => r.name.length));
