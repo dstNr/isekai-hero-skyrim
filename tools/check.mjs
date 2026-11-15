@@ -1516,6 +1516,22 @@ check("hotkeys: every registration is rebindable, and a settings reload rebinds"
   return "reload rebinds, all registrations rebindable";
 });
 
+/* -- 10. the main-thread tick ---------------------------------------------- */
+
+check("tick: quests and the mod API run from FrameTick, not the Present hook", () => {
+  // The clock used to live in the ImGui Present hook, on the render thread, and that
+  // hook is going away. A call left behind in Overlay.cpp would tick twice as long as
+  // the hook lives, then silently stop when it is deleted.
+  const tick = read("src/FrameTick.cpp");
+  const overlay = read("src/UI/Overlay.cpp");
+  const names = ["Quests::Tick", "ModAPI::PublishIfChanged"];
+  const missing = names.filter((n) => !tick.includes(n));
+  need(missing.length === 0, `FrameTick.cpp does not call ${missing.join(", ")}`);
+  const leftover = names.filter((n) => overlay.includes(n));
+  need(leftover.length === 0, `Overlay.cpp still names ${leftover.join(", ")}`);
+  return "both in FrameTick, neither in Overlay";
+});
+
 /* -- report ---------------------------------------------------------------- */
 
 const pad = Math.max(...results.map((r) => r.name.length));

@@ -38,6 +38,9 @@ add_commonlibsse_plugin(
         src/Config.h
         src/System.cpp
         src/System.h
+        src/FrameTick.cpp
+        src/FrameTick.h
+        src/TickThrottle.h
         src/Readiness.cpp
         src/Readiness.h
         src/ReadinessLogic.h

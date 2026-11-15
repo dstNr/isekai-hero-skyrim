@@ -17,8 +17,8 @@ namespace Isekai::ModAPI {
     [[nodiscard]] void* Resolve(std::uint8_t a_version);
 
     // Compare the System's state against the last one published and dispatch an
-    // SKSE message if it moved. Main thread only; called once a second from the
-    // overlay's game-clock tick.
+    // SKSE message if it moved. Main thread only; called once a second from
+    // FrameTick's game clock.
     //
     // Polled rather than pushed from each site that changes the tier: those sites
     // are three today and nobody will remember the fourth. A comparison cannot

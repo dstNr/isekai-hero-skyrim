@@ -27,9 +27,8 @@ namespace Isekai::Quests {
     void Install();
 
     // Hand out the next objective if one is due. Cheap and idempotent — safe to call as
-    // often as convenient, which is how it gets called: the overlay polls it, and so does
-    // every load. There is no per-frame main-thread hook in an SKSE plugin, so "the
-    // System offers work on its own" has to be assembled out of the events we do get.
+    // often as convenient, which is how it gets called: FrameTick polls it once a second
+    // on the main thread, and so does every load.
     void Tick();
 
     // Game days until the next objective, or 0 when one is already running or due now.

@@ -170,27 +170,6 @@ namespace Isekai::UI {
             return true;
         }
 
-        // Ask the quest system whether anything is due, once a second, from the main
-        // thread. Everything it might touch is game state, so the render thread only ever
-        // decides WHEN — never what.
-        void PollGameClock() {
-            using namespace std::chrono;
-            static steady_clock::time_point last{};
-            const auto                      now = steady_clock::now();
-            if (now - last < seconds(1)) {
-                return;
-            }
-            last = now;
-            if (auto* task = SKSE::GetTaskInterface()) {
-                task->AddTask([]() {
-                    Quests::Tick();
-                    // Same cadence, same thread, and the API's listeners want exactly
-                    // the state this tick may just have changed.
-                    ModAPI::PublishIfChanged();
-                });
-            }
-        }
-
         // Set once at Install. In VR the same hook fires (on the desktop mirror's
         // swap chain) but nothing is drawn into that back buffer: the mirror is not what
         // the player is looking at. It is used purely as a per-frame tick on the render
@@ -231,10 +210,6 @@ namespace Isekai::UI {
             if (g_vrMode) {
                 LogVRPresentSeen(a_swapChain);
                 DrawVRFrame();
-                // Quests never ticked in VR before, because the only caller sat inside the
-                // flat overlay's frame. The System handing out work on its own schedule is
-                // not a flat-screen feature.
-                PollGameClock();
                 const HRESULT hr = g_originalPresent(a_swapChain, a_syncInterval, a_flags);
                 static std::atomic<bool> firstReturned{ false };
                 if (!firstReturned.exchange(true)) {
@@ -271,12 +246,6 @@ namespace Isekai::UI {
                 // input, and pause nothing.
                 DrawThreatLabels();
                 DrawToasts();
-
-                // An SKSE plugin has no per-frame MAIN-thread hook, and "the System offers
-                // work on its own schedule" needs one. This is the render thread, so the
-                // poll only reads a clock here and does the work on a task. Throttled hard:
-                // once a second is far finer than a cadence measured in game days.
-                PollGameClock();
 
                 // Only while we own the input, and above everything else — otherwise
                 // it would sit on screen next to Skyrim's own cursor whenever the game
