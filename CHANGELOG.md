@@ -6,6 +6,16 @@ All notable changes to Isekai Hero are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Unit tests for the readiness gate and the automatic reincarnation trigger** (refs #36).
+  The decisions moved into `src/ReadinessLogic.h`, which has no engine dependency:
+  `Evaluate` (blocker order), `ChangeReporter` (one log line per change), `WorldGate`
+  (chargen start room) and `DecideTrigger` (the gate order of `TryTrigger`). Behaviour is
+  unchanged. `tests/readiness_tests.cpp` pins it down, among others that an already
+  reincarnated character never polls readiness — which is why a loaded save logs at most the
+  one blocker from the pre-load revert and never `Readiness: ready`. Run with
+  `pwsh -NoProfile -File tools/run-unit-tests.ps1` (MSVC Build Tools only, no vcpkg).
+
 ### Fixed
 - **Ordinator's "Recycle Materials" no longer duplicates the crafting tokens, and "Fuel the Inferno" no longer burns a dragon soul for them.**
   On menu close the token return moves up to a few hundred materials out of the player's

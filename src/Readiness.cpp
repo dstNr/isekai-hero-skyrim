@@ -3,77 +3,40 @@
 namespace Isekai::Readiness {
 
     namespace {
-        // The cell the player was FIRST ready in. 0 = not seen yet.
-        RE::FormID g_firstReadyCell = 0;
+        // The cell the player was FIRST ready in, and the chargen-room hold built on it.
+        WorldGate g_world;
 
         // The last blocker IsPlayerReady() reported, so it logs only on a change.
-        Blocker g_lastBlocker = Blocker::kNone;
-        bool    g_reported = false;
+        ChangeReporter g_reporter;
     }
 
     Blocker Check() {
-        auto* player = RE::PlayerCharacter::GetSingleton();
-        if (!player) {
-            return Blocker::kNoPlayer;
+        // Filled in the order Evaluate() tests it: a missing singleton stops the reads
+        // there, and Evaluate() never looks at the fields after it.
+        Snapshot s;
+        auto*    player = RE::PlayerCharacter::GetSingleton();
+        s.hasPlayer = player != nullptr;
+        if (s.hasPlayer) {
+            s.player3D = player->Is3DLoaded();
+            auto* ui = RE::UI::GetSingleton();
+            s.hasUI = ui != nullptr;
+            if (ui) {
+                s.paused = ui->GameIsPaused();
+                s.charGenOpen = ui->IsMenuOpen("RaceSex Menu"sv);
+                s.loadingOpen = ui->IsMenuOpen("Loading Menu"sv);
+            }
+            auto* controls = RE::ControlMap::GetSingleton();
+            s.hasControlMap = controls != nullptr;
+            if (controls) {
+                s.movementEnabled = controls->IsMovementControlsEnabled();
+            }
         }
-        if (!player->Is3DLoaded()) {
-            return Blocker::kNo3D;
-        }
-
-        auto* ui = RE::UI::GetSingleton();
-        if (!ui) {
-            return Blocker::kNoUI;
-        }
-        if (ui->GameIsPaused()) {
-            return Blocker::kPaused;
-        }
-        if (ui->IsMenuOpen("RaceSex Menu"sv)) {
-            return Blocker::kCharGen;
-        }
-        if (ui->IsMenuOpen("Loading Menu"sv)) {
-            return Blocker::kLoading;
-        }
-
-        auto* controls = RE::ControlMap::GetSingleton();
-        if (!controls) {
-            return Blocker::kNoControlMap;
-        }
-        if (!controls->IsMovementControlsEnabled()) {
-            return Blocker::kMovementLocked;
-        }
-
-        return Blocker::kNone;
-    }
-
-    std::string_view Name(Blocker a_blocker) {
-        switch (a_blocker) {
-        case Blocker::kNone:
-            return "ready";
-        case Blocker::kNoPlayer:
-            return "no player";
-        case Blocker::kNo3D:
-            return "3D not loaded";
-        case Blocker::kNoUI:
-            return "no UI";
-        case Blocker::kPaused:
-            return "game paused";
-        case Blocker::kCharGen:
-            return "character creation open";
-        case Blocker::kLoading:
-            return "loading screen";
-        case Blocker::kNoControlMap:
-            return "no control map";
-        case Blocker::kMovementLocked:
-            return "movement controls locked";
-        }
-        return "unknown";
+        return Evaluate(s);
     }
 
     bool IsPlayerReady() {
         const auto blocker = Check();
-        if (!g_reported || blocker != g_lastBlocker) {
-            g_reported = true;
-            g_lastBlocker = blocker;
+        if (g_reporter.ShouldReport(blocker)) {
             if (blocker == Blocker::kNone) {
                 logger::info("Readiness: ready");
             } else if (blocker == Blocker::kMovementLocked) {
@@ -91,37 +54,23 @@ namespace Isekai::Readiness {
     }
 
     bool InGameWorld() {
-        // Character-creation start rooms (NYA, Alternate Start, ...) hand the player full
-        // control while they are still picking a face — the System fired the moment the
-        // room spawned. The tell: those rooms are interiors, and the real start arrives
-        // via a teleport out of them. So: if the first cell the player is ready in is an
-        // exterior, we are in the world right away (vanilla starts, coc); if it is an
-        // interior, hold until the player reaches a DIFFERENT cell.
+        // See WorldGate: an interior first-ready cell is taken for a chargen start room
+        // (NYA, Alternate Start, ...) and held until the player reaches a different cell.
         auto* player = RE::PlayerCharacter::GetSingleton();
         auto* cell = player ? player->GetParentCell() : nullptr;
-        if (!cell) {
-            return false;
+        const auto step = cell ? g_world.Update(cell->GetFormID(), cell->IsInteriorCell())
+                               : WorldGate::Step::kNoCell;
+        if (step == WorldGate::Step::kHoldFirstInterior) {
+            logger::info(
+                "Reincarnation armed, holding: first ready in interior {:#x} "
+                "(likely a chargen room) — waiting for a cell change",
+                g_world.FirstCell());
         }
-
-        if (g_firstReadyCell == 0) {
-            g_firstReadyCell = cell->GetFormID();
-            if (cell->IsInteriorCell()) {
-                logger::info(
-                    "Reincarnation armed, holding: first ready in interior {:#x} "
-                    "(likely a chargen room) — waiting for a cell change",
-                    g_firstReadyCell);
-                return false;
-            }
-        } else if (cell->GetFormID() == g_firstReadyCell && cell->IsInteriorCell()) {
-            return false;  // still in the start room
-        }
-
-        return true;
+        return step == WorldGate::Step::kInWorld;
     }
 
     void Reset() {
-        g_firstReadyCell = 0;  // the next game gets a fresh chargen-room detection
-        g_reported = false;    // ...and logs its first blocker again
-        g_lastBlocker = Blocker::kNone;
+        g_world.Reset();     // the next game gets a fresh chargen-room detection
+        g_reporter.Reset();  // ...and logs its first blocker again
     }
 }

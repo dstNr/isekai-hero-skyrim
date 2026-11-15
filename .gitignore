@@ -39,3 +39,5 @@ Thumbs.db
 # Subagent-driven-development scratch: ledgers, briefs, review packages.
 # Per-plan working state, never part of the record — git history is.
 .superpowers/
+
+build-tests/

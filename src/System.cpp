@@ -634,15 +634,21 @@ namespace Isekai {
         }
 
         void TryTrigger() {
-            if (g_state.reincarnated || !Readiness::IsPlayerReady()) {
-                return;
-            }
+            // The order of the gates is Readiness::DecideTrigger's and pinned by
+            // tests/readiness_tests.cpp. A reincarnated character is not asked about
+            // readiness at all, so a loaded save past its reincarnation never logs
+            // "Readiness: ready" (#36). "Ready" alone is not "in the game world" either —
+            // see Readiness::InGameWorld.
+            const auto step = Readiness::DecideTrigger(
+                g_state.reincarnated, [] { return Readiness::IsPlayerReady(); },
+                Config::AutoStart(), [] { return Readiness::InGameWorld(); });
 
-            // AutoStart = 0: the player boots the System with the menu hotkey instead.
-            // Alternate starts that open with a prologue elsewhere (a modern-world intro
-            // above all) put the boot sequence somewhere it does not belong, and no cell
-            // heuristic can tell that apart from a normal start — the player can.
-            if (!Config::AutoStart()) {
+            switch (step) {
+            case Readiness::TriggerStep::kHeldNoAutoStart: {
+                // AutoStart = 0: the player boots the System with the menu hotkey instead.
+                // Alternate starts that open with a prologue elsewhere (a modern-world
+                // intro above all) put the boot sequence somewhere it does not belong, and
+                // no cell heuristic can tell that apart from a normal start — the player can.
                 static bool logged = false;
                 if (!logged) {
                     logged = true;
@@ -652,13 +658,12 @@ namespace Isekai {
                 }
                 return;
             }
-
-            // "Ready" alone is not "in the game world" — see Readiness::InGameWorld.
-            if (!Readiness::InGameWorld()) {
+            case Readiness::TriggerStep::kBegin:
+                BeginReincarnation();
                 return;
+            default:
+                return;  // reincarnated, not ready, or still in a chargen start room
             }
-
-            BeginReincarnation();
         }
 
         // ------------------------------------------------------------------
