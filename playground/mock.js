@@ -1,24 +1,24 @@
 /* ============================================================================
    Isekai Hero — mock plugin for the playground
    ----------------------------------------------------------------------------
-   Stands in for the SKSE plugin (src/UI/Prisma.cpp) so the real PrismaUI view
-   can be developed and demoed in a browser without launching Skyrim.
+   Stands in for the SKSE plugin so the real Magelight pages can be developed
+   and reviewed in a browser without launching Skyrim. It plays both halves of
+   what the game does:
 
-   It reproduces the plugin's actual behaviour, not an approximation:
+     - The host. Every window.magelight.send() the page makes arrives here
+       (serve.mjs injects the forwarding shim into the page). "isekai.ready"
+       releases the queue the way src/UI/Magelight.cpp does — the translation
+       table and UiScale first, then everything shown before the page was ready.
+       "isekai.action" is routed like Screens::OnAction: choose, buy, respec,
+       shopBuy, status, nav, close.
+     - The game. The tree data is the real 17-node graph from src/SkillTree.cpp
+       (keys, coordinates, icons, costs, prerequisites, rebirth-tier gates), the
+       shop is Shop::Catalog() in order, and the panel scenarios use the real
+       strings from src/System.cpp, so a layout seen here is a layout the player
+       sees. buildTree() mirrors Payloads::Tree(), buildShop() Payloads::Shop().
 
-     - The tree data is the real 17-node graph from src/SkillTree.cpp, with the
-       same keys, coordinates, icons, costs, prerequisites and rebirth-tier
-       gates.
-     - buildTreeJson() mirrors Prisma.cpp::BuildTreeJson exactly (same field
-       names and shapes), so the view receives byte-compatible data.
-     - onBuy() mirrors OnBuy -> SkillTree::TryUnlock -> PushTree: it validates
-       the purchase, spends points, unlocks or ranks up, then re-pushes the
-       whole tree -- which is what makes buying feel live.
-
-   The view is never modified. Exactly like the plugin, this defines the
-   callbacks on the view's window (isekaiBuy / isekaiChoose / isekaiCloseTree)
-   and calls the view's entry points (window.isekaiShowTree / isekaiShowPanel /
-   isekaiFlourish) on it.
+   The page is never modified: this file only calls the page's own entry points
+   (isekai.show / loc / scale) and answers what it sends.
    ============================================================================ */
 
 (function (global) {
@@ -223,24 +223,6 @@
     }
   }
 
-  /* ======================================================================
-     View plumbing -- the parent reaches into the iframe exactly as the
-     plugin reaches into the view.
-     ====================================================================== */
-
-  var frame = null;           // the <iframe> element
-  var onSelect = null;        // pending panel callback
-  var panelMulti = false;
-
-  function win() { return frame && frame.contentWindow; }
-
-  function call(fn, arg) {
-    var w = win();
-    if (w && typeof w[fn] === "function") w[fn](arg);
-  }
-
-  function pushTree() { call("isekaiShowTree", buildTree()); }
-
   /* --- SYSTEM SHOP, mirroring src/Shop.cpp -------------------------------
      Same goods, same prices, same order as Shop::Catalog(), so the indices the view
      sends back mean the same thing here as in the plugin. Quantities are per material
@@ -288,7 +270,6 @@
   var SHOP_SHELVES = ["MATERIALS", "WEALTH", "RESTORATIVES", "ELIXIRS"];
 
   function buildShop() { return { points: G.points, shelves: SHOP_SHELVES, items: SHOP_ITEMS }; }
-  function pushShop() { call("isekaiShowShop", buildShop()); }
 
   /* Mirrors Shop::Buy(): spend, deliver, then re-push so the balance and every card's
      affordability refresh. There is no chest in the mock, so "deliver" is the log line. */
@@ -296,133 +277,337 @@
     var it = SHOP_ITEMS[idx];
     if (!it) return;
     if (G.points < it.cost) {
-      global.VS_LOG && global.VS_LOG("shop: cannot afford " + it.name);
+      log("shop: cannot afford " + it.name);
     } else {
       G.points -= it.cost;
-      global.VS_LOG && global.VS_LOG("shop: bought " + it.name + " " + it.qty +
-                                     " for " + it.cost + " SP");
+      log("shop: bought " + it.name + " " + it.qty + " for " + it.cost + " SP");
     }
-    pushShop();
+    show("shop", buildShop());
   }
 
-  /* Install the callbacks on the view's window (RegisterJSListener equivalent). */
-  function installCallbacks() {
-    var w = win();
-    if (!w) return;
-
-    w.isekaiBuy = function (arg) {
-      var key = parseInt(arg, 10) || 0;
-      if (!key) return;
-      tryUnlock(key);
-      pushTree();                 // OnBuy: TryUnlock then PushTree
-      global.VS_LOG && global.VS_LOG("buy " + key + " → points " + G.points);
-    };
-
-    w.isekaiRespec = function () {
-      doRespec();
-      pushTree();
-      global.VS_LOG && global.VS_LOG("respec → points " + G.points);
-    };
-
-    w.isekaiCloseTree = function () {
-      hide();
-      global.VS_LOG && global.VS_LOG("close tree");
-    };
-
-    w.isekaiChoose = function (arg) {
-      var idx = parseInt(arg, 10);
-      var fn = onSelect;
-      onSelect = null;
-      hide();
-      global.VS_LOG && global.VS_LOG("choose " + idx);
-      if (fn && idx >= 0) fn(idx);
-    };
-
-    w.isekaiShopBuy = function (arg) {
-      var idx = parseInt(arg, 10);
-      if (!isNaN(idx)) shopBuy(idx);
-    };
-
-    w.isekaiShopClose = function () {
-      hide();
-      global.VS_LOG && global.VS_LOG("close shop");
-    };
-
-    // Mirrors Prisma::OnStatusAction — tree / storage / shop / reboot / close.
-    w.isekaiStatusAction = function (action) {
-      global.VS_LOG && global.VS_LOG("status action: " + action);
-      if (action === "tree") { pushTree(); }        // OpenTree switches screens in-view
-      else if (action === "shop") { pushShop(); }    // OpenShop, likewise in-view
-      else if (action === "close" || action === "storage") { hide(); }
-      // Storage opens a native container menu in-game — nothing to preview here.
+  /* --- the status ledger, shaped like BuildStatusJson ---------------------
+     full = every one of the 79 milestones granted: the stress case for scaling,
+     where the card must stay on screen and the titles list scroll inside it. */
+  function buildStatus(full) {
+    var titles = [
+      { name: "Survivor",   effect: "+100 Health",       quest: "Unbound" },
+      { name: "Wayfarer",   effect: "+100 Carry Weight", quest: "Before the Storm" },
+      { name: "Dragonborn", effect: "+15% Magic Resist", quest: "The Way of the Voice" }
+    ];
+    if (full) {
+      titles = [];
+      for (var i = 1; i <= 79; i++) {
+        titles.push({ name: "Title " + i, effect: "+" + (i * 2) + " Health",
+                      quest: "Quest milestone number " + i });
+      }
+    }
+    return {
+      tier: "ASCENDED", rank: full ? "S" : "C", mode: "CUSTOM",
+      rewardTier: "ASCENDED", treeTier: "ASCENDED", grantTier: "ASCENDED",
+      nextAwakening: 0,
+      milestonesEarned: full ? 79 : 7, milestonesTotal: 79,
+      points: G.points, hasTree: true, hasStorage: true, hasShop: true, canReboot: true,
+      // The standing System objective (src/Quests.cpp). Empty questText hides the row.
+      // questCanReroll is the ini's testing switch (QuestRerollButton), on here so the
+      // preview shows the widest possible action row.
+      questText: "Slay 25 Draugr", questProgress: full ? 25 : 9, questTarget: 25,
+      questReward: 16, questWaitHours: 0, questCanReroll: true,
+      attunements: [
+        { stat: "Health", amount: 250 }, { stat: "Magicka", amount: 150 },
+        { stat: "Stamina", amount: 150 }, { stat: "Carry Weight", amount: 200 },
+        { stat: "Magic Resist", amount: 15 }, { stat: "Fire Resist", amount: 25 },
+        { stat: "Frost Resist", amount: 25 }, { stat: "Disease Resist", amount: 25 }
+      ],
+      titles: titles
     };
   }
-
-  /* The view has no hide of its own beyond switching screens; in-game the
-     plugin hides the whole PrismaUI view. Here the harness fades the iframe. */
-  function show() { if (frame) frame.classList.remove("is-hidden"); }
-  function hide() { if (frame) frame.classList.add("is-hidden"); }
 
   /* ======================================================================
-     Public API used by the harness controls
+     Panel scenarios — the real strings from src/System.cpp
      ====================================================================== */
+
+  var DORMANT_HERO = 25, DORMANT_ASCENDED = 80;   // ini defaults
+
+  function panel(title, body, buttons, tone, extra) {
+    var p = { title: title, body: body, reveal: 45, width: 720, tone: tone || "cyan",
+              buttons: buttons || CONTINUE };
+    for (var k in (extra || {})) p[k] = extra[k];
+    return p;
+  }
+  var CONTINUE = [{ label: "CONTINUE", icon: "", iconOnly: false }];
+  var TIERS3 = [
+    { label: "NORMAL",   icon: "blessing_normal.png",   iconOnly: false },
+    { label: "HERO",     icon: "blessing_hero.png",     iconOnly: false },
+    { label: "ASCENDED", icon: "blessing_ascended.png", iconOnly: false }
+  ];
+
+  function storyPanel(mode) {
+    return panel("[ SYSTEM ]",
+      "REINCARNATION COMPLETE\n\n  Power level   ASCENDED" + (mode ? "  (" + mode + ")" : "") + "\n" +
+      (mode === "DORMANT" ? "  Awakens at    level " + DORMANT_HERO + "\n" : "") +
+      "\nThe System is now bound to your soul.\nYour new life begins.",
+      CONTINUE, "cyan");
+  }
+
+  var CUSTOM_STEPS = [
+    "CUSTOM — 1 of 3: STARTING GIFT\n\nThe flat head start handed over at birth — skills, body,\n" +
+    "gold and seed points.\n\n  NORMAL    Nothing. Begin as any mortal.\n  HERO      A hero's start.\n" +
+    "  ASCENDED  A transcendent's fortune.",
+    "CUSTOM — 2 of 3: REWARD PACE\n\nHow fast the System keeps paying out — milestone\n" +
+    "passives, System Points, dragon souls, perk points.\n\n  NORMAL    x1. The honest grind.\n" +
+    "  HERO      x2.\n  ASCENDED  x4.",
+    "CUSTOM — 3 of 3: SKILL TREE\n\nHow deep the tree opens. You still buy each node\n" +
+    "with System Points, so a deep tree on a NORMAL\npace is access, not a free ride.\n\n" +
+    "  NORMAL    The self-made half.\n  HERO      + the Omniscience gifts.\n" +
+    "  ASCENDED  + the World Tree capstone."
+  ];
+
+  function customStep(i) {
+    open("panel", panel("[ SYSTEM ]", CUSTOM_STEPS[i], TIERS3, "gold"), function () {
+      if (i < 2) customStep(i + 1); else open("panel", storyPanel("CUSTOM"));
+    });
+  }
+
+  function pathPanel(dormant) {
+    var body = dormant
+      ? "The dormant blessing stirs.\nHow will each awakening reach you?\n\n" +
+        "  FULL       Every awakening arrives whole —\n             skills, body and fortune granted\n" +
+        "             the moment it comes.\n  SHATTERED  Only the System's reach grows: faster\n" +
+        "             rewards and deeper gifts unlock, but\n             nothing is ever handed to you.\n\n" +
+        "Choose how you rise:"
+      : "The ASCENDED blessing resonates.\nHow will you receive it?\n\n" +
+        "  FULL       Awaken at once — skills, body and\n             fortune granted now.\n" +
+        "  SHATTERED  The System is fractured. Begin as any\n             mortal, but its rewards still flow faster\n" +
+        "             and its deepest gifts stay open to you.\n             Higher ceiling, same floor — earn it.\n\n" +
+        "Choose how you rise:";
+    return panel("[ SYSTEM ]", body, [
+      { label: "FULL AWAKENING", icon: "blessing_full.png",      iconOnly: false },
+      { label: "SHATTERED",      icon: "blessing_shattered.png", iconOnly: false }
+    ], dormant ? "violet" : "gold");
+  }
+
+  var SCENARIOS = [
+    { id: "story", group: "Panel", label: "Story", hint: "Single CONTINUE, typewriter, cyan",
+      run: function () { open("panel", storyPanel("")); } },
+    { id: "blessing", group: "Panel", label: "Blessing ×5",
+      hint: "The real blessing choice: five choices fall back to the capsule row, gold",
+      run: function () {
+        open("panel", panel("[ SYSTEM ]",
+          "You have been reincarnated.\nThe System offers you a blessing.\n\n" +
+          "  NORMAL    No blessing. Pure challenge.\n  HERO      Awakened power.\n" +
+          "  ASCENDED  Transcend mortal limits.\n  DORMANT   The blessing sleeps. Begin as a mortal;\n" +
+          "            it wakes to HERO at level " + DORMANT_HERO + ", then to\n" +
+          "            ASCENDED at level " + DORMANT_ASCENDED + ".\n" +
+          "  CUSTOM    Set the pieces yourself — starting gift,\n" +
+          "            reward pace and skill-tree depth, each on\n            its own.\n\nChoose your path:",
+          [
+            { label: "NORMAL",   icon: "blessing_normal.png",   iconOnly: false },
+            { label: "HERO",     icon: "blessing_hero.png",     iconOnly: false },
+            { label: "ASCENDED", icon: "blessing_ascended.png", iconOnly: false },
+            { label: "DORMANT",  icon: "blessing_dormant.png",  iconOnly: false },
+            { label: "CUSTOM",   icon: "blessing_custom.png",   iconOnly: false }
+          ], "gold"),
+          function (i) {
+            if (i === 4) customStep(0);
+            else open("panel", pathPanel(i === 3), function () { open("panel", storyPanel(i === 3 ? "DORMANT" : "")); });
+          });
+      } },
+    { id: "cards", group: "Panel", label: "Blessing ×3", hint: "Three cards (CUSTOM step 1), gold",
+      run: function () { customStep(0); } },
+    { id: "awaken", group: "Panel", label: "Awakening", hint: "Two cards, gold",
+      run: function () { open("panel", pathPanel(false), function () { open("panel", storyPanel("")); }); } },
+    { id: "dormant", group: "Panel", label: "Dormant", hint: "The dormant blessing stirs, violet",
+      run: function () { open("panel", pathPanel(true), function () { open("panel", storyPanel("DORMANT")); }); } },
+    { id: "warning", group: "Panel", label: "Warning", hint: "A failing self-test, red",
+      run: function () {
+        open("panel", panel("[ SYSTEM ]",
+          "SELF-TEST\n\n  magelight host    PASS  1.9.0\n  system view       PASS\n  hud view          PASS\n" +
+          "  page ready        FAIL  page dev, plugin 3f2a9c1\n  interface icons   PASS  72 icons\n\n" +
+          "The page and the plugin come from different builds.\nReinstall the mod so both match.",
+          [{ label: "CLOSE", icon: "", iconOnly: false }], "red", { reveal: 120 }));
+      } },
+    { id: "emblem", group: "Panel", label: "Emblem", hint: "Crest + caption, icon actions top right",
+      run: function () {
+        open("panel", panel("[ STATUS ]",
+          "  Power level   ASCENDED  (CUSTOM)\n  Milestones    7 / 79\n  System Points  " + G.points + "\n\n" +
+          "The System watches. Spend what it gives you.",
+          [
+            { label: "Skill tree", icon: "ui_skilltree.png", iconOnly: true },
+            { label: "Storage",    icon: "ui_storage.png",   iconOnly: true },
+            { label: "Shop",       icon: "ui_shop.png",      iconOnly: true },
+            { label: "CLOSE",      icon: "",                 iconOnly: false }
+          ], "cyan",
+          { reveal: 200, emblem: { icon: "icons/rank_s.png", caption: "Rank S", tone: "gold" } }));
+      } },
+    { id: "status", group: "Screens", label: "Status", screen: "status",
+      hint: "Shift-click: all 79 titles",
+      run: function (e) { open("status", buildStatus(!!(e && e.shiftKey))); } },
+    { id: "tree", group: "Screens", label: "Skill tree", screen: "tree",
+      run: function () { open("tree", buildTree()); } },
+    { id: "shop", group: "Screens", label: "Shop", screen: "shop",
+      run: function () { open("shop", buildShop()); } }
+  ];
+
+  /* A sample translation, partial on purpose (that is what real ones are). Switching
+     it while a screen is up re-renders that screen in place, as a settings reload does. */
+  var LOC_DE = {
+    "view.panel.skip": "Klicken oder Enter zum Überspringen",
+    "view.close": "Schließen"
+  };
+
+  /* ======================================================================
+     The fake host
+     ====================================================================== */
+
+  var frame = null;          // the <iframe> holding system.html
+  var view = null;           // its window, known from the first message it sends
+  var ready = false;         // isekai.ready seen
+  var queue = [];            // calls made before ready, in order
+  var onSelect = null;       // what the open panel's choice continues with
+  var last = null;           // the last screen shown, for the tone override
+  var opts = { lang: "en", scale: 1, tone: "", build: "", instant: false };
+  var listeners = [];
+
+  function log(m) { if (global.VS_LOG) global.VS_LOG(m); }
+  function changed() { listeners.forEach(function (f) { f(); }); }
+
+  /* Magelight::Run: straight through once ready, queued before. */
+  function run(fn) {
+    if (ready && view && view.isekai) fn(view.isekai);
+    else queue.push(fn);
+  }
+
+  /* The prelude C++ sends on ready, before anything queued (Magelight::SetPrelude). */
+  function prelude(isekai) {
+    isekai.loc(opts.lang === "de" ? LOC_DE : {});
+    isekai.scale(opts.scale);
+  }
+
+  function show(screen, payload) {
+    last = { screen: screen, payload: payload };
+    var p = payload;
+    if (screen === "panel" && (opts.tone || opts.instant)) {
+      p = {};
+      for (var k in payload) p[k] = payload[k];
+      if (opts.tone) p.tone = opts.tone;
+      if (opts.instant) p.reveal = 1000000;
+    }
+    if (frame) frame.classList.remove("is-hidden");
+    run(function (isekai) { isekai.show(screen, p); });
+  }
+
+  /* What a screen-opening call site does in C++: remember the continuation, show. */
+  function open(screen, payload, then) {
+    onSelect = then || null;
+    show(screen, payload);
+  }
+
+  /* ReleaseUIMode: Magelight hides the view. */
+  function hide() { if (frame) frame.classList.add("is-hidden"); }
+
+  /* Screens::OnAction, by the same "type:arg" grammar UiLogic::ParseAction reads. */
+  function onAction(text) {
+    var colon = text.indexOf(":");
+    var type = colon < 0 ? text : text.slice(0, colon);
+    var arg = colon < 0 ? "" : text.slice(colon + 1);
+    log("action " + text);
+    switch (type) {
+      case "choose": {
+        var fn = onSelect;
+        onSelect = null;
+        hide();
+        if (fn) fn(parseInt(arg, 10));
+        break;
+      }
+      case "close": hide(); break;
+      case "nav":
+        if (arg === "tree") show("tree", buildTree());
+        else if (arg === "shop") show("shop", buildShop());
+        else if (arg === "status") show("status", buildStatus(false));
+        break;
+      case "status":
+        if (arg === "tree") show("tree", buildTree());
+        else if (arg === "shop") show("shop", buildShop());
+        else if (arg === "close" || arg === "storage") hide();
+        // reboot / reroll change save state in game; nothing to preview here.
+        break;
+      case "buy": tryUnlock(parseInt(arg, 10) || 0); show("tree", buildTree()); break;
+      case "respec": doRespec(); show("tree", buildTree()); break;
+      case "shopBuy": shopBuy(parseInt(arg, 10)); break;
+      default: log("  (the plugin would reject this action)");
+    }
+    changed();
+  }
+
   var Mock = {
+    SCENARIOS: SCENARIOS,
+
+    /* Called by the injected window.magelight.send in the page. */
+    receive: function (win, name, payload) {
+      view = win;
+      if (name === "isekai.ready") {
+        opts.build = payload;
+        ready = true;
+        log("ready, page build " + payload);
+        prelude(win.isekai);
+        var q = queue; queue = [];
+        q.forEach(function (fn) { fn(win.isekai); });
+        changed();
+      } else if (name === "isekai.action") {
+        onAction(payload);
+      } else if (name === "__escapecapture") {
+        log("escape " + (payload === "1" ? "captured by the page" : "closes the view"));
+      } else {
+        log("unknown message " + name + " " + payload);
+      }
+    },
+
+    /* The page's frame. Messages it sent before this script could take them wait in
+       its __mlQueue (see serve.mjs). */
     attach: function (iframeEl) {
       frame = iframeEl;
-      installCallbacks();
+      var w = frame.contentWindow;
+      var early = (w && w.__mlQueue) || [];
+      if (w) w.__mlQueue = [];
+      early.forEach(function (m) { Mock.receive(w, m[0], m[1]); });
     },
 
-    openTree: function () {
-      show();
-      pushTree();
-      // Focus the frame so the view's ESC handler can fire.
-      if (win()) win().focus();
+    open: function (id, e) {
+      for (var i = 0; i < SCENARIOS.length; i++) {
+        if (SCENARIOS[i].id === id) { SCENARIOS[i].run(e); return; }
+      }
     },
 
-    openShop: function () {
-      show();
-      pushShop();
-      if (win()) win().focus();
+    /* The screens the page has a renderer for (isekai.screens). */
+    supports: function (screen) {
+      return !!(view && view.isekai && view.isekai.screens &&
+                view.isekai.screens.indexOf(screen) >= 0);
     },
 
-    /* ShowPanel(title, body, choices, onSelect, reveal, width) */
-    showPanel: function (opts) {
-      onSelect = opts.onSelect || null;
-      panelMulti = (opts.buttons || []).length > 1;
-      show();
-      call("isekaiShowPanel", {
-        title: opts.title || "",
-        body: opts.body || "",
-        reveal: opts.reveal || 45,
-        width: opts.width || 720,
-        buttons: opts.buttons || [{ label: "Continue", icon: "", iconOnly: false }]
-      });
-      if (win()) win().focus();
+    /* Re-show the last panel in another tone (review aid; in game C++ picks it). */
+    setTone: function (tone) {
+      opts.tone = tone;
+      if (last && last.screen === "panel") show(last.screen, last.payload);
+    },
+    setInstant: function (on) { opts.instant = !!on; },
+    setLang: function (lang) {
+      opts.lang = lang;
+      run(function (isekai) { isekai.loc(lang === "de" ? LOC_DE : {}); });
+    },
+    setScale: function (s) {
+      opts.scale = s;
+      run(function (isekai) { isekai.scale(s); });
     },
 
-    /* Mirrors Prisma::ShowStatus — hands the structured status payload to the real
-       status screen so its layout can be seen and clicked here. */
-    showStatus: function (data) {
-      show();
-      call("isekaiShowStatus", data);
-      if (win()) win().focus();
-    },
-
-    flourish: function (title, subtitle) {
-      show();
-      call("isekaiFlourish", { title: title, subtitle: subtitle });
-      // Purely visual in-game; auto-hide after the animation like the plugin.
-      setTimeout(function () { hide(); }, 2400);
-    },
-
-    addPoints: function (n) { G.points = Math.max(0, G.points + n); pushTree(); },
-    setTier: function (t) { G.tier = t; pushTree(); },
+    addPoints: function (n) { G.points = Math.max(0, G.points + n); changed(); },
+    setTier: function (t) { G.tier = t; },
     getTier: function () { return G.tier; },
-    setDormant: function (b) { G.dormant = !!b; pushTree(); },
+    setDormant: function (b) { G.dormant = !!b; },
     getDormant: function () { return G.dormant; },
-    reset: function () { G = freshState(); pushTree(); },
+    reset: function () { G = freshState(); changed(); },
 
-    state: function () { return G; }
+    onChange: function (f) { listeners.push(f); },
+    state: function () { return { points: G.points, ready: ready, build: opts.build }; }
   };
 
   global.IsekaiMock = Mock;

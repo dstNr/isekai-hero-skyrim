@@ -26,6 +26,17 @@ import { collect as collectStrings, template as stringTemplate } from "./extract
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = (p) => readFileSync(join(ROOT, p), "utf8");
 
+/* The Magelight pages. The system page's markup and its own script live in system.html;
+   the projection theme and the helpers every page shares (translation, scale, typewriter,
+   host messages) live next to it. A rule about "the page" means all three together. */
+const SYSTEM_PAGE = "magelight/IsekaiHero/system.html";
+const PAGE_THEME = "magelight/IsekaiHero/theme.css";
+const PAGE_COMMON = "magelight/IsekaiHero/common.js";
+const systemPage = () => [SYSTEM_PAGE, PAGE_THEME, PAGE_COMMON].map(read).join("\n");
+/* The PrismaUI page still carries the status, skill tree and shop screens until they move
+   to the system page; rules about those screens read it until then. */
+const PRISMA_VIEW = "prisma-patch/PrismaUI/views/IsekaiHero/index.html";
+
 let failures = 0;
 let checks = 0;
 const results = [];
@@ -618,56 +629,64 @@ check("ui: every icon a C++ file names by hand exists", () => {
 });
 
 check("ui: the web view's script parses", () => {
-  // Nothing else here would notice. The view is not compiled, and a syntax error in it
+  // Nothing else here would notice. The page is not compiled, and a syntax error in it
   // does not fail the build or any other check — it shows up in the game as a panel that
-  // never appears, which is an expensive way to find a typo.
-  const html = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
-  const blocks = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
-  need(blocks.length > 0, "no <script> blocks found — parser stale?");
+  // never appears, which is an expensive way to find a typo. The shared common.js is
+  // loaded by every page, so a typo there blanks all of them.
+  const html = read(SYSTEM_PAGE);
+  const blocks = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)]
+    .map((m) => m[1]).filter((js) => js.trim());
+  need(blocks.length > 0, "no inline <script> blocks found — parser stale?");
+  blocks.push(read(PAGE_COMMON));
   blocks.forEach((js, i) => {
     try {
       new Function(js);  // parses only; nothing runs
     } catch (e) {
-      need(false, `<script> block ${i + 1} does not parse: ${e.message}`);
+      need(false, `${i === blocks.length - 1 ? "common.js" : `<script> block ${i + 1}`} ` +
+                  `does not parse: ${e.message}`);
     }
   });
-  return `${blocks.length} block(s), ${blocks.reduce((n, b) => n + b.split("\n").length, 0)} lines`;
+  return `${blocks.length - 1} block(s) + common.js, ` +
+         `${blocks.reduce((n, b) => n + b.split("\n").length, 0)} lines`;
 });
 
 check("ui: the web view actually translates itself", () => {
   // Everything else about the translation is checked by reading the source. This RUNS it:
-  // the view's own tr/trf/applyLoc, against a table shaped like Loc::Json's output and
-  // deliberately partial, which is what every real translation is.
-  const html = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
-  const js = html.match(/<script\b[^>]*>([\s\S]*?)<\/script>/)[1];
-  const from = js.indexOf("let LOC = {};");
-  const to = js.indexOf('document.addEventListener("DOMContentLoaded", applyLoc);');
-  need(from >= 0 && to > from, "the translation block's delimiters moved — check stale");
-
+  // the page's own t/tf/setLoc from common.js, against a table shaped like Loc::Json's
+  // output and deliberately partial, which is what every real translation is.
   const els = [
     { dataset: { loc: "view.close" }, textContent: "Close" },
     { dataset: { loc: "view.milestones" }, textContent: "Milestones" },
   ];
+  const doc = {
+    querySelectorAll: () => els,
+    addEventListener: () => {},
+    documentElement: { style: { setProperty: () => {} } },
+    readyState: "loading",
+  };
   const win = {};
-  const api = new Function(
-    "document", "window",
-    js.slice(from, to) +
-      "\nreturn { tr, trf, get isekaiLoc() { return window.isekaiLoc; } };",
-  )({ querySelectorAll: () => els }, win);
+  new Function("window", "document", read(PAGE_COMMON))(win, doc);
+  const api = win.isekaiUi;
+  need(api && typeof api.t === "function" && typeof api.tf === "function" &&
+       typeof api.setLoc === "function",
+       "common.js no longer publishes isekaiUi.t / tf / setLoc — check stale?");
 
-  api.isekaiLoc({ "view.close": "Schließen", "view.tree.cost": "{} Systempunkt(e)" });
+  api.setLoc({ "view.close": "Schließen", "view.tree.cost": "{} Systempunkt(e)" });
   need(els[0].textContent === "Schließen", "a covered label was not translated");
   need(els[1].textContent === "Milestones", "an uncovered label must stay English");
-  need(api.trf("view.tree.cost", "{} system point(s)", 7) === "7 Systempunkt(e)",
-       "trf did not fill {} from the translated pattern");
-  need(api.trf("view.tree.rank", " · Rank {}", 3) === " · Rank 3",
-       "trf did not fill {} in the English fallback");
-  need(api.tr("view.buy", "Buy") === "Buy", "a missing key did not fall back to English");
+  need(api.tf("view.tree.cost", "{} system point(s)", 7) === "7 Systempunkt(e)",
+       "tf did not fill {} from the translated pattern");
+  need(api.tf("view.tree.rank", " · Rank {}", 3) === " · Rank 3",
+       "tf did not fill {} in the English fallback");
+  need(api.t("view.buy", "Buy") === "Buy", "a missing key did not fall back to English");
 
   // A second push must translate from the stashed English, not from the first result.
-  api.isekaiLoc({ "view.close": "Fermer" });
+  api.setLoc({ "view.close": "Fermer" });
   need(els[0].textContent === "Fermer", "a re-push translated an already-translated label");
   need(els[1].textContent === "Milestones", "a re-push corrupted an uncovered label");
+  // Anything but an object (a failed parse on the C++ side) must reset to English, not throw.
+  api.setLoc(null);
+  need(els[0].textContent === "Close", "an empty push did not fall back to English");
   return "partial table, re-push, and both fallbacks";
 });
 
@@ -675,7 +694,7 @@ check("ui: every translated label in the web view carries its English", () => {
   // A data-loc element's own text IS the English fallback. Empty it, and that label
   // disappears entirely for anyone whose translation happens not to cover that key —
   // which is the exact case the fallback exists for.
-  const html = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  const html = read(SYSTEM_PAGE);
   const labels = [...html.matchAll(/data-loc="([\w.]+)"[^>]*>([^<]*)</g)];
   need(labels.length > 0, "no data-loc labels parsed — parser stale?");
   for (const [, key, text] of labels) {
@@ -684,8 +703,56 @@ check("ui: every translated label in the web view carries its English", () => {
   return `${labels.length} labels`;
 });
 
+check("ui: the system page speaks the plugin's message contract", () => {
+  // src/UI/Magelight.cpp listens for exactly two names on the system view and parses
+  // the action text with UiLogic::ParseAction. A page that sends "choose 2" or
+  // "isekai:action" is silently ignored — the player clicks and nothing happens, and in
+  // the blessing choice that means a character who can never finish being reborn.
+  // RUN the page's helpers against a fake host and read what they sent.
+  const sent = [];
+  const win = { magelight: { send: (name, arg) => sent.push([name, arg]) } };
+  new Function("window", "document", read(PAGE_COMMON))(win, {
+    querySelectorAll: () => [], addEventListener: () => {}, readyState: "loading",
+    documentElement: { style: { setProperty: () => {} } },
+  });
+  const ui = win.isekaiUi;
+  ui.send("choose", 2);
+  ui.send("close");
+  ui.send("status", "tree");
+  ui.ready();
+  win.ISEKAI_UI_BUILD = "abc1234";
+  ui.ready();
+  ui.escapeCapture(true);
+  ui.escapeCapture(false);
+  const want = [
+    ["isekai.action", "choose:2"], ["isekai.action", "close"], ["isekai.action", "status:tree"],
+    ["isekai.ready", "dev"], ["isekai.ready", "abc1234"],
+    ["__escapecapture", "1"], ["__escapecapture", "0"],
+  ];
+  need(JSON.stringify(sent) === JSON.stringify(want),
+       `the page sent ${JSON.stringify(sent)}, the plugin expects ${JSON.stringify(want)}`);
+
+  const cpp = read("src/UI/Magelight.cpp");
+  for (const name of ["isekai.action", "isekai.ready"]) {
+    need(cpp.includes(`"${name}"`), `Magelight.cpp no longer listens for ${name}`);
+  }
+  need(/isekai\.hello\(\)/.test(cpp), "Magelight.cpp no longer re-asks a reloaded page for ready");
+
+  // The page side: hello() re-sends ready, and the build id is loaded from version.js
+  // without the page depending on it (a missing file must not stop the page).
+  const html = read(SYSTEM_PAGE);
+  need(/<script\s+src="version\.js"[^>]*onerror=/.test(html),
+       "system.html does not load version.js with a failure-tolerant <script>");
+  for (const fn of ["loc", "scale", "show", "hello"]) {
+    need(new RegExp(`\\b${fn}\\s*[:=]\\s*(function\\b|\\([^)]*\\)\\s*=>)`).test(html),
+         `system.html no longer defines isekai.${fn}`);
+  }
+  need(/\bhello\s*[:=][^\n]*\bready\(\)/.test(html), "isekai.hello() no longer re-sends isekai.ready");
+  return `${want.length} messages, hello/loc/scale/show defined, version.js optional`;
+});
+
 check("ui: the web view's status buttons name real icons", () => {
-  const html = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  const html = read(PRISMA_VIEW);
   // The label argument now goes through tr("key", "English"), so it holds commas of its
   // own — anything up to the PNG rather than "one comma-free argument".
   const icons = [...html.matchAll(/addIcon\([\s\S]*?,\s*"([\w.]+\.png)"/g)].map((m) => m[1]);
@@ -722,7 +789,8 @@ check("ui: the playground previews every blessing icon the game uses", () => {
   const used = new Set([...cpp.matchAll(/BlessingIcon\("([\w.]+\.png)"\)/g)].map((m) => m[1]));
   need(used.size > 0, "no BlessingIcon calls in System.cpp — parser stale?");
 
-  const pg = read("playground/index.html");
+  // The scenarios live in mock.js (the screen picker), the harness in index.html.
+  const pg = read("playground/index.html") + read("playground/mock.js");
   const shown = new Set([...pg.matchAll(/icon:\s*"(blessing_[\w.]+\.png)"/g)].map((m) => m[1]));
   need(shown.size > 0, "the playground previews no blessing panel at all");
 
@@ -738,8 +806,9 @@ check("ui: the panel's button labels are wrapped in the element their CSS styles
   // renderers stack them and the view clips an over-long label with an ellipsis. That
   // clipping is a rule on a .lbl span — if buildButtons ever goes back to emitting a
   // bare text node, the rule silently stops applying and the label runs off the button
-  // again, which is exactly the bug it was written for.
-  const view = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  // again, which is exactly the bug it was written for. Cards (two to four choices) carry
+  // the same .lbl span; the stacked row is what one, or five and more, choices use.
+  const view = systemPage();
   need(/#pButtons \.btn \.lbl\s*\{/.test(view),
        "no #pButtons .btn .lbl rule — the label clipping is gone");
   need(/#pButtons \.btn\s*\{[^}]*min-width:\s*0/.test(view),
@@ -750,8 +819,10 @@ check("ui: the panel's button labels are wrapped in the element their CSS styles
   const from = view.indexOf("function buildButtons()");
   need(from >= 0, "buildButtons not found in the view — parser stale?");
   const build = view.slice(from, view.indexOf("\nfunction ", from + 1));
-  need(/class="lbl">'\s*\+\s*esc\(b\.label\)/.test(build),
-       "buildButtons emits a row label that is not inside a .lbl span");
+  const spans = build.match(/class="lbl">'\s*\+\s*esc\(b\.label\)/g) || [];
+  need(spans.length >= 2,
+       "buildButtons emits a card or row label that is not inside a .lbl span " +
+       `(${spans.length} of 2 builders wrap it)`);
   return "stacked, clipped, and the span exists";
 });
 
@@ -854,11 +925,24 @@ check("ui: UiScale reaches both renderers", () => {
   // view. Either half can rot on its own without anything failing - the interface simply
   // stops resizing for half the players, and only the half using that renderer notice.
   // This is an accessibility setting, so silent half-coverage is the wrong failure.
-  const view = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
-  need(/window\.isekaiScale\s*=/.test(view), "the view no longer defines window.isekaiScale");
-  need(/--ui-scale/.test(view), "the view no longer uses the --ui-scale variable");
+  const view = systemPage();
+  need(/\bscale\s*[:=]\s*(function\b|\([^)]*\)\s*=>)/.test(read(SYSTEM_PAGE)),
+       "the page no longer defines isekai.scale");
+  need(/--ui-scale/.test(read(PAGE_COMMON)), "setScale no longer writes the --ui-scale variable");
   need(/transform:\s*scale\(var\(--ui-scale/.test(view),
-       "nothing in the view applies --ui-scale, so the plugin would push a number nowhere");
+       "nothing in the page applies --ui-scale, so the plugin would push a number nowhere");
+  // A value arriving from outside the page: a 0 would make the whole interface vanish
+  // with no way left to reach the setting that did it. Run the clamp, don't just read it.
+  let pushed = null;
+  const win = {};
+  new Function("window", "document", read(PAGE_COMMON))(win, {
+    querySelectorAll: () => [], addEventListener: () => {}, readyState: "loading",
+    documentElement: { style: { setProperty: (k, v) => { if (k === "--ui-scale") pushed = +v; } } },
+  });
+  win.isekaiUi.setScale(0);
+  need(pushed === 0.5, `setScale(0) wrote ${pushed}, not the 0.5 floor`);
+  win.isekaiUi.setScale("garbage");
+  need(pushed === 1, `setScale("garbage") wrote ${pushed}, not 1`);
   need(/isekaiScale/.test(read("src/UI/Prisma.cpp")),
        "the plugin no longer pushes the scale into the view");
   need(/g_userScale/.test(read("src/UI/Style.h")) &&
@@ -873,7 +957,29 @@ check("ui: the controller's focus ring can reach every kind of target", () => {
   // markup built somewhere else in the same file — rename `.card` in renderShop and the
   // shop silently stops being reachable by controller, with nothing failing anywhere.
   // Nobody here plays on a pad, so nobody would notice.
-  const view = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  //
+  // The Magelight page: its navigation-style pad moves native focus between focusable
+  // controls, and the page's own arrow keys walk the FOCUSABLE list. Every kind of
+  // target is a <button> (focusable without a tabindex), every class in the list must
+  // exist, and theme.css must draw a ring on :focus.
+  const page = systemPage();
+  const list = read(SYSTEM_PAGE).match(/const FOCUSABLE\s*=\s*"([^"]+)"/);
+  need(list, "system.html has no FOCUSABLE selector list — controller navigation gone?");
+  const kinds = list[1].split(",").map((x) => x.trim().replace(/^\./, ""));
+  need(kinds.length >= 3,
+       `FOCUSABLE is down to ${kinds.length} selectors; the panel alone has buttons, ` +
+       "cards and icon actions");
+  for (const c of kinds) {
+    need(new RegExp(`class(Name)?\\s*=?\\s*"${c}[ "]`).test(page),
+         `FOCUSABLE names .${c}, but nothing in the page ever carries that class`);
+  }
+  need(!/createElement\("(?!button")\w+"\)[^;]*;\s*\w+\.className\s*=\s*"(btn|card|iconBtn)\b/.test(page),
+       "a pad target is built as a non-button element, which focus cannot reach");
+  need(/:focus\b[^{]*\{[^}]*outline/.test(read(PAGE_THEME)),
+       "theme.css draws no outline on :focus — the controller would move an invisible focus");
+
+  // The PrismaUI page, for the screens that still live there.
+  const view = read(PRISMA_VIEW);
   const sel = view.match(/querySelectorAll\("([^"]*\.btn[^"]*)"\)/);
   need(sel, "padTargets no longer queries a selector list — controller navigation gone?");
   const classes = sel[1].split(",").map((s) => s.trim().replace(/^\./, ""));
@@ -886,7 +992,7 @@ check("ui: the controller's focus ring can reach every kind of target", () => {
   }
   need(/\.padfocus\s*\{/.test(view),
        "no .padfocus rule — the controller would move an invisible focus");
-  return `${classes.length} selectors, all present`;
+  return `page ${kinds.length} kinds, Prisma ${classes.length} selectors, all present`;
 });
 
 check("ui: both renderers colour a System Rank the same", () => {
@@ -904,7 +1010,7 @@ check("ui: both renderers colour a System Rank the same", () => {
   }
   need(Object.keys(cpp).length === 6, `RankColor names ${Object.keys(cpp).length} ranks, not 6`);
 
-  const view = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  const view = read(PRISMA_VIEW);
 
   // The ramp is applied as a CLASS to #sRankLetter, and an id selector outranks a class.
   // This shipped once: the six colours below were correct, agreed with the C++ to the
@@ -936,7 +1042,7 @@ check("ui: the web view's rank insignia is actually on screen", () => {
   // bottom: -7px; right: -7px }` — so the chip was pinned to the bottom-right corner of
   // the status card. Nothing about that is a syntax error and both screens still
   // "worked", which is exactly why it went unnoticed until the chip gained an emblem.
-  const view = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  const view = read(PRISMA_VIEW);
   need(!/^\s*\.rank\s*\{/m.test(view),
        "an unscoped `.rank {` rule is back — it will also match the status screen's " +
        "rank element. Scope it to `.node .rank`.");
@@ -1088,7 +1194,7 @@ check("shop: the shelf list agrees across C++, the view and the playground", () 
   need(cpp.join("|") === mockNames.join("|"),
        `C++ offers [${cpp.join(", ")}], the playground [${mockNames.join(", ")}]`);
   // The view builds its rail from the pushed list, so it must not hardcode any of them.
-  const view = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
+  const view = read(PRISMA_VIEW);
   need(/SHOP\.shelves/.test(view), "the view no longer reads SHOP.shelves — rail parser stale?");
   return cpp.join(" / ");
 });
@@ -1139,8 +1245,8 @@ check("shop: the built-in window still fits a 1080p screen", () => {
 
 function contract(label, cppFile, prefix) {
   const cpp = read(cppFile);
-  const view = read("prisma-patch/PrismaUI/views/IsekaiHero/index.html");
-  const pg = read("playground/index.html");
+  const view = read(PRISMA_VIEW);
+  const pg = read("playground/index.html") + read("playground/mock.js");
 
   const emitted = [...cpp.matchAll(new RegExp(`"\\\\"(${prefix}\\w+)\\\\":`, "g"))].map((m) => m[1]);
   const readBack = [...new Set([...view.matchAll(new RegExp(`\\bs\\.(${prefix}\\w+)`, "g"))].map((m) => m[1]))];

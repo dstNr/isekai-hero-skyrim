@@ -1,0 +1,307 @@
+/* ============================================================================
+   Isekai Hero — projection theme (shared by every Magelight page)
+   ----------------------------------------------------------------------------
+   The System Window looks projected into the world: a translucent tinted pane
+   with scanlines, tilted slightly away from the viewer, lit by a cone of light
+   from a point below it (spec 7.1). Cyan is the default; gold, red and violet
+   recolour the whole window when C++ passes a tone (spec 7.2).
+
+   Rendered by Ultralight (WebKit, CPU or GPU, no WebGL guaranteed):
+     - Only transform and opacity are animated. Everything else is static, so a
+       page with nothing moving is a page Ultralight does not repaint.
+     - No backdrop-filter: legibility comes from a dark shade under the tint and
+       a soft veil behind the window, not from blurring the game.
+     - No never-ending animation. The caret blinks a few times after the text is
+       done and then holds still; an infinite blink would keep the whole view
+       repainting every frame, which is exactly the FPS cost this rewrite exists
+       to remove.
+     - No external URLs and no font files: system fonts only.
+   ========================================================================== */
+
+:root {
+  /* ---- spec 7.1, verbatim ---- */
+  --proj-fill:   rgba(60, 200, 255, .09);
+  --proj-border: rgba(110, 230, 255, .8);
+  --proj-glow:   0 0 18px rgba(80, 220, 255, .35);
+  --proj-scan:   repeating-linear-gradient(0deg, rgba(110, 230, 255, .07) 0 1px, transparent 1px 4px);
+  --proj-tilt:   perspective(800px) rotateX(8deg);
+  --proj-fringe: -1px 0 rgba(255, 60, 140, .55), 1px 0 rgba(60, 255, 240, .55);
+  --proj-cone:   rgba(90, 220, 255, .26);
+  --tone:        #6ee6ff;
+
+  /* The same tone as an rgb triplet, for the states that need it at other alphas
+     (card fill, selected glow, rules). Each tone block below sets both. */
+  --tone-rgb:  110, 230, 255;
+  --text:      #dff9ff;
+  --dim:       #9cc9d6;
+
+  /* Legibility under a translucent pane. The spec's fill is a tint, and a tint alone
+     reads well over the mockup's dusk but not over snow at noon. This shade sits
+     UNDER the tint; it is what keeps body text readable on a bright scene without
+     blurring the game behind it. */
+  --proj-shade: rgba(3, 11, 19, .52);
+
+  /* ---- type ----
+     Bahnschrift is Windows' DIN-style engineering face: the System reads like an
+     instrument, not a document. Segoe UI covers anything it lacks, then the CJK
+     system faces for translations, then the symbol face for stray glyphs.
+     Consolas carries numbers, labels and codes; it lacks some glyphs (the ini
+     says so), hence the same chain behind it. */
+  --font-text: "Bahnschrift", "Segoe UI", "Microsoft YaHei UI", "Yu Gothic UI",
+               "Malgun Gothic", "Segoe UI Symbol", system-ui, sans-serif;
+  --font-mono: Consolas, "Cascadia Mono", "Lucida Console", "Segoe UI",
+               "Microsoft YaHei UI", "Yu Gothic UI", "Malgun Gothic",
+               "Segoe UI Symbol", monospace;
+
+  /* Type scale (px at UiScale 1; the whole stage is scaled, not the type). */
+  --fs-title: 13px;
+  --fs-small: 12px;
+  --fs-body:  16px;
+  --fs-big:   21px;
+
+  /* ---- motion ---- */
+  --t-open:  190ms;   /* projector flicker-on, spec: <= 200 ms */
+  --t-close: 110ms;   /* fade out, faster than the open */
+  --t-swap:  140ms;   /* switching screens inside an open view */
+  --t-ui:    160ms;   /* hover / focus feedback */
+  --ease:    cubic-bezier(.2, .8, .2, 1);
+
+  --ui-scale: 1;
+}
+
+/* ---- tones: each recolours border, glow, scanlines, cone, title and caret ----
+   Applied to a window (.proj, .stage) or to a single element inside one (a gold
+   card in a cyan window). Every derived colour reads these variables, so one
+   attribute is the whole recolour. */
+[data-tone="cyan"] {
+  --proj-fill:   rgba(60, 200, 255, .09);
+  --proj-border: rgba(110, 230, 255, .8);
+  --proj-glow:   0 0 18px rgba(80, 220, 255, .35);
+  --proj-scan:   repeating-linear-gradient(0deg, rgba(110, 230, 255, .07) 0 1px, transparent 1px 4px);
+  --proj-cone:   rgba(90, 220, 255, .26);
+  --tone: #6ee6ff; --tone-rgb: 110, 230, 255; --text: #dff9ff; --dim: #9cc9d6;
+}
+/* gold: from the approved mockup's gold variant */
+[data-tone="gold"] {
+  --proj-fill:   rgba(255, 190, 90, .08);
+  --proj-border: rgba(255, 214, 140, .8);
+  --proj-glow:   0 0 18px rgba(255, 190, 90, .35);
+  --proj-scan:   repeating-linear-gradient(0deg, rgba(255, 214, 140, .07) 0 1px, transparent 1px 4px);
+  --proj-cone:   rgba(255, 200, 110, .24);
+  --tone: #ffd27a; --tone-rgb: 255, 210, 122; --text: #fff4df; --dim: #e0c79c;
+}
+/* red: a warm alarm red with enough blue in it to stay in the projected-light family
+   (a pure #f00 reads as a different UI); warnings, Shattered, penalties, FAIL */
+[data-tone="red"] {
+  --proj-fill:   rgba(255, 80, 100, .09);
+  --proj-border: rgba(255, 128, 142, .8);
+  --proj-glow:   0 0 18px rgba(255, 70, 95, .35);
+  --proj-scan:   repeating-linear-gradient(0deg, rgba(255, 128, 142, .07) 0 1px, transparent 1px 4px);
+  --proj-cone:   rgba(255, 90, 110, .24);
+  --tone: #ff6b7a; --tone-rgb: 255, 107, 122; --text: #ffe7ea; --dim: #dba5ad;
+}
+/* violet: the sleeping blessing; cooler and quieter than gold, never mistaken for it */
+[data-tone="violet"] {
+  --proj-fill:   rgba(160, 110, 255, .09);
+  --proj-border: rgba(196, 155, 255, .8);
+  --proj-glow:   0 0 18px rgba(150, 100, 255, .35);
+  --proj-scan:   repeating-linear-gradient(0deg, rgba(196, 155, 255, .07) 0 1px, transparent 1px 4px);
+  --proj-cone:   rgba(170, 120, 255, .24);
+  --tone: #c49bff; --tone-rgb: 196, 155, 255; --text: #f2eaff; --dim: #b9a8d8;
+}
+
+/* ---- base ---- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  background: transparent;              /* composited over the game */
+  font-family: var(--font-text);
+  font-size: var(--fs-body);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none; user-select: none;
+  cursor: default;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+img { display: block; }
+.mono { font-family: var(--font-mono); letter-spacing: .02em; }
+.hidden { display: none !important; }
+
+/* ---- screens and the scale ----
+   One <section class="screen"> per screen; only the active one is laid out.
+   UiScale (isekai.scale) scales the stage as a transform, so borders, brackets
+   and any fixed geometry scale with the text, from the centre where the screen
+   already centres its content. The veil is excluded: scaling it would pull its
+   edges into view. */
+.screen {
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+  display: none; align-items: center; justify-content: center;
+}
+.screen.active { display: flex; }
+.screen > .scale { transform: scale(var(--ui-scale, 1)); position: relative; }
+
+/* A soft dark falloff behind the window: the game stays visible everywhere, but the
+   window has a calmer field to sit on. Static; it fades in with the open. */
+.veil {
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none;
+  background: radial-gradient(ellipse 70% 62% at 50% 46%,
+              rgba(2, 8, 14, .48), rgba(2, 8, 14, .22) 62%, rgba(2, 8, 14, .5));
+}
+
+/* ---- the stage: window + cone, animated together ---- */
+.stage { position: relative; }
+.stage.opening { animation: proj-on var(--t-open) linear both; transform-origin: 50% 100%; }
+.stage.swapping { animation: proj-swap var(--t-swap) var(--ease) both; }
+.stage.closing { opacity: 0; transition: opacity var(--t-close) ease-in; }
+
+/* Projector warm-up: the pane unfolds upward from its base line, then the lamp
+   catches with two dips of brightness before it holds. Opacity and transform only. */
+@keyframes proj-on {
+  0%   { opacity: 0;   transform: scaleY(.03); }
+  32%  { opacity: .85; transform: scaleY(1.015); }
+  46%  { opacity: .3;  transform: scaleY(1); }
+  60%  { opacity: 1; }
+  74%  { opacity: .62; }
+  100% { opacity: 1;   transform: none; }
+}
+@keyframes proj-swap {
+  0%   { opacity: .35; transform: translateY(4px); }
+  100% { opacity: 1;   transform: none; }
+}
+
+/* ---- .proj-beam: the light cone ----
+   Starts at a point well below the window and widens to the window's base, behind
+   it. The gradient runs bright at the source and fades upward, as in the mockup. */
+.proj-beam {
+  position: absolute; left: 4%; right: 4%; top: 42%;
+  height: calc(58% + 26vh);
+  pointer-events: none;
+  background: linear-gradient(0deg, var(--proj-cone), transparent 85%);
+  -webkit-clip-path: polygon(47% 100%, 53% 100%, 100% 0, 0 0);
+          clip-path: polygon(47% 100%, 53% 100%, 100% 0, 0 0);
+  opacity: .9;
+}
+/* The emitter: a small lens of light where the cone starts. */
+.proj-beam::after {
+  content: ""; position: absolute; left: 50%; bottom: -3px;
+  width: 26px; height: 6px; margin-left: -13px; border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(var(--tone-rgb), .9), rgba(var(--tone-rgb), 0) 70%);
+}
+
+/* ---- .proj: the window ---- */
+.proj {
+  position: relative;
+  color: var(--text);
+  background-color: var(--proj-shade);
+  background-image: var(--proj-scan), linear-gradient(var(--proj-fill), var(--proj-fill));
+  border: 1px solid var(--proj-border);
+  box-shadow: var(--proj-glow);
+  transform: var(--proj-tilt);
+  transform-origin: 50% 100%;
+  padding: 22px 28px 24px;
+}
+/* Corner brackets, top-left and bottom-right, in the tone. */
+.proj::before, .proj::after {
+  content: ""; position: absolute; width: 14px; height: 14px; pointer-events: none;
+  border: 2px solid var(--tone);
+}
+.proj::before { left: -4px; top: -4px; border-right: 0; border-bottom: 0; }
+.proj::after  { right: -4px; bottom: -4px; border-left: 0; border-top: 0; }
+
+/* ---- .proj-title: "// TITLE" with the chromatic fringe ---- */
+.proj-title {
+  display: flex; align-items: center; gap: 14px;
+  font-family: var(--font-text); font-weight: 600;
+  font-size: var(--fs-title); letter-spacing: 5px; text-transform: uppercase;
+  color: var(--tone); text-shadow: var(--proj-fringe);
+  white-space: nowrap;
+}
+.proj-title .slashes { opacity: .75; letter-spacing: 2px; }
+.proj-title .name { overflow: hidden; text-overflow: ellipsis; }
+/* The rule that runs from the title to the window edge. */
+.proj-title .rule {
+  flex: 1 1 auto; min-width: 24px; height: 1px;
+  background: linear-gradient(90deg, rgba(var(--tone-rgb), .55), rgba(var(--tone-rgb), 0));
+}
+
+/* ---- .caret: the typewriter's block caret ---- */
+.caret {
+  display: inline-block; width: .5em; height: 1.05em; margin-left: 2px;
+  vertical-align: -.16em; background: var(--tone);
+  box-shadow: 0 0 6px rgba(var(--tone-rgb), .6);
+}
+/* Done typing: blink three times, then go. Finite on purpose (see the header). */
+.caret.done { animation: caret-out 1.8s steps(1) forwards; }
+@keyframes caret-out {
+  0%  { opacity: 1; } 17% { opacity: 0; } 33% { opacity: 1; } 50% { opacity: 0; }
+  67% { opacity: 1; } 83% { opacity: 0; } 100% { opacity: 0; }
+}
+
+/* ---- .card: one choice of two to four ---- */
+.card {
+  position: relative; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center;
+  padding: 16px 12px 14px; min-width: 0;
+  border: 1px solid rgba(var(--tone-rgb), .45);
+  background: rgba(var(--tone-rgb), .06);
+  color: var(--text);
+  transition: opacity var(--t-ui) var(--ease), transform var(--t-ui) var(--ease);
+}
+/* The selected card glows (spec 7.1). "Selected" is where the player is: the
+   mouse, or the pad/keyboard focus. Painted by a pseudo-element whose OPACITY
+   changes, so the state change itself animates nothing but opacity. */
+.card::after {
+  content: ""; position: absolute; top: -1px; right: -1px; bottom: -1px; left: -1px;
+  pointer-events: none; opacity: 0;
+  border: 1px solid var(--tone);
+  background: rgba(var(--tone-rgb), .12);
+  box-shadow: 0 0 14px rgba(var(--tone-rgb), .5), inset 0 0 18px rgba(var(--tone-rgb), .12);
+  transition: opacity var(--t-ui) var(--ease);
+}
+.card.on::after, .card:hover::after, .card:focus::after { opacity: 1; }
+.card.on { transform: translateY(-2px); }
+
+/* ---- .btn: thin outlined capsule, spaced capitals ---- */
+.btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  min-height: 34px; padding: 7px 24px;
+  border: 1px solid var(--tone); border-radius: 999px;
+  color: var(--tone);
+  font-family: var(--font-text); font-weight: 600;
+  font-size: var(--fs-small); letter-spacing: 3px; text-transform: uppercase;
+}
+.btn::after {
+  content: ""; position: absolute; top: -1px; right: -1px; bottom: -1px; left: -1px;
+  border-radius: inherit; pointer-events: none; opacity: 0;
+  background: rgba(var(--tone-rgb), .16);
+  box-shadow: 0 0 12px rgba(var(--tone-rgb), .45);
+  transition: opacity var(--t-ui) var(--ease);
+}
+.btn:hover::after, .btn:focus::after, .btn.on::after { opacity: 1; }
+
+/* ---- focus: where the pad or the keyboard is ----
+   Loud on purpose: on a pad there is no cursor to look for, so a subtle ring makes
+   the screen unusable. An outline is not layout, so it costs no reflow. */
+:focus { outline: 2px solid var(--tone); outline-offset: 3px; }
+.btn:focus { outline-offset: 4px; }
+/* The window's own focus target (for keyboard Escape) shows nothing. */
+.proj:focus, [tabindex="-1"]:focus { outline: none; }
+
+/* ---- icons ----
+   The art is dark-bodied (a navy silhouette with edge light). The plate gives that
+   body something to be dark against; the lift raises the near-blacks and traces the
+   silhouette in the tone's light. */
+.icon-plate {
+  background: linear-gradient(165deg, rgba(var(--tone-rgb), .22), rgba(var(--tone-rgb), .05));
+  border: 1px solid rgba(var(--tone-rgb), .3);
+}
+.icon-lift {
+  -webkit-filter: contrast(.86) brightness(1.3) drop-shadow(0 0 5px rgba(var(--tone-rgb), .45));
+          filter: contrast(.86) brightness(1.3) drop-shadow(0 0 5px rgba(var(--tone-rgb), .45));
+}
+
+/* ---- motion preference ---- */
+@media (prefers-reduced-motion: reduce) {
+  .stage.opening, .stage.swapping { animation: none; }
+  .card.on { transform: none; }
+}

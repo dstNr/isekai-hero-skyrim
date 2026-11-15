@@ -5,34 +5,41 @@
 <title>Isekai Hero — Playground</title>
 <style>
   /* ==========================================================================
-     The playground fakes what PrismaUI gives the view for free in-game: a
-     transparent overlay composited over a running scene. Here the "scene" is a
-     dim gameplay-ish backdrop, and the real view is loaded in an iframe on top
-     of it, driven by mock.js exactly as the SKSE plugin drives it.
+     The playground fakes what Magelight gives the pages in game: a transparent
+     view composited over a running scene. Here the "scene" is a painted
+     backdrop (switchable, so legibility can be checked over dusk, snow and
+     night), and the real system page is loaded in an iframe on top of it,
+     driven by mock.js exactly as the SKSE plugin drives it.
      ========================================================================== */
-  :root { color-scheme: dark; }
+  /* No color-scheme here: when the harness and the page declare different schemes,
+     Chromium paints an opaque canvas behind the iframe and the "transparent" view
+     turns into a grey sheet over the scene. */
   html, body { margin: 0; height: 100%; background: #05070c; overflow: hidden;
                font-family: "Segoe UI", system-ui, sans-serif; }
 
-  #scene {
-    position: fixed; inset: 0;
+  #scene { position: fixed; top: 0; right: 0; bottom: 0; left: 0; }
+  #scene.dusk {
     background:
-      radial-gradient(ellipse 60% 50% at 50% 42%, rgba(40, 60, 90, 0.35), transparent 70%),
-      radial-gradient(circle at 30% 80%, rgba(120, 70, 30, 0.18), transparent 55%),
-      linear-gradient(180deg, #0a1018, #04060a);
+      radial-gradient(60% 40% at 30% 92%, rgba(120, 140, 110, .35), transparent),
+      radial-gradient(50% 30% at 80% 96%, rgba(90, 100, 120, .4), transparent),
+      linear-gradient(180deg, #2b3440 0%, #1a1f26 60%, #12161b 100%);
   }
-  #scene::after {
-    content: "SCENE — gameplay renders here";
-    position: absolute; left: 50%; bottom: 12%;
-    transform: translateX(-50%);
-    color: rgba(255,255,255,0.1); font-size: 12px; letter-spacing: 0.3em;
-    text-transform: uppercase;
+  #scene.snow {
+    background:
+      radial-gradient(70% 35% at 40% 95%, rgba(255, 255, 255, .9), transparent),
+      radial-gradient(45% 25% at 85% 90%, rgba(220, 230, 240, .8), transparent),
+      linear-gradient(180deg, #b9c7d4 0%, #dfe7ee 55%, #f4f7fa 100%);
+  }
+  #scene.night {
+    background:
+      radial-gradient(40% 25% at 70% 90%, rgba(200, 120, 50, .25), transparent),
+      linear-gradient(180deg, #05080d 0%, #0b1017 70%, #10151c 100%);
   }
 
-  /* The view, transparent-backed, exactly as PrismaUI composites it. */
+  /* The view, transparent-backed, exactly as Magelight composites it. */
   #view {
-    position: fixed; inset: 0; width: 100%; height: 100%; border: 0;
-    background: transparent; transition: opacity 0.25s ease;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: 0;
+    background: transparent; transition: opacity .2s ease;
   }
   #view.is-hidden { opacity: 0; pointer-events: none; }
 
@@ -40,275 +47,195 @@
   #dock {
     position: fixed; left: 12px; top: 12px; z-index: 10;
     display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
-    max-width: 640px;
-    padding: 10px 12px;
-    background: rgba(6, 10, 16, 0.82);
-    border: 1px solid rgba(120, 160, 200, 0.22);
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    max-width: 700px; padding: 10px 12px;
+    background: rgba(6, 10, 16, .86);
+    border: 1px solid rgba(120, 160, 200, .22); border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
     font-size: 12px; color: #b9c6d6;
   }
-  #dock strong { color: #7fd0ff; letter-spacing: 0.12em; font-size: 11px;
-                 text-transform: uppercase; margin-right: 4px; }
+  #dock.collapsed > :not(#btnDock) { display: none; }
+  #dock strong { color: #7fd0ff; letter-spacing: .12em; font-size: 11px;
+                 text-transform: uppercase; margin: 0 2px 0 6px; }
   #dock .sep { width: 100%; height: 0; }
-  #dock button {
-    background: rgba(30, 46, 66, 0.7); color: #cfe0f0;
-    border: 1px solid rgba(120, 160, 200, 0.3); border-radius: 5px;
-    padding: 6px 10px; cursor: pointer; font: inherit; letter-spacing: 0.04em;
+  #dock button, #dock select {
+    background: rgba(30, 46, 66, .7); color: #cfe0f0;
+    border: 1px solid rgba(120, 160, 200, .3); border-radius: 5px;
+    padding: 5px 9px; cursor: pointer; font: inherit;
   }
-  #dock button:hover { border-color: #5ad2ff; color: #fff; }
+  #dock button:hover:not(:disabled) { border-color: #5ad2ff; color: #fff; }
+  #dock button:disabled { opacity: .4; cursor: not-allowed; }
   #dock button.ghost { background: transparent; }
-  #dock select {
-    background: rgba(30, 46, 66, 0.7); color: #cfe0f0;
-    border: 1px solid rgba(120, 160, 200, 0.3); border-radius: 5px;
-    padding: 5px 8px; font: inherit;
-  }
   #dock .pts { font-family: Consolas, monospace; color: #7fd0ff; }
 
   #log {
     position: fixed; right: 12px; bottom: 12px; z-index: 10;
-    width: 260px; max-height: 160px; overflow: auto;
-    padding: 8px 10px;
-    background: rgba(6, 10, 16, 0.82);
-    border: 1px solid rgba(120, 160, 200, 0.22);
-    border-radius: 8px;
+    width: 300px; max-height: 170px; overflow: auto; padding: 8px 10px;
+    background: rgba(6, 10, 16, .86);
+    border: 1px solid rgba(120, 160, 200, .22); border-radius: 8px;
     font-family: Consolas, monospace; font-size: 11px; color: #8aa8c4;
   }
-  #log b { color: #7fd0ff; display: block; margin-bottom: 4px; letter-spacing: 0.1em; }
-  #log div { opacity: 0.85; }
+  #log b { color: #7fd0ff; display: block; margin-bottom: 4px; letter-spacing: .1em; }
+  #log div { opacity: .85; }
 </style>
+<!-- Before the iframe: the page's fake host forwards to IsekaiMock from its first line. -->
+<script src="mock.js"></script>
 </head>
 <body>
-  <div id="scene"></div>
+  <div id="scene" class="dusk"></div>
 
-  <!-- The real, unmodified view. Served over http so parent↔iframe share an
-       origin (see playground/serve.mjs for why that matters). -->
-  <iframe id="view"
-          src="/prisma-patch/PrismaUI/views/IsekaiHero/index.html"
+  <!-- The real, unmodified system page, with the fake Magelight host injected by
+       serve.mjs (?host=mock). Served over http so parent and iframe share an origin. -->
+  <iframe id="view" class="is-hidden" src="/magelight/IsekaiHero/system.html?host=mock"
           allowtransparency="true"></iframe>
 
   <div id="dock">
-    <strong>Screens</strong>
-    <button id="btnTree">Skill Tree</button>
-    <button id="btnStatus" title="Shift-click for the full 79-title stress test">Status</button>
-    <button id="btnShop">Shop</button>
-    <button id="btnPanel">Dialog</button>
-    <button id="btnChoice">Choice</button>
-    <button id="btnBlessing" title="The reincarnation blessing choice — 5 icons, the widest button row we ship">Blessing</button>
-    <button id="btnAwakening" title="FULL / SHATTERED — the follow-up question">Awakening</button>
-    <button id="btnFlourish">Level&nbsp;Up</button>
-
+    <button id="btnDock" class="ghost" title="Hide the dock for a clean screenshot">☰</button>
+    <span id="scenarios"></span>
     <div class="sep"></div>
 
-    <strong>Points</strong>
-    <button id="btnP10" class="ghost">+10</button>
-    <button id="btnP1" class="ghost">+1</button>
-    <span class="pts" id="ptsView">—</span>
-
-    <strong style="margin-left:8px">Rebirth</strong>
-    <select id="tier">
-      <option value="0">Normal</option>
-      <option value="1">Hero</option>
-      <option value="2" selected>Ascended</option>
+    <strong>Tone</strong>
+    <select id="tone" title="Re-show the panel in another tone (in game C++ picks it)">
+      <option value="">as sent</option>
+      <option value="cyan">cyan</option>
+      <option value="gold">gold</option>
+      <option value="red">red</option>
+      <option value="violet">violet</option>
+    </select>
+    <strong>Scene</strong>
+    <select id="scene-pick">
+      <option value="dusk">dusk</option>
+      <option value="snow">snow (bright)</option>
+      <option value="night">night</option>
+    </select>
+    <strong>Text</strong>
+    <select id="lang"><option value="en">English</option><option value="de">Deutsch (partial)</option></select>
+    <strong>UiScale</strong>
+    <select id="scale">
+      <option value="0.75">0.75</option><option value="1" selected>1</option>
+      <option value="1.25">1.25</option><option value="1.5">1.5</option>
     </select>
 
-    <label style="margin-left:8px" title="Sealed nodes name the level they awaken at instead of a rebirth">
+    <div class="sep"></div>
+    <strong>Points</strong>
+    <button id="btnP10" class="ghost">+10</button>
+    <span class="pts" id="ptsView">—</span>
+    <strong>Rebirth</strong>
+    <select id="tier">
+      <option value="0">Normal</option><option value="1">Hero</option>
+      <option value="2" selected>Ascended</option>
+    </select>
+    <label title="Sealed nodes name the level they awaken at instead of a rebirth">
       <input type="checkbox" id="dormant"> Dormant
     </label>
-
-    <button id="btnReset" class="ghost" style="margin-left:8px">Reset</button>
+    <button id="btnReset" class="ghost">Reset</button>
+    <span class="pts" id="build" title="The build id the page reported with isekai.ready"></span>
   </div>
 
-  <div id="log"><b>Callbacks</b></div>
+  <div id="log"><b>Host traffic</b></div>
 
-  <script src="mock.js"></script>
   <script>
     "use strict";
+    var M = window.IsekaiMock;
     var frame = document.getElementById("view");
     var logEl = document.getElementById("log");
-    var ptsView = document.getElementById("ptsView");
+    var buttons = [];
 
-    // mock.js pushes callback traffic here so the plugin round-trips are visible.
+    // mock.js reports host traffic here, so every round trip is visible.
     window.VS_LOG = function (msg) {
       var d = document.createElement("div");
       d.textContent = "▸ " + msg;
       logEl.appendChild(d);
       logEl.scrollTop = logEl.scrollHeight;
-      refreshPts();
     };
 
-    function refreshPts() {
-      if (window.IsekaiMock) ptsView.textContent = window.IsekaiMock.state().points;
+    // The screen picker, built from mock.js's scenarios. A screen the page has no
+    // renderer for yet (isekai.screens) is listed but disabled.
+    (function buildPicker() {
+      var host = document.getElementById("scenarios");
+      var group = "";
+      M.SCENARIOS.forEach(function (s) {
+        if (s.group !== group) {
+          group = s.group;
+          var g = document.createElement("strong");
+          g.textContent = group;
+          host.appendChild(g);
+        }
+        var b = document.createElement("button");
+        b.textContent = s.label;
+        b.title = s.hint || "";
+        b.onclick = function (e) { M.open(s.id, e); };
+        b.dataset.screen = s.screen || "panel";
+        host.appendChild(b);
+        buttons.push(b);
+      });
+      // The hud page (toasts, flourish, threat labels) previews here once it exists.
+      var hud = document.createElement("button");
+      hud.textContent = "Hud";
+      hud.disabled = true;
+      hud.title = "magelight/IsekaiHero/hud.html is not there yet";
+      host.appendChild(hud);
+      fetch("/magelight/IsekaiHero/hud.html", { method: "HEAD" }).then(function (r) {
+        if (!r.ok) return;
+        hud.disabled = false;
+        hud.title = "Open the hud page";
+        hud.onclick = function () { window.open("/magelight/IsekaiHero/hud.html?host=mock", "_blank"); };
+      }).catch(function () {});
+    })();
+
+    function refresh() {
+      var st = M.state();
+      document.getElementById("ptsView").textContent = st.points;
+      document.getElementById("build").textContent = st.ready ? "page " + st.build : "page not ready";
+      buttons.forEach(function (b) {
+        var screen = b.dataset.screen;
+        b.disabled = screen !== "panel" && !M.supports(screen);
+        if (b.disabled) b.title = "system.html has no '" + screen + "' screen yet";
+      });
+    }
+    M.onChange(refresh);
+
+    // Direct links for review and screenshots:
+    //   ?open=<scenario id>&tone=<cyan|gold|red|violet>&scene=<dusk|snow|night>&dock=0
+    //   &instant=1   panels arrive fully typed (a screenshot does not wait for the text)
+    var Q = new URLSearchParams(location.search);
+    if (Q.get("instant") === "1") M.setInstant(true);
+    if (Q.get("scene")) {
+      document.getElementById("scene").className = Q.get("scene");
+      document.getElementById("scene-pick").value = Q.get("scene");
+    }
+    if (Q.get("tone")) { document.getElementById("tone").value = Q.get("tone"); M.setTone(Q.get("tone")); }
+    if (Q.get("dock") === "0") {
+      document.getElementById("dock").classList.add("collapsed");
+      logEl.style.display = "none";
     }
 
+    M.attach(frame);
     frame.addEventListener("load", function () {
-      // Same handshake the plugin does on DOM-ready: install callbacks, then a
-      // screen can be pushed. We wait a tick so the view's own scripts have run.
-      window.IsekaiMock.attach(frame);
-      setTimeout(function () {
-        window.IsekaiMock.openTree();
-        refreshPts();
-      }, 60);
+      M.attach(frame);
+      refresh();
+      // A first look without clicking: the story panel, or the one asked for.
+      if (!frame.dataset.opened) { frame.dataset.opened = "1"; M.open(Q.get("open") || "story"); }
     });
 
-    document.getElementById("btnTree").onclick = function () { window.IsekaiMock.openTree(); };
-    document.getElementById("btnShop").onclick = function () { window.IsekaiMock.openShop(); };
-
-    document.getElementById("btnPanel").onclick = function () {
-      window.IsekaiMock.showPanel({
-        title: "A Voice in the Dark",
-        body: "You awaken on cold stone, the System's sigil burning behind your "
-            + "eyes. It offers a single word, and asks whether you will listen.",
-        reveal: 45,
-        width: 640,
-        buttons: [{ label: "Listen", icon: "spells_01_frame.png", iconOnly: false }],
-        onSelect: function (i) { window.VS_LOG("panel resolved: " + i); }
-      });
+    document.getElementById("btnDock").onclick = function () {
+      document.getElementById("dock").classList.toggle("collapsed");
     };
-
-    document.getElementById("btnChoice").onclick = function () {
-      window.IsekaiMock.showPanel({
-        title: "The System Offers a Gift",
-        body: "Three paths open before you. Choose, and the blessing is bound to "
-            + "your soul for this life.",
-        reveal: 60,
-        width: 720,
-        buttons: [
-          { label: "Vitality", icon: "spells_25_frame.png", iconOnly: false },
-          { label: "Arcana", icon: "spells_15_frame.png", iconOnly: false },
-          { label: "Shadow", icon: "spells_32_frame.png", iconOnly: false }
-        ],
-        onSelect: function (i) { window.VS_LOG("gift chosen: " + i); }
-      });
+    document.getElementById("tone").onchange = function (e) { M.setTone(e.target.value); };
+    document.getElementById("scene-pick").onchange = function (e) {
+      document.getElementById("scene").className = e.target.value;
     };
-
-    // Drives the REAL dedicated status screen (Prisma::ShowStatus) with sample data,
-    // so its layout — tier header, tiles, attunements, titles ledger and the footer
-    // buttons incl. the two-click Reboot — is visible and clickable here.
-    // Stress the layout with the FULL set (all 79 milestones granted) so the scaling
-    // can be checked — the card must stay on screen and the titles list scroll inside.
-    // The Reset ("×3") button shows the light case instead.
-    function statusData(full) {
-      var titles = [
-        { name: "Survivor",   effect: "+100 Health",       quest: "Unbound" },
-        { name: "Wayfarer",   effect: "+100 Carry Weight", quest: "Before the Storm" },
-        { name: "Dragonborn", effect: "+15% Magic Resist", quest: "The Way of the Voice" }
-      ];
-      if (full) {
-        titles = [];
-        for (var i = 1; i <= 79; i++) {
-          titles.push({ name: "Title " + i, effect: "+" + (i * 2) + " Health",
-                        quest: "Quest milestone number " + i });
-        }
-      }
-      return {
-        tier: "ASCENDED", rank: full ? "S" : "C", mode: "CUSTOM",
-        rewardTier: "ASCENDED", treeTier: "ASCENDED", grantTier: "ASCENDED",
-        nextAwakening: 0,
-        milestonesEarned: full ? 79 : 7, milestonesTotal: 79,
-        points: 512, hasTree: true, hasStorage: true, hasShop: true, canReboot: true,
-        // The standing System objective (src/Quests.cpp). Empty questText hides the row.
-        // questCanReroll is the ini's testing switch (QuestRerollButton), on here so the
-        // preview shows the widest possible action row — the layout worth looking at.
-        questText: "Slay 25 Draugr", questProgress: full ? 25 : 9, questTarget: 25,
-        questReward: full ? 16 : 16, questWaitHours: 0, questCanReroll: true,
-        attunements: [
-          { stat: "Health", amount: 250 }, { stat: "Magicka", amount: 150 },
-          { stat: "Stamina", amount: 150 }, { stat: "Carry Weight", amount: 200 },
-          { stat: "Magic Resist", amount: 15 }, { stat: "Fire Resist", amount: 25 },
-          { stat: "Frost Resist", amount: 25 }, { stat: "Disease Resist", amount: 25 }
-        ],
-        titles: titles
-      };
-    }
-
-    // Shift-click the Status button for the full 79-title stress test.
-    document.getElementById("btnStatus").onclick = function (e) {
-      window.IsekaiMock.showStatus(statusData(!!e.shiftKey));
-    };
-
-    // --- The reincarnation blessing, mirroring src/System.cpp -------------------
-    // Body text and icon names are copied from ShowPowerSelection / AskAwakeningPath.
-    // The point of previewing these two specifically: the blessing row is the widest
-    // button row the mod has (five icon+label buttons side by side), and the body is
-    // the longest — so if a panel is going to run out of room, it is this one.
-    // tools/check.mjs asserts the icon names here still match the C++ ones.
-    document.getElementById("btnBlessing").onclick = function () {
-      window.IsekaiMock.showPanel({
-        title: "[ SYSTEM ]",
-        body: "You have been reincarnated.\n"
-            + "The System offers you a blessing.\n"
-            + "\n"
-            + "  NORMAL    No blessing. Pure challenge.\n"
-            + "  HERO      Awakened power.\n"
-            + "  ASCENDED  Transcend mortal limits.\n"
-            + "  DORMANT   The blessing sleeps. Begin as a mortal;\n"
-            + "            it wakes to HERO at level 25, then to\n"
-            + "            ASCENDED at level 80.\n"
-            + "  CUSTOM    Set the pieces yourself — starting gift,\n"
-            + "            reward pace and skill-tree depth, each on\n"
-            + "            its own.\n"
-            + "\n"
-            + "Choose your path:",
-        reveal: 100000,
-        width: 720,
-        buttons: [
-          { label: "NORMAL",   icon: "blessing_normal.png",   iconOnly: false },
-          { label: "HERO",     icon: "blessing_hero.png",     iconOnly: false },
-          { label: "ASCENDED", icon: "blessing_ascended.png", iconOnly: false },
-          { label: "DORMANT",  icon: "blessing_dormant.png",  iconOnly: false },
-          { label: "CUSTOM",   icon: "blessing_custom.png",   iconOnly: false }
-        ],
-        onSelect: function (i) { window.VS_LOG("blessing chosen: " + i); }
-      });
-    };
-
-    document.getElementById("btnAwakening").onclick = function () {
-      window.IsekaiMock.showPanel({
-        title: "[ SYSTEM ]",
-        body: "The ASCENDED blessing resonates.\n"
-            + "How will you receive it?\n"
-            + "\n"
-            + "  FULL       Awaken at once — skills, level and\n"
-            + "             fortune granted now.\n"
-            + "  SHATTERED  The System is fractured. Begin as any\n"
-            + "             mortal, but its rewards still flow faster\n"
-            + "             and its deepest gifts stay open to you.\n"
-            + "             Higher ceiling, same floor — earn it.\n"
-            + "\n"
-            + "Choose how you rise:",
-        reveal: 100000,
-        width: 720,
-        buttons: [
-          { label: "FULL AWAKENING", icon: "blessing_full.png",      iconOnly: false },
-          { label: "SHATTERED",      icon: "blessing_shattered.png", iconOnly: false }
-        ],
-        onSelect: function (i) { window.VS_LOG("awakening chosen: " + i); }
-      });
-    };
-
-    document.getElementById("btnFlourish").onclick = function () {
-      window.IsekaiMock.flourish("REBIRTH", "The System awakens");
-    };
-
-    document.getElementById("btnP10").onclick = function () { window.IsekaiMock.addPoints(10); refreshPts(); };
-    document.getElementById("btnP1").onclick  = function () { window.IsekaiMock.addPoints(1);  refreshPts(); };
-
-    document.getElementById("tier").onchange = function (e) {
-      window.IsekaiMock.setTier(parseInt(e.target.value, 10));
-    };
-
-    document.getElementById("dormant").onchange = function (e) {
-      window.IsekaiMock.setDormant(e.target.checked);
-    };
-
+    document.getElementById("lang").onchange = function (e) { M.setLang(e.target.value); };
+    document.getElementById("scale").onchange = function (e) { M.setScale(parseFloat(e.target.value)); };
+    document.getElementById("btnP10").onclick = function () { M.addPoints(10); };
+    document.getElementById("tier").onchange = function (e) { M.setTier(parseInt(e.target.value, 10)); };
+    document.getElementById("dormant").onchange = function (e) { M.setDormant(e.target.checked); };
     document.getElementById("btnReset").onclick = function () {
-      window.IsekaiMock.reset();
-      document.getElementById("tier").value = String(window.IsekaiMock.getTier());
-      document.getElementById("dormant").checked = window.IsekaiMock.getDormant();
-      logEl.innerHTML = "<b>Callbacks</b>";
-      refreshPts();
+      M.reset();
+      document.getElementById("tier").value = String(M.getTier());
+      document.getElementById("dormant").checked = M.getDormant();
+      logEl.innerHTML = "<b>Host traffic</b>";
     };
+    refresh();
   </script>
 </body>
 </html>

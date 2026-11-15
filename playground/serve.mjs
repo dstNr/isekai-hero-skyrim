@@ -2,18 +2,25 @@
    Isekai Hero — playground dev server
    ----------------------------------------------------------------------------
    Serves the repo over http://localhost so the playground can drive the REAL
-   PrismaUI view in an iframe. A local http origin is used on purpose: opening
-   the harness as a file:// page makes the browser treat the parent and the
-   iframe as different origins, which blocks the cross-document scripting the
-   playground needs (defining the callbacks on the view's window, and calling
-   window.isekaiShowTree on it). Over http://localhost everything is one origin
-   and it just works.
+   Magelight pages (magelight/IsekaiHero/*.html) in an iframe. A local http
+   origin is used on purpose: opening the harness as a file:// page makes the
+   browser treat the parent and the iframe as different origins, which blocks
+   the cross-document scripting the playground needs (the page's fake host
+   calling into mock.js, and mock.js calling isekai.show on the page). Over
+   http://localhost everything is one origin and it just works.
 
-   One alias does the only piece of path fixing needed: in the shipped patch the
-   node icons sit next to index.html (PrismaUI\views\IsekaiHero\icons\), but in
-   the repo they live at the top-level icons\ folder. The view asks for
-   "icons/<name>.png" relative to itself, so requests under the view's icons
-   path are redirected to the repo's icons folder. No files are moved or copied.
+   Three pieces of path fixing, none of which moves or copies a file:
+     - Icons. In the shipped mod they sit next to the pages
+       (Data\Magelight\IsekaiHero\icons\); in the repo they live in the
+       top-level icons\ folder. Requests under a page's icons/ path are served
+       from there. (The PrismaUI page's alias stays while that page exists.)
+     - version.js. The build generates it into build\generated\; it is served
+       from there when a build exists, else a 404, which the page survives and
+       then reports build "dev" — exactly what a missing file does in game.
+     - The host. In game Magelight puts window.magelight into the page before
+       it runs. Asked for with ?host=mock, a page is served with a small script
+       injected at the top of <head> that does the same, forwarding every
+       send() to mock.js in the parent window. The page file itself is untouched.
 
    Nothing but Node's standard library — no install, no lockfile, no network.
 
@@ -44,22 +51,35 @@ const MIME = {
   ".ttf": "font/ttf"
 };
 
-/* The view references icons relative to itself; in the repo they are elsewhere.
-   Rewrite that one path prefix and leave everything else untouched. */
-const ICON_ALIAS = "/prisma-patch/PrismaUI/views/IsekaiHero/icons/";
+/* The pages reference icons relative to themselves; in the repo they are elsewhere.
+   Rewrite those path prefixes and leave everything else untouched. */
+const ICON_ALIASES = ["/magelight/IsekaiHero/icons/", "/prisma-patch/PrismaUI/views/IsekaiHero/icons/"];
+const VERSION_JS = "/magelight/IsekaiHero/version.js";
+
+/* The fake host (see the header). Messages sent before the parent's mock is reachable
+   wait in __mlQueue; mock.js drains it when it attaches. */
+const HOST_SHIM =
+  "<script>/* injected by playground/serve.mjs: the fake Magelight host */\n" +
+  "window.magelight = { send: function (name, payload) {\n" +
+  "  var m = null; try { m = window.parent && window.parent.IsekaiMock; } catch (e) {}\n" +
+  "  if (m && m.receive) m.receive(window, String(name), String(payload));\n" +
+  "  else (window.__mlQueue = window.__mlQueue || []).push([String(name), String(payload)]);\n" +
+  "} };\n</script>";
 
 const server = createServer(async (req, res) => {
   try {
-    let pathname = decodeURIComponent(new URL(req.url, "http://x").pathname);
+    const url = new URL(req.url, "http://x");
+    let pathname = decodeURIComponent(url.pathname);
 
     // Directory index: "/" opens the playground, and any "…/" serves its index.html
     // (the README points people at "/playground/", which is a directory read -> EISDIR
     // -> 500 without this).
     if (pathname === "/") pathname = "/playground/index.html";
     else if (pathname.endsWith("/")) pathname += "index.html";
-    if (pathname.startsWith(ICON_ALIAS)) {
-      pathname = "/icons/" + pathname.slice(ICON_ALIAS.length);
+    for (const alias of ICON_ALIASES) {
+      if (pathname.startsWith(alias)) pathname = "/icons/" + pathname.slice(alias.length);
     }
+    if (pathname === VERSION_JS) pathname = "/build/generated/version.js";
 
     // Contain the path to the repo root -- no "../" escapes.
     const rel = normalize(pathname).replace(/^(\.\.[/\\])+/, "");
@@ -69,7 +89,10 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    const body = await readFile(file);
+    let body = await readFile(file);
+    if (url.searchParams.get("host") === "mock" && extname(file).toLowerCase() === ".html") {
+      body = Buffer.from(body.toString("utf8").replace(/<head>/i, (h) => h + "\n" + HOST_SHIM));
+    }
     res.writeHead(200, {
       "Content-Type": MIME[extname(file).toLowerCase()] || "application/octet-stream",
       // The whole point of the playground is fast iteration; never cache.

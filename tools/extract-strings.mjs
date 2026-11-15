@@ -194,6 +194,43 @@ function view() {
   return out;
 }
 
+// The Magelight pages' own chrome, the same two shapes under the names common.js gives
+// them: data-loc="key" on a static element, and isekaiUi.t()/tf() calls in the scripts.
+// Every page and the shared common.js are scanned, so a page added later is covered.
+// t and tf are DEFINED in common.js with a variable key — that is what they are for —
+// so a `function t(` / `function tf(` definition is not a call site.
+const PAGE_DIR = "magelight/IsekaiHero";
+const PAGE_CALL = /(?<!function\s+)\btf?\(\s*"([\w.]+)"\s*,\s*((?:"(?:[^"\\]|\\.)*"\s*\+?\s*)+)[,)]/g;
+const PAGE_ANY = /(?<!function\s+)\btf?\(\s*(.)/g;
+
+function pages() {
+  const dir = join(ROOT, PAGE_DIR);
+  const files = readdirSync(dir).filter((n) => /\.(html|js)$/.test(n) && n !== "version.js");
+  const out = [];
+  for (const name of files) {
+    const file = `${PAGE_DIR}/${name}`;
+    const code = readFileSync(join(dir, name), "utf8")
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^[ \t]*\/\/.*$/gm, "");
+    for (const m of code.matchAll(PAGE_ANY)) {
+      if (m[1] !== '"') {
+        const line = code.slice(0, m.index).split("\n").length;
+        throw new Error(
+          `${file}: line ~${line}: t()/tf() needs a literal key, got ${JSON.stringify(m[1])}`,
+        );
+      }
+    }
+    for (const [, key, text] of code.matchAll(VIEW_ATTR)) out.push([key, text.trim()]);
+    for (const [, key, literals] of code.matchAll(PAGE_CALL)) {
+      const text = [...literals.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((x) => x[1]).join("");
+      out.push([key, text]);
+    }
+  }
+  if (out.length === 0) throw new Error("pages: no strings harvested — the parser is stale");
+  return out;
+}
+
 export function collect() {
   const found = new Map();
   const dupes = [];
@@ -243,6 +280,10 @@ export function collect() {
   for (const [key, text] of view()) {
     if (found.has(key) && found.get(key).text !== text) dupes.push(key);
     found.set(key, { text, file: "prisma-patch (the web view's own chrome)" });
+  }
+  for (const [key, text] of pages()) {
+    if (found.has(key) && found.get(key).text !== text) dupes.push(key);
+    found.set(key, { text, file: "magelight (the pages' own chrome)" });
   }
   return { found, dupes, callSites };
 }

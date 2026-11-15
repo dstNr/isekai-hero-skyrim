@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Isekai Hero — System</title>
+<link rel="stylesheet" href="theme.css" />
+<style>
+  /* ======================= SYSTEM PANEL =======================
+     Title, typewriter body and the choices: cards for two to four decisions, a row
+     of capsules otherwise. Icon-only actions sit at the right end of the title
+     rule, the emblem (crest + caption) in a column left of the body. */
+  #pStage { width: min(var(--pw, 720px), 92vw); }
+  #panel { display: flex; flex-direction: column; max-height: 86vh; }
+
+  #pHead { margin-bottom: 18px; }
+  #pIcons { display: flex; gap: 8px; flex: none; }
+  .iconBtn {
+    position: relative; width: 44px; height: 44px; padding: 3px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .iconBtn img { width: 100%; height: 100%; object-fit: contain; }
+  /* The action's name, under the icon while it is pointed at or focused. */
+  .iconBtn .lbl {
+    position: absolute; top: 100%; right: 0; margin-top: 8px; padding: 3px 8px;
+    white-space: nowrap; pointer-events: none; opacity: 0;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--tone);
+    background: rgba(3, 11, 19, .82); border: 1px solid rgba(var(--tone-rgb), .4);
+    transition: opacity var(--t-ui) var(--ease);
+  }
+  .iconBtn:hover .lbl, .iconBtn:focus .lbl { opacity: 1; }
+
+  #pMain { display: flex; gap: 22px; min-height: 0; }
+
+  /* Emblem: the crest in a projected diamond, its caption under it in its own tone. */
+  #pEmblem { flex: none; width: 96px; display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 4px; }
+  #pEmblem .crest { position: relative; width: 76px; height: 76px; display: flex; align-items: center; justify-content: center; }
+  #pEmblem .crest::before {
+    content: ""; position: absolute; top: 11px; right: 11px; bottom: 11px; left: 11px;
+    transform: rotate(45deg);
+    border: 1px solid rgba(var(--tone-rgb), .7);
+    background: rgba(var(--tone-rgb), .08);
+    box-shadow: 0 0 14px rgba(var(--tone-rgb), .35);
+  }
+  #pEmblem img { position: relative; width: 58px; height: 58px; object-fit: contain; }
+  #pEmblem .cap {
+    font-size: var(--fs-small); letter-spacing: 3px; text-align: center; text-transform: uppercase;
+    color: var(--tone); text-shadow: var(--proj-fringe);
+  }
+
+  /* Body. Prose reflows; "LABEL  value" rows (two spaces after a short label, the
+     shape the C++ strings use for tables) become a two-column grid; an all-caps line
+     on its own is a heading. See buildBody(). */
+  #pBody {
+    flex: 1 1 auto; min-width: 0; overflow-y: auto; max-height: 56vh;
+    font-size: var(--fs-body); line-height: 1.55; color: var(--text);
+    text-shadow: 0 1px 2px rgba(0, 6, 12, .85);
+  }
+  #pBody p { max-width: 66ch; }
+  #pBody p + p, #pBody .rows + p, #pBody p + .rows, #pBody .rows + .rows { margin-top: .55em; }
+  #pBody .gap { height: .7em; }
+  #pBody .head {
+    font-family: var(--font-mono); color: var(--tone); letter-spacing: 4px;
+    font-size: 14px; margin-bottom: .2em;
+  }
+  #pBody .rows {
+    display: grid; grid-template-columns: max-content 1fr; column-gap: 1.4em; row-gap: .35em;
+    padding-left: .2em;
+  }
+  #pBody .rows .lbl { font-family: var(--font-mono); color: var(--tone); letter-spacing: 1px; font-size: 15px; }
+  #pBody .rows .val { min-width: 0; white-space: pre-wrap; }   /* "PASS  1.9.0" keeps its column */
+  #pBody::-webkit-scrollbar { width: 5px; }
+  #pBody::-webkit-scrollbar-thumb { background: rgba(var(--tone-rgb), .35); }
+
+  /* Choices. Hidden choices would leave a pad with nothing to focus while the text
+     types, so they show from the start, held back until the text is done. */
+  #pButtons { margin-top: 22px; transition: opacity var(--t-ui) var(--ease); }
+  #pButtons.pending { opacity: .35; }
+  #pButtons.cards { display: grid; gap: 12px; }
+  #pButtons.row { display: flex; justify-content: center; gap: 12px; }
+
+  #pButtons .card { min-height: 112px; gap: 10px; }
+  #pButtons .card .ico { width: 64px; height: 64px; padding: 3px; }
+  #pButtons .card .ico img { width: 100%; height: 100%; object-fit: contain; }
+  #pButtons .card .lbl {
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: var(--fs-big); letter-spacing: 3px; text-transform: uppercase; font-weight: 600;
+  }
+  #pButtons .card.bare .lbl { font-size: 24px; }
+
+  /* The capsule row. Icon ABOVE label: the widest row the mod has — five blessing
+     choices — cannot fit a 28px icon beside a letter-spaced "ASCENDED" at a fifth of
+     the panel each. min-width: 0 is what lets a flex item shrink below its content;
+     without it the row overflows the panel instead of the button. */
+  #pButtons .btn { flex: 0 1 auto; min-width: 0; flex-direction: column; gap: 7px; }
+  #pButtons.iconic .btn { flex: 1 1 0; border-radius: 14px; padding: 11px 8px; min-height: 76px; }
+  #pButtons .btn img { width: 34px; height: 34px; object-fit: contain; }
+  /* Last line of defence: a label longer than any button gets an ellipsis rather than
+     silently running under the frame. */
+  #pButtons .btn .lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* "Skip" — only while typing, and only once it has been typing for a moment. */
+  #pSkip {
+    position: absolute; right: 16px; bottom: -26px;
+    font-size: 11px; letter-spacing: 2px; color: var(--dim); opacity: 0;
+    text-shadow: 0 1px 2px rgba(0, 6, 12, .9); pointer-events: none;
+  }
+  #panel.typing #pSkip { animation: skip-in .3s ease-out .9s both; }
+  @keyframes skip-in { from { opacity: 0; } to { opacity: .8; } }
+
+  #keyDiag { display: none; }
+</style>
+</head>
+<body>
+
+<div class="veil hidden" id="veil"></div>
+
+<!-- ======================= SYSTEM PANEL ======================= -->
+<section id="screen-panel" class="screen" data-screen="panel">
+  <div class="scale">
+    <div class="stage" id="pStage" data-tone="cyan">
+      <div class="proj-beam"></div>
+      <div class="proj" id="panel" tabindex="-1" role="dialog" aria-labelledby="pTitle">
+        <div id="pHead" class="proj-title">
+          <span class="slashes">//</span><span class="name" id="pTitle"></span><span class="rule"></span>
+          <div id="pIcons"></div>
+        </div>
+        <div id="pMain">
+          <div id="pEmblem" class="hidden"><div class="crest"><img alt="" /></div><div class="cap"></div></div>
+          <div id="pBody" aria-live="polite"></div>
+        </div>
+        <div id="pButtons"></div>
+        <div id="pSkip" class="mono" data-loc="view.panel.skip">Click or press Enter to skip</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="keyDiag" hidden></div>
+
+<!-- The build id (generated next to the pages by the build). A missing file must not
+     stop the page: it then reports "dev". -->
+<script src="version.js" onerror="window.console && console.warn('version.js missing; the page reports build dev')"></script>
+<script src="common.js"></script>
+<script>
+"use strict";
+(function () {
+  const ui = window.isekaiUi;
+  const { esc, iconUrl } = ui;
+  const $ = (id) => document.getElementById(id);
+  const TONES = { cyan: 1, gold: 1, red: 1, violet: 1 };
+  const toneOf = (v) => (TONES[v] ? v : "cyan");
+
+  /* Every kind of pad/keyboard target. All are <button>s, so they take focus without
+     a tabindex; Magelight's navigation-style pad moves that focus, the arrow keys
+     below do the same for a keyboard. tools/check.mjs holds this list to the markup. */
+  const FOCUSABLE = ".btn, .card, .iconBtn";
+
+  /* ======================= screens =======================
+     One <section class="screen"> per screen and one registry entry each:
+       render(data, fresh)  draw; fresh = a new payload, false = re-render in place
+                            (translation table or scale arrived while showing)
+       escape(data)         true: the page takes Escape (sent as __escapecapture)
+       onEscape(data)       what Escape does when the page has it
+     Switching screens inside an open view swaps without reopening; a show after
+     the view was closed by an action plays the projector flicker-on. */
+  const SCREENS = {
+    panel: { render: renderPanel, escape: panelCapturesEscape, onEscape: panelEscape },
+  };
+
+  let current = "";       // the screen on display
+  let currentData = null; // its payload
+  let open = false;       // false after an action that closes the view
+  let reopenTimer = 0;
+
+  function sectionOf(name) { return $("screen-" + name); }
+
+  function show(name, payload) {
+    let data = payload;
+    if (typeof payload === "string") {
+      try { data = JSON.parse(payload); } catch (e) { console.warn("[isekai] bad payload for " + name); return; }
+    }
+    const entry = SCREENS[name];
+    if (!entry || !data || typeof data !== "object") {
+      console.warn("[isekai] no screen '" + name + "'");
+      return;
+    }
+    clearTimeout(reopenTimer);
+    const swap = open && current !== "";
+    current = name; currentData = data; open = true;
+
+    Object.keys(SCREENS).forEach((s) => {
+      const el = sectionOf(s);
+      if (el) el.classList.toggle("active", s === name);
+    });
+    $("veil").classList.remove("hidden");
+
+    const section = sectionOf(name);
+    const stage = section.querySelector(".stage");
+    stage.setAttribute("data-tone", toneOf(data.tone));
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    entry.render(data, true);
+    ui.escapeCapture(!!entry.escape(data));
+    play(stage, swap ? "swapping" : "opening");
+  }
+
+  function play(stage, cls) {
+    stage.classList.remove("opening", "swapping", "closing");
+    void stage.offsetWidth;            // restart the animation
+    stage.classList.add(cls);
+  }
+
+  /* An action that ends the screen: fade out fast and wait for the plugin, which
+     either hides the view or shows the next screen. If neither happens (the plugin
+     refused the action), come back rather than leave an invisible screen holding
+     the cursor. */
+  function closing() {
+    open = false;
+    const section = current && sectionOf(current);
+    const stage = section && section.querySelector(".stage");
+    if (stage) play(stage, "closing");
+    clearTimeout(reopenTimer);
+    // Only the fade is undone: the next show still counts as an open (flicker-on),
+    // since the view was most likely hidden in between.
+    reopenTimer = setTimeout(() => { if (!open && stage) stage.classList.remove("closing"); }, 1500);
+  }
+
+  function rerender() {
+    if (!current || !SCREENS[current]) return;
+    SCREENS[current].render(currentData, false);
+  }
+
+  /* ======================= SYSTEM PANEL ======================= */
+  let PANEL = null;
+  let typer = null;
+  let typedAt = 0;      // when an input finished the typewriter (its click must not act)
+  let chosen = false;   // one answer per panel
+
+  function textButtons(p) { return (p.buttons || []).filter((b) => !b.iconOnly); }
+  function useCards(p) { const n = textButtons(p).length; return n >= 2 && n <= 4; }
+  function typing() { return !!(typer && !typer.done); }
+
+  /* "[ SYSTEM ]" → "SYSTEM": the window draws its own "// " prefix. */
+  function titleText(s) {
+    return String(s || "").replace(/^\s*\[\s*(.*?)\s*\]\s*$/, "$1");
+  }
+
+  function renderPanel(p, fresh) {
+    PANEL = p;
+    $("pStage").style.setProperty("--pw", Math.max(420, +p.width || 720) + "px");
+    $("pTitle").textContent = titleText(p.title);
+    buildEmblem(p.emblem);
+    buildButtons();
+    if (!fresh) return;      // the body is plugin text: nothing to re-translate
+
+    chosen = false;
+    if (typer) typer.cancel();
+    $("panel").classList.add("typing");
+    $("pButtons").classList.add("pending");
+    $("pBody").scrollTop = 0;
+    typer = ui.typewriter($("pBody"), p.body || "", +p.reveal || 45, {
+      build: buildBody,
+      onDone: panelRevealed,
+    });
+  }
+
+  function panelRevealed() {
+    $("panel").classList.remove("typing");
+    $("pButtons").classList.remove("pending");
+    // One way on: the button gets focus, so Enter or A continues. A decision gets
+    // none — the player moves to an answer on purpose.
+    const tb = $("pButtons").querySelectorAll(".btn, .card");
+    if (tb.length === 1 && !document.activeElement.matches(FOCUSABLE)) tb[0].focus();
+  }
+
+  function finishTyping() {
+    if (!typing()) return false;
+    typer.finish();
+    typedAt = performance.now();
+    return true;
+  }
+
+  function buildEmblem(em) {
+    const box = $("pEmblem");
+    const icon = em && iconUrl(em.icon);
+    const cap = em && em.caption ? String(em.caption) : "";
+    box.classList.toggle("hidden", !icon && !cap);
+    box.setAttribute("data-tone", toneOf(em && em.tone));
+    const img = box.querySelector("img");
+    img.style.display = icon ? "" : "none";
+    if (icon) {
+      img.onerror = () => { img.style.display = "none"; };
+      img.src = icon;
+    }
+    box.querySelector(".crest").style.display = icon ? "" : "none";
+    box.querySelector(".cap").textContent = cap;
+  }
+
+  function iconImg(b, cls) {
+    const src = iconUrl(b.icon);
+    return src ? '<img class="' + cls + '" alt="" src="' + esc(src) + '">' : "";
+  }
+
+  function buildButtons() {
+    const row = $("pButtons");
+    const icons = $("pIcons");
+    const focusedIndex = document.activeElement && document.activeElement.dataset
+      ? document.activeElement.dataset.choice : undefined;
+    row.innerHTML = ""; icons.innerHTML = "";
+    const cards = useCards(PANEL);
+    const texts = textButtons(PANEL);
+    row.className = (cards ? "cards" : "row") +
+      (!cards && texts.some((b) => b.icon) ? " iconic" : "") +
+      (typing() ? " pending" : "");
+    if (cards) row.style.gridTemplateColumns = "repeat(" + texts.length + ", minmax(0, 1fr))";
+    else row.style.gridTemplateColumns = "";
+
+    (PANEL.buttons || []).forEach((b, i) => {
+      const el = document.createElement("button");
+      el.dataset.choice = String(i);
+      if (b.iconOnly) {
+        el.className = "iconBtn icon-plate";
+        el.setAttribute("aria-label", b.label || "");
+        el.innerHTML = iconImg(b, "icon-lift") + '<span class="lbl">' + esc(b.label) + "</span>";
+        icons.appendChild(el);
+      } else if (cards) {
+        el.className = "card" + (b.icon ? "" : " bare");
+        el.innerHTML = (b.icon ? '<span class="ico icon-plate">' + iconImg(b, "icon-lift") + "</span>" : "") +
+                       '<span class="lbl">' + esc(b.label) + "</span>";
+        row.appendChild(el);
+      } else {
+        el.className = "btn";
+        el.innerHTML = iconImg(b, "icon-lift") + '<span class="lbl">' + esc(b.label) + "</span>";
+        row.appendChild(el);
+      }
+      el.querySelectorAll("img").forEach((img) => { img.onerror = () => img.remove(); });
+      el.onclick = () => choose(i);
+    });
+    // A re-render in place keeps the pad where it was.
+    if (focusedIndex !== undefined) {
+      const again = document.querySelector('#screen-panel [data-choice="' + focusedIndex + '"]');
+      if (again) again.focus();
+    }
+  }
+
+  /* A press on a choice: the first press while the text types only completes it. */
+  function choose(i) {
+    if (finishTyping()) return;                           // first press: show the text
+    if (performance.now() - typedAt < 250) return;        // the same press, seen twice
+    answer(i);
+  }
+
+  function answer(i) {
+    if (chosen) return;
+    chosen = true;
+    if (typer) typer.finish();
+    ui.send("choose", i);
+    closing();
+  }
+
+  /* Escape: a panel with exactly one text button (CONTINUE, CLOSE) closes with it at
+     once, typing or not, as it always has; a decision ignores Escape and takes it from
+     Magelight, so Escape cannot dismiss a choice the game is waiting for (the blessing). */
+  function panelCapturesEscape(p) { return textButtons(p).length !== 1; }
+  function panelEscape(p) {
+    const tb = textButtons(p);
+    if (tb.length === 1) answer(p.buttons.indexOf(tb[0]));
+  }
+
+  /* Lay the body out from its own shape, the rule the ImGui panel used (DrawBody):
+       - a short label, two spaces, a value: a table row (label in the tone, value
+         bright, because the value is what the panel is for); a following line
+         indented to the value column continues that value
+       - an all-caps line on its own: a heading
+       - anything else is prose; consecutive lines join into one reflowing paragraph
+     The plugin's strings stay plain text, shared with the log and every language. */
+  /* A heading is short and (nearly) all capitals: "AWAKENING", and also
+     "CUSTOM — 1 of 3: STARTING GIFT", whose "of" is the only lower case. */
+  function isHeading(s) {
+    const letters = s.replace(/[^A-Za-z]/g, "");
+    if (!letters || s.length > 48 || /[.!?:]$/.test(s)) return false;
+    return letters.replace(/[^A-Z]/g, "").length / letters.length >= 0.8;
+  }
+
+  function buildBody(el, text) {
+    el.innerHTML = "";
+    let rows = null, lastVal = null, valCol = -1, para = null;
+    const add = (tag, cls, s) => {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (s !== undefined) n.textContent = s;
+      return n;
+    };
+    String(text).split("\n").forEach((line) => {
+      const first = line.search(/\S/);
+      if (first < 0) { rows = null; lastVal = null; para = null; el.appendChild(add("div", "gap")); return; }
+      if (lastVal && first >= valCol) { lastVal.firstChild.data += " " + line.trim(); return; }
+
+      const gap = line.indexOf("  ", first);
+      const v = gap < 0 ? -1 : line.slice(gap).search(/\S/);
+      if (gap >= 0 && v >= 0 && gap - first <= 22) {
+        if (!rows) { rows = add("div", "rows"); el.appendChild(rows); }
+        const value = line.slice(gap + v);
+        const lbl = add("span", "lbl", line.slice(first, gap));
+        lastVal = add("span", "val", value);
+        if (/^FAIL\b/.test(value)) { lbl.setAttribute("data-tone", "red"); lastVal.setAttribute("data-tone", "red"); }
+        rows.appendChild(lbl); rows.appendChild(lastVal);
+        valCol = gap + v; para = null;
+        return;
+      }
+      rows = null; lastVal = null;
+      const trimmed = line.trim();
+      if (isHeading(trimmed)) {
+        el.appendChild(add("div", "head", trimmed)); para = null;
+        return;
+      }
+      if (para && !/^[-•*·]\s/.test(trimmed)) { para.firstChild.data += " " + trimmed; return; }
+      para = add("p", "", trimmed);
+      el.appendChild(para);
+    });
+  }
+
+  /* While the text types, any press on the panel — click, Enter, Space, pad A —
+     completes it and does nothing else. Capture phase, so it runs before a button's
+     own handler. */
+  $("screen-panel").addEventListener("click", (e) => {
+    if (finishTyping()) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+
+  /* ======================= input ======================= */
+
+  /* Ultralight's WebKit can deliver Escape as keyCode 27 or keyIdentifier "U+001B"
+     without e.key being "Escape", so accept every form of it. */
+  function isEscKey(e) {
+    return e.key === "Escape" || e.key === "Esc" || e.keyCode === 27 || e.which === 27 ||
+           e.keyIdentifier === "U+001B";
+  }
+  function isConfirmKey(e) {
+    return e.key === "Enter" || e.keyCode === 13 || e.key === " " || e.keyCode === 32;
+  }
+  const ARROWS = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+                   Up: [0, -1], Down: [0, 1], Left: [-1, 0], Right: [1, 0] };
+  const ARROW_CODES = { 38: [0, -1], 40: [0, 1], 37: [-1, 0], 39: [1, 0] };
+
+  function targets() {
+    const section = current && sectionOf(current);
+    if (!section) return [];
+    return Array.prototype.filter.call(section.querySelectorAll(FOCUSABLE),
+      (el) => el.offsetParent !== null && !el.disabled);
+  }
+
+  /* Move focus to the nearest target in a direction: distance along the direction,
+     plus twice the sideways offset, so "down" prefers what is below, not what is
+     merely close. No target that way: stay put. */
+  function moveFocus(dx, dy) {
+    const list = targets();
+    if (!list.length) return;
+    const cur = document.activeElement;
+    if (list.indexOf(cur) < 0) { list[0].focus(); return; }
+    const r = cur.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    let best = null, bestScore = Infinity;
+    list.forEach((el) => {
+      if (el === cur) return;
+      const q = el.getBoundingClientRect();
+      const ox = q.left + q.width / 2 - cx, oy = q.top + q.height / 2 - cy;
+      const along = ox * dx + oy * dy;
+      if (along <= 1) return;
+      const side = Math.abs(ox * dy) + Math.abs(oy * dx);
+      const score = along + side * 2;
+      if (score < bestScore) { bestScore = score; best = el; }
+    });
+    if (best) best.focus();
+  }
+
+  /* Diagnostics for the test bridge: the last eight keydowns, newest first, in the
+     hidden #keyDiag (key|keyCode|which|keyIdentifier|code). */
+  const KEY_LOG = [];
+  window.addEventListener("keydown", (e) => {
+    KEY_LOG.unshift([e.key, e.keyCode, e.which, e.keyIdentifier, e.code].join("|"));
+    KEY_LOG.length = Math.min(KEY_LOG.length, 8);
+    $("keyDiag").textContent = KEY_LOG.join(" ; ");
+  }, true);
+
+  document.addEventListener("keydown", (e) => {
+    if (!current) return;
+    if (isEscKey(e)) {
+      const entry = SCREENS[current];
+      if (entry.onEscape) entry.onEscape(currentData);
+      return;
+    }
+    if (current === "panel" && isConfirmKey(e) && finishTyping()) {
+      e.preventDefault(); e.stopPropagation();
+      return;
+    }
+    const dir = ARROWS[e.key] || ARROW_CODES[e.keyCode];
+    if (dir) { e.preventDefault(); moveFocus(dir[0], dir[1]); }
+  }, true);
+
+  /* ======================= plugin entry points =======================
+     Called by src/UI/Magelight.cpp through InvokeJS. loc and scale arrive before the
+     first show (the ready prelude) and again after a settings reload; arriving while
+     a screen is up, they re-render it in place. */
+  window.isekai = {
+    screens: Object.keys(SCREENS),
+    show: (screen, payload) => show(screen, payload),
+    loc: (table) => { ui.setLoc(table); rerender(); },
+    scale: (s) => { ui.setScale(s); rerender(); },
+    hello: () => ui.ready(),
+  };
+
+  ui.applyLoc();
+  ui.ready();
+})();
+</script>
+</body>
+</html>
