@@ -76,15 +76,6 @@ view.tree.sealedRebirth = Sealed — needs {} rebirth
 view.tree.tierTag =  · {} ({}/{})
 view.tree.unlocked = Unlocked
 
-; --- prisma-patch (the web view's own chrome) ---
-view.buy = Buy
-view.locked = Locked
-view.respec.tip = Refunds the System Points spent on stat nodes.\nKnowledge unlocks and Perk Synthesis stay — the System cannot un-teach what you already know.
-view.shop.eyebrow = System · Shop
-view.shop.title = Exchange
-view.sp = SP
-view.tree.title = System · Skill Tree
-
 ; --- src/Professions.cpp ---
 profession.payout = [ SYSTEM ]  Craft recognised  —  +1 SP
 

@@ -11,26 +11,26 @@ namespace Isekai::UI::Payloads {
 
     // --- JSON helpers ---
 
-    [[nodiscard]] std::string Escape(const char* a_s) {
-        std::string out;
-        for (const char* p = a_s; p && *p; ++p) {
-            switch (*p) {
-            case '"':  out += "\\\""; break;
-            case '\\': out += "\\\\"; break;
-            case '\n': out += "\\n"; break;
-            case '\r': break;
-            case '\t': out += "\\t"; break;
-            default:
-                if (static_cast<unsigned char>(*p) >= 0x20) {
-                    out += *p;
-                }
-                break;
-            }
-        }
-        return out;
-    }
-
     namespace {
+        [[nodiscard]] std::string Escape(const char* a_s) {
+            std::string out;
+            for (const char* p = a_s; p && *p; ++p) {
+                switch (*p) {
+                case '"':  out += "\\\""; break;
+                case '\\': out += "\\\\"; break;
+                case '\n': out += "\\n"; break;
+                case '\r': break;
+                case '\t': out += "\\t"; break;
+                default:
+                    if (static_cast<unsigned char>(*p) >= 0x20) {
+                        out += *p;
+                    }
+                    break;
+                }
+            }
+            return out;
+        }
+
         [[nodiscard]] const char* Bool(bool a_b) { return a_b ? "true" : "false"; }
 
         // Just the file name of an icon path ("...\\icons\\x.png" -> "x.png"); the web
@@ -112,7 +112,7 @@ namespace Isekai::UI::Payloads {
         j += "\"reveal\":" + std::to_string(static_cast<int>(a_spec.revealCharsPerSec)) + ",";
         j += "\"width\":" + std::to_string(static_cast<int>(a_spec.widthHint)) + ",";
         j += "\"tone\":\"" + std::string(Logic::ToneName(a_spec.tone)) + "\",";
-        // The crest beside the title; the Prisma page ignores it. Absent when the panel
+        // The crest beside the title of the system page. Absent when the panel
         // has neither an icon nor a caption.
         if (!a_spec.emblemIcon.empty() || !a_spec.emblemCaption.empty()) {
             j += "\"emblem\":{\"icon\":\"";

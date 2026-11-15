@@ -1,8 +1,8 @@
 #pragma once
 
 // A per-frame tick on Skyrim's MAIN thread: a vtable hook on PlayerCharacter's
-// Update(float). It replaces the old clock inside the ImGui Present hook, which ran on
-// the render thread and had to hand every piece of work to an SKSE task.
+// Update(float). It replaces the old clock inside the render-thread Present hook, which
+// had to hand every piece of work to an SKSE task.
 //
 // Contract for listeners:
 // - They run on the main thread, once per frame, but ONLY while the player's update

@@ -33,20 +33,6 @@
               <files/>
               <typeDescriptor><type name="Recommended"/></typeDescriptor>
             </plugin>
-            <plugin name="PrismaUI">
-              <description>Renders the whole interface as a web page instead: the same screens, laid out with HTML and CSS. REQUIRES the PrismaUI framework to be installed separately - without it the mod silently falls back to the built-in interface, so this is safe to pick either way. This is the same patch that used to be a separate download.</description>
-              <image path="fomod\images\prismaui.png"/>
-              <files>
-                <!-- The icons are the same files the built-in path installs. Installed
-                     twice from one source rather than shipped twice: the icon set is
-                     almost the entire size of both archives. -->
-                <file   source="PrismaUI\views\IsekaiHero\index.html"
-                        destination="PrismaUI\views\IsekaiHero\index.html"/>
-                <folder source="SKSE\Plugins\IsekaiHero\icons"
-                        destination="PrismaUI\views\IsekaiHero\icons"/>
-              </files>
-              <typeDescriptor><type name="Optional"/></typeDescriptor>
-            </plugin>
           </plugins>
         </group>
 

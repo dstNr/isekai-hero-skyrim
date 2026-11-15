@@ -4,8 +4,6 @@
 #include <functional>
 #include <string>
 
-struct ImGuiIO;
-
 namespace Isekai::UI {
 
     // Run fn when a key is pressed, whether or not a panel is open. The callback is
@@ -60,8 +58,4 @@ namespace Isekai::UI {
     // via DirectInput, so WM_LBUTTONDOWN & friends never reach the window proc.
     // The game's InputEvent bus is the only place the clicks actually show up.
     void InstallInput();
-
-    // Push the accumulated input into ImGui. Must run on the render thread,
-    // *before* ImGui::NewFrame().
-    void FeedImGui(ImGuiIO& a_io);
 }

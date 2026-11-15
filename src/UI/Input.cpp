@@ -1,10 +1,7 @@
 #include "UI/Input.h"
 
 #include "Config.h"
-#include "UI/Overlay.h"
 #include "UI/Screens.h"
-
-#include <imgui.h>
 
 #include <algorithm>
 #include <array>
@@ -19,30 +16,6 @@
 namespace Isekai::UI {
 
     namespace {
-        // Skyrim's mouse id codes: buttons count up from 0, the wheel sits above them.
-        constexpr std::uint32_t kMouseLeft = 0;
-        constexpr std::uint32_t kMouseRight = 1;
-        constexpr std::uint32_t kMouseMiddle = 2;
-        constexpr std::uint32_t kMouseWheelUp = 8;
-        constexpr std::uint32_t kMouseWheelDown = 9;
-
-        // The game only ever gives us relative motion, so we keep the cursor
-        // position ourselves. Feels roughly like the vanilla menu cursor.
-        constexpr float kCursorSpeed = 1.6f;
-
-        // Left stick -> cursor, per event. The stick reports a position, not a motion,
-        // so this is a speed: how far the cursor travels while the stick is held all the
-        // way over. The deadzone is what stops a worn stick from drifting the cursor
-        // across the screen on its own.
-        constexpr float kStickSpeed = 13.0f;
-        constexpr float kStickDeadzone = 0.18f;
-
-        // The right stick scrolls, at a rate that reads like a wheel rather than a slide.
-        // One scrollable surface exists today — the skill tree's mastery rail — and a
-        // cursor alone cannot reach it: dragging inside a child window pans the tree
-        // behind it instead of scrolling the rail.
-        constexpr float kStickScrollSpeed = 0.35f;
-
         // Hotkeys are keyed by DEVICE and code, never by code alone. A gamepad button
         // arrives as its XInput mask — D-pad up is 0x0001, Start is 0x0010 — and those
         // collide head-on with keyboard scan codes, where 0x0001 is ESCAPE and 0x0010 is
@@ -84,15 +57,6 @@ namespace Isekai::UI {
                        : Config::KeyName(code);
         }
 
-        // Input events arrive on the main thread, ImGui is fed on the render
-        // thread, so everything crossing that line sits behind this lock.
-        struct Pending {
-            float                                    dx = 0.0f;
-            float                                    dy = 0.0f;
-            float                                    wheel = 0.0f;
-            std::vector<std::pair<int, bool>>        buttons;  // (ImGui button, down)
-        };
-
         // (The old compile-time kLogKeyPresses lived here. It is
         // Config::LogInputDiagnostics() now — a build switch is useless for diagnosing
         // someone else's machine.)
@@ -103,9 +67,6 @@ namespace Isekai::UI {
         // everything typed in game. It also keeps the log readable.
         constexpr int         kInputDiagnosticLimit = 200;
         std::atomic<int>      g_inputDiagnosticCount{ 0 };
-
-        std::mutex g_mutex;
-        Pending    g_pending;
 
         struct Hotkey {
             std::function<void()> fn;
@@ -230,92 +191,6 @@ namespace Isekai::UI {
                     FireHotkey(id);
                 }
 
-                if (!IsCapturingInput()) {
-                    return RE::BSEventNotifyControl::kContinue;
-                }
-
-                std::scoped_lock lock(g_mutex);
-
-                for (auto* event = *a_event; event; event = event->next) {
-                    // Gamepad: the left stick drives our cursor and A is a left click.
-                    //
-                    // Deliberately a cursor rather than ImGui's gamepad focus navigation.
-                    // Focus nav only reaches widgets, and the skill tree is a pannable
-                    // canvas with no widgets in it at all — a controller player would have
-                    // got the panels and not the tree. A cursor covers every screen we
-                    // have with one mechanism.
-                    if (event->GetDevice() == RE::INPUT_DEVICE::kGamepad) {
-                        if (event->GetEventType() == RE::INPUT_EVENT_TYPE::kThumbstick) {
-                            auto* stick = static_cast<RE::ThumbstickEvent*>(event);
-                            if (stick->IsRight()) {
-                                const float y = stick->yValue;
-                                if (std::abs(y) > kStickDeadzone) {
-                                    g_pending.wheel += y * kStickScrollSpeed;  // up scrolls up
-                                }
-                            } else if (stick->IsLeft()) {
-                                const float x = stick->xValue;
-                                const float y = stick->yValue;
-                                if (std::abs(x) > kStickDeadzone) {
-                                    g_pending.dx += x * kStickSpeed;
-                                }
-                                if (std::abs(y) > kStickDeadzone) {
-                                    g_pending.dy -= y * kStickSpeed;  // stick up is +y
-                                }
-                            }
-                        } else if (event->GetEventType() == RE::INPUT_EVENT_TYPE::kButton) {
-                            if (auto* button = event->AsButtonEvent();
-                                button && button->GetIDCode() == 0x1000) {  // A
-                                g_pending.buttons.emplace_back(ImGuiMouseButton_Left,
-                                                               button->IsPressed());
-                            }
-                        }
-                        continue;
-                    }
-
-                    if (event->GetDevice() != RE::INPUT_DEVICE::kMouse) {
-                        continue;
-                    }
-
-                    switch (event->GetEventType()) {
-                    case RE::INPUT_EVENT_TYPE::kMouseMove:
-                        if (auto* move = static_cast<RE::MouseMoveEvent*>(event)) {
-                            g_pending.dx += static_cast<float>(move->mouseInputX) * kCursorSpeed;
-                            g_pending.dy += static_cast<float>(move->mouseInputY) * kCursorSpeed;
-                        }
-                        break;
-
-                    case RE::INPUT_EVENT_TYPE::kButton:
-                        if (auto* button = event->AsButtonEvent()) {
-                            switch (button->GetIDCode()) {
-                            case kMouseLeft:
-                                g_pending.buttons.emplace_back(ImGuiMouseButton_Left,
-                                                               button->IsPressed());
-                                break;
-                            case kMouseRight:
-                                g_pending.buttons.emplace_back(ImGuiMouseButton_Right,
-                                                               button->IsPressed());
-                                break;
-                            case kMouseMiddle:
-                                g_pending.buttons.emplace_back(ImGuiMouseButton_Middle,
-                                                               button->IsPressed());
-                                break;
-                            case kMouseWheelUp:
-                                g_pending.wheel += 1.0f;
-                                break;
-                            case kMouseWheelDown:
-                                g_pending.wheel -= 1.0f;
-                                break;
-                            default:
-                                break;
-                            }
-                        }
-                        break;
-
-                    default:
-                        break;
-                    }
-                }
-
                 return RE::BSEventNotifyControl::kContinue;
             }
 
@@ -325,6 +200,9 @@ namespace Isekai::UI {
     }
 
     namespace {
+        // True while one of our Magelight screens is up and owns the keys.
+        [[nodiscard]] bool IsCapturingInput() { return HoldsInput(); }
+
         // Belt to the guard's braces. Consuming the key in the handler chain has not
         // reliably kept the journal shut (tried: front of the chain, back of the
         // chain, swallowing until key release) — so this attacks from the other end:
@@ -646,7 +524,7 @@ namespace Isekai::UI {
             manager->AddEventSink(InputSink::GetSingleton());
             logger::info("UI: hooked Skyrim's input event stream");
         } else {
-            logger::error("UI: no input device manager — the overlay will not take clicks");
+            logger::error("UI: no input device manager — the overlay will not see hotkeys");
         }
 
         if (auto* ui = RE::UI::GetSingleton()) {
@@ -691,48 +569,6 @@ namespace Isekai::UI {
                              "({} handlers)",
                              index, handlers.size());
             }
-        }
-    }
-
-    void FeedImGui(ImGuiIO& a_io) {
-        // Render-thread owned: the cursor only exists while we are drawing.
-        static float cursorX = 0.0f;
-        static float cursorY = 0.0f;
-        static bool  wasCapturing = false;
-
-        const bool capturing = IsCapturingInput();
-
-        // Drop the cursor in the middle of the screen each time a panel opens,
-        // instead of wherever it happened to be left last time.
-        if (capturing && !wasCapturing) {
-            cursorX = a_io.DisplaySize.x * 0.5f;
-            cursorY = a_io.DisplaySize.y * 0.5f;
-            std::scoped_lock lock(g_mutex);
-            g_pending = Pending{};
-        }
-        wasCapturing = capturing;
-
-        if (!capturing) {
-            a_io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);  // park it off-screen
-            return;
-        }
-
-        Pending pending;
-        {
-            std::scoped_lock lock(g_mutex);
-            pending = std::move(g_pending);
-            g_pending = Pending{};
-        }
-
-        cursorX = std::clamp(cursorX + pending.dx, 0.0f, a_io.DisplaySize.x);
-        cursorY = std::clamp(cursorY + pending.dy, 0.0f, a_io.DisplaySize.y);
-
-        a_io.AddMousePosEvent(cursorX, cursorY);
-        for (const auto& [button, down] : pending.buttons) {
-            a_io.AddMouseButtonEvent(button, down);
-        }
-        if (pending.wheel != 0.0f) {
-            a_io.AddMouseWheelEvent(0.0f, pending.wheel);
         }
     }
 }

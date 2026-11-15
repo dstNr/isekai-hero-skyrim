@@ -24,9 +24,6 @@ namespace Isekai::UI::Payloads {
         Logic::Tone         emblemTone = Logic::Tone::Cyan;
     };
 
-    // Escapes a C string for a JSON string literal (drops control characters, CR).
-    [[nodiscard]] std::string Escape(const char* a_s);
-
     // Whole tree + header. Reads game state (perk pool).
     [[nodiscard]] std::string Tree();
 

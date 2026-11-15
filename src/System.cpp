@@ -20,9 +20,7 @@
 #include "UI/Hud.h"
 #include "UI/Input.h"
 #include "UI/Magelight.h"
-#include "UI/Overlay.h"
 #include "UI/Screens.h"
-#include "UI/Style.h"
 #include "UI/ThreatLabels.h"
 
 #include <algorithm>
@@ -679,7 +677,6 @@ namespace Isekai {
             // the new keys are the ones armed (#37).
             const bool changed = BindAllHotkeys(/*a_log=*/false);
             SelfTest::OnHotkeysRebound(changed);
-            ::Isekai::UI::Style::g_userScale = Config::UiScale();
             UI::Screens::OnSettingsReloaded();  // the pages re-render at a changed UiScale
         }
 
@@ -1129,13 +1126,10 @@ namespace Isekai {
 
         void OnSKSEMessage(SKSE::MessagingInterface::Message* a_msg) {
             switch (a_msg->type) {
-            // No kPostPostLoad any more: it carried the ImGuiVRHelper handshake, and the
-            // in-headset layer is gone with Magelight UI (spec 8).
+            // No kPostPostLoad: the in-headset layer is Magelight UI now (spec 8).
             case SKSE::MessagingInterface::kDataLoaded:
                 Config::Load();
                 Loc::Load();  // after Config: it reads Config::Language()
-                // Copied out once, so the render thread never touches Config.
-                ::Isekai::UI::Style::g_userScale = Config::UiScale();
                 Plugin::DumpForms();
                 Passives::Install();
                 Sounds::Install();
@@ -1144,7 +1138,7 @@ namespace Isekai {
                 CraftHooks::Install();  // zero-transfer crafting (validation build for now)
                 ModAPI::Install();      // the export other plugins resolve by name
                 FrameTick::Install();   // main-thread clock: quests and the mod API publish
-                UI::Install();
+                UI::InstallInput();     // hotkeys, menu guard
                 UI::Magelight::Install();  // system and hud views; no-op without Magelight UI
                 UI::Screens::Install();    // what every fresh page gets first: loc table, UiScale
                 UI::Hud::Install();        // toasts, flourish, threat labels on the frame tick

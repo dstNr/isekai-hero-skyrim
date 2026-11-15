@@ -188,7 +188,7 @@ namespace Isekai::UI {
             Magelight::Close();
         }
 
-        // The panel's answer, with the sound rule the ImGui and Prisma panels had (choosing
+        // The panel's answer, with the sound rule the old panels had (choosing
         // clicks, dismissing a single button whooshes, after the unpause), then the
         // callback. A callback that shows the next screen (a chain of panels) gets the view
         // as it is, still in UI mode; only when it shows nothing does the view let go.

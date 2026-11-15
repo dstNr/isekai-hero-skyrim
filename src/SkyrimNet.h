@@ -7,7 +7,7 @@
 // recognition for <deed>" — so AI NPCs can react to the isekai premise. Nothing is
 // pulled back, and there is no build- or load-time dependency: if SkyrimNet is absent
 // (or the ini switch is off) every call here is a no-op. Same soft-dependency spirit as
-// the PrismaUI patch. Not verified in-game — needs a SkyrimNet install (see docs).
+// the Magelight host. Not verified in-game — needs a SkyrimNet install (see docs).
 
 namespace Isekai::SkyrimNet {
 

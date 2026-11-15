@@ -21,10 +21,8 @@ add_subdirectory(extern/CommonLibSSE-NG)
 get_target_property(COMMONLIB_SRC_DIR CommonLibSSE SOURCE_DIR)
 include(${COMMONLIB_SRC_DIR}/cmake/CommonLibSSE.cmake)
 
-find_package(imgui CONFIG REQUIRED)
 find_package(minhook CONFIG REQUIRED)
-# Required by the vendored ImGuiVRHelper client API: its InputCombo serialises through
-# nlohmann_json so clients can persist bindings.
+# The Magelight payloads are built and re-serialised with nlohmann_json.
 find_package(nlohmann_json CONFIG REQUIRED)
 
 add_commonlibsse_plugin(
@@ -69,7 +67,6 @@ add_commonlibsse_plugin(
         src/Storage.h
         src/CraftHooks.cpp
         src/CraftHooks.h
-        src/PrismaUI_API.h
         src/ModAPI.cpp
         src/ModAPI.h
         include/IsekaiHeroAPI.h
@@ -81,42 +78,22 @@ add_commonlibsse_plugin(
         src/UI/Input.h
         src/UI/Magelight.cpp
         src/UI/Magelight.h
-        src/UI/Overlay.cpp
-        src/UI/Overlay.h
         src/UI/Payloads.cpp
         src/UI/Payloads.h
-        src/UI/Prisma.cpp
-        src/UI/Prisma.h
         src/UI/Screens.cpp
         src/UI/Screens.h
         src/UI/ThreatLabels.cpp
         src/UI/ThreatLabels.h
-        src/UI/Style.h
         src/UI/UiLogic.h
-        src/UI/Textures.cpp
-        src/UI/Textures.h
-        src/UI/VROverlay.cpp
-        src/UI/VROverlay.h
-        # Vendored, LGPL-3.0-or-later, unmodified — see extern/imgui-vr-helper/README.md.
-        # Only the handshake needs compiling; everything else in there is header-only.
-        extern/imgui-vr-helper/ImGuiVRHelperAPI.cpp
-        extern/imgui-vr-helper/ImGuiVRHelperAPI.h
 )
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
 
-# ImGui renders straight into the game's D3D11 swap chain (see src/UI/Overlay.cpp).
 # MinHook detours the crafting inventory-count functions (see src/CraftHooks.cpp).
-target_link_libraries(${PROJECT_NAME} PRIVATE imgui::imgui d3d11.lib dxgi.lib minhook::minhook
-                                             nlohmann_json::nlohmann_json)
+target_link_libraries(${PROJECT_NAME} PRIVATE minhook::minhook nlohmann_json::nlohmann_json)
 
-# stb_image decodes the panel icon PNGs (header-only; vcpkg ships no CMake config).
-find_path(STB_INCLUDE_DIRS "stb_image.h" REQUIRED)
-target_include_directories(${PROJECT_NAME} PRIVATE ${STB_INCLUDE_DIRS})
-
-# So sources can say #include "UI/Overlay.h", and #include "ImGuiVRHelperClientSDK.h"
-# without spelling out the vendor path at every call site.
-target_include_directories(${PROJECT_NAME} PRIVATE src extern/imgui-vr-helper extern/magelight
+# So sources can say #include "UI/Screens.h" without spelling out the path at every call site.
+target_include_directories(${PROJECT_NAME} PRIVATE src extern/magelight
                                                    ${CMAKE_BINARY_DIR}/generated)
 
 # UI build id: IsekaiBuildId.h (plugin) and version.js (pages) get the same id from the

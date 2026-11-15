@@ -29,11 +29,11 @@ namespace Isekai::Sounds {
 
     // Play a_ms from now, back on the main thread.
     //
-    // Needed whenever a sound follows a PrismaUI view losing focus: that unfocus
+    // Needed whenever a sound follows a UI view losing focus: that unfocus
     // takes the game out of menu-pause, and the engine's resume pass discards
     // sounds started in the same frame — the level-up sting simply never reached
-    // the speakers. A grace period of kResumeGraceMs sidesteps it. The ImGui UI
-    // never pauses the game, so it has no such problem and calls Play directly.
+    // the speakers. A grace period of kResumeGraceMs sidesteps it. A UI that never
+    // pauses the game has no such problem and calls Play directly.
     void PlayDelayed(Sfx a_sfx, std::uint32_t a_ms);
 
     // Long enough to land in a later frame than the unpause, short enough that

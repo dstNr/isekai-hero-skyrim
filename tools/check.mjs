@@ -476,28 +476,6 @@ check("readiness: every blocker has a name, and System.cpp no longer owns the ch
   return `${names.length} blockers named`;
 });
 
-check("vr startup: the probe, the first Present and each PrismaUI call are logged", () => {
-  // #35: a VR game died silently between "overlay armed" and the next line we always log.
-  // Each step in that gap must leave a line, or the next report narrows nothing.
-  const ov = read("src/UI/Overlay.cpp");
-  const pr = read("src/UI/Prisma.cpp");
-  need(ov.includes("VR probe — creating") && ov.includes("VR probe — released"),
-       "the swap-chain probe must log before creating and after releasing");
-  need(ov.includes("Present before our patch is"), "Present's owning module must be logged before patching");
-  const hook = ov.slice(ov.indexOf("HRESULT WINAPI HookedPresent"));
-  const vr = hook.slice(0, hook.indexOf("static bool initTried"));
-  need(vr.includes("LogVRPresentSeen(") && vr.includes("first call returned"),
-       "the VR branch of HookedPresent must log the first call in and out");
-  const inst = pr.slice(pr.indexOf("void Install()"));
-  const req = inst.indexOf("requesting the API");
-  const api = inst.indexOf("RequestPluginAPI");
-  const crt = inst.indexOf("creating the view");
-  const view = inst.indexOf("CreateView(");
-  need(req >= 0 && req < api, "Prisma::Install must log before RequestPluginAPI");
-  need(crt >= 0 && crt < view, "Prisma::Install must log before CreateView");
-  return "probe, Present and Prisma steps logged";
-});
-
 check("magelight: Install logs before RequestApi4 and each CreateViewEx, and page paths are under Data\\Magelight\\IsekaiHero", () => {
   // Same lesson as #35: a crash inside a host call must leave the line naming that call.
   // Install creates its views through one helper, Create(), so every Create(api, ...) in
@@ -606,7 +584,7 @@ check("ui: every icon a C++ file names by hand exists", () => {
   // have passed with every blessing PNG missing, which is precisely the case it exists
   // for. Add a helper here whenever a new one is introduced.
   //
-  // Comments are stripped first: Prisma.cpp explains its path helper with a
+  // Comments are stripped first: a comment can explain a path helper with a
   // "…\\icons\\x.png" example, and an example is not a missing file.
   const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
   const patterns = [/icons\\\\([\w.]+\.png)/g, /BlessingIcon\("([\w.]+\.png)"\)/g];
@@ -962,8 +940,6 @@ check("fomod: the installer offers files that exist, and presets that are curren
     "SKSE\\Plugins\\IsekaiHero.ini": "IsekaiHero.ini",
     "LICENSE": "LICENSE",
     "Sound": "sounds",
-    "PrismaUI\\views\\IsekaiHero\\index.html":
-      "prisma-patch/PrismaUI/views/IsekaiHero/index.html",
     "SKSE\\Plugins\\IsekaiHero\\icons": "icons",
     "MCM\\Config\\IsekaiHero": "mcm-patch/MCM/Config/IsekaiHero",
     "Scripts\\IsekaiHeroMCM.pex": "mcm-patch/Scripts/IsekaiHeroMCM.pex",
@@ -2028,18 +2004,14 @@ check("hotkeys: every registration is rebindable, and a settings reload rebinds"
 
 /* -- 10. the main-thread tick ---------------------------------------------- */
 
-check("tick: quests and the mod API run from FrameTick, not the Present hook", () => {
-  // The clock used to live in the ImGui Present hook, on the render thread, and that
-  // hook is going away. A call left behind in Overlay.cpp would tick twice as long as
-  // the hook lives, then silently stop when it is deleted.
+check("tick: quests and the mod API run from FrameTick", () => {
+  // The clock used to live in a render-thread Present hook, which is gone. The two
+  // calls belong to the main-thread FrameTick now.
   const tick = read("src/FrameTick.cpp");
-  const overlay = read("src/UI/Overlay.cpp");
   const names = ["Quests::Tick", "ModAPI::PublishIfChanged"];
   const missing = names.filter((n) => !tick.includes(n));
   need(missing.length === 0, `FrameTick.cpp does not call ${missing.join(", ")}`);
-  const leftover = names.filter((n) => overlay.includes(n));
-  need(leftover.length === 0, `Overlay.cpp still names ${leftover.join(", ")}`);
-  return "both in FrameTick, neither in Overlay";
+  return "both in FrameTick";
 });
 
 /* -- report ---------------------------------------------------------------- */

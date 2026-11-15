@@ -104,7 +104,7 @@ namespace Isekai::Config {
     [[nodiscard]] bool SkyrimNetIntegration();
 
     // Floating threat verdicts over actors (src/UI/ThreatLabels.cpp). Default on.
-    // SE/AE only — they are drawn by the ImGui overlay, which Skyrim VR does not get.
+    // Drawn by the Magelight hud view (src/UI/Hud.cpp).
     [[nodiscard]] bool ThreatLabels();
 
     // Which actors carry one.

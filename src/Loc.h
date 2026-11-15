@@ -69,7 +69,7 @@ namespace Isekai::Loc {
         }
     }
 
-    // The whole loaded table as a JSON object, for the PrismaUI view.
+    // The whole loaded table as a JSON object, for the Magelight pages.
     //
     // The web view cannot call Get(): its chrome is written in HTML and JavaScript and
     // never passes through C++ at all. So it gets the table itself, once, and does the

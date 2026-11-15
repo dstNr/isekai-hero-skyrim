@@ -182,7 +182,7 @@ namespace Isekai::Progression {
         }
 
         // How many of the 79 milestones are already granted. Shared by the status panel,
-        // the PrismaUI status JSON, and SystemRank below — previously computed inline in
+        // the status payload, and SystemRank below — previously computed inline in
         // the first two, drifting into three near-identical loops otherwise.
         [[nodiscard]] std::size_t MilestonesEarned() {
             std::size_t earned = 0;
