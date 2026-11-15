@@ -18,7 +18,6 @@
     /*
        BuildStatusJson (src/Progression.cpp): rank, power tier and mode, milestones,
        points, the standing objective, attunement totals and the titles earned. */
-    let rebootArmed = 0;
 
     /* The rank's tone. The plugin sends it as rankTone (Logic::ToneForRank); a plugin
        that does not yet gets the same rule, which has one case: S is gold. */
@@ -38,26 +37,11 @@
 
     function statusAction(a) {
       ui.send("status", a);
-      // Tree and shop swap in place; reroll re-pushes this screen. Storage opens a game
-      // menu, reboot restarts the System and close ends it: those leave this screen.
-      if (a === "close" || a === "storage" || a === "reboot") closing();
-    }
-
-    /* Reboot re-opens the whole blessing choice, so it takes a deliberate second press
-       within three seconds; anything else lets it lapse. */
-    function rebootClick(btn) {
-      if (rebootArmed) {
-        clearTimeout(rebootArmed); rebootArmed = 0;
-        statusAction("reboot");
-        return;
-      }
-      btn.classList.add("armed");
-      btn.querySelector(".lbl").textContent = t("view.confirmReboot", "Confirm reboot?");
-      rebootArmed = setTimeout(() => {
-        rebootArmed = 0;
-        btn.classList.remove("armed");
-        btn.querySelector(".lbl").textContent = t("view.reboot", "Reboot");
-      }, 3000);
+      // Tree and shop swap in place; reroll re-pushes this screen; reboot swaps in the
+      // plugin's red confirmation panel (what is kept, what is undone), which is the one
+      // confirmation it gets. Storage opens a game menu and close ends the view: those
+      // leave this screen.
+      if (a === "close" || a === "storage") closing();
     }
 
     function statusButton(box, id, label, icon, onClick) {
@@ -83,7 +67,6 @@
       const nav = $("sNav"), acts = $("sActions");
       const was = focusedId(nav) || focusedId(acts);
       nav.innerHTML = ""; acts.innerHTML = "";
-      if (rebootArmed) { clearTimeout(rebootArmed); rebootArmed = 0; }
 
       if (s.hasTree)    addIcon(t("view.skillTree", "Skill Tree"), "ui_skilltree.png", "tree");
       if (s.hasStorage) addIcon(t("view.storage", "Storage"), "ui_storage.png", "storage");
@@ -93,7 +76,7 @@
       // exists at all; the page only obeys.
       if (s.questCanReroll) statusButton(acts, "reroll", t("view.newTask", "New Task"), "", () => statusAction("reroll"));
       if (s.canReboot) {
-        const rb = statusButton(acts, "reboot", t("view.reboot", "Reboot"), "", rebootClick);
+        const rb = statusButton(acts, "reboot", t("view.reboot", "Reboot"), "", () => statusAction("reboot"));
         rb.setAttribute("data-tone", "red");
       }
       statusButton(acts, "close", t("view.close", "Close"), "", () => statusAction("close"));

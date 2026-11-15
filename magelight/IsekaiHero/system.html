@@ -484,7 +484,7 @@
   const ui = window.isekaiUi;
   const { esc, iconUrl, t, tf } = ui;
   const $ = (id) => document.getElementById(id);
-  const TONES = { cyan: 1, gold: 1, red: 1, violet: 1 };
+  const TONES = ui.TONES;    // the four tones, no prototype (common.js); also the screens' (core)
   const toneOf = (v) => (TONES[v] ? v : "cyan");
 
   /* Every kind of pad/keyboard target: buttons and choice cards (panel), icon actions,
@@ -506,6 +506,8 @@
                             screen with new numbers (a purchase, a respec): it updates
                             in place, keeps the pad's focus and plays no animation
        home()               where the pad lands on its first press
+       closed()             optional: the view was closed, drop transient state (an
+                            armed button)
      Switching screens inside an open view swaps without reopening; a show after
      the view was closed by an action plays the projector flicker-on.
 
@@ -614,6 +616,18 @@
       stage.classList.remove("closing");
       chosen = false;
     }, 1500);
+  }
+
+  /* The plugin closed the view, or saw it closed: Escape or pad B handed to Magelight on
+     a data screen, another mod taking UI mode, a load. The page did not ask for it, so it
+     still thinks the screen is up. Let go of it: the next show starts fresh and plays the
+     projector flicker-on, and nothing armed or chosen survives into it. Idempotent. */
+  function closed() {
+    open = false;
+    clearTimeout(reopenTimer);
+    chosen = false;
+    if (typer) typer.cancel();
+    Object.keys(SCREENS).forEach((s) => { if (SCREENS[s].closed) SCREENS[s].closed(); });
   }
 
   function rerender() {
@@ -935,6 +949,8 @@
     loc: (table) => { ui.setLoc(table); rerender(); },
     scale: (s) => { ui.setScale(s); rerender(); },
     hello: () => ui.ready(),
+    // UI mode ended without a reopen (src/UI/Screens.cpp, SendClosed).
+    closed: () => closed(),
     // The hud's toast, shown here instead of on the hud while the hud view sits below
     // this one and this one holds UI mode (Hud.cpp then sends it here only, never to
     // both, so a toast is never seen twice).

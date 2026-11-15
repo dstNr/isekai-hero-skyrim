@@ -66,13 +66,16 @@ namespace Isekai::UI {
     // answer: the "don't open anything over it" guard. Any thread.
     [[nodiscard]] bool IsSystemScreenOpen();
 
-    // The system view is open or queued for UI mode. Unlike IsSystemScreenOpen, a decision
-    // waiting off screen does not count. For the input guards in Input.cpp. Any thread.
+    // The system view has ENTERED UI mode and holds it: the screen is on display and the
+    // player is looking at it. A screen still queued behind another mod's UI mode does not
+    // count (its keys belong to whatever is on screen), and neither does a decision waiting
+    // off screen. For the input guards in Input.cpp. Any thread.
     [[nodiscard]] bool HoldsInput();
 
     // Escape / Tab / pad B from the game's menu chain: closes a data screen, answers a
     // panel with one text button with that button, and leaves a decision alone. Acts only
-    // on the screen that is up NOW, on the next game-thread task. Any thread.
+    // on the screen that is up NOW and entered (HoldsInput), on the next game-thread task,
+    // so it never answers a panel the player has not seen. Any thread.
     void DismissSystemWindow();
 
     // Magelight UI is there and both views exist (spec 6.5). Any thread.
@@ -129,5 +132,9 @@ namespace Isekai::UI::Screens::detail {
 
     // A page sent "isekai.ready"; every call queued for it has been sent.
     void OnPageReady(Magelight::View a_view, std::string a_version);
+
+    // The system page was reloaded (ViewReloaded): its state is gone, so the next ready
+    // shows the current screen again, once.
+    void OnPageReloaded();
 
 }  // namespace Isekai::UI::Screens::detail

@@ -2,7 +2,7 @@
 
 // Engine-free logic of the Magelight UI: tones, threat verdicts, the JS-to-plugin
 // action wire format, the page ready gate, decision re-offer, the label push gate and
-// the label geometry, content hash and heartbeat.
+// the label geometry, content hash and heartbeat, and the page console rate limit.
 //
 // Standard library only, on purpose: the plugin and the bare-MSVC unit tests
 // (tests/ui_logic_tests.cpp) both compile this header.
@@ -336,14 +336,18 @@ namespace Isekai::UI::Logic {
         std::uint64_t h_ = 14695981039346656037ull;
     };
 
-    // The labels' sign of life. The page hides every label 300 ms after the last labels.*
-    // call (the frame tick stops in free camera and while paused). While labels are up
-    // and a frame sends nothing (the push gate said None), keep() goes out once the last
-    // call is kPeriod old: at most 4 Hz, well inside the 300 ms.
+    // The labels' sign of life. The page hides every label kPageStale after the last
+    // labels.* call (the frame tick stops in free camera and while paused). While labels
+    // are up and a frame sends nothing (the push gate said None), keep() goes out once the
+    // last call is kPeriod old: at most 4 Hz. kPageStale is more than twice kPeriod, so a
+    // frame that lands late at a low frame rate (a keep() due at 250 ms that goes out with
+    // the next frame, 100 ms later) does not blink the labels off.
     class LabelHeartbeat {
     public:
         using Clock = std::chrono::steady_clock;
         static constexpr std::chrono::milliseconds kPeriod{ 250 };
+        // hud.html's STALE_MS (tools/check.mjs holds the two equal).
+        static constexpr std::chrono::milliseconds kPageStale{ 600 };
 
         // A labels.* call went out (full, pos or keep).
         void Sent(Clock::time_point a_now) { last_ = a_now; }
@@ -358,6 +362,48 @@ namespace Isekai::UI::Logic {
 
     private:
         std::optional<Clock::time_point> last_;
+    };
+
+    // --- Page console rate limit --------------------------------------------------
+
+    // Page console messages go to the plugin log; a page stuck in a loop that warns every
+    // frame would fill it. At most kMax lines per kWindow, counted from the first message
+    // of a window; what is held back is counted and reported once, with the first message
+    // of the next window.
+    class ConsoleLogLimit {
+    public:
+        using Clock = std::chrono::steady_clock;
+        static constexpr std::uint32_t kMax = 20;
+        static constexpr std::chrono::seconds kWindow{ 10 };
+
+        struct Verdict {
+            bool log = false;              // write this message
+            std::uint32_t suppressed = 0;  // first write "N messages suppressed" (0 = none)
+        };
+
+        Verdict Admit(Clock::time_point a_now) {
+            Verdict v;
+            // A new window, also when the clock reads earlier than the window start.
+            if (!start_ || a_now < *start_ || a_now - *start_ >= kWindow) {
+                v.suppressed = std::exchange(held_, 0u);
+                start_ = a_now;
+                count_ = 0;
+            }
+            if (count_ < kMax) {
+                ++count_;
+                v.log = true;
+            } else {
+                ++held_;
+            }
+            return v;
+        }
+
+        std::uint32_t Held() const { return held_; }
+
+    private:
+        std::optional<Clock::time_point> start_;
+        std::uint32_t count_ = 0;
+        std::uint32_t held_ = 0;
     };
 
     // --- UI-mode exits we owe ourselves ---------------------------------------------

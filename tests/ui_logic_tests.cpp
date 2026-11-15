@@ -388,8 +388,9 @@ namespace {
         hb.Sent(t0 + milliseconds(240));
         EXPECT(!hb.KeepDue(t0 + milliseconds(260)));
         EXPECT(hb.KeepDue(t0 + milliseconds(490)));
-        // Well inside the page's 300 ms staleness limit.
-        EXPECT(LabelHeartbeat::kPeriod < milliseconds(300));
+        // Well inside the page's staleness limit, with room for a late frame.
+        EXPECT(LabelHeartbeat::kPeriod * 2 < LabelHeartbeat::kPageStale);
+        EXPECT(LabelHeartbeat::kPageStale == milliseconds(600));
         // A clock that reads earlier is due, never wedged.
         EXPECT(hb.KeepDue(t0));
         hb.Reset();
@@ -406,6 +407,43 @@ namespace {
             }
         }
         EXPECT(keeps == 4);
+    }
+
+    void ConsoleLimit() {
+        using Clock = ConsoleLogLimit::Clock;
+        using std::chrono::milliseconds;
+        using std::chrono::seconds;
+        const Clock::time_point t0{};
+        ConsoleLogLimit lim;
+        // The first kMax messages of a window are logged, nothing is reported held.
+        for (std::uint32_t i = 0; i < ConsoleLogLimit::kMax; ++i) {
+            const auto v = lim.Admit(t0 + milliseconds(i));
+            EXPECT(v.log && v.suppressed == 0);
+        }
+        // The rest of the window is held back and counted.
+        for (int i = 0; i < 5; ++i) EXPECT(!lim.Admit(t0 + seconds(9)).log);
+        EXPECT(lim.Held() == 5);
+        // The next window reports the count once, with its first message, which is logged.
+        const auto next = lim.Admit(t0 + seconds(10));
+        EXPECT(next.log && next.suppressed == 5);
+        EXPECT(lim.Held() == 0);
+        EXPECT(lim.Admit(t0 + seconds(11)).suppressed == 0);
+        // A quiet page never reports anything.
+        ConsoleLogLimit quiet;
+        EXPECT(quiet.Admit(t0).suppressed == 0);
+        EXPECT(quiet.Admit(t0 + seconds(30)).suppressed == 0);
+        // A clock that reads earlier starts a new window rather than wedging.
+        ConsoleLogLimit back;
+        for (std::uint32_t i = 0; i <= ConsoleLogLimit::kMax; ++i) back.Admit(t0 + seconds(5));
+        EXPECT(back.Held() == 1);
+        const auto v = back.Admit(t0);
+        EXPECT(v.log && v.suppressed == 1);
+        // A flood of 1000 messages in one window writes kMax lines, then one count.
+        ConsoleLogLimit flood;
+        int lines = 0;
+        for (int i = 0; i < 1000; ++i) lines += flood.Admit(t0 + milliseconds(i)).log ? 1 : 0;
+        EXPECT(lines == static_cast<int>(ConsoleLogLimit::kMax));
+        EXPECT(flood.Admit(t0 + seconds(20)).suppressed == 1000 - ConsoleLogLimit::kMax);
     }
 
     void PageBuild() {
@@ -445,6 +483,7 @@ int main() {
         { "LabelPoolSteps", LabelPoolSteps },
         { "LabelContentHash", LabelContentHash },
         { "LabelKeepCadence", LabelKeepCadence },
+        { "ConsoleLimit", ConsoleLimit },
         { "PageBuild", PageBuild },
     };
 

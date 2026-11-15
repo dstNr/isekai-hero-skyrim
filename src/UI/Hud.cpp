@@ -295,7 +295,7 @@ namespace Isekai::UI {
         // ---- the menu watcher ------------------------------------------------------
 
         // A menu that pauses the game, or the console, opens: the frame tick stops, and
-        // labels left on the page would hang over the menu until the page's 300 ms
+        // labels left on the page would hang over the menu until the page's 600 ms
         // staleness hides them. Clear them at once instead.
         class MenuWatcher final : public RE::BSTEventSink<RE::MenuOpenCloseEvent> {
         public:

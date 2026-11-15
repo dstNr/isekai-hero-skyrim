@@ -26,7 +26,6 @@ view.blessing = Blessing
 view.catalogEmpty = The catalog is empty.
 view.close = Close
 view.confirm = Confirm?
-view.confirmReboot = Confirm reboot?
 view.custom.gift = Gift
 view.custom.rewards = Rewards
 view.custom.tree = Tree
@@ -340,10 +339,15 @@ path.dormant = The dormant blessing stirs.\nHow will each awakening reach you?\n
 status.mode.custom =   (CUSTOM)
 status.mode.dormant =   (DORMANT)
 status.mode.shattered =   (SHATTERED)
-window.system = [ SYSTEM ]
 
 ; --- src/UI/Screens.cpp ---
+button.cancel = CANCEL
+button.reboot = REBOOT
+reboot.confirm = REBOOT THE SYSTEM?\n\nRe-opens the blessing choice, so you can pick a different path\n(tier, Full/Shattered, Dormant).\n\nKEPT:    milestones, System Points, storage. The skill\n         tree is refunded, not lost — every point spent\n         on it comes back to spend again.\nUNDONE:  the skills and attributes a previous blessing\n         granted — you return to the mortal you were\n         when the System first bound itself. Your\n         character level is left alone.\nNOTE:    gold and perk points already spent stay spent.\n         A character from before this update has no such\n         record, and keeps what it was given.
+ui.decisionWaiting = [ SYSTEM ] A choice is waiting — press {}
+ui.menuKeyUnbound = the System menu key
 ui.needsMagelight = [ SYSTEM ] Isekai Hero needs Magelight UI (1.7.0 or newer). The System will wait.
+window.system = [ SYSTEM ]
 
 ; --- src/UI/ThreatLabels.cpp ---
 threat.toggleOff = Threat display  OFF

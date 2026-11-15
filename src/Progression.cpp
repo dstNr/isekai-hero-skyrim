@@ -294,8 +294,10 @@ namespace Isekai::Progression {
                 });
                 return;
             }
+            // A milestone payout: gold (spec 7.2).
             UI::ShowSystemWindow(L("window.system", "[ SYSTEM ]"), std::move(a_body),
-                                 { L("button.accept", "ACCEPT") }, [](int) {});
+                                 { L("button.accept", "ACCEPT") }, [](int) {}, 45.0f, 720.0f,
+                                 UI::Logic::Tone::Gold);
         }
 
         // Fire the flourish, then bring up the panel once it has played out.

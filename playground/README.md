@@ -45,10 +45,10 @@ then open the printed URL: **http://localhost:5173/playground/**
 
 | Control | What it does |
 |---------|--------------|
-| **Panel** buttons | Story (cyan, one button), Blessing ×5 (the real five-way choice, capsule row), Blessing ×3 (cards), Awakening (two cards), Dormant (violet), Warning (red self-test), Emblem (crest + icon actions). Choices continue the flow as in game. |
+| **Panel** buttons | Story (gold, one button), Blessing ×5 (the real five-way choice, capsule row, gold), Blessing ×3 (cards, the violet CUSTOM builder), Awakening (two cards, red: FULL or SHATTERED), Dormant (violet), Reboot (red confirmation), Warning (red self-test), Emblem (crest + icon actions). Choices continue the flow as in game. |
 | **Status** | The ledger for each blessing kind: Custom (violet blessing, the three dials), S rank (rank and ASCENDED gold, all 79 titles), Hero (cyan), Shattered (red), Dormant (violet, awakening level, the System quiet). |
 | **Screens** | Skill tree; Shop; Shop 12 SP (sets the balance so the dearest goods cannot be afforded). Buying, respec, Back and the status buttons continue as in game. |
-| **Hud** | Toasts (a burst: objective banner, a kill tally that replaces itself under one key, a payout, the objective paid out in gold), Banners (gold, red and a line at once), Flourish and Grandmaster (gold), Labels (12 threat labels drifting, `labels.pos` at 60 Hz), Still (8 labels, only the 4 Hz `labels.keep()` heartbeat), Stall (no label call at all — free camera or a pause: the page hides them after 300 ms; Labels or Still brings them back), Clear (`labels.full([])`, what a pausing menu sends). |
+| **Hud** | Toasts (a burst: objective banner, a kill tally that replaces itself under one key, a payout, the objective paid out in gold), Banners (gold, red and a line at once), Flourish and Grandmaster (gold), Labels (12 threat labels drifting, `labels.pos` at 60 Hz), Still (8 labels, only the 4 Hz `labels.keep()` heartbeat), Stall (no label call at all — free camera or a pause: the page hides them after 600 ms; Labels or Still brings them back), Clear (`labels.full([])`, what a pausing menu sends). |
 | **VR** | The hud in VR: threat labels become the head-locked scan list, most dangerous first. |
 | **Tone** | Re-shows the panel in another tone (in game C++ picks it). |
 | **Scene** | Dusk, snow (bright — the legibility check), field (mid-grey with figures — the label check) or night behind the page. |
@@ -67,7 +67,7 @@ completes it.
 `?open=<id>&tone=<cyan|gold|red|violet>&scene=<dusk|snow|field|night>&dock=0&instant=1&vr=1`
 opens a scenario straight away (`instant=1` skips the typewriter, `vr=1` puts
 the hud in VR mode). Ids:
-`story`, `blessing`, `cards`, `awaken`, `dormant`, `warning`, `emblem`,
+`story`, `blessing`, `cards`, `awaken`, `dormant`, `reboot`, `warning`, `emblem`,
 `status`, `status-s`, `status-hero`, `status-shattered`, `status-dormant`, `tree`,
 `shop`, `shop-low`, `hud-toasts`, `hud-banner`, `hud-flourish`, `hud-flourish-gm`,
 `hud-labels`, `hud-labels-still`, `hud-stall`, `hud-clear` (`open=none` opens

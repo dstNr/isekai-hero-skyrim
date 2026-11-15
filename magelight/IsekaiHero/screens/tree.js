@@ -544,6 +544,8 @@
     $("tClose").onclick = closeScreen;
     $("tRespec").onclick = respecClick;
 
-    return { render: renderTree, escape: () => false, onEscape: closeScreen, refresh: true, home: treeHome };
+    // closed: an armed respec must not survive the view closing under it.
+    return { render: renderTree, escape: () => false, onEscape: closeScreen, refresh: true, home: treeHome,
+             closed: disarmRespec };
   };
 })(window);

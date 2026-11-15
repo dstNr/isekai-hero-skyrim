@@ -28,6 +28,12 @@
 // so the state below is game-thread only. The atomics are the part other threads read
 // (the input guards, DismissSystemWindow).
 //
+// "Requested" and "entered" are kept apart: g_open says a screen is wanted (UI mode asked
+// for, maybe still queued behind another mod), g_entered that the host has entered it and
+// the screen is on display. The input guards and Escape key on entered: a screen queued
+// behind another mod's view owns no keys, and a reward panel nobody has seen yet must not
+// be answered by an Escape meant for that other view.
+//
 // UI mode bookkeeping (Logic::OwnExits). Every UI-mode period we enter ends in exactly one
 // UIModeExited. An exit we caused (Close, after the period was entered) is counted and
 // swallowed, and a screen opened while one is still owed asks for UI mode only once it
@@ -84,11 +90,13 @@ namespace Isekai::UI {
         std::optional<PanelState> g_panel;
         Logic::PendingDecision    g_decision;
         std::uint32_t             g_panelIds = 0;
-        bool                      g_entered = false;       // UIModeEntered seen since the last exit
+        std::atomic<bool>         g_entered{ false };      // UIModeEntered seen since the last exit (HoldsInput)
         Logic::OwnExits           g_ownExits;              // exits our releases still owe, a request waiting on them
         bool                      g_autoReoffered = false; // the one automatic re-offer is spent
+        std::uint32_t             g_notedDecision = 0;     // the panel id the "choice is waiting" note was shown for
+        bool                      g_holdNote = false;      // the hotkey offers the decision itself right after
         std::string               g_lastShow;              // re-sent to a system page that reloaded
-        int                       g_systemReadies = 0;
+        bool                      g_reloaded = false;      // the system page reloaded; its next ready re-shows, once
         bool                      g_showQueued = false;    // a show waits in the gate for the next ready
         std::chrono::steady_clock::time_point g_openedAt;   // the last RequestOpen
 
@@ -152,6 +160,51 @@ namespace Isekai::UI {
 
         void Lost(bool a_exited, std::string_view a_why);
 
+        // Tells the page its view is no longer open, so the next show plays the open
+        // animation and starts the screen fresh (Escape or pad B can end UI mode without the
+        // page having asked). Idempotent on the page.
+        void SendClosed() { Magelight::Run(Magelight::View::System, "isekai.closed()"); }
+
+        // "0x1f (S)" -> "S": the name a key carries in Config's tables, else its code.
+        std::string KeyLabel(const std::string& a_name) {
+            const auto open = a_name.find('(');
+            const auto close = a_name.rfind(')');
+            if (open == std::string::npos || close == std::string::npos || close <= open + 1) return a_name;
+            return a_name.substr(open + 1, close - open - 1);
+        }
+
+        // The system-menu key as the player presses it: keyboard, then pad ("RSHIFT + S /
+        // LB + BACK"), each with its modifier.
+        std::string MenuKeyText() {
+            std::string out;
+            if (const auto key = Config::SystemMenuKey()) {
+                const auto mod = Config::SystemMenuModifier();
+                out = (mod ? KeyLabel(Config::KeyName(mod)) + " + " : std::string{}) + KeyLabel(Config::KeyName(key));
+            }
+            if (const auto pad = Config::GamepadMenuButton()) {
+                const auto mod = Config::GamepadMenuModifier();
+                if (!out.empty()) out += " / ";
+                out += (mod ? KeyLabel(Config::GamepadButtonName(mod)) + " + " : std::string{}) +
+                       KeyLabel(Config::GamepadButtonName(pad));
+            }
+            return out.empty() ? std::string(L("ui.menuKeyUnbound", "the System menu key")) : out;
+        }
+
+        // A decision lost UI mode and is not offered again by itself: say so once per
+        // decision, with a native HUD note (our own hud may be what went away), so it does
+        // not wait unseen.
+        void NoteWaitingDecision() {
+            if (!g_panel || g_holdNote || g_notedDecision == g_panel->id) return;
+            g_notedDecision = g_panel->id;
+            if (!Available()) {
+                ShowNeedsMagelight();  // the overlay is gone: no key would bring it back
+                return;
+            }
+            const std::string note =
+                LF("ui.decisionWaiting", "[ SYSTEM ] A choice is waiting — press {}", MenuKeyText());
+            RE::SendHUDMessage::ShowHUDMessage(note.c_str());
+        }
+
         // RequestOpen (pause and queue). A request the host turns down at once is handled
         // as a loss on the next task, never inside the caller's Show*: a single-button panel
         // answers itself there, and its callback must not run under its own ShowSystemWindow.
@@ -162,7 +215,10 @@ namespace Isekai::UI {
             if (Magelight::RequestOpen()) return;
             if (auto* task = SKSE::GetTaskInterface()) {
                 task->AddTask([request]() {
-                    if (g_open.load() && !g_entered && g_requests == request) Lost(false, "the host turned the request down");
+                    if (g_open.load() && !g_entered && g_requests == request) {
+                        Lost(false, "the host turned the request down");
+                        if (!g_open.load()) SendClosed();  // no exit follows to tell the page
+                    }
                 });
             }
         }
@@ -183,9 +239,12 @@ namespace Isekai::UI {
             g_screen.store(Screen::None);
             if (!g_open.exchange(false)) return;
             ++g_requests;  // a refusal still on its way belongs to the screen closed here
-            g_ownExits.Close(g_entered);
-            g_entered = false;
+            const bool entered = g_entered.exchange(false);
+            g_ownExits.Close(entered);
             Magelight::Close();
+            // Not entered: the request is withdrawn (or its entry is released as a stale
+            // one), and no exit of a period we entered tells the page.
+            if (!entered) SendClosed();
         }
 
         // The panel's answer, with the sound rule the old panels had (choosing
@@ -245,10 +304,12 @@ namespace Isekai::UI {
                 logger::info("Screens: a decision panel lost UI mode ({}); it waits for the system-menu key", a_why);
                 // Once by itself (queued behind whoever holds UI mode); after that only
                 // the hotkey, so a host that keeps ending UI mode cannot loop us.
-                if (a_exited && g_decision.NeedsReoffer() && !g_autoReoffered) {
+                if (a_exited && g_decision.NeedsReoffer() && !g_autoReoffered && Available()) {
                     g_autoReoffered = true;
                     Reoffer();
+                    return;
                 }
+                NoteWaitingDecision();
                 return;
             }
             if (g_panel->singleText >= 0) {
@@ -270,6 +331,7 @@ namespace Isekai::UI {
                 logger::warn("Screens: the {} screen replaces an open panel", ScreenName(a_screen));
                 if (g_panel->decision) {
                     g_decision.OnUiModeLost();  // kept for the hotkey
+                    NoteWaitingDecision();
                 } else {
                     g_panel.reset();
                 }
@@ -304,6 +366,40 @@ namespace Isekai::UI {
             logger::warn("Screens: the page sent an action the plugin does not take: '{}'", CleanUtf8(a_raw.substr(0, 64)));
         }
 
+        // Reboot undoes a blessing's grants, so it asks first and says what it keeps and
+        // what it takes back. A decision in red (spec 7.2: a warning); it swaps in over the
+        // status screen. REBOOT re-opens the blessing choice, whose panel takes the view
+        // over; CANCEL goes back to the status screen.
+        void ConfirmReboot() {
+            ShowSystemWindow(
+                L("window.system", "[ SYSTEM ]"),
+                L("reboot.confirm",
+                  "REBOOT THE SYSTEM?\n"
+                  "\n"
+                  "Re-opens the blessing choice, so you can pick a different path\n"
+                  "(tier, Full/Shattered, Dormant).\n"
+                  "\n"
+                  "KEPT:    milestones, System Points, storage. The skill\n"
+                  "         tree is refunded, not lost — every point spent\n"
+                  "         on it comes back to spend again.\n"
+                  "UNDONE:  the skills and attributes a previous blessing\n"
+                  "         granted — you return to the mortal you were\n"
+                  "         when the System first bound itself. Your\n"
+                  "         character level is left alone.\n"
+                  "NOTE:    gold and perk points already spent stay spent.\n"
+                  "         A character from before this update has no such\n"
+                  "         record, and keeps what it was given."),
+                std::vector<std::string>{ L("button.cancel", "CANCEL"), L("button.reboot", "REBOOT") },
+                [](int a_choice) {
+                    if (a_choice == 1) {
+                        Isekai::RebootSystem();
+                    } else {
+                        ShowStatus(Progression::StatusJson());
+                    }
+                },
+                45.0f, 720.0f, Logic::Tone::Red);
+        }
+
         void OnStatusAction(const std::string& a_word) {
             if (a_word == "tree") {
                 ShowSkillTree();  // switches screens inside the view
@@ -317,8 +413,7 @@ namespace Isekai::UI {
                 Quests::Reroll();
                 Refresh(Screen::Status, Progression::StatusJson());
             } else if (a_word == "reboot") {
-                // Re-opens the blessing choice, whose panel takes the view over.
-                Isekai::RebootSystem();
+                ConfirmReboot();
             } else {  // "close"
                 CloseData();
             }
@@ -400,17 +495,17 @@ namespace Isekai::UI {
         return up || g_decisionWaiting.load();
     }
 
-    bool HoldsInput() { return g_open.load() && Available(); }
+    bool HoldsInput() { return g_open.load() && g_entered.load() && Available(); }
 
     void DismissSystemWindow() {
-        if (!g_open.load()) return;
+        if (!HoldsInput()) return;
         const auto shown = g_shown.load();
         auto* task = SKSE::GetTaskInterface();
         if (!task) return;
         // Only the screen the key was pressed on: the page may have answered the same key
         // first, and the next panel of a chain must not be dismissed by it.
         task->AddTask([shown]() {
-            if (!g_open.load() || g_shown.load() != shown) return;
+            if (!g_open.load() || !g_entered.load() || g_shown.load() != shown) return;
             const Screen s = g_screen.load();
             if (IsDataScreen(s)) {
                 CloseData();
@@ -453,8 +548,11 @@ namespace Isekai::UI {
             g_entered = false;
             g_ownExits.Reset();  // backstop: a count that leaked must not swallow the next real exit
             Magelight::Close();  // withdraws a request still queued behind another mod's UI mode
+            g_holdNote = true;   // this key offers a waiting decision itself, just below
             Lost(/*a_exited=*/true, "UI mode gone without an exit event");
+            g_holdNote = false;
             if (g_open.load()) return true;  // the decision was offered again by itself
+            SendClosed();
         }
         if (!g_decision.Current() || !g_panel || g_open.load()) return false;
         Reoffer();
@@ -496,6 +594,7 @@ namespace Isekai::UI {
             const bool had = g_open.load() || g_panel.has_value();
             g_decision.Reset();
             g_autoReoffered = false;
+            g_notedDecision = 0;
             Close();
             g_ownExits.CancelDeferred();
             g_panel.reset();
@@ -575,16 +674,18 @@ namespace Isekai::UI::Screens::detail {
         g_entered = false;
         switch (g_ownExits.OnExited()) {
             case Logic::OwnExits::Exit::Ours:
-                return;
+                break;
             case Logic::OwnExits::Exit::OursRequestNow:
                 // A screen opened while our release was still owed: its turn now.
                 if (g_open.load()) Request();
-                return;
+                break;
             case Logic::OwnExits::Exit::Theirs:
+                if (g_open.load() && !a_reopened) Lost(/*a_exited=*/true, "UI mode ended");
                 break;
         }
-        if (!g_open.load() || a_reopened) return;
-        Lost(/*a_exited=*/true, "UI mode ended");
+        // The view is closed and nothing new was shown into it (a held screen, a re-offer
+        // and a next panel all leave g_open set): the page lets go of the old screen.
+        if (!a_reopened && !g_open.load()) SendClosed();
     }
 
     void OnRefused(std::string a_detail) {
@@ -592,6 +693,7 @@ namespace Isekai::UI::Screens::detail {
         // Only the request of the screen we want now; an entered period is not refused.
         if (!g_open.load() || g_entered) return;
         Lost(/*a_exited=*/false, "refused");
+        if (!g_open.load()) SendClosed();  // no exit follows a refusal to tell the page
     }
 
     void OnPageReady(Magelight::View a_view, std::string a_version) {
@@ -605,11 +707,16 @@ namespace Isekai::UI::Screens::detail {
         }
         // A reload while a screen is up threw the page's state away: show it again, unless
         // a show made since the reload was queued and has just been delivered by the gate.
+        // Once per reload: the page's own ready and its answer to isekai.hello() both land
+        // here, and a second show would restart the panel's typewriter.
         if (!system) return;
         const bool delivered = std::exchange(g_showQueued, false);
-        if (++g_systemReadies > 1 && !delivered && g_open.load() && !g_lastShow.empty()) {
+        if (!std::exchange(g_reloaded, false)) return;
+        if (!delivered && g_open.load() && !g_lastShow.empty()) {
             Magelight::Run(Magelight::View::System, g_lastShow);
         }
     }
+
+    void OnPageReloaded() { g_reloaded = true; }
 
 }  // namespace Isekai::UI::Screens::detail

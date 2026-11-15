@@ -4,6 +4,7 @@
 #include "UI/UiLogic.h"
 
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <exception>
 #include <filesystem>
@@ -45,6 +46,7 @@ namespace Isekai::UI::Magelight {
             std::function<std::vector<std::string>()> prelude;  // mx: copied out, run outside the lock
             std::size_t queued = 0;   // mx: calls queued in this not-ready period
             bool fullWarned = false;  // mx: the queue-full warning was logged in this period
+            Logic::ConsoleLogLimit console;  // OnEvent only (the game thread)
         };
 
         // Caller holds a_slot.mx. Back to not-ready: the page has to report ready again.
@@ -55,8 +57,9 @@ namespace Isekai::UI::Magelight {
             a_slot.fullWarned = false;
         }
 
-        // Sent once, ungated, after a reload: a page that already reported ready before the
-        // reload event was handled reports again (page contract in Magelight.h).
+        // Sent once, ungated, after a reload and after the listeners are registered: a page
+        // that already reported ready before the event was handled, or before anyone was
+        // listening, reports again (page contract in Magelight.h).
         constexpr const char* kHello = "window.isekai && isekai.hello && isekai.hello()";
 
         Slot g_slots[2]{ { "system", "system.html" }, { "hud", "hud.html" } };
@@ -333,19 +336,30 @@ namespace Isekai::UI::Magelight {
                         // (page messages and page events keep no common order), so ask the
                         // page once, ungated, to send it again; a second ready is harmless.
                         if (slot) {
-                            std::scoped_lock lock(slot->mx);
-                            ResetGate(*slot);
-                            g_api->InvokeJS(slot->id.load(), kHello);
+                            {
+                                std::scoped_lock lock(slot->mx);
+                                ResetGate(*slot);
+                                g_api->InvokeJS(slot->id.load(), kHello);
+                            }
+                            if (slot == &SlotOf(View::System)) Screens::detail::OnPageReloaded();
                         }
                         logger::info("Magelight: {} page reloaded, asked it to report ready again", name);
                         break;
                     case ml::Event::FocusDenied:
                         logger::info("Magelight: {} asked for UI mode while Isekai Hero holds it", Clip(a_ev->detail));
                         break;
-                    case ml::Event::ConsoleMessage:
-                        if (a_ev->x >= 1)
+                    case ml::Event::ConsoleMessage: {
+                        if (a_ev->x < 1 || !slot) break;
+                        // A page that warns every frame must not fill the log (Logic::ConsoleLogLimit).
+                        const auto v = slot->console.Admit(std::chrono::steady_clock::now());
+                        if (v.suppressed > 0)
+                            logger::warn("Magelight: {} page: {} console message(s) suppressed (more than {} in {} s)",
+                                         name, v.suppressed, Logic::ConsoleLogLimit::kMax,
+                                         Logic::ConsoleLogLimit::kWindow.count());
+                        if (v.log)
                             logger::warn("Magelight: {} page (line {}): {}", name, a_ev->y, Clip(a_ev->detail));
                         break;
+                    }
                     default:
                         break;
                 }
@@ -445,7 +459,11 @@ namespace Isekai::UI::Magelight {
             d.size = sizeof(d);
             d.modId = kModId;
             d.displayName = kDisplayName;
-            d.modVersion = 0;
+            // The plugin's own version, as the SKSE declaration carries it (CMake's VERSION).
+            if (const auto* decl = SKSE::PluginDeclaration::GetSingleton()) {
+                const auto v = decl->GetVersion();
+                d.modVersion = ml::PackVersion(v.major(), v.minor(), v.patch());
+            }
             d.minHostVersion = kMinHost;
             d.callbackThread = ml::CallbackThread::GameThread;
             d.onEvent = &OnEvent;
@@ -498,6 +516,10 @@ namespace Isekai::UI::Magelight {
             if (!Listen(sysId, sys.name, "isekai.action", &OnSystemAction) ||
                 !Listen(sysId, sys.name, "isekai.ready", &OnSystemReady))
                 return Abandon();
+            // The page may have loaded and sent its first ready before the listener above
+            // existed, and that ready is gone. Ask once, ungated: a page that is not up yet
+            // ignores it (no window.isekai) and reports by itself; a second ready is harmless.
+            api->InvokeJS(sysId, kHello);
 
             // ---- hud: toasts, flourish, threat labels ----
             // Popup, not Hud: Hud is the lowest tier, under Panel, and a toast has to stay
@@ -523,6 +545,7 @@ namespace Isekai::UI::Magelight {
             }
             const auto hudId = hud.id.load();
             if (!Listen(hudId, hud.name, "isekai.ready", &OnHudReady)) return Abandon();
+            api->InvokeJS(hudId, kHello);  // the first-ready race, as for the system view
             // VR: glued to the head, toasts and the flourish in the upper field of view (spec 8).
             if (api->QueryCapability("vr") == 1) {
                 ml::VRPlacementDesc place{};

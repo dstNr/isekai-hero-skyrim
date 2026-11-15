@@ -507,8 +507,9 @@ namespace Isekai::SelfTest {
                 const std::string version = ML::PageVersion(row.view);
                 if (!UI::Logic::PageMatchesBuild(version, kUiBuildId)) {
                     stale = true;
+                    // Page text: clipped to 64 characters, as the log line does.
                     detail += std::string(detail.empty() ? "" : "; ") + row.name + " page " +
-                              version + " != dll " + kUiBuildId;
+                              version.substr(0, 64) + " != dll " + kUiBuildId;
                 }
             }
             const bool created = sys && hud;

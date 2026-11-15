@@ -321,6 +321,7 @@ namespace Isekai {
             // (The sting comes with the flourish — PlayLevelUpEffect owns it.)
             UI::PlayLevelUpEffect(L("flourish.awakened", "AWAKENED"), PowerName(g_state.power));
 
+            // Gold: the blessing has landed (spec 7.2).
             DelayedMainThread(1600, [body]() {
                 UI::ShowSystemWindow(L("window.system", "[ SYSTEM ]"), body,
                                      { L("button.continue", "CONTINUE") }, [](int) {
@@ -328,7 +329,7 @@ namespace Isekai {
                     // before it existed — alternate starts finish the early main
                     // quests to skip the intro, and those deeds still count.
                     Progression::CatchUpOnLoad();
-                });
+                }, 45.0f, 720.0f, UI::Logic::Tone::Gold);
             });
         }
 
@@ -386,7 +387,12 @@ namespace Isekai {
                     logger::info("Awakening path: {}{}", g_state.shattered ? "SHATTERED" : "FULL",
                                  g_state.dormant ? " (DORMANT)" : "");
                     ApplyReincarnation();
-                });
+                },
+                45.0f, 720.0f, {},
+                // The blessing it builds (spec 7.2): a dormant one violet; otherwise the
+                // question is whether to take the Shattered path, red.
+                UI::Logic::ToneFor(g_state.dormant ? UI::Logic::Blessing::Dormant
+                                                   : UI::Logic::Blessing::Shattered));
         }
 
         // ---- CUSTOM build: the three axes, chosen one by one ----
@@ -405,7 +411,8 @@ namespace Isekai {
                 [a_set = std::move(a_set), a_next = std::move(a_next)](int a_idx) {
                     a_set(static_cast<PowerLevel>(std::clamp(a_idx, 0, 2)));
                     a_next();
-                });
+                },
+                45.0f, 720.0f, {}, UI::Logic::ToneFor(UI::Logic::Blessing::Custom));  // the CUSTOM builder
         }
 
         void ShowCustomBuilder() {
@@ -514,7 +521,8 @@ namespace Isekai {
                     } else {
                         ShowPathSelection();
                     }
-                });
+                },
+                45.0f, 720.0f, {}, UI::Logic::Tone::Gold);  // the blessing (spec 7.2)
         }
 
         // ---- Dormant awakening ----
@@ -586,7 +594,8 @@ namespace Isekai {
                                   PowerName(a_tier));
             DelayedMainThread(1600, [body]() {
                 UI::ShowSystemWindow(L("window.system", "[ SYSTEM ]"), body,
-                                     { L("button.continue", "CONTINUE") }, [](int) {});
+                                     { L("button.continue", "CONTINUE") }, [](int) {}, 45.0f, 720.0f,
+                                     UI::Logic::Tone::Gold);  // AWAKENED / TRANSCENDED (spec 7.2)
             });
         }
 

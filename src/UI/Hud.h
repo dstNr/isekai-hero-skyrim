@@ -9,7 +9,7 @@
 // Toasts and the flourish go out at once, from any thread: the hud page shows them while
 // the game is paused (a purchase toast over the shop) and in the free camera, where the
 // frame tick does not run. Threat labels come from the frame tick (FrameTick.h) and stop
-// with it; the page hides them 300 ms after the last labels.* call.
+// with it; the page hides them 600 ms after the last labels.* call.
 //
 // Without Magelight UI, toasts fall back to the game's own corner notification.
 

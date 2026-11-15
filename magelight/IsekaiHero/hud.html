@@ -107,7 +107,7 @@
      per frame nothing else is written. The frame inside is static: anchored to that
      point by its bottom centre. */
   #labels { position: fixed; top: 0; left: 0; width: 0; height: 0; transition: opacity 120ms ease-out; }
-  /* No call for 300 ms: the game stopped ticking (free camera, a pause) and the labels
+  /* No call for 600 ms: the game stopped ticking (free camera, a pause) and the labels
      would freeze over a world that moves on. Hidden until the next call. */
   #labels.stale { opacity: 0; }
   .lab { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; will-change: transform; }
@@ -230,7 +230,7 @@
 
    Liveness: PlayerCharacter::Update, which pushes labels, does not run in free camera
    or while paused. Any labels.* call (full, pos, keep) is a sign of life; with none
-   for 300 ms every label is hidden, and the next call shows them again. keep() is the
+   for 600 ms every label is hidden, and the next call shows them again. keep() is the
    heartbeat the plugin sends while labels are up and nothing moved. full([]) clears.
 
    The page sends isekai.ready (with its build id) and nothing else, ever.
@@ -311,7 +311,7 @@
   }
 
   /* ======================= threat labels ======================= */
-  const MAX_LABELS = 12, STALE_MS = 300;
+  const MAX_LABELS = 12, STALE_MS = 600;  // the 250 ms keep() and room for a late frame (UiLogic.h)
 
   /* Logic::Verdict, in the enum's order (the number a plugin may send is its index). */
   const VERDICTS = ["trivial", "manageable", "dangerous", "lethal"];

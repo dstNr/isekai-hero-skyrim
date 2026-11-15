@@ -367,7 +367,7 @@
      drift at 60 Hz (labels.pos every frame while something moves); a still camp gets
      the labels.keep() heartbeat at 4 Hz instead; "Stall" stops every call, which is
      what free camera and a pause look like to the page (it hides the labels after
-     300 ms and shows them again on the next call).
+     600 ms and shows them again on the next call).
      ====================================================================== */
 
   var PLAYER_LEVEL = 30;
@@ -509,7 +509,32 @@
       "REINCARNATION COMPLETE\n\n  Power level   ASCENDED" + (mode ? "  (" + mode + ")" : "") + "\n" +
       (mode === "DORMANT" ? "  Awakens at    level " + DORMANT_HERO + "\n" : "") +
       "\nThe System is now bound to your soul.\nYour new life begins.",
-      CONTINUE, "cyan");
+      CONTINUE, "gold");   // the blessing has landed: gold, as System.cpp sends it
+  }
+
+  /* The reboot confirmation (Screens.cpp ConfirmReboot): a decision in red. CANCEL goes
+     back to the status screen, REBOOT re-opens the blessing choice. */
+  var REBOOT_TEXT =
+    "REBOOT THE SYSTEM?\n\nRe-opens the blessing choice, so you can pick a different path\n" +
+    "(tier, Full/Shattered, Dormant).\n\n" +
+    "KEPT:    milestones, System Points, storage. The skill\n" +
+    "         tree is refunded, not lost — every point spent\n" +
+    "         on it comes back to spend again.\n" +
+    "UNDONE:  the skills and attributes a previous blessing\n" +
+    "         granted — you return to the mortal you were\n" +
+    "         when the System first bound itself. Your\n" +
+    "         character level is left alone.\n" +
+    "NOTE:    gold and perk points already spent stay spent.\n" +
+    "         A character from before this update has no such\n" +
+    "         record, and keeps what it was given.";
+  function rebootConfirm() {
+    open("panel", panel("[ SYSTEM ]", REBOOT_TEXT, [
+      { label: "CANCEL", icon: "", iconOnly: false },
+      { label: "REBOOT", icon: "", iconOnly: false }
+    ], "red"), function (i) {
+      if (i === 1) SCENARIOS.filter(function (s) { return s.id === "blessing"; })[0].run();
+      else showStatus();
+    });
   }
 
   var CUSTOM_STEPS = [
@@ -526,7 +551,8 @@
   ];
 
   function customStep(i) {
-    open("panel", panel("[ SYSTEM ]", CUSTOM_STEPS[i], TIERS3, "gold"), function () {
+    // The CUSTOM builder: violet, Logic::ToneFor(Blessing::Custom).
+    open("panel", panel("[ SYSTEM ]", CUSTOM_STEPS[i], TIERS3, "violet"), function () {
       if (i < 2) customStep(i + 1); else open("panel", storyPanel("CUSTOM"));
     });
   }
@@ -546,11 +572,11 @@
     return panel("[ SYSTEM ]", body, [
       { label: "FULL AWAKENING", icon: "blessing_full.png",      iconOnly: false },
       { label: "SHATTERED",      icon: "blessing_shattered.png", iconOnly: false }
-    ], dormant ? "violet" : "gold");
+    ], dormant ? "violet" : "red");   // Logic::ToneFor(Dormant / Shattered), as System.cpp
   }
 
   var SCENARIOS = [
-    { id: "story", group: "Panel", label: "Story", hint: "Single CONTINUE, typewriter, cyan",
+    { id: "story", group: "Panel", label: "Story", hint: "Single CONTINUE, typewriter: REINCARNATION COMPLETE, gold",
       run: function () { open("panel", storyPanel("")); } },
     { id: "blessing", group: "Panel", label: "Blessing ×5",
       hint: "The real blessing choice: five choices fall back to the capsule row, gold",
@@ -575,12 +601,14 @@
             else open("panel", pathPanel(i === 3), function () { open("panel", storyPanel(i === 3 ? "DORMANT" : "")); });
           });
       } },
-    { id: "cards", group: "Panel", label: "Blessing ×3", hint: "Three cards (CUSTOM step 1), gold",
+    { id: "cards", group: "Panel", label: "Blessing ×3", hint: "Three cards (CUSTOM step 1), violet",
       run: function () { customStep(0); } },
-    { id: "awaken", group: "Panel", label: "Awakening", hint: "Two cards, gold",
+    { id: "awaken", group: "Panel", label: "Awakening", hint: "Two cards: FULL or SHATTERED, red",
       run: function () { open("panel", pathPanel(false), function () { open("panel", storyPanel("")); }); } },
     { id: "dormant", group: "Panel", label: "Dormant", hint: "The dormant blessing stirs, violet",
       run: function () { open("panel", pathPanel(true), function () { open("panel", storyPanel("DORMANT")); }); } },
+    { id: "reboot", group: "Panel", label: "Reboot", hint: "The reboot confirmation, red: CANCEL back to status",
+      run: function () { rebootConfirm(); } },
     { id: "warning", group: "Panel", label: "Warning", hint: "A failing self-test, red",
       run: function () {
         open("panel", panel("[ SYSTEM ]",
@@ -650,7 +678,7 @@
       hint: "Eight labels, nothing moving: only the keep() heartbeat (4 Hz)",
       run: function () { holdLabels(8); } },
     { id: "hud-stall", group: "Hud", label: "Stall", screen: "hud",
-      hint: "No label call at all (free camera, a pause): the page hides them after 300 ms",
+      hint: "No label call at all (free camera, a pause): the page hides them after 600 ms",
       run: function () { stopLabels(); } },
     { id: "hud-clear", group: "Hud", label: "Clear", screen: "hud",
       hint: "labels.full([]): what a pausing menu or the console sends",
@@ -766,9 +794,8 @@
         if (arg === "tree") show("tree", buildTree());
         else if (arg === "shop") show("shop", buildShop());
         else if (arg === "reroll") showStatus();   // a new objective: the ledger is re-pushed
-        else if (arg === "close" || arg === "storage" || arg === "reboot") hide();
-        // reboot changes save state in game (the blessing choice follows); the mock only
-        // closes, as the plugin does before that choice opens.
+        else if (arg === "reboot") rebootConfirm();   // swaps in, as the plugin does
+        else if (arg === "close" || arg === "storage") hide();
         break;
       case "buy": tryUnlock(parseInt(arg, 10) || 0); show("tree", buildTree()); break;
       case "respec": doRespec(); show("tree", buildTree()); break;

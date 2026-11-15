@@ -719,18 +719,26 @@ check("ui: the system page speaks the plugin's message contract", () => {
     need(cpp.includes(`"${name}"`), `Magelight.cpp no longer listens for ${name}`);
   }
   need(/isekai\.hello\(\)/.test(cpp), "Magelight.cpp no longer re-asks a reloaded page for ready");
+  // The first-ready race: a page that reported ready before its listener existed is asked
+  // again, once per view, right after the listeners are registered.
+  const install = cpp.slice(cpp.indexOf("bool Install()"));
+  need((install.match(/InvokeJS\(\w+, kHello\)/g) || []).length >= 2,
+       "Install no longer asks both pages for ready after registering their listeners");
+  // A UI-mode exit the page did not ask for (Escape or pad B on a data screen) is told to
+  // the page, so the next open starts fresh.
+  need(/"isekai\.closed\(\)"/.test(read("src/UI/Screens.cpp")), "Screens.cpp no longer tells the page its view closed");
 
   // The page side: hello() re-sends ready, and the build id is loaded from version.js
   // without the page depending on it (a missing file must not stop the page).
   const html = read(SYSTEM_PAGE);
   need(/<script\s+src="version\.js"[^>]*onerror=/.test(html),
        "system.html does not load version.js with a failure-tolerant <script>");
-  for (const fn of ["loc", "scale", "show", "hello"]) {
+  for (const fn of ["loc", "scale", "show", "hello", "closed"]) {
     need(new RegExp(`\\b${fn}\\s*[:=]\\s*(function\\b|\\([^)]*\\)\\s*=>)`).test(html),
          `system.html no longer defines isekai.${fn}`);
   }
   need(/\bhello\s*[:=][^\n]*\bready\(\)/.test(html), "isekai.hello() no longer re-sends isekai.ready");
-  return `${want.length} messages, hello/loc/scale/show defined, version.js optional`;
+  return `${want.length} messages, hello/loc/scale/show/closed defined, version.js optional`;
 });
 
 check("ui: system.html loads every screen script", () => {
@@ -1149,9 +1157,16 @@ check("ui: the status payload's rank tone comes from ToneForRank", () => {
   need(/\\"level\\"/.test(body), "BuildStatusJson no longer sends the character level");
 
   const html = systemPage();
+  // One tone table for the page and every screen: common.js's, which has no prototype
+  // (a payload tone of "constructor" must not pass as a tone).
+  need(/\bconst TONES = ui\.TONES;/.test(read(SYSTEM_PAGE)),
+       "system.html no longer takes its TONES from common.js (ui.TONES) — update this check");
+  need(!/\bTONES\s*=\s*\{/.test(html), "a page script defines its own plain TONES object");
   const src = html.match(/function rankTone\(s\) \{[\s\S]*?\n\s*\}/);
   need(src, "rankTone(s) not found in system.html — parser stale?");
-  const rankTone = new Function("TONES", `${src[0]}\nreturn rankTone;`)({ cyan: 1, gold: 1, red: 1, violet: 1 });
+  const tones = Object.assign(Object.create(null), { cyan: 1, gold: 1, red: 1, violet: 1 });
+  const rankTone = new Function("TONES", `${src[0]}\nreturn rankTone;`)(tones);
+  need(rankTone({ rank: "C", rankTone: "constructor" }) === "cyan", "rankTone takes \"constructor\" as a tone");
   for (const l of letters) {
     const want = gold.includes(l) ? "gold" : "cyan";
     need(rankTone({ rank: l }) === want, `rank ${l}: the plugin says ${want}, the page ${rankTone({ rank: l })}`);
@@ -1283,12 +1298,19 @@ check("hud: a label position push writes one transform and nothing else", () => 
   }
   need(/style\.transform\s*=/.test(body("place")), "place() no longer moves the label by transform");
   need(/\bplace\(/.test(body("pos")), "pos() no longer goes through place()");
-  // Liveness: any labels.* call keeps the labels, 300 ms without one hides them.
-  need(/\bconst\b[^;]*\bSTALE_MS\s*=\s*300\b/.test(js), "the 300 ms staleness limit is gone from hud.html");
+  // Liveness: any labels.* call keeps the labels, STALE_MS without one hides them. The
+  // limit is UiLogic's LabelHeartbeat::kPageStale, 600 ms: the 250 ms keep() plus room for
+  // a frame that lands late at a low frame rate, so the labels do not blink.
+  const stale = js.match(/\bconst\b[^;]*\bSTALE_MS\s*=\s*(\d+)\b/);
+  const pageStale = read("src/UI/UiLogic.h").match(/kPageStale\{\s*(\d+)\s*\}/);
+  need(stale, "the staleness limit STALE_MS is gone from hud.html");
+  need(pageStale, "LabelHeartbeat::kPageStale not found in UiLogic.h — parser stale?");
+  need(+stale[1] === +pageStale[1], `hud.html hides labels after ${stale[1]} ms, UiLogic.h says ${pageStale[1]} ms`);
+  need(+stale[1] === 600, `the staleness limit is ${stale[1]} ms, the ruling is 600 ms`);
   for (const name of ["full", "pos", "keep"]) {
     need(/\balive\(\)/.test(body(name)), `labels.${name}() is not a sign of life (alive())`);
   }
-  return "pos/place: transforms and opacity only; full/pos/keep keep labels alive for 300 ms";
+  return `pos/place: transforms and opacity only; full/pos/keep keep labels alive for ${stale[1]} ms`;
 });
 
 check("hud: threat labels take the plugin's verdict tones", () => {
@@ -1451,10 +1473,43 @@ check("hud: the plugin sends labels the way the page reads them", () => {
   // Code only: a comment may well explain why toasts are not here.
   const onFrame = hud.slice(hud.indexOf("void OnFrame()"), hud.indexOf("class MenuWatcher")).replace(/\/\/.*$/gm, "");
   need(onFrame.length > 0 && !/toast|flourish/i.test(onFrame), "OnFrame sends toasts or the flourish — they would stop while paused");
-  // The page's 300 ms staleness vs the heartbeat period.
+  // The page's staleness vs the heartbeat period: a keep() that goes out one late frame
+  // after its period must still land well inside it.
   const period = read("src/UI/UiLogic.h").match(/kPeriod\{\s*(\d+)\s*\}/);
-  need(period && +period[1] < 300, `the keep() period (${period && period[1]} ms) is not inside the page's 300 ms`);
+  const staleMs = read(HUD_PAGE).match(/\bSTALE_MS\s*=\s*(\d+)\b/);
+  need(period && staleMs, "kPeriod or STALE_MS not found — parser stale?");
+  need(+period[1] === 250, `the keep() period is ${period[1]} ms, the ruling is 250 ms`);
+  need(+period[1] * 2 < +staleMs[1], `the keep() period (${period[1]} ms) is not well inside the page's ${staleMs[1]} ms`);
   return `y down, s unscaled, nums/resources, keep() every ${period[1]} ms, menu clear`;
+});
+
+check("ui: the game's panels pass their spec 7.2 tones", () => {
+  // The page never guesses a panel's tone (spec 7.2): a call site that drops it shows the
+  // blessing choice in plain cyan. Each function below holds the panel it names.
+  const sys = read("src/System.cpp");
+  const fn = (src, name) => {
+    const at = src.indexOf(name);
+    need(at >= 0, `${name} not found — parser stale?`);
+    const next = src.slice(at + name.length).search(/\n        (?:void|\[\[nodiscard\]\]|bool|std::)\s/);
+    return src.slice(at, next < 0 ? undefined : at + name.length + next);
+  };
+  const want = [
+    [sys, "void ShowPowerSelection()", /UI::Logic::Tone::Gold\)/, "the blessing choice is not gold"],
+    [sys, "void ShowPathSelection()", /ToneFor\(g_state\.dormant \? UI::Logic::Blessing::Dormant\s*:\s*UI::Logic::Blessing::Shattered\)/,
+     "the Full/Shattered choice does not take ToneFor(Dormant / Shattered)"],
+    [sys, "void AskTier(", /ToneFor\(UI::Logic::Blessing::Custom\)/, "the CUSTOM builder is not ToneFor(Custom)"],
+    [sys, "void AwakenTo(", /UI::Logic::Tone::Gold\)/, "AWAKENING / TRANSCENDENCE is not gold"],
+    [read("src/Progression.cpp"), "void ShowPanelWhenFree(", /UI::Logic::Tone::Gold\)/, "a milestone payout is not gold"],
+    [read("src/UI/Screens.cpp"), "void ConfirmReboot()", /L\("reboot\.confirm"[\s\S]*Logic::Tone::Red\)/,
+     "the reboot confirmation is gone or not red"],
+  ];
+  for (const [src, name, re, why] of want) need(re.test(fn(src, name)), why);
+  // REINCARNATION COMPLETE, after the AWAKENED flourish.
+  const complete = sys.slice(sys.indexOf('L("flourish.awakened", "AWAKENED"), PowerName(g_state.power))'));
+  need(/button\.continue[\s\S]{0,600}?UI::Logic::Tone::Gold\)/.test(complete), "REINCARNATION COMPLETE is not gold");
+  // The reboot is confirmed by that panel alone: no second press on the page.
+  need(!/rebootArmed|confirmReboot/.test(read(`${PAGE_SCREENS}/status.js`)), "status.js arms the reboot button again (the plugin's panel confirms it)");
+  return `${want.length + 1} panels toned, reboot confirmed by its red panel`;
 });
 
 check("icons: every shipped PNG is 512x512", () => {
