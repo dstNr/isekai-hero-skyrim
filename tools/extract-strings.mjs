@@ -144,17 +144,9 @@ function quarries() {
 // whole table at DOM-ready and it looks strings up itself — so its keys have to be
 // harvested from the HTML, or a translator would simply never see them.
 //
-// Two shapes, matching the two in the view: data-loc="key" on a static element, whose
-// English is the element's own text, and tr()/trf() calls in the script.
-const VIEW_ATTR = /data-loc="([\w.]+)"[^>]*>([^<]*)</g;
-const VIEW_CALL = /\btrf?\(\s*"([\w.]+)"\s*,\s*((?:"(?:[^"\\]|\\.)*"\s*\+?\s*)+)[,)]/g;
-const VIEW_ANY = /\btrf?\(\s*(.)/g;
-
-// tr() and trf() call each other with a variable key — that is what they are FOR. The
-// rule is about callers, so the machinery itself is cut out before the scan rather than
-// special-cased inside it. Delimited by the two lines that open and close the block.
-const VIEW_MACHINERY_FROM = "let LOC = {};";
-const VIEW_MACHINERY_TO = 'document.addEventListener("DOMContentLoaded", applyLoc);';
+// Two shapes: data-loc="key" on a static element, whose English is the element's own
+// text (PAGE_ATTR), and the t()/tf() calls in the scripts (PAGE_CALL, below).
+const PAGE_ATTR = /data-loc="([\w.]+)"[^>]*>([^<]*)</g;
 
 // The Magelight pages' own chrome, the same two shapes under the names common.js gives
 // them: data-loc="key" on a static element, and isekaiUi.t()/tf() calls in the scripts.
@@ -190,7 +182,7 @@ function pages() {
         );
       }
     }
-    for (const [, key, text] of code.matchAll(VIEW_ATTR)) out.push([key, text.trim()]);
+    for (const [, key, text] of code.matchAll(PAGE_ATTR)) out.push([key, text.trim()]);
     for (const [, key, literals] of code.matchAll(PAGE_CALL)) {
       const text = [...literals.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((x) => x[1]).join("");
       out.push([key, text]);

@@ -108,18 +108,16 @@ It [b]starts empty for every blessing[/b] — you stock it from the System Shop'
 [list]
 [*][b]Keyboard[/b] — Right Shift + S opens the System panel, F10 toggles the threat display. Both remappable.
 [*][b]Controller[/b] — hold [b]LB[/b] and tap [b]Back[/b] for the System menu; the left stick moves the cursor, [b]A[/b] clicks, [b]B[/b] closes. A combination rather than a single button because a controller has none spare — every face button, both shoulders and both sticks are already bound in vanilla. Both bindings are in the ini, and `None` switches the controller off.
-[*][b]Skyrim VR[/b] — the menus come into the headset through the PrismaUI patch, and the keyboard and controller bindings above work there. The in-headset layer that would add threat labels standing in the world, notifications on the HUD plane and a [b]B + Y[/b] controller chord is [b]switched off by default[/b]: a VR player found that it sends the game to the desktop as the mods finish loading, and the cause is not yet found. Set [font=Courier New]VRInHeadsetLayer = 1[/font] in the ini to try it, and please report what happens.
+[*][b]Skyrim VR[/b] — [b]experimental and untested[/b]: the menus use Magelight UI's own VR panels, laser pointer and keyboard. Threat readings cannot float over each actor in a headset, so they show as a head-locked [b]scan list[/b] of the nearest actors, most dangerous first. The System menu opens from a controller button you set in the ini ([font=Courier New]VRMenuButton[/font], off by default).
 [/list]
 
 [size=4][b]Translations[/b][/size]
-Every line of text the mod shows goes through a language file. Drop a `lang/<code>.txt` next to the plugin, set [b]Language[/b] in the ini, and anything a translation does not cover falls back to English rather than showing a blank or a key. The PrismaUI view translates itself the same way. A full English template ships with the mod as the starting point.
+Every line of text the mod shows goes through a language file. Drop a `lang/<code>.txt` next to the plugin, set [b]Language[/b] in the ini, and anything a translation does not cover falls back to English rather than showing a blank or a key. The pages translate themselves the same way. A full English template ships with the mod as the starting point.
 
-[size=4][b]Two interfaces, one download[/b][/size]
-The installer asks which interface you want. [b]Built-in[/b] is the one the mod draws itself and needs nothing else. [b]PrismaUI[/b] renders the [b]whole interface[/b] — skill tree, System panels, level-up flourish — as a modern HTML/CSS view instead. Same mod, same logic, different skin.
+[size=4][b]One interface: Magelight UI[/b][/size]
+The whole interface — skill tree, System panels, toasts, level-up flourish, threat labels — is a set of HTML/CSS pages drawn by [url=https://www.nexusmods.com/skyrimspecialedition/mods/193303]Magelight UI[/url] ([b]1.7.0 or newer[/b], required) in a translucent cyan "projection" look. The earlier built-in overlay and the optional PrismaUI patch are gone, so there is nothing to choose in the installer about how the System is drawn. Same mod, same logic, same saves.
 
-This used to be a second download; it is now an option inside this one. The mod detects PrismaUI at load and falls back safely on its own UI when it is absent, so the option is safe to pick either way and needs no new save.
-
-Only that option requires [url=https://www.nexusmods.com/skyrimspecialedition/mods/148718]PrismaUI[/url] (and its own Media Keys Fix dependency). The base mod requires neither.
+If Magelight UI is missing or too old, the mod does not start the reincarnation: it shows one note, writes the reason to its log and waits, so a character is never left without a way to pick a blessing.
 
 [size=4][b]Settings[/b][/size]
 An optional ini at [i]Data/SKSE/Plugins/IsekaiHero.ini[/i] — ships with sane defaults, safe to delete:
@@ -139,10 +137,11 @@ An optional ini at [i]Data/SKSE/Plugins/IsekaiHero.ini[/i] — ships with sane d
 [*]Skyrim Special Edition / Anniversary Edition / VR — one download covers all of them, up to and including runtime [b]1.7.104[/b]
 [*][url=https://skse.silverlock.org/]SKSE64[/url]
 [*][url=https://www.nexusmods.com/skyrimspecialedition/mods/32444]Address Library for SKSE Plugins[/url] — on 1.7.x this has to be a current build; in VR, the VR Address Library for SKSEVR
+[*][url=https://www.nexusmods.com/skyrimspecialedition/mods/193303]Magelight UI[/url] [b]1.7.0 or newer[/b] — draws every screen of the mod
 [/list]
 
 [size=4][b]Installation & Compatibility[/b][/size]
-Install with your mod manager. The archive is a [b]FOMOD[/b] and asks three things — which interface, whether the System boots itself or waits for your hotkey, and whether you want the threat readings. Everything it sets is one line in the ini and can be changed afterwards.
+Install with your mod manager. The archive is a [b]FOMOD[/b] and asks two things — whether the System boots itself or waits for your hotkey, and whether you want the threat readings. Everything it sets is one line in the ini and can be changed afterwards. Install [url=https://www.nexusmods.com/skyrimspecialedition/mods/193303]Magelight UI[/url] first; the mod needs it.
 
 The first page also offers the optional [b]Mod Configuration Menu[/b]: 28 of the mod's settings in SkyUI, each with the explanation the ini gives it. It needs [url=https://www.nexusmods.com/skyrimspecialedition/mods/12604]SkyUI[/url] and [url=https://www.nexusmods.com/skyrimspecialedition/mods/53000]MCM Helper[/url], which is why it is optional — leave it unticked and nothing is lost, the settings simply stay in the ini file.
 
@@ -152,11 +151,9 @@ The plugin is [b]ESL-flagged[/b] (no load order slot), adds only new records and
 
 [b]Hotkey:[/b] Right Shift + S opens the System status panel; storage, shop and skill tree sit behind the icon buttons in its corner. F10 switches the threat display off and on. Both are remappable in the ini.
 
-[b]Skyrim VR:[/b] the mod loads and runs, and the menus work — a VR player confirmed that much. They go through the PrismaUI option (VR build), which is the one to tick in the installer.
+[b]Skyrim VR:[/b] [b]experimental and untested.[/b] The interface goes through Magelight UI's own VR panels, laser pointer and keyboard, so the same pages serve every runtime. A view cannot be pinned over each moving actor, so in a headset the threat readings become a head-locked [b]scan list[/b] — the nearest labelled actors, most dangerous first — instead of labels over their heads. The menu opens from a controller button you set with [font=Courier New]VRMenuButton[/font] in the ini (off by default).
 
-The [b]in-headset layer[/b] — threat labels as billboards in the world, notifications on a head-locked plane, and a controller chord that opens the menu — needs the optional [url=https://www.nexusmods.com/skyrimspecialedition/mods/149180]ImGui VR Helper[/url] and is [b]off by default[/b]. The same player reported that with the helper installed the game goes to the desktop as the mods finish loading: every time, on a five-mod load order, and without writing a crash log. Turning the layer off restores the working setup and leaves the helper installed for other mods that use it.
-
-[i]The cause is not known. There is no VR install on the author's machine, so this one is being chased through player reports — if you turn [font=Courier New]VRInHeadsetLayer = 1[/font] on and it works, or crashes, saying so is genuinely the fastest way to get it fixed.[/i]
+[i]There is no VR install on the author's machine, so this has never been run in a headset. If you try it, saying what happened — with the log — is the fastest way to get it fixed.[/i]
 
 [size=4][b]Source code and bug reports[/b][/size]
 This mod is open source (MIT). Everything is on GitHub — the full source, the developer
@@ -179,7 +176,7 @@ Early release. Feedback is very welcome, especially from heavily modded setups. 
 [*][b]UI sounds[/b] by Nathan Gibson (Cyrex Studios) — [url=https://cyrex-studios.itch.io/ui-sound-pack]UI Sound Pack[/url], used under [url=https://creativecommons.org/licenses/by/4.0/]CC BY 4.0[/url]
 [*][b]Skill-tree node icons[/b] by The Higalina Vault — [url=https://higalina.itch.io/40-spell-icons-fantasy-style-png-512x512]40 Spell Icons (Fantasy Style)[/url]. Every other icon is AI-generated artwork made for this mod.
 [*][b]Crafting integration[/b]: the Dimensional Storage reads and consumes the chest at a workbench without moving items, adapting the zero-transfer hooking technique from [url=https://github.com/ohfor/scie]SCIE — Skyrim Crafting Inventory Extender[/url] by ohfor (MIT License). SCIE itself is [b]not required[/b] — its approach is reimplemented here, not depended upon.
-[*][b]VR interface[/b]: drawn through [url=https://www.nexusmods.com/skyrimspecialedition/mods/149180]ImGui VR Helper[/url] (LGPL-3.0-or-later). Its client API ships with this mod unmodified; the helper itself is an optional separate install.
+[*][b]Interface[/b]: drawn by [url=https://www.nexusmods.com/skyrimspecialedition/mods/193303]Magelight UI[/url] by Severause (MIT). Only its public API headers are used at build time; the mod itself is a separate, required install.
 [/list]
 
 [size=4][b]AI Disclaimer[/b][/size]

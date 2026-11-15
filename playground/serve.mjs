@@ -13,7 +13,7 @@
      - Icons. In the shipped mod they sit next to the pages
        (Data\Magelight\IsekaiHero\icons\); in the repo they live in the
        top-level icons\ folder. Requests under a page's icons/ path are served
-       from there. (The PrismaUI page's alias stays while that page exists.)
+       from there.
      - version.js. The build generates it into build\generated\; it is served
        from there when a build exists, else a 404, which the page survives and
        then reports build "dev" — exactly what a missing file does in game.
@@ -53,7 +53,7 @@ const MIME = {
 
 /* The pages reference icons relative to themselves; in the repo they are elsewhere.
    Rewrite those path prefixes and leave everything else untouched. */
-const ICON_ALIASES = ["/magelight/IsekaiHero/icons/", "/prisma-patch/PrismaUI/views/IsekaiHero/icons/"];
+const ICON_ALIASES = ["/magelight/IsekaiHero/icons/"];
 const VERSION_JS = "/magelight/IsekaiHero/version.js";
 
 /* The fake host (see the header). Messages sent before the parent's mock is reachable

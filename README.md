@@ -12,7 +12,8 @@
 
 **An Isekai / "reincarnated hero" system for Skyrim Special Edition** — a native
 **SKSE C++ plugin** built on [CommonLibSSE-NG](https://github.com/alandtse/CommonLibSSE-NG),
-with its own ImGui UI drawn straight into the game's D3D11 swap chain.
+whose interface is a set of HTML/CSS pages drawn by
+[Magelight UI](https://www.nexusmods.com/skyrimspecialedition/mods/193303).
 
 [**Nexus page**](https://www.nexusmods.com/skyrimspecialedition/mods/185548) ·
 [Changelog](CHANGELOG.md) ·
@@ -40,22 +41,10 @@ with its own ImGui UI drawn straight into the game's D3D11 swap chain.
 
 ## What it looks like
 
-<table>
-<tr>
-<td width="52%" valign="top">
-<img src="fomod/images/prismaui.png" alt="The status panel under the PrismaUI patch" width="100%">
-<sub><b>The optional PrismaUI patch</b> — the whole UI rendered as an HTML/CSS view: tier,
-System Rank, milestones, the running objective, attunements and earned titles.</sub>
-</td>
-<td width="48%" valign="top">
-<img src="fomod/images/builtin.png" alt="The built-in ImGui status panel" width="100%">
-<sub><b>The built-in ImGui panel</b> — no foreign dependency, ships with the base mod.</sub>
-<br><br>
-<img src="fomod/images/threat-labels.png" alt="Threat labels over an NPC" width="100%">
-<sub><b>Threat labels</b> — the System's read on anything you aim at or that fights you.</sub>
-</td>
-</tr>
-</table>
+<img src="fomod/images/threat-labels.png" alt="Threat labels over an NPC" width="60%">
+<sub><b>Threat labels</b> — the System's read on anything you aim at or that fights you.
+(This picture predates the Magelight interface; new screenshots of the projected System
+panels are still to come.)</sub>
 
 ---
 
@@ -178,8 +167,8 @@ TRIVIAL/MANAGEABLE/DANGEROUS/LETHAL floating over what you are aiming at and ove
 fighting you, shrinking and dimming with distance. `F10` switches it off and on, and
 `IsekaiHero.ini` decides who gets a label.
 
-> *In VR the labels are billboards in the world rather than an overlay, and they ship
-> **off** — see the VR box under Requirements.*
+> *In VR the labels cannot float over each actor; they become a head-locked scan list of
+> the nearest labelled actors, most dangerous first — see the VR box under Requirements.*
 
 ### Dimensional Storage
 
@@ -234,15 +223,17 @@ long after the skill tree is bought out.
 
 ### Custom UI and sound
 
-Solo-Levelling-inspired panels (glow frames, corner brackets, typewriter reveal, monospace
-terminal font), custom SFX routed through the game's audio system, icon buttons, ESC
-handled properly.
+Solo-Levelling-inspired panels in a holographic "projection" look (a translucent cyan
+window with scanlines and a glow, tilted slightly toward the player; a gold tone for
+rewards), custom SFX routed through the game's audio system, icon buttons, ESC handled
+properly.
 
-An optional **[PrismaUI](https://www.nexusmods.com/skyrimspecialedition/mods/148718)
-patch** renders the **whole UI** — the tree, the System dialog panels and the level-up
-flourish — as an HTML/CSS view instead of ImGui. Auto-detected at load, with a safe ImGui
-fallback whenever the patch or the framework is absent. The base mod depends on neither.
-See `prisma-patch/`, `src/UI/Prisma.cpp` and `package-prisma-patch.ps1`.
+The **whole UI** — the tree, the System dialog panels, toasts, the level-up flourish and
+the threat labels — is two HTML/CSS pages (`magelight/IsekaiHero/`) that
+**[Magelight UI](https://www.nexusmods.com/skyrimspecialedition/mods/193303)** (1.7.0 or
+newer) draws. It is a required mod. Without it the mod holds the reincarnation prompt back
+and says so in the log rather than leave the character without a way to choose a blessing.
+See `src/UI/Magelight.cpp` for the host side.
 
 An optional **MCM** component puts 28 of the 32 ini settings into SkyUI, each row carrying
 the explanation the ini gives it. It needs [SkyUI](https://www.nexusmods.com/skyrimspecialedition/mods/12604)
@@ -270,7 +261,7 @@ without SkyrimNet, and can be switched off in `IsekaiHero.ini`.
 | **Game** | Skyrim SE / AE / VR — one DLL covers all three, up to and including runtime **1.7.104** |
 | **Required** | [SKSE64](https://skse.silverlock.org/) |
 | **Required** | [Address Library for SKSE Plugins](https://www.nexusmods.com/skyrimspecialedition/mods/32444) — on 1.7.x this has to be a current build; in VR, the VR Address Library for SKSEVR |
-| **Optional** | [PrismaUI](https://www.nexusmods.com/skyrimspecialedition/mods/148718) — for the HTML/CSS UI patch |
+| **Required** | [Magelight UI](https://www.nexusmods.com/skyrimspecialedition/mods/193303) **1.7.0 or newer** — draws every screen of the mod |
 | **Optional** | [SkyUI](https://www.nexusmods.com/skyrimspecialedition/mods/12604) + [MCM Helper](https://www.nexusmods.com/skyrimspecialedition/mods/53000) — for the MCM component |
 | **Optional** | [SkyrimNet](https://github.com/MinLL/SkyrimNet-GamePlugin) — for AI NPC awareness |
 
@@ -283,24 +274,17 @@ The plugin is built for all three runtimes at once (CommonLibSSE-NG) and loads u
 **SKSEVR** with the **VR Address Library for SKSEVR** — same archive, no separate VR build.
 The mod's logic (blessings, milestones, passives, storage, crafting) is runtime-neutral.
 
-The built-in **ImGui overlay is disabled in VR** (it hooks the desktop swap chain, which
-crashes on the VR renderer and would never appear in the headset anyway), so in VR **all UI
-goes through the PrismaUI patch** — which needs PrismaUI's **1.5.0 VR build** (the stable
-1.4.x has no VR). Without it, the System menu cannot be shown in VR and the mod holds off
-the reincarnation prompt rather than stranding the character. A VR player has confirmed
-the menus work this way.
+The interface is the same Magelight UI pages as on a flat screen. Magelight brings its own
+VR overlays, laser pointer and VR keyboard: the System panel sits where Magelight puts VR
+panels, toasts and the level-up flourish sit in the upper field of view, and the threat
+readings become a **head-locked scan list** (nearest labelled actors, most dangerous
+first) because a view cannot be pinned over each moving actor. Without Magelight UI the
+mod holds off the reincarnation prompt rather than stranding the character.
 
-The separate **in-headset layer** — threat labels as world billboards, notifications on a
-head-locked plane, and a controller chord — draws through
-[ImGui VR Helper](https://www.nexusmods.com/skyrimspecialedition/mods/149180) and **ships
-off** (`VRInHeadsetLayer = 0`). The same player reported that with the helper installed the
-game exits to the desktop as the mods finish loading, every time, without writing a crash
-log. The cause is not known and there is no VR install here to find it on, so it is off
-until it is. Turn it on and you are helping find it — see
-[#35](https://github.com/dstNr/isekai-hero-skyrim/issues/35).
-
-Still community-testing; see [docs/VR.md](docs/VR.md) for status, requirements and the test
-checklist.
+**This is untested in a headset.** The previous VR route (the ImGui overlay, PrismaUI and
+ImGui VR Helper) is gone, and the new one has not been run on a VR install — there is none
+here. Reports are welcome on [#35](https://github.com/dstNr/isekai-hero-skyrim/issues/35);
+see [docs/VR.md](docs/VR.md) for status, requirements and the test checklist.
 
 </details>
 

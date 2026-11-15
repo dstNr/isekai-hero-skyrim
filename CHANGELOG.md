@@ -55,6 +55,43 @@ All notable changes to Isekai Hero are documented here. The format follows
   report of it surfacing again says where it actually was.
 
 ### Changed
+- **The whole interface is now drawn by Magelight UI instead of ImGui and PrismaUI.**
+  Every screen — the System panels, the skill tree, storage and shop, the blessing choice,
+  toasts, banners, the level-up flourish and the threat labels — is one of two HTML/CSS
+  pages (`magelight/IsekaiHero/`: `system.html` and `hud.html`, with the shared
+  `theme.css`, `common.js` and the per-screen scripts in `screens/`), shipped to
+  `Data\Magelight\IsekaiHero\` together with the icons and a build-generated `version.js`
+  that lets the plugin check the pages belong to its build. The plugin talks to them over
+  Magelight's API (`src/UI/Magelight.cpp`) and drives the HUD from a vtable hook on
+  `PlayerCharacter::Update`, so the interface needs no new Address Library IDs and the same
+  DLL still serves SE, AE and VR.
+- **New look: a holographic "projection".** A translucent cyan window with scanlines, a
+  glow and a slight tilt toward the player; a gold tone for rewards. The timings carry over
+  from the old overlay (toast line 3.2 s, banner 5.5 s, flourish 3.2 s). Threat labels keep
+  their four verdicts and the 12-label cap.
+- **Magelight UI 1.7.0 or newer is a new requirement.** Without it the mod does not start
+  the reincarnation: it writes the reason to its log, shows one note
+  (`ui.needsMagelight`) and waits, on every runtime, so a character can never be left
+  without a way to choose a blessing.
+- **Threat labels in VR are a head-locked scan list** (up to 12 actors, nearest first,
+  most dangerous on top) because Magelight cannot pin a view over each moving actor. Flat
+  screens keep the labels above heads. VR stays experimental and untested; `docs/VR.md` is
+  rewritten for the new route.
+- **The FOMOD no longer asks how the interface is drawn.** The PrismaUI option and the
+  "Built-in" choice are gone; the installer asks the start behaviour, the threat readings
+  and (optionally) the MCM. Icons are installed with the pages under
+  `Data\Magelight\IsekaiHero\icons\` instead of `Data\SKSE\Plugins\IsekaiHero\icons\`;
+  the self-test checks them there.
+- **`package.ps1` stages the complete page set** (pages, theme, shared and screen scripts,
+  `version.js`, icons) and `tools/check.mjs` fails when a file a page loads is not staged.
+
+### Removed
+- **The ImGui overlay, the PrismaUI bridge and view, and the ImGui VR Helper layer.** The
+  `Present` hook, the `imgui` dependency, `extern/imgui-vr-helper/`, `prisma-patch/` and the
+  PrismaUI installer option are gone. The ini keys `VRInHeadsetLayer` and
+  `VRThreatLabelHeight` are retired (an old ini that still has them loads as before), and
+  so is the two-button controller chord that came from the VR helper.
+
 - **A finished rebirth now signals other plugins with the `IsekaiHero_RebirthComplete` ModEvent.**
   Sent through `SKSE::GetModCallbackEventSource()` right after the "Reincarnation applied" log
   line, once per rebirth (all three selection paths end in the one `ApplyReincarnation`; a
@@ -72,6 +109,8 @@ All notable changes to Isekai Hero are documented here. The format follows
   (anything other than `dxgi.dll` means another plugin hooked it first), the first VR
   `Present` call is logged on the way in and out along with every distinct swap chain (up
   to four), and each call into PrismaUI is marked before it is made.
+  *Superseded within this release: the overlay and PrismaUI bridge this logging covered
+  were removed, see above.*
 
 ## [0.9.0] — 2026-09-17
 

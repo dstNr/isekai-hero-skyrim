@@ -8,7 +8,7 @@ the one-liner list below — the reasoning behind them lives in git history and
 resistance/regen batch — Storm Ward, Warded Mind, Arcane Absorption, Iron Skin, Rapid
 Recovery), mastery tiers on those nodes (10 ranks / 5 named tiers, escalating cost),
 Shattered/Dormant/Custom blessings, skill-tree respec, the Reboot button, remappable
-hotkey + `HideSealedNodes` ini, the PrismaUI status dashboard, orphaned-chest cleanup,
+hotkey + `HideSealedNodes` ini, the status dashboard, orphaned-chest cleanup,
 System Rank (E–S) in the status panel, System Analysis (the Analyze hotkey), the storage
 codex (physical fallback access to Dimensional Storage), the skill tree's zone redesign
 (named branches, node labels, size hierarchy), and the System Shop — now its own screen of
@@ -112,15 +112,13 @@ Verification checklist and API details: `src/SkyrimNet.cpp`, `README.md`.
 ### Gamepad support for the UI
 
 **Status:** 🅿️ Roadmap
-PrismaUI 1.5 added gamepad input; the built-in ImGui path would need its own controller
-mapping. Its own effort; ties into the VR work below (both are "the built-in UI doesn't
-cover every input method" problems).
+Superseded by the Magelight UI rework: Magelight has its own gamepad layer (gated by its
+`gamepad` capability) and, in VR, a laser pointer, so the mod no longer maps a controller
+to the UI itself. What is left is testing it on a pad.
 
 ### Skyrim VR — Phase 2 (in-HMD UI)
 
 **Status:** 🅿️ Blocked on a VR test environment (or a responsive tester). Phase 1
-(VR-loadable, no crash, forms resolve, PrismaUI as the VR UI) is shipped.
-**The three routes are now costed out in `docs/VR.md`** — including why the ImGui VR
-Helper's "four integration steps" do not cover our case (it exposes no per-frame render
-callback, and our own frame tick is precisely what is broken in VR). Read that before
-picking this up; the analysis is done, only the decision is open.
+(VR-loadable, no crash, forms resolve) is shipped, and the UI now goes through Magelight
+UI's VR overlays (head-locked scan list for the threat labels). It is still untested in a
+headset; `docs/VR.md` has the status and the first-test checklist.

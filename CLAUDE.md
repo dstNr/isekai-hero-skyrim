@@ -1,7 +1,7 @@
 # Isekai Hero — working agreements
 
-An SKSE C++ plugin (CommonLibSSE-NG) with an ImGui overlay and an optional
-PrismaUI view, shipped as one FOMOD. The layout, the dependencies and the build
+An SKSE C++ plugin (CommonLibSSE-NG) whose interface is HTML pages drawn by Magelight UI
+(`magelight/IsekaiHero/`), shipped as one FOMOD. The layout, the dependencies and the build
 commands are readable from the tree, `CMakeLists.txt` and `vcpkg.json` — this
 file only holds what they don't say.
 
@@ -63,8 +63,8 @@ files cross over.
 
 - **Crafting token-lending lends official-master items only.** Moving a scripted
   mod item in or out fires its `OnContainerChanged` and floods the VM.
-- **VR is untested** — there is no VR install on this machine. The ImGui overlay
-  is off in VR; the whole UI goes through PrismaUI there.
+- **VR is untested** — there is no VR install on this machine. The UI is the same
+  Magelight pages there; threat labels become a head-locked scan list.
 - **Generated files are generated.** `fomod/ModuleConfig.xml` and
   `fomod-presets/*/IsekaiHero.ini` come from `tools/make-fomod.mjs`;
   `lang/template.txt` from `tools/extract-strings.mjs`. Edit the generator.

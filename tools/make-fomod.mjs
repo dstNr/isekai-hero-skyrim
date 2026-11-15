@@ -87,7 +87,7 @@ const xml = `<?xml version="1.0" encoding="utf-8"?>
     <file   source="IsekaiHero.esp"                    destination="IsekaiHero.esp"/>
     <file   source="LICENSE"                           destination="LICENSE"/>
     <file   source="SKSE\\Plugins\\IsekaiHeroSKSE.dll"   destination="SKSE\\Plugins\\IsekaiHeroSKSE.dll"/>
-    <folder source="SKSE\\Plugins\\IsekaiHero"           destination="SKSE\\Plugins\\IsekaiHero"/>
+    <folder source="Magelight\\IsekaiHero"               destination="Magelight\\IsekaiHero"/>
     <file   source="Scripts\\IsekaiHeroCraft.pex"        destination="Scripts\\IsekaiHeroCraft.pex"/>
     <file   source="Source\\Scripts\\IsekaiHeroCraft.psc" destination="Source\\Scripts\\IsekaiHeroCraft.psc"/>
     <folder source="Sound"                             destination="Sound"/>
@@ -96,22 +96,11 @@ const xml = `<?xml version="1.0" encoding="utf-8"?>
   </requiredInstallFiles>
 
   <installSteps order="Explicit">
-    <installStep name="Interface">
+    <!-- The interface is one thing now (Magelight UI pages, installed above), so there is
+         nothing to choose about it; the only optional file is the MCM. SelectAny with a
+         single entry is how FOMOD spells "a checkbox". -->
+    <installStep name="Extras">
       <optionalFileGroups order="Explicit">
-        <group name="How the System draws itself" type="SelectExactlyOne">
-          <plugins order="Explicit">
-            <plugin name="Built-in">
-              <description>The interface the mod draws itself. Needs nothing else, works everywhere the mod does.</description>
-              ${image("builtin.png")}
-              <files/>
-              <typeDescriptor><type name="Recommended"/></typeDescriptor>
-            </plugin>
-          </plugins>
-        </group>
-
-        <!-- Additive, not an alternative, so its own group: the MCM sits beside whichever
-             interface was picked above rather than replacing it. SelectAny with a single
-             entry is how FOMOD spells "a checkbox". -->
         <group name="Extras" type="SelectAny">
           <plugins order="Explicit">
             <plugin name="Mod Configuration Menu">

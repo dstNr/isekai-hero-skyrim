@@ -7,6 +7,8 @@
     Reincarnated into Skyrim with a System: a skill tree paid for in System Points,
     kill objectives handed out on the System's own schedule, threat readings over your
     enemies, a pocket-dimension storage and a shop to fill it from.
+    REQUIRES Magelight UI 1.7.0 or newer (Nexus mod 193303), which draws every screen of
+    the mod, besides SKSE and the Address Library. Install it first.
   </Description>
   <Groups>
     <element>Gameplay</element>

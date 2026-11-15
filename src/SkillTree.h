@@ -60,7 +60,7 @@ namespace Isekai::SkillTree {
         Zone          zone;  // display grouping only — see Zone
         const char*   name;
         const char*   desc;
-        const char*   icon;  // file name under Data\SKSE\Plugins\IsekaiHero\icons
+        const char*   icon;  // file name under Data\Magelight\IsekaiHero\icons
         float         x, y;  // layout coords in the tree canvas (1080p design space)
         std::int32_t  cost;  // System Points
         PowerLevel    minPower;   // minimum rebirth tier that may unlock this node.

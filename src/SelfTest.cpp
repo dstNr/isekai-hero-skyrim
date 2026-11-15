@@ -280,7 +280,7 @@ namespace Isekai::SelfTest {
             std::vector<std::string> missing;
             for (const auto& item : catalog) {
                 const std::string path =
-                    "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\" + item.icon;
+                    "Data\\Magelight\\IsekaiHero\\icons\\" + item.icon;
                 if (!std::filesystem::exists(path)) {
                     missing.push_back(item.icon);
                 }
@@ -357,7 +357,7 @@ namespace Isekai::SelfTest {
                 std::vector<std::string> missingIcons;
                 for (std::size_t i = 0; i < count; ++i) {
                     const std::string path =
-                        "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\" + std::string(nodes[i].icon);
+                        "Data\\Magelight\\IsekaiHero\\icons\\" + std::string(nodes[i].icon);
                     if (!std::filesystem::exists(path)) {
                         missingIcons.emplace_back(nodes[i].icon);
                     }
@@ -451,7 +451,7 @@ namespace Isekai::SelfTest {
 
             std::vector<std::string> missing;
             for (const char* icon : kChrome) {
-                const std::string path = "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\" + std::string(icon);
+                const std::string path = "Data\\Magelight\\IsekaiHero\\icons\\" + std::string(icon);
                 if (!std::filesystem::exists(path)) {
                     missing.emplace_back(icon);
                 }

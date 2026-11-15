@@ -172,7 +172,7 @@
     G.points += refund;
   }
 
-  /* --- buildTreeJson: same shape as Prisma.cpp::BuildTreeJson ------------- */
+  /* --- buildTreeJson: same shape as the tree JSON the plugin builds (src/UI/Payloads.cpp) ------------- */
   function buildTree() {
     return {
       points: G.points,

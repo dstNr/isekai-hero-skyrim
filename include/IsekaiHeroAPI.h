@@ -9,7 +9,7 @@
 // Nothing here throws, and no call blocks. If Isekai Hero is not installed you get
 // a nullptr and your plugin carries on.
 
-// Guarded exactly the way PrismaUI's own SKSE header guards it: if you have already
+// Guarded the way SKSE plugin headers commonly guard it: if you have already
 // included <Windows.h> with your own macro choices, yours win and this is a no-op.
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN

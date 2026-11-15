@@ -193,7 +193,6 @@ defaults.
 | `TextSpeed = 3`, open any panel. | Text types out about three times as fast. |
 | `TextSpeed = 0`. | No typing at all — the full text is there the moment the panel opens. |
 | `TextSpeed = 1`, open a long panel and **click it** while it types. | Jumps to the full text, buttons appear. The click must **not** press a button. |
-| Same click test with the **PrismaUI patch** installed. | Identical behaviour. |
 
 ### 1.1d Controller support (new, and nobody here plays on one)
 
@@ -381,7 +380,7 @@ is **still there** afterwards.
 
 Nothing here can fail automatically; the checks only prove nothing overlaps.
 
-- Skill tree in **both** renderers (with and without the PrismaUI patch): are the zone
+- Skill tree: are the zone
   frames sensible, the icons legible, the names readable, the mastery rail usable?
 - Shop cards: do the icons read as what they sell?
 - The status panel with a long title list (79 milestones) — does it still scroll and fit?

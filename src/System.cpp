@@ -54,7 +54,7 @@ namespace Isekai {
         // icon renders as no icon, exactly as these buttons looked before, so wiring the
         // names ahead of the art costs nothing. See docs/UI_ART_PROMPTS.md.
         [[nodiscard]] std::string BlessingIcon(const char* a_name) {
-            return std::string("Data\\SKSE\\Plugins\\IsekaiHero\\icons\\") + a_name;
+            return std::string("Data\\Magelight\\IsekaiHero\\icons\\") + a_name;
         }
 
         // ---- Reincarnation flow (choice captured into g_state) ----

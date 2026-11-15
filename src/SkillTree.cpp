@@ -16,7 +16,7 @@
 namespace Isekai::SkillTree {
 
     namespace {
-        constexpr const char* kIconDir = "Data\\SKSE\\Plugins\\IsekaiHero\\icons\\";
+        constexpr const char* kIconDir = "Data\\Magelight\\IsekaiHero\\icons\\";
 
         using AV = RE::ActorValue;
 
