@@ -204,6 +204,9 @@ quest.newObjective = [ SYSTEM ]  New objective:  slay {} {}
 quest.slay = Slay {} {}
 quest.tally = {}   {} / {}
 
+; --- src/SelfTest.cpp ---
+selftest.busy = [ SYSTEM ] Self-test: {} of {} checks passed. Full report: IsekaiHeroSKSE.log
+
 ; --- src/Shop.cpp (catalog) ---
 shelf.ELIXIRS = ELIXIRS
 shelf.MATERIALS = MATERIALS

@@ -194,6 +194,48 @@ namespace {
         EXPECT(!d.NeedsReoffer());
     }
 
+    // A screen closed and the next one opened in the same tick (queued reward panels): the
+    // request waits for the exit of our own release, and goes out when it arrives.
+    void OwnExitsCloseThenOpenSameTick() {
+        OwnExits e;
+        e.Close(/*a_entered=*/true);
+        EXPECT(!e.Open());
+        EXPECT(e.Deferred());
+        EXPECT(e.OnExited() == OwnExits::Exit::OursRequestNow);
+        EXPECT(!e.Deferred() && e.Owed() == 0);
+        EXPECT(e.OnExited() == OwnExits::Exit::Theirs);  // the next exit is a real loss
+    }
+
+    // The exit arrived before the next open: nothing to wait for, and nothing held back.
+    void OwnExitsCloseExitThenOpen() {
+        OwnExits e;
+        e.Close(true);
+        EXPECT(e.OnExited() == OwnExits::Exit::Ours);
+        EXPECT(e.Open());
+        EXPECT(!e.Deferred());
+        // Closing a request that never entered owes nothing.
+        e.Close(false);
+        EXPECT(e.Owed() == 0 && e.Open());
+    }
+
+    void OwnExitsCancelAndReset() {
+        OwnExits e;
+        e.Close(true);
+        EXPECT(!e.Open());
+        e.CancelDeferred();
+        EXPECT(e.OnExited() == OwnExits::Exit::Ours);  // still owed, but nobody waits
+        e.StaleEntry();
+        e.StaleEntry();
+        EXPECT(!e.Open());
+        EXPECT(e.OnExited() == OwnExits::Exit::Ours);
+        e.Reset();
+        EXPECT(e.Owed() == 0 && !e.Deferred() && e.Open());
+        e.Close(true);
+        EXPECT(!e.Open());
+        e.Close(false);  // a close drops the waiting open
+        EXPECT(e.OnExited() == OwnExits::Exit::Ours);
+    }
+
     void LabelPushDecisions() {
         constexpr float W = 1920.0f, H = 1080.0f;
         LabelPushGate g;
@@ -287,6 +329,9 @@ int main() {
         { "DecisionNothingPending", DecisionNothingPending },
         { "DecisionOfferSemantics", DecisionOfferSemantics },
         { "DecisionScreensReoffer", DecisionScreensReoffer },
+        { "OwnExitsCloseThenOpenSameTick", OwnExitsCloseThenOpenSameTick },
+        { "OwnExitsCloseExitThenOpen", OwnExitsCloseExitThenOpen },
+        { "OwnExitsCancelAndReset", OwnExitsCancelAndReset },
         { "LabelPushDecisions", LabelPushDecisions },
         { "LabelPushEdges", LabelPushEdges },
         { "PageBuild", PageBuild },

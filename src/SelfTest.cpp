@@ -3,6 +3,7 @@
 #include "../include/IsekaiHeroAPI.h"
 #include "Config.h"
 #include "CraftHooks.h"
+#include "Loc.h"
 #include "Passives.h"
 #include "Plugin.h"
 #include "Progression.h"
@@ -643,6 +644,16 @@ namespace Isekai::SelfTest {
 
         // Instant reveal and a wide panel, same as the status ledger: this is a table, and
         // nobody wants to watch a typewriter spell out a diagnostic.
+        // Never over an open screen or a decision still waiting for its answer (the
+        // blessing): the report would replace it and drop its callback. The log has it all.
+        if (UI::IsSystemScreenOpen()) {
+            RE::SendHUDMessage::ShowHUDMessage(
+                LF("selftest.busy", "[ SYSTEM ] Self-test: {} of {} checks passed. Full report: IsekaiHeroSKSE.log",
+                   out.size() - failed, out.size())
+                    .c_str());
+            return;
+        }
+
         // Red when a line FAILs (spec 7.2); warnings alone keep the window cyan.
         UI::ShowSystemWindow("[ SYSTEM ] SELF-TEST", std::move(body),
                              std::vector<std::string>{ "CLOSE" }, [](int) {}, 100000.0f, 900.0f,

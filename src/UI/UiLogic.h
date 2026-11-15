@@ -269,6 +269,60 @@ namespace Isekai::UI::Logic {
         std::vector<LabelFrame> last_;
     };
 
+    // --- UI-mode exits we owe ourselves ---------------------------------------------
+
+    // Every UI-mode period ends in exactly one exit event. The exits our own releases cause
+    // are counted here and swallowed, and a request made while one is still owed waits for
+    // it: the host runs a release later, so a request made before that runs would be ended
+    // by it (an invisible screen, the game unpaused).
+    class OwnExits {
+    public:
+        // We release UI mode. a_entered: the period had been entered, so its exit follows.
+        void Close(bool a_entered) {
+            deferred_ = false;
+            if (a_entered) ++owed_;
+        }
+
+        // An entry that ran just before we closed: our release ends it, its exit follows.
+        void StaleEntry() { ++owed_; }
+
+        // We want UI mode. True = request it now; false = wait for the owed exit.
+        bool Open() {
+            if (owed_ == 0) return true;
+            deferred_ = true;
+            return false;
+        }
+
+        enum class Exit : std::uint8_t {
+            Theirs,          // not ours: the screen lost UI mode
+            Ours,            // ours: swallow it
+            OursRequestNow,  // ours, the last one owed, and an Open waited for it: request now
+        };
+
+        Exit OnExited() {
+            if (owed_ == 0) return Exit::Theirs;
+            if (--owed_ > 0 || !deferred_) return Exit::Ours;
+            deferred_ = false;
+            return Exit::OursRequestNow;
+        }
+
+        // The wanted screen went away (lost, refused): nothing waits any more.
+        void CancelDeferred() { deferred_ = false; }
+
+        // Back to nothing owed (a load, a recovery from a count that leaked).
+        void Reset() {
+            owed_ = 0;
+            deferred_ = false;
+        }
+
+        int Owed() const { return owed_; }
+        bool Deferred() const { return deferred_; }
+
+    private:
+        int  owed_ = 0;
+        bool deferred_ = false;
+    };
+
     // --- Page / build match --------------------------------------------------------
 
     // The page reports the build it was made for; both must be present and equal.

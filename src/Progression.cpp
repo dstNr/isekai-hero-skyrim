@@ -400,7 +400,17 @@ namespace Isekai::Progression {
                 case '\n': o += "\\n"; break;
                 case '\r': break;
                 case '\t': o += "\\t"; break;
-                default:   o += c; break;
+                default:
+                    // Every other control character as \u00XX: a raw one is not JSON.
+                    if (static_cast<unsigned char>(c) < 0x20) {
+                        constexpr char kHex[] = "0123456789abcdef";
+                        o += "\\u00";
+                        o += kHex[(c >> 4) & 0xF];
+                        o += kHex[c & 0xF];
+                    } else {
+                        o += c;
+                    }
+                    break;
                 }
             }
             return o;

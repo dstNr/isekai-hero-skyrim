@@ -28,11 +28,13 @@
 // so the state below is game-thread only. The atomics are the part other threads read
 // (the input guards, DismissSystemWindow).
 //
-// UI mode bookkeeping. Every UI-mode period we enter ends in exactly one UIModeExited. An
-// exit we caused (Close, after the period was entered) is counted in g_ownExits and
-// swallowed; any other exit while a screen is wanted means UI mode was taken from us
-// (Escape on a screen that leaves it to Magelight, another mod, a load boundary), and the
-// screen's loss rule runs (Lost). A refused request is the same loss without the exit.
+// UI mode bookkeeping (Logic::OwnExits). Every UI-mode period we enter ends in exactly one
+// UIModeExited. An exit we caused (Close, after the period was entered) is counted and
+// swallowed, and a screen opened while one is still owed asks for UI mode only once it
+// arrived: the host runs our release later, and would end a request made before that. Any
+// other exit while a screen is wanted means UI mode was taken from us (Escape on a screen
+// that leaves it to Magelight, another mod, a load boundary), and the screen's loss rule
+// runs (Lost). A refused request is the same loss without the exit.
 namespace Isekai::UI {
 
     namespace {
@@ -82,10 +84,11 @@ namespace Isekai::UI {
         Logic::PendingDecision    g_decision;
         std::uint32_t             g_panelIds = 0;
         bool                      g_entered = false;       // UIModeEntered seen since the last exit
-        int                       g_ownExits = 0;          // UIModeExited events our releases still owe
+        Logic::OwnExits           g_ownExits;              // exits our releases still owe, a request waiting on them
         bool                      g_autoReoffered = false; // the one automatic re-offer is spent
         std::string               g_lastShow;              // re-sent to a system page that reloaded
         int                       g_systemReadies = 0;
+        bool                      g_showQueued = false;    // a show waits in the gate for the next ready
         std::chrono::steady_clock::time_point g_openedAt;   // the last RequestOpen
 
         void SyncDecisionFlag() { g_decisionWaiting.store(g_decision.Current().has_value()); }
@@ -138,6 +141,8 @@ namespace Isekai::UI {
             }
             std::string js = "isekai.show(" + nlohmann::json(ScreenName(a_screen)).dump() + "," + *payload + ")";
             g_lastShow = js;
+            // Not ready (first load, or a reload): the gate delivers this one on ready.
+            if (!Magelight::PageReady(Magelight::View::System)) g_showQueued = true;
             g_screen.store(a_screen);
             g_shown.fetch_add(1);
             Magelight::Run(Magelight::View::System, std::move(js));
@@ -146,13 +151,10 @@ namespace Isekai::UI {
 
         void Lost(bool a_exited, std::string_view a_why);
 
-        // UI mode with pause and queue (Magelight::RequestOpen), unless it is already held
-        // or asked for. A request the host turns down at once is handled as a loss on the
-        // next task, never inside the caller's Show*: a single-button panel answers itself
-        // there, and its callback must not run under its own ShowSystemWindow.
-        void Open() {
-            if (g_open.exchange(true)) return;
-            g_openedAt = std::chrono::steady_clock::now();
+        // RequestOpen (pause and queue). A request the host turns down at once is handled
+        // as a loss on the next task, never inside the caller's Show*: a single-button panel
+        // answers itself there, and its callback must not run under its own ShowSystemWindow.
+        void Request() {
             if (Magelight::RequestOpen()) return;
             const auto shown = g_shown.load();
             if (auto* task = SKSE::GetTaskInterface()) {
@@ -162,14 +164,23 @@ namespace Isekai::UI {
             }
         }
 
+        // UI mode for the screen just pushed, unless it is already held or asked for.
+        void Open() {
+            if (g_open.exchange(true)) return;
+            g_openedAt = std::chrono::steady_clock::now();
+            if (g_ownExits.Open()) {
+                Request();
+            } else {
+                logger::info("Screens: the {} screen waits for the exit of our own release", ScreenName(g_screen.load()));
+            }
+        }
+
         // Leave UI mode ourselves. The page fades the screen out on its own.
         void Close() {
             g_screen.store(Screen::None);
             if (!g_open.exchange(false)) return;
-            if (g_entered) {
-                g_entered = false;
-                ++g_ownExits;
-            }
+            g_ownExits.Close(g_entered);
+            g_entered = false;
             Magelight::Close();
         }
 
@@ -215,6 +226,7 @@ namespace Isekai::UI {
         void Lost(bool a_exited, std::string_view a_why) {
             g_open.store(false);
             g_entered = false;
+            g_ownExits.CancelDeferred();
             const Screen s = g_screen.exchange(Screen::None);
             if (s != Screen::Panel || !g_panel) {
                 if (s != Screen::None) {
@@ -384,7 +396,7 @@ namespace Isekai::UI {
         return up || g_decisionWaiting.load();
     }
 
-    bool HoldsInput() { return g_open.load(); }
+    bool HoldsInput() { return g_open.load() && Available(); }
 
     void DismissSystemWindow() {
         if (!g_open.load()) return;
@@ -435,6 +447,7 @@ namespace Isekai::UI {
             logger::warn("Screens: the {} screen lost UI mode without an exit event; recovering",
                          ScreenName(g_screen.load()));
             g_entered = false;
+            g_ownExits.Reset();  // backstop: a count that leaked must not swallow the next real exit
             Magelight::Close();  // withdraws a request still queued behind another mod's UI mode
             Lost(/*a_exited=*/true, "UI mode gone without an exit event");
             if (g_open.load()) return true;  // the decision was offered again by itself
@@ -479,6 +492,7 @@ namespace Isekai::UI {
             g_decision.Reset();
             g_autoReoffered = false;
             Close();
+            g_ownExits.CancelDeferred();
             g_panel.reset();
             SyncDecisionFlag();
             if (had) logger::info("Screens: a load dropped the screen or decision left from before it");
@@ -545,7 +559,7 @@ namespace Isekai::UI::Screens::detail {
         if (!g_open.load()) {
             // An entry that ran just before we closed: Close released it, and the exit of
             // that release follows this event.
-            ++g_ownExits;
+            g_ownExits.StaleEntry();
             logger::info("Screens: UI mode entered after the screen was closed; its exit is ours");
             return;
         }
@@ -554,9 +568,15 @@ namespace Isekai::UI::Screens::detail {
 
     void OnExited(bool a_reopened) {
         g_entered = false;
-        if (g_ownExits > 0) {
-            --g_ownExits;
-            return;
+        switch (g_ownExits.OnExited()) {
+            case Logic::OwnExits::Exit::Ours:
+                return;
+            case Logic::OwnExits::Exit::OursRequestNow:
+                // A screen opened while our release was still owed: its turn now.
+                if (g_open.load()) Request();
+                return;
+            case Logic::OwnExits::Exit::Theirs:
+                break;
         }
         if (!g_open.load() || a_reopened) return;
         Lost(/*a_exited=*/true, "UI mode ended");
@@ -578,9 +598,11 @@ namespace Isekai::UI::Screens::detail {
                          system ? "system" : "hud", CleanUtf8(std::string_view(a_version).substr(0, 64)),
                          kUiBuildId);
         }
-        // A reload while a screen is up threw the page's state away: show it again. The
-        // first ready already received the queued show.
-        if (system && ++g_systemReadies > 1 && g_open.load() && !g_lastShow.empty()) {
+        // A reload while a screen is up threw the page's state away: show it again, unless
+        // a show made since the reload was queued and has just been delivered by the gate.
+        if (!system) return;
+        const bool delivered = std::exchange(g_showQueued, false);
+        if (++g_systemReadies > 1 && !delivered && g_open.load() && !g_lastShow.empty()) {
             Magelight::Run(Magelight::View::System, g_lastShow);
         }
     }
