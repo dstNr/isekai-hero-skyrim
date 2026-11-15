@@ -19,6 +19,7 @@
 #include "Storage.h"
 #include "UI/Input.h"
 #include "UI/LevelUpEffect.h"
+#include "UI/Magelight.h"
 #include "UI/Overlay.h"
 #include "UI/Prisma.h"
 #include "UI/SkillTreeWindow.h"
@@ -1163,6 +1164,7 @@ namespace Isekai {
                 ModAPI::Install();      // the export other plugins resolve by name
                 FrameTick::Install();   // main-thread clock: quests and the mod API publish
                 UI::Install();
+                UI::Magelight::Install();  // system and hud views; no-op without Magelight UI
                 UI::Prisma::Install();  // optional web UI; no-op without the patch
                 SkyrimNet::Install();   // optional AI-NPC context; no-op without SkyrimNet
                 Progression::Install();

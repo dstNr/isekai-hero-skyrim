@@ -79,12 +79,16 @@ add_commonlibsse_plugin(
         src/UI/Input.h
         src/UI/LevelUpEffect.cpp
         src/UI/LevelUpEffect.h
+        src/UI/Magelight.cpp
+        src/UI/Magelight.h
         src/UI/Overlay.cpp
         src/UI/Overlay.h
         src/UI/Payloads.cpp
         src/UI/Payloads.h
         src/UI/Prisma.cpp
         src/UI/Prisma.h
+        src/UI/Screens.cpp
+        src/UI/Screens.h
         src/UI/ShopWindow.cpp
         src/UI/ShopWindow.h
         src/UI/ThreatLabels.cpp

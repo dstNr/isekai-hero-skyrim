@@ -484,6 +484,43 @@ check("vr startup: the probe, the first Present and each PrismaUI call are logge
   return "probe, Present and Prisma steps logged";
 });
 
+check("magelight: Install logs before RequestApi4 and each CreateViewEx, and page paths are under Data\\Magelight\\IsekaiHero", () => {
+  // Same lesson as #35: a crash inside a host call must leave the line naming that call.
+  // Install creates its views through one helper, Create(), so every Create(api, ...) in
+  // Install needs its own "creating view" line after the previous one. The page paths are
+  // pinned too: the packaged pages live in one folder, and logs name only that relative
+  // folder (the absolute one can sit under the user's folder).
+  const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  const src = strip(read("src/UI/Magelight.cpp"));
+  const at = src.indexOf("bool Install()");
+  need(at >= 0, "Install() not found in Magelight.cpp");
+  const inst = src.slice(at);
+  const req = inst.indexOf("requesting the API");
+  const api = inst.indexOf("RequestApi4(");
+  need(api >= 0, "Install no longer calls RequestApi4 — parser stale?");
+  need(req >= 0 && req < api, "Install must log before RequestApi4");
+  need([...src.matchAll(/CreateViewEx\(/g)].length === 1,
+       "CreateViewEx must be called in exactly one place, the Create() helper");
+  const helper = src.slice(src.indexOf("bool Create("), src.indexOf("bool Listen("));
+  need(helper.includes("CreateViewEx("), "the Create() helper no longer calls CreateViewEx");
+  const calls = [...inst.matchAll(/\bCreate\(api,/g)].map((m) => m.index);
+  need(calls.length >= 2, `${calls.length} view creations parsed in Install, expected system and hud`);
+  calls.forEach((pos, i) => {
+    const from = i === 0 ? 0 : calls[i - 1];
+    need(inst.slice(from, pos).includes("Magelight: creating view "),
+         `view creation ${i + 1} in Install is not logged before it`);
+  });
+  need(src.includes('kPageDir = "Data\\\\Magelight\\\\IsekaiHero\\\\"'),
+       "kPageDir must be Data\\Magelight\\IsekaiHero\\");
+  need(src.includes('L"Data" / L"Magelight" / L"IsekaiHero" / a_file'),
+       "PagePath must build <exe dir>\\Data\\Magelight\\IsekaiHero\\<file>");
+  for (const page of ["system.html", "hud.html"]) {
+    need(src.includes(`"${page}"`), `the ${page} view is gone from Magelight.cpp`);
+  }
+  need(!/logger::\w+\([^;]*(\bpaths?\[|Utf8\()/.test(src), "a log line formats an absolute page path");
+  return `RequestApi4 and ${calls.length} view creations logged first, pages under Data\\Magelight\\IsekaiHero`;
+});
+
 check("shop: visible catalog matches the playground", () => {
   const cpp = parseShopCatalog();
   const visible = cpp.filter((e) => e.kind !== "OurItem" || e.localID);
