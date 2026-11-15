@@ -248,9 +248,11 @@ namespace Isekai::UI::Magelight {
                         // ReleaseUIMode and Escape leave the view on screen; hide it unless a
                         // new entry already took UI mode again (a quick reopen, whose Entered
                         // job follows this one).
+                        // Hide first: OnExited may send a held request at once (our own exit
+                        // arrived), and that screen must not end up in UI mode while hidden.
                         const bool reopened = g_api->GetUIModeOwner() == g_mod;
-                        Screens::detail::OnExited(reopened);
                         if (!reopened) g_api->ShowView(SlotOf(View::System).id.load(), false);
+                        Screens::detail::OnExited(reopened);
                         break;
                     }
                 }

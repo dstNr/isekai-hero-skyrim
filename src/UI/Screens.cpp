@@ -75,6 +75,7 @@ namespace Isekai::UI {
         std::atomic<bool>          g_open{ false };          // UI mode asked for and not closed or lost
         std::atomic<bool>          g_decisionWaiting{ false };  // g_decision.Current(), for other threads
         std::atomic<std::uint32_t> g_shown{ 0 };             // bumps with every isekai.show
+        std::uint32_t              g_requests = 0;           // bumps with every RequestOpen (game thread)
         std::atomic<float>         g_pushedScale{ 0.0f };    // the UiScale the pages last got
         // A panel callback is running with the view still held: until it shows something,
         // the guards read "nothing open", as they did when the old panels closed first.
@@ -154,12 +155,14 @@ namespace Isekai::UI {
         // RequestOpen (pause and queue). A request the host turns down at once is handled
         // as a loss on the next task, never inside the caller's Show*: a single-button panel
         // answers itself there, and its callback must not run under its own ShowSystemWindow.
+        // Keyed on the request, not the show: a Push in between asks for nothing new, and
+        // its screen still has no UI mode.
         void Request() {
+            const auto request = ++g_requests;
             if (Magelight::RequestOpen()) return;
-            const auto shown = g_shown.load();
             if (auto* task = SKSE::GetTaskInterface()) {
-                task->AddTask([shown]() {
-                    if (g_open.load() && !g_entered && g_shown.load() == shown) Lost(false, "the host turned the request down");
+                task->AddTask([request]() {
+                    if (g_open.load() && !g_entered && g_requests == request) Lost(false, "the host turned the request down");
                 });
             }
         }
@@ -179,6 +182,7 @@ namespace Isekai::UI {
         void Close() {
             g_screen.store(Screen::None);
             if (!g_open.exchange(false)) return;
+            ++g_requests;  // a refusal still on its way belongs to the screen closed here
             g_ownExits.Close(g_entered);
             g_entered = false;
             Magelight::Close();

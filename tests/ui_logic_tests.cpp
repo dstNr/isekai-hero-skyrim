@@ -218,6 +218,20 @@ namespace {
         EXPECT(e.Owed() == 0 && e.Open());
     }
 
+    // Two exits owed (a stale entry and our close): the held open waits for the second.
+    void OwnExitsTwoOwedHoldOpen() {
+        OwnExits e;
+        e.StaleEntry();
+        e.Close(true);
+        EXPECT(e.Owed() == 2);
+        EXPECT(!e.Open());
+        EXPECT(e.OnExited() == OwnExits::Exit::Ours);
+        EXPECT(e.Deferred() && e.Owed() == 1);  // still held
+        EXPECT(e.OnExited() == OwnExits::Exit::OursRequestNow);
+        EXPECT(!e.Deferred() && e.Owed() == 0);
+        EXPECT(e.OnExited() == OwnExits::Exit::Theirs);
+    }
+
     void OwnExitsCancelAndReset() {
         OwnExits e;
         e.Close(true);
@@ -331,6 +345,7 @@ int main() {
         { "DecisionScreensReoffer", DecisionScreensReoffer },
         { "OwnExitsCloseThenOpenSameTick", OwnExitsCloseThenOpenSameTick },
         { "OwnExitsCloseExitThenOpen", OwnExitsCloseExitThenOpen },
+        { "OwnExitsTwoOwedHoldOpen", OwnExitsTwoOwedHoldOpen },
         { "OwnExitsCancelAndReset", OwnExitsCancelAndReset },
         { "LabelPushDecisions", LabelPushDecisions },
         { "LabelPushEdges", LabelPushEdges },
