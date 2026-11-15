@@ -196,7 +196,8 @@ function view() {
 
 // The Magelight pages' own chrome, the same two shapes under the names common.js gives
 // them: data-loc="key" on a static element, and isekaiUi.t()/tf() calls in the scripts.
-// Every page and the shared common.js are scanned, so a page added later is covered.
+// Every page, the shared common.js and the screen scripts in screens/ are scanned, so a
+// page or screen added later is covered.
 // t and tf are DEFINED in common.js with a variable key — that is what they are for —
 // so a `function t(` / `function tf(` definition is not a call site.
 const PAGE_DIR = "magelight/IsekaiHero";
@@ -205,7 +206,13 @@ const PAGE_ANY = /(?<!function\s+)\btf?\(\s*(.)/g;
 
 function pages() {
   const dir = join(ROOT, PAGE_DIR);
-  const files = readdirSync(dir).filter((n) => /\.(html|js)$/.test(n) && n !== "version.js");
+  const scripts = (sub) => {
+    const d = join(dir, sub);
+    try { if (!statSync(d).isDirectory()) return []; } catch { return []; }
+    return readdirSync(d).filter((n) => /\.js$/.test(n)).map((n) => `${sub}/${n}`);
+  };
+  const files = readdirSync(dir).filter((n) => /\.(html|js)$/.test(n) && n !== "version.js")
+    .concat(scripts("screens"));
   const out = [];
   for (const name of files) {
     const file = `${PAGE_DIR}/${name}`;

@@ -42,13 +42,14 @@ then open the printed URL: **http://localhost:5173/playground/**
 | Control | What it does |
 |---------|--------------|
 | **Panel** buttons | Story (cyan, one button), Blessing ×5 (the real five-way choice, capsule row), Blessing ×3 (cards), Awakening (two cards), Dormant (violet), Warning (red self-test), Emblem (crest + icon actions). Choices continue the flow as in game. |
-| **Screens** | Status, Skill tree, Shop — enabled once the page has that screen (`isekai.screens`). |
+| **Status** | The ledger for each blessing kind: Custom (violet blessing, the three dials), S rank (rank and ASCENDED gold, all 79 titles), Hero (cyan), Shattered (red), Dormant (violet, awakening level, the System quiet). |
+| **Screens** | Skill tree; Shop; Shop 12 SP (sets the balance so the dearest goods cannot be afforded). Buying, respec, Back and the status buttons continue as in game. |
 | **Hud** | Opens `hud.html` once it exists. |
 | **Tone** | Re-shows the panel in another tone (in game C++ picks it). |
 | **Scene** | Dusk, snow (bright — the legibility check) or night behind the page. |
 | **Text** | English or a partial German table: re-renders the open screen in place, as a settings reload does. |
 | **UiScale** | Pushes `isekai.scale`. |
-| **+10 / Rebirth / Dormant / Reset** | Game state for the tree and shop. |
+| **+10 / Rebirth / Dormant / Reset** | Game state. A change re-pushes the tree, shop or status on display, the way the plugin re-pushes after a purchase. |
 | **☰** | Hides the dock for a clean screenshot. |
 
 The **Host traffic** panel (bottom-right) logs every message the page sends.
@@ -61,7 +62,8 @@ completes it.
 `?open=<id>&tone=<cyan|gold|red|violet>&scene=<dusk|snow|night>&dock=0&instant=1`
 opens a scenario straight away (`instant=1` skips the typewriter). Ids:
 `story`, `blessing`, `cards`, `awaken`, `dormant`, `warning`, `emblem`,
-`status`, `tree`, `shop`. A headless screenshot, for example:
+`status`, `status-s`, `status-hero`, `status-shattered`, `status-dormant`, `tree`,
+`shop`, `shop-low`. A headless screenshot, for example:
 
 ```
 msedge --headless=new --window-size=1600,900 --virtual-time-budget=6000 ^

@@ -286,40 +286,74 @@
   }
 
   /* --- the status ledger, shaped like BuildStatusJson ---------------------
-     full = every one of the 79 milestones granted: the stress case for scaling,
-     where the card must stay on screen and the titles list scroll inside it. */
-  function buildStatus(full) {
-    var titles = [
-      { name: "Survivor",   effect: "+100 Health",       quest: "Unbound" },
-      { name: "Wayfarer",   effect: "+100 Carry Weight", quest: "Before the Storm" },
-      { name: "Dragonborn", effect: "+15% Magic Resist", quest: "The Way of the Voice" }
-    ];
-    if (full) {
-      titles = [];
-      for (var i = 1; i <= 79; i++) {
-        titles.push({ name: "Title " + i, effect: "+" + (i * 2) + " Health",
-                      quest: "Quest milestone number " + i });
-      }
+     One character per blessing kind. rankTone / blessingTone mirror the plugin's
+     Logic::ToneForRank and Logic::ToneFor(Blessing) (src/UI/UiLogic.h), which the
+     plugin sends with the ledger; level is the character level the header shows.
+     The "s" character has every one of the 79 milestones: the stress case for
+     scaling, where the window must stay on screen and the titles scroll inside it. */
+  var STATUS_KINDS = {
+    custom:    { tier: "ASCENDED", mode: "CUSTOM",    rank: "C", level: 23, earned: 7,
+                 rewardTier: "ASCENDED", treeTier: "HERO", grantTier: "NORMAL" },
+    s:         { tier: "ASCENDED", mode: "",          rank: "S", level: 81, earned: 79 },
+    hero:      { tier: "HERO",     mode: "",          rank: "B", level: 37, earned: 24 },
+    shattered: { tier: "ASCENDED", mode: "SHATTERED", rank: "B", level: 34, earned: 22 },
+    dormant:   { tier: "NORMAL",   mode: "DORMANT",   rank: "D", level: 12, earned: 4,
+                 nextAwakening: 25, quiet: 6 }
+  };
+  var statusKind = "custom";   // the last one shown, for nav:status and re-pushes
+
+  function toneForRank(rank) { return rank === "S" ? "gold" : "cyan"; }
+  function toneForBlessing(tier, mode) {
+    if (mode === "SHATTERED") return "red";
+    if (mode === "DORMANT" || mode === "CUSTOM") return "violet";
+    return tier === "ASCENDED" ? "gold" : "cyan";
+  }
+
+  var TITLES = [
+    { name: "Survivor",      effect: "+100 Health",        quest: "Unbound" },
+    { name: "Wayfarer",      effect: "+100 Carry Weight",  quest: "Before the Storm" },
+    { name: "Dragonborn",    effect: "+15% Magic Resist",  quest: "The Way of the Voice" },
+    { name: "Tomb Raider",   effect: "+25 Stamina",        quest: "Bleak Falls Barrow" },
+    { name: "Dragon Slayer", effect: "+10% Fire Resist",   quest: "Dragon Rising" },
+    { name: "Voice Wielder", effect: "+50 Magicka",        quest: "The Horn of Jurgen Windcaller" },
+    { name: "Horn Bearer",   effect: "+5% Shock Resist",   quest: "The Horn of Jurgen Windcaller" }
+  ];
+
+  function buildStatus(kind) {
+    var k = STATUS_KINDS[kind] || STATUS_KINDS.custom;
+    var titles = TITLES.slice(0, Math.min(k.earned, TITLES.length));
+    for (var i = titles.length + 1; i <= k.earned; i++) {
+      titles.push({ name: "Title " + i, effect: "+" + (i * 2) + " Health",
+                    quest: "Quest milestone number " + i });
     }
     return {
-      tier: "ASCENDED", rank: full ? "S" : "C", mode: "CUSTOM",
-      rewardTier: "ASCENDED", treeTier: "ASCENDED", grantTier: "ASCENDED",
-      nextAwakening: 0,
-      milestonesEarned: full ? 79 : 7, milestonesTotal: 79,
+      tier: k.tier, rank: k.rank, mode: k.mode,
+      rewardTier: k.rewardTier || k.tier, treeTier: k.treeTier || k.tier, grantTier: k.grantTier || k.tier,
+      nextAwakening: k.nextAwakening || 0,
+      milestonesEarned: k.earned, milestonesTotal: 79,
       points: G.points, hasTree: true, hasStorage: true, hasShop: true, canReboot: true,
-      // The standing System objective (src/Quests.cpp). Empty questText hides the row.
+      // The standing System objective (src/Quests.cpp). Empty questText hides the row,
+      // unless hours remain until the next one ("the System is quiet").
       // questCanReroll is the ini's testing switch (QuestRerollButton), on here so the
       // preview shows the widest possible action row.
-      questText: "Slay 25 Draugr", questProgress: full ? 25 : 9, questTarget: 25,
-      questReward: 16, questWaitHours: 0, questCanReroll: true,
-      attunements: [
+      questText: k.quiet ? "" : "Slay 25 Draugr", questProgress: k.earned >= 79 ? 25 : 9, questTarget: 25,
+      questReward: 16, questWaitHours: k.quiet || 0, questCanReroll: !k.quiet,
+      attunements: k.earned < 5 ? [{ stat: "Health", amount: 100 }, { stat: "Carry Weight", amount: 100 }] : [
         { stat: "Health", amount: 250 }, { stat: "Magicka", amount: 150 },
         { stat: "Stamina", amount: 150 }, { stat: "Carry Weight", amount: 200 },
         { stat: "Magic Resist", amount: 15 }, { stat: "Fire Resist", amount: 25 },
         { stat: "Frost Resist", amount: 25 }, { stat: "Disease Resist", amount: 25 }
       ],
-      titles: titles
+      titles: titles,
+      level: k.level,
+      rankTone: toneForRank(k.rank),
+      blessingTone: toneForBlessing(k.tier, k.mode)
     };
+  }
+
+  function showStatus(kind) {
+    if (kind) statusKind = kind;
+    show("status", buildStatus(statusKind));
   }
 
   /* ======================================================================
@@ -439,13 +473,29 @@
           ], "cyan",
           { reveal: 200, emblem: { icon: "icons/rank_s.png", caption: "Rank S", tone: "gold" } }));
       } },
-    { id: "status", group: "Screens", label: "Status", screen: "status",
-      hint: "Shift-click: all 79 titles",
-      run: function (e) { open("status", buildStatus(!!(e && e.shiftKey))); } },
+    { id: "status", group: "Status", label: "Custom", screen: "status",
+      hint: "ASCENDED (CUSTOM), rank C: blessing violet, the three dials spelled out",
+      run: function () { onSelect = null; showStatus("custom"); } },
+    { id: "status-s", group: "Status", label: "S rank", screen: "status",
+      hint: "Rank S and ASCENDED, both gold; all 79 titles (the scroll stress case)",
+      run: function () { onSelect = null; showStatus("s"); } },
+    { id: "status-hero", group: "Status", label: "Hero", screen: "status",
+      hint: "HERO, rank B: everything cyan",
+      run: function () { onSelect = null; showStatus("hero"); } },
+    { id: "status-shattered", group: "Status", label: "Shattered", screen: "status",
+      hint: "ASCENDED (SHATTERED): blessing red",
+      run: function () { onSelect = null; showStatus("shattered"); } },
+    { id: "status-dormant", group: "Status", label: "Dormant", screen: "status",
+      hint: "NORMAL (DORMANT), awakens at 25, the System quiet between objectives: blessing violet",
+      run: function () { onSelect = null; showStatus("dormant"); } },
     { id: "tree", group: "Screens", label: "Skill tree", screen: "tree",
       run: function () { open("tree", buildTree()); } },
     { id: "shop", group: "Screens", label: "Shop", screen: "shop",
-      run: function () { open("shop", buildShop()); } }
+      hint: "The dearest goods of a shelf are gold",
+      run: function () { open("shop", buildShop()); } },
+    { id: "shop-low", group: "Screens", label: "Shop 12 SP", screen: "shop",
+      hint: "Sets the balance to 12 SP: the crates and the hoard cannot be afforded",
+      run: function () { G.points = 12; changed(); open("shop", buildShop()); } }
   ];
 
   /* A sample translation, partial on purpose (that is what real ones are). Switching
@@ -505,6 +555,15 @@
   /* ReleaseUIMode: Magelight hides the view. */
   function hide() { if (frame) frame.classList.add("is-hidden"); }
 
+  /* Re-push the data screen on display, if it is one of `screens` and the view is up. */
+  function repush(screens) {
+    if (!last || screens.indexOf(last.screen) < 0) return;
+    if (!frame || frame.classList.contains("is-hidden")) return;
+    if (last.screen === "tree") show("tree", buildTree());
+    else if (last.screen === "shop") show("shop", buildShop());
+    else if (last.screen === "status") showStatus();
+  }
+
   /* Screens::OnAction, by the same "type:arg" grammar UiLogic::ParseAction reads. */
   function onAction(text) {
     var colon = text.indexOf(":");
@@ -523,13 +582,15 @@
       case "nav":
         if (arg === "tree") show("tree", buildTree());
         else if (arg === "shop") show("shop", buildShop());
-        else if (arg === "status") show("status", buildStatus(false));
+        else if (arg === "status") showStatus();
         break;
       case "status":
         if (arg === "tree") show("tree", buildTree());
         else if (arg === "shop") show("shop", buildShop());
-        else if (arg === "close" || arg === "storage") hide();
-        // reboot / reroll change save state in game; nothing to preview here.
+        else if (arg === "reroll") showStatus();   // a new objective: the ledger is re-pushed
+        else if (arg === "close" || arg === "storage" || arg === "reboot") hide();
+        // reboot changes save state in game (the blessing choice follows); the mock only
+        // closes, as the plugin does before that choice opens.
         break;
       case "buy": tryUnlock(parseInt(arg, 10) || 0); show("tree", buildTree()); break;
       case "respec": doRespec(); show("tree", buildTree()); break;
@@ -599,12 +660,16 @@
       run(function (isekai) { isekai.scale(s); });
     },
 
-    addPoints: function (n) { G.points = Math.max(0, G.points + n); changed(); },
-    setTier: function (t) { G.tier = t; },
+    /* Game state. A change re-pushes the screen it shows on, as the plugin re-pushes after
+       a purchase: the points reach every data screen, the rebirth tier and the dormant
+       seal only the tree. */
+    addPoints: function (n) { Mock.setPoints(G.points + n); },
+    setPoints: function (n) { G.points = Math.max(0, n | 0); repush(["tree", "shop", "status"]); changed(); },
+    setTier: function (t) { G.tier = t; repush(["tree"]); },
     getTier: function () { return G.tier; },
-    setDormant: function (b) { G.dormant = !!b; },
+    setDormant: function (b) { G.dormant = !!b; repush(["tree"]); },
     getDormant: function () { return G.dormant; },
-    reset: function () { G = freshState(); changed(); },
+    reset: function () { G = freshState(); repush(["tree", "shop", "status"]); changed(); },
 
     onChange: function (f) { listeners.push(f); },
     state: function () { return { points: G.points, ready: ready, build: opts.build }; }

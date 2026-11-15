@@ -26,16 +26,18 @@ import { collect as collectStrings, template as stringTemplate } from "./extract
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = (p) => readFileSync(join(ROOT, p), "utf8");
 
-/* The Magelight pages. The system page's markup and its own script live in system.html;
-   the projection theme and the helpers every page shares (translation, scale, typewriter,
-   host messages) live next to it. A rule about "the page" means all three together. */
+/* The Magelight pages. The system page's markup, its styles and the panel's script live
+   in system.html; the status, skill tree and shop screens each in screens/<name>.js; the
+   projection theme and the helpers every page shares (translation, scale, typewriter,
+   host messages) next to it. A rule about "the page" means all of them together. */
 const SYSTEM_PAGE = "magelight/IsekaiHero/system.html";
 const PAGE_THEME = "magelight/IsekaiHero/theme.css";
 const PAGE_COMMON = "magelight/IsekaiHero/common.js";
-const systemPage = () => [SYSTEM_PAGE, PAGE_THEME, PAGE_COMMON].map(read).join("\n");
-/* The PrismaUI page still carries the status, skill tree and shop screens until they move
-   to the system page; rules about those screens read it until then. */
-const PRISMA_VIEW = "prisma-patch/PrismaUI/views/IsekaiHero/index.html";
+const PAGE_SCREENS = "magelight/IsekaiHero/screens";
+const screenScripts = () => existsSync(join(ROOT, PAGE_SCREENS))
+  ? readdirSync(join(ROOT, PAGE_SCREENS)).filter((n) => n.endsWith(".js")).sort().map((n) => `${PAGE_SCREENS}/${n}`)
+  : [];
+const systemPage = () => [SYSTEM_PAGE, PAGE_THEME, PAGE_COMMON, ...screenScripts()].map(read).join("\n");
 
 let failures = 0;
 let checks = 0;
@@ -632,22 +634,23 @@ check("ui: the web view's script parses", () => {
   // Nothing else here would notice. The page is not compiled, and a syntax error in it
   // does not fail the build or any other check — it shows up in the game as a panel that
   // never appears, which is an expensive way to find a typo. The shared common.js is
-  // loaded by every page, so a typo there blanks all of them.
+  // loaded by every page, so a typo there blanks all of them; a typo in a screen script
+  // takes that screen away.
   const html = read(SYSTEM_PAGE);
   const blocks = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)]
-    .map((m) => m[1]).filter((js) => js.trim());
+    .map((m, i) => [`<script> block ${i + 1}`, m[1]]).filter((b) => b[1].trim());
   need(blocks.length > 0, "no inline <script> blocks found — parser stale?");
-  blocks.push(read(PAGE_COMMON));
-  blocks.forEach((js, i) => {
+  const inline = blocks.length;
+  for (const f of [PAGE_COMMON, ...screenScripts()]) blocks.push([f.replace(/^.*IsekaiHero\//, ""), read(f)]);
+  for (const [name, js] of blocks) {
     try {
       new Function(js);  // parses only; nothing runs
     } catch (e) {
-      need(false, `${i === blocks.length - 1 ? "common.js" : `<script> block ${i + 1}`} ` +
-                  `does not parse: ${e.message}`);
+      need(false, `${name} does not parse: ${e.message}`);
     }
-  });
-  return `${blocks.length - 1} block(s) + common.js, ` +
-         `${blocks.reduce((n, b) => n + b.split("\n").length, 0)} lines`;
+  }
+  return `${inline} block(s) + ${blocks.length - inline} script(s), ` +
+         `${blocks.reduce((n, b) => n + b[1].split("\n").length, 0)} lines`;
 });
 
 check("ui: the web view actually translates itself", () => {
@@ -751,12 +754,75 @@ check("ui: the system page speaks the plugin's message contract", () => {
   return `${want.length} messages, hello/loc/scale/show defined, version.js optional`;
 });
 
+check("ui: system.html loads every screen script", () => {
+  // A screen script that is not loaded is a screen that is not there: the page then
+  // simply does not offer it, and the plugin's show() of it logs a warning nobody reads.
+  // Each one is loaded by a plain <script src> before the page's own script runs them,
+  // and each registers the factory its file name promises.
+  const html = read(SYSTEM_PAGE);
+  const files = screenScripts();
+  need(files.length >= 3, `${files.length} screen scripts in ${PAGE_SCREENS} — status, tree and shop expected`);
+  const main = html.search(/<script>\s*"use strict";/);
+  need(main >= 0, "the page's own inline script not found — parser stale?");
+  for (const f of files) {
+    const name = f.slice(PAGE_SCREENS.length + 1, -3);
+    const tag = html.indexOf(`<script src="screens/${name}.js"></script>`);
+    need(tag >= 0, `system.html never loads screens/${name}.js`);
+    need(tag < main, `screens/${name}.js loads after the script that runs it`);
+    need(new RegExp(`defs\\.${name}\\s*=\\s*function`).test(read(f)),
+         `screens/${name}.js does not register defs.${name}`);
+    need(html.includes(`"${name}"`), `system.html never asks for the ${name} screen`);
+  }
+  return files.map((f) => f.slice(PAGE_SCREENS.length + 1)).join(", ");
+});
+
+check("ui: every action the page sends is one the plugin parses", () => {
+  // UiLogic::ParseAction rejects an unknown type or word outright, so a typo in a button
+  // handler is a button that does nothing, in game only. Read every ui.send() and every
+  // statusAction() the page makes and hold it to the parser's own word lists.
+  const logic = read("src/UI/UiLogic.h");
+  const parse = logic.slice(logic.indexOf("inline std::optional<Action> ParseAction"));
+  need(parse.length > 100, "ParseAction not found in UiLogic.h — parser stale?");
+  const words = (type) => {
+    const m = parse.match(new RegExp(`type == "${type}"\\)\\s*\\{\\s*static constexpr std::string_view kWords\\[\\] = \\{([^}]*)\\}`));
+    need(m, `no word list for "${type}" in ParseAction — parser stale?`);
+    return [...m[1].matchAll(/"(\w+)"/g)].map((x) => x[1]);
+  };
+  const bare = ["close", "respec"];                // no argument
+  const numbered = ["choose", "shopBuy", "buy"];  // a number
+  for (const w of [...bare, ...numbered]) {
+    need(parse.includes(`"${w}"`), `ParseAction no longer knows "${w}" — update this check`);
+  }
+  const allowed = { status: words("status"), nav: words("nav") };
+
+  const page = [SYSTEM_PAGE, PAGE_COMMON, ...screenScripts()].map(read).join("\n")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
+  const sends = [...page.matchAll(/\bui\.send\(\s*"(\w+)"\s*(?:,\s*([^)]*))?\)/g)];
+  need(sends.length >= 8, `${sends.length} ui.send calls parsed — parser stale?`);
+  for (const [, type, arg] of sends) {
+    if (bare.includes(type)) { need(arg === undefined, `ui.send("${type}") takes no argument`); continue; }
+    if (numbered.includes(type)) { need(arg !== undefined && !/^"/.test(arg.trim()), `ui.send("${type}") needs a number`); continue; }
+    need(type in allowed, `ui.send("${type}", …): ParseAction knows no type "${type}"`);
+    if (type === "status" && arg.trim() === "a") continue;   // statusAction's own pass-through, checked below
+    const word = arg.trim().match(/^"(\w+)"$/);
+    need(word, `ui.send("${type}", ${arg}) does not send a literal word`);
+    need(allowed[type].includes(word[1]), `ui.send("${type}", "${word[1]}"): not one of ${allowed[type].join("/")}`);
+  }
+  const status = [...page.matchAll(/\bstatusAction\(\s*"(\w+)"\s*\)/g), ...page.matchAll(/\baddIcon\([^;]*?,\s*"[\w.]+\.png",\s*"(\w+)"\)/g),
+                  ...page.matchAll(/\bstatusButton\(\s*\w+,\s*"(\w+)"/g)].map((m) => m[1]);
+  need(status.length >= 6, `${status.length} status actions parsed — parser stale?`);
+  for (const w of status) {
+    need(allowed.status.includes(w), `status action "${w}" is not one of ${allowed.status.join("/")}`);
+  }
+  return `${sends.length} sends, ${new Set(status).size} status words, all parseable`;
+});
+
 check("ui: the web view's status buttons name real icons", () => {
-  const html = read(PRISMA_VIEW);
-  // The label argument now goes through tr("key", "English"), so it holds commas of its
-  // own — anything up to the PNG rather than "one comma-free argument".
+  const html = systemPage();
+  // The label argument goes through t("key", "English"), so it holds commas of its own —
+  // anything up to the PNG rather than "one comma-free argument".
   const icons = [...html.matchAll(/addIcon\([\s\S]*?,\s*"([\w.]+\.png)"/g)].map((m) => m[1]);
-  need(icons.length > 0, "no addIcon calls parsed — parser stale?");
+  need(icons.length >= 3, `${icons.length} addIcon calls parsed (tree, storage, shop expected) — parser stale?`);
   for (const i of icons) {
     need(existsSync(join(ROOT, "icons", i)), `icons/${i} is missing — that button renders bare`);
   }
@@ -966,7 +1032,7 @@ check("ui: UiScale reaches both renderers", () => {
 
 check("ui: the controller's focus ring can reach every kind of target", () => {
   // A pad has no cursor, so in the web view it navigates by moving focus between the
-  // elements named in padTargets(). Those are class selectors written by hand against
+  // elements named in a selector list. Those are class selectors written by hand against
   // markup built somewhere else in the same file — rename `.card` in renderShop and the
   // shop silently stops being reachable by controller, with nothing failing anywhere.
   // Nobody here plays on a pad, so nobody would notice.
@@ -979,74 +1045,65 @@ check("ui: the controller's focus ring can reach every kind of target", () => {
   const list = read(SYSTEM_PAGE).match(/const FOCUSABLE\s*=\s*"([^"]+)"/);
   need(list, "system.html has no FOCUSABLE selector list — controller navigation gone?");
   const kinds = list[1].split(",").map((x) => x.trim().replace(/^\./, ""));
-  need(kinds.length >= 3,
-       `FOCUSABLE is down to ${kinds.length} selectors; the panel alone has buttons, ` +
-       "cards and icon actions");
+  need(kinds.length >= 5,
+       `FOCUSABLE is down to ${kinds.length} selectors; it has to cover buttons, cards ` +
+       "(choices and shop goods), icon actions, tree nodes, mastery rows and shelves");
   for (const c of kinds) {
     need(new RegExp(`class(Name)?\\s*=?\\s*"${c}[ "]`).test(page),
          `FOCUSABLE names .${c}, but nothing in the page ever carries that class`);
   }
-  need(!/createElement\("(?!button")\w+"\)[^;]*;\s*\w+\.className\s*=\s*"(btn|card|iconBtn)\b/.test(page),
+  const alt = kinds.join("|");
+  need(!new RegExp(`createElement\\("(?!button")\\w+"\\)[^;]*;\\s*\\w+\\.className\\s*=\\s*"(${alt})\\b`).test(page),
        "a pad target is built as a non-button element, which focus cannot reach");
   need(/:focus\b[^{]*\{[^}]*outline/.test(read(PAGE_THEME)),
        "theme.css draws no outline on :focus — the controller would move an invisible focus");
-
-  // The PrismaUI page, for the screens that still live there.
-  const view = read(PRISMA_VIEW);
-  const sel = view.match(/querySelectorAll\("([^"]*\.btn[^"]*)"\)/);
-  need(sel, "padTargets no longer queries a selector list — controller navigation gone?");
-  const classes = sel[1].split(",").map((s) => s.trim().replace(/^\./, ""));
-  need(classes.length >= 5,
-       `padTargets is down to ${classes.length} selectors; it used to cover buttons, ` +
-       "tree nodes, shop cards, shelves and mastery rows");
-  for (const c of classes) {
-    need(new RegExp(`class(Name)?\\s*=?\\s*"${c}[ "]`).test(view),
-         `padTargets looks for .${c}, but nothing in the view ever carries that class`);
-  }
-  need(/\.padfocus\s*\{/.test(view),
-       "no .padfocus rule — the controller would move an invisible focus");
-  return `page ${kinds.length} kinds, Prisma ${classes.length} selectors, all present`;
+  return `${kinds.length} kinds, all present, all buttons`;
 });
 
-check("ui: both renderers colour a System Rank the same", () => {
-  // The rank ramp is written twice — once as ImVec4 in Style::RankColor, once as CSS in
-  // the view — because neither renderer can read the other's. Two screens showing the
-  // same character's rank in different colours would be worse than neither having any:
-  // the colour is the part you are meant to trust without reading the letter.
-  const style = read("src/UI/Style.h");
-  const cpp = {};
-  for (const m of style.matchAll(/case '([SABCDE])':/g)) {
-    const rest = style.slice(m.index);
-    const ret = rest.match(/return \{ ([\d.]+)f, ([\d.]+)f, ([\d.]+)f/);
-    need(ret, `no colour follows case '${m[1]}' in RankColor`);
-    cpp[m[1]] = [+ret[1], +ret[2], +ret[3]].map((v) => Math.round(v * 255));
+check("ui: the status screen colours a System Rank in the plugin's tone", () => {
+  // The rank's colour is the part you are meant to trust without reading the letter, so
+  // the page and the plugin must never disagree about it. The plugin decides the tone
+  // (Logic::ToneForRank, sent as rankTone); the page falls back to the same rule for a
+  // plugin that does not send it. RUN the page's rankTone() against every rank the
+  // plugin can return, and against the field.
+  //
+  // It also has to reach the screen. The old view shipped six correct colours that all
+  // rendered white because an id rule outranked them — so the letter must take its
+  // colour from the tone, and the rank block must be given the rank's tone.
+  const logic = read("src/UI/UiLogic.h");
+  const fn = logic.match(/constexpr Tone ToneForRank\(char a_rank\)\s*\{([\s\S]*?)\n    \}/);
+  need(fn, "ToneForRank not found in UiLogic.h — parser stale?");
+  need(/\?\s*Tone::Gold\s*:\s*Tone::Cyan/.test(fn[1]),
+       "ToneForRank is no longer `letter ? Gold : Cyan` — update this check with it");
+  const gold = [...fn[1].matchAll(/a_rank == '([A-Z])'/g)].map((m) => m[1]);
+  need(gold.length > 0, "no gold rank parsed from ToneForRank — parser stale?");
+
+  const cpp = read("src/Progression.cpp");
+  const from = cpp.indexOf("std::string SystemRank()");
+  need(from >= 0, "SystemRank not found in Progression.cpp");
+  const letters = [...new Set([...cpp.slice(from, cpp.indexOf("\n    }", from))
+    .matchAll(/return "(\w)";/g)].map((m) => m[1]))];
+  need(letters.length > 0, "no rank letters parsed — parser stale?");
+
+  const html = systemPage();
+  const src = html.match(/function rankTone\(s\) \{[\s\S]*?\n\s*\}/);
+  need(src, "rankTone(s) not found in system.html — parser stale?");
+  const rankTone = new Function("TONES", `${src[0]}\nreturn rankTone;`)({ cyan: 1, gold: 1, red: 1, violet: 1 });
+  for (const l of letters) {
+    const want = gold.includes(l) ? "gold" : "cyan";
+    need(rankTone({ rank: l }) === want, `rank ${l}: the plugin says ${want}, the page ${rankTone({ rank: l })}`);
   }
-  need(Object.keys(cpp).length === 6, `RankColor names ${Object.keys(cpp).length} ranks, not 6`);
+  need(rankTone({ rank: "C", rankTone: "gold" }) === "gold", "the page ignores the plugin's rankTone");
+  need(rankTone({ rank: gold[0], rankTone: "bogus" }) === "gold",
+       "an unknown rankTone must fall back to the rank's own rule");
 
-  const view = read(PRISMA_VIEW);
-
-  // The ramp is applied as a CLASS to #sRankLetter, and an id selector outranks a class.
-  // This shipped once: the six colours below were correct, agreed with the C++ to the
-  // byte, and every rank still rendered white because #sRankLetter also said `color:
-  // #fff`. Comparing the values alone cannot see that — so check that the id rule sets
-  // no colour of its own.
-  const idRule = view.match(/#sRankLetter\s*\{([^}]*)\}/);
+  const idRule = html.match(/#sRankLetter\s*\{([^}]*)\}/);
   need(idRule, "#sRankLetter rule not found — parser stale?");
-  need(!/(^|[;\s])color\s*:/.test(idRule[1]),
-       "#sRankLetter sets its own colour, which outranks the .rank-* classes — " +
-       "every rank will render in that colour whatever the ramp says");
-
-  for (const [rank, rgb] of Object.entries(cpp)) {
-    const css = view.match(new RegExp(`\\.rank-${rank.toLowerCase()}\\s*\\{\\s*color:\\s*#([0-9a-f]{6})`, "i"));
-    need(css, `the view has no .rank-${rank.toLowerCase()} colour`);
-    const hex = [0, 2, 4].map((i) => parseInt(css[1].slice(i, i + 2), 16));
-    // Two levels of slack for the float-to-byte rounding, and nothing more: a real
-    // divergence is never off by one.
-    const off = hex.map((v, i) => Math.abs(v - rgb[i]));
-    need(Math.max(...off) <= 2,
-         `rank ${rank}: C++ says rgb(${rgb}), the view #${css[1]} — they have drifted`);
-  }
-  return `${Object.keys(cpp).length} ranks agree`;
+  need(/(^|[;\s])color:\s*var\(--tone\)/.test(idRule[1]),
+       "#sRankLetter is not drawn in the tone, so the rank's tone never shows");
+  need(/\$\("sRank"\)\.setAttribute\("data-tone",\s*rankTone\(s\)\)/.test(html),
+       "the rank block is never given the rank's tone");
+  return `${letters.join("")}: ${gold.join("")} gold, the rest cyan, rankTone honoured`;
 });
 
 check("ui: the web view's rank insignia is actually on screen", () => {
@@ -1055,7 +1112,7 @@ check("ui: the web view's rank insignia is actually on screen", () => {
   // bottom: -7px; right: -7px }` — so the chip was pinned to the bottom-right corner of
   // the status card. Nothing about that is a syntax error and both screens still
   // "worked", which is exactly why it went unnoticed until the chip gained an emblem.
-  const view = read(PRISMA_VIEW);
+  const view = systemPage();
   need(!/^\s*\.rank\s*\{/m.test(view),
        "an unscoped `.rank {` rule is back — it will also match the status screen's " +
        "rank element. Scope it to `.node .rank`.");
@@ -1207,7 +1264,7 @@ check("shop: the shelf list agrees across C++, the view and the playground", () 
   need(cpp.join("|") === mockNames.join("|"),
        `C++ offers [${cpp.join(", ")}], the playground [${mockNames.join(", ")}]`);
   // The view builds its rail from the pushed list, so it must not hardcode any of them.
-  const view = read(PRISMA_VIEW);
+  const view = systemPage();
   need(/SHOP\.shelves/.test(view), "the view no longer reads SHOP.shelves — rail parser stale?");
   return cpp.join(" / ");
 });
@@ -1258,7 +1315,7 @@ check("shop: the built-in window still fits a 1080p screen", () => {
 
 function contract(label, cppFile, prefix) {
   const cpp = read(cppFile);
-  const view = read(PRISMA_VIEW);
+  const view = systemPage();
   const pg = read("playground/index.html") + read("playground/mock.js");
 
   const emitted = [...cpp.matchAll(new RegExp(`"\\\\"(${prefix}\\w+)\\\\":`, "g"))].map((m) => m[1]);

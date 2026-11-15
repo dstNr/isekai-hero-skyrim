@@ -33,17 +33,18 @@
 
   #pMain { display: flex; gap: 22px; min-height: 0; }
 
-  /* Emblem: the crest in a projected diamond, its caption under it in its own tone. */
+  /* Emblem: the crest in a projected diamond, its caption under it in its own tone.
+     .crest is shared with the status screen's rank insignia. */
   #pEmblem { flex: none; width: 96px; display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 4px; }
-  #pEmblem .crest { position: relative; width: 76px; height: 76px; display: flex; align-items: center; justify-content: center; }
-  #pEmblem .crest::before {
+  .crest { position: relative; flex: none; width: 76px; height: 76px; display: flex; align-items: center; justify-content: center; }
+  .crest::before {
     content: ""; position: absolute; top: 11px; right: 11px; bottom: 11px; left: 11px;
     transform: rotate(45deg);
     border: 1px solid rgba(var(--tone-rgb), .7);
     background: rgba(var(--tone-rgb), .08);
     box-shadow: 0 0 14px rgba(var(--tone-rgb), .35);
   }
-  #pEmblem img { position: relative; width: 58px; height: 58px; object-fit: contain; }
+  .crest img { position: relative; width: 58px; height: 58px; object-fit: contain; }
   #pEmblem .cap {
     font-size: var(--fs-small); letter-spacing: 3px; text-align: center; text-transform: uppercase;
     color: var(--tone); text-shadow: var(--proj-fringe);
@@ -109,6 +110,205 @@
   #panel.typing #pSkip { animation: skip-in .3s ease-out .9s both; }
   @keyframes skip-in { from { opacity: 0; } to { opacity: .8; } }
 
+  /* ======================= DATA SCREENS (status, tree, shop) =======================
+     Shared pieces: the small grey caption over a value, the footer row of capsules,
+     and the readout strip that names whatever the pointer or the pad is on. */
+  .cap {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--dim);
+  }
+  .proj-title .chip { margin-left: 10px; }
+  .foot {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(var(--tone-rgb), .2);
+  }
+  .foot .grp { display: flex; align-items: center; }
+  .foot .btn + .btn { margin-left: 10px; }
+  .foot .btn img { width: 30px; height: 30px; object-fit: contain; margin: -8px 8px -8px -12px; }
+  .foot .hint { flex: 1 1 auto; min-width: 0; padding: 0 16px; text-align: center; font-size: 11px; letter-spacing: 1px; color: var(--dim); }
+  /* A two-press button (respec, reboot) while it waits for the second press. */
+  .btn.armed::after { opacity: 1; }
+
+  .readout { position: relative; min-height: 96px; margin-top: 14px; padding: 10px 14px;
+             border: 1px solid rgba(var(--tone-rgb), .22); background: rgba(3, 11, 19, .35); }
+  .readout .rHead { display: flex; align-items: baseline; justify-content: space-between; }
+  .readout .rName { font-size: 18px; font-weight: 600; letter-spacing: 2px; color: var(--tone); text-shadow: var(--proj-fringe); }
+  .readout .rState { margin-left: 14px; font-size: 12px; letter-spacing: 1px; color: var(--tone); text-align: right; }
+  .readout .rDesc { margin-top: 4px; font-size: 14px; line-height: 1.4; white-space: pre-line; color: var(--text); }
+  .readout .rEmpty { display: none; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+                     align-items: center; justify-content: center; font-size: 12px; letter-spacing: 1px; color: var(--dim); }
+  .readout.empty > * { visibility: hidden; }
+  .readout.empty > .rEmpty { visibility: visible; display: flex; }
+  .dim { color: var(--dim) !important; }
+
+  /* ---- STATUS ---- */
+  #sStage { width: 880px; }
+  #sHead { display: flex; align-items: center; margin: 14px 0 16px; }
+  #sRank { display: flex; align-items: center; }
+  #sRank .crest { margin-right: 10px; }
+  #sRankLetter {
+    margin-top: 2px; font-size: 30px; font-weight: 600; letter-spacing: 5px; color: var(--tone);
+    text-shadow: var(--proj-fringe), 0 0 14px rgba(var(--tone-rgb), .45);
+  }
+  #sHead .vr { flex: none; width: 1px; align-self: stretch; margin: 6px 28px; background: rgba(var(--tone-rgb), .25); }
+  #sBless { min-width: 0; }
+  #sBless .row { display: flex; align-items: center; margin-top: 3px; }
+  #sTier {
+    font-size: 26px; font-weight: 600; letter-spacing: 5px; text-transform: uppercase;
+    color: var(--tone); text-shadow: var(--proj-fringe), 0 0 14px rgba(var(--tone-rgb), .35);
+  }
+  #sMode { margin-left: 14px; }
+  #sBless .sub { margin-top: 5px; font-size: 13px; color: var(--dim); }
+  #sBless .sub b { color: var(--tone); font-weight: 600; }
+  #sLevel { margin-left: auto; padding-left: 24px; text-align: right; }
+  #sLevelNum { margin-top: 2px; font-size: 30px; color: var(--text); }
+
+  #sTiles { display: grid; grid-template-columns: 1fr 1fr 2fr; grid-gap: 12px; margin-bottom: 16px; }
+  .tile { min-width: 0; padding: 9px 14px 12px; border: 1px solid rgba(var(--tone-rgb), .28); background: rgba(var(--tone-rgb), .05); }
+  .tile .val { margin: 3px 0 8px; font-size: 24px; white-space: nowrap; }
+  .tile .val b { font-weight: 600; color: var(--tone); }
+  .tile .val span { font-size: 15px; color: var(--dim); }
+  #sQuestRow { display: flex; align-items: baseline; justify-content: space-between; margin: 7px 0 10px; font-size: 15px; }
+  #sQuestText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #sQuestCount { flex: none; margin-left: 12px; font-size: 14px; }
+  #sQuestCount .rew { margin-left: 10px; color: var(--tone); }
+
+  #sAtt { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-gap: 4px 20px; margin-bottom: 16px; }
+  .att { display: flex; justify-content: space-between; padding: 3px 0; font-size: 14px;
+         border-bottom: 1px dashed rgba(var(--tone-rgb), .18); }
+  .att span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .att b { flex: none; margin-left: 8px; font-family: var(--font-mono); font-weight: 400; color: var(--tone); }
+
+  #sTitleCount { margin-left: 10px; letter-spacing: 1px; color: var(--dim); }
+  #sTitles { max-height: 188px; overflow-y: auto; padding-right: 6px; }
+  #sTitles::-webkit-scrollbar { width: 5px; }
+  #sTitles::-webkit-scrollbar-thumb { background: rgba(var(--tone-rgb), .35); }
+  .trow { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.4fr); grid-gap: 14px;
+          padding: 4px 0; font-size: 14px; border-bottom: 1px solid rgba(var(--tone-rgb), .08); }
+  .trow span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trow .tEff { font-family: var(--font-mono); font-size: 13px; color: var(--tone); }
+  .trow .tQuest { color: var(--dim); }
+  .trow.empty { display: block; color: var(--dim); border: 0; }
+
+  /* ---- SKILL TREE ----
+     The net: an SVG layer (zone frames, links, node frames) under absolutely placed
+     <button>s, one per node, which carry the icon, the name and the focus. Node frames
+     are chamfered squares, the shape of the icon art's own frame:
+       owned    a filled frame band
+       buyable  an outline with a glow around it
+       poor     reachable but not affordable: a fainter outline
+       locked   dashed (a prerequisite is missing)
+       sealed   dotted, in the gate's tone (red: a rebirth; violet: a level, for a
+                dormant blessing) */
+  #tStage { width: 1016px; }
+  #tMain { display: flex; margin-top: 14px; }
+
+  #tRail { flex: none; width: 220px; margin-right: 20px; }
+  .mrow {
+    display: flex; align-items: center; width: 100%; padding: 4px 8px; text-align: left;
+    border: 1px solid transparent; transition: background-color var(--t-ui) var(--ease);
+  }
+  .mrow + .mrow { margin-top: 4px; }
+  .mrow:hover, .mrow:focus { background-color: rgba(var(--tone-rgb), .1); border-color: rgba(var(--tone-rgb), .35); }
+  .mrow:focus { outline-offset: 1px; }
+  .mrow .mi {
+    flex: none; width: 40px; height: 40px; margin-right: 10px; padding: 3px;
+    border: 1.5px solid rgba(var(--tone-rgb), .55); background: rgba(3, 11, 19, .5);
+  }
+  .mrow .mi img { width: 100%; height: 100%; object-fit: contain; }
+  .mrow.owned .mi   { border-color: var(--tone); background: rgba(var(--tone-rgb), .3); }
+  .mrow.buyable .mi { border-color: var(--tone); box-shadow: 0 0 10px rgba(var(--tone-rgb), .55); }
+  .mrow.locked .mi, .mrow.sealed .mi { border-style: dashed; border-color: rgba(var(--tone-rgb), .35); }
+  .mrow.locked img, .mrow.sealed img { opacity: .4; }
+  .mrow .mb { flex: 1 1 auto; min-width: 0; }
+  .mrow .mName { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mrow .mMeta { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; }
+  .pips { white-space: nowrap; line-height: 0; }
+  .pips i { display: inline-block; width: 6px; height: 6px; margin-right: 3px; transform: rotate(45deg);
+            border: 1px solid rgba(var(--tone-rgb), .55); }
+  .pips i.on { background: var(--tone); border-color: var(--tone); box-shadow: 0 0 5px rgba(var(--tone-rgb), .7); }
+  .pips i.sep { margin-right: 8px; }
+  .mrow .mTier { margin-left: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; color: var(--dim); white-space: nowrap; }
+  .mrow .mTier.top { color: var(--tone); }
+
+  #tNet { position: relative; flex: none; width: 720px; height: 560px; }
+  #tSvg { position: absolute; top: 0; left: 0; overflow: visible; }
+  .zone rect { fill: rgba(var(--tone-rgb), .025); stroke: rgba(var(--tone-rgb), .16); stroke-width: 1; }
+  .zone text { fill: rgba(var(--tone-rgb), .7); font-family: var(--font-mono); font-size: 10px; letter-spacing: 3px; }
+  .lnk { fill: none; stroke: var(--tone); }
+  .lnk.on   { stroke-width: 2; stroke-opacity: .85; }
+  .lnk.halo { stroke-width: 7; stroke-opacity: .14; }
+  .lnk.half { stroke-width: 1.5; stroke-opacity: .45; }
+  .lnk.off  { stroke-width: 1; stroke-opacity: .22; stroke-dasharray: 3 5; }
+  .frame { fill: rgba(3, 11, 19, .6); stroke: var(--tone); stroke-width: 1.5; }
+  .frame.owned   { fill: rgba(var(--tone-rgb), .34); stroke-width: 2; }
+  .frame.buyable { fill: rgba(var(--tone-rgb), .08); stroke-width: 2; }
+  .frame.poor    { stroke-opacity: .55; }
+  .frame.locked  { stroke-opacity: .4; stroke-dasharray: 4 4; }
+  .frame.sealed  { stroke-opacity: .45; stroke-dasharray: 1.5 4; }
+  .glow { fill: none; stroke: var(--tone); stroke-width: 8; stroke-opacity: .2; }
+
+  .node { position: absolute; padding: 0; display: flex; align-items: center; justify-content: center; }
+  .node img { width: 100%; height: 100%; object-fit: contain; }
+  .node.poor img { opacity: .75; }
+  .node.locked img, .node.sealed img { opacity: .32; }
+  .node .nlabel {
+    position: absolute; top: 100%; left: 50%; width: 84px; margin: 6px 0 0 -42px; max-height: 26px; overflow: hidden;
+    text-align: center; font-size: 11px; line-height: 13px; color: var(--text);
+    text-shadow: 0 1px 2px rgba(0, 6, 12, .95); pointer-events: none;
+  }
+  .node.locked .nlabel, .node.sealed .nlabel { color: var(--dim); }
+  .node .pip {
+    position: absolute; right: -9px; bottom: -7px; min-width: 18px; height: 16px; padding: 0 4px;
+    font-family: var(--font-mono); font-size: 10px; line-height: 14px; text-align: center;
+    color: var(--tone); background: rgba(3, 11, 19, .92); border: 1px solid var(--tone);
+  }
+  /* The node's own focus: a square ring in the tone (the theme's outline is replaced
+     here because the label below the tile would sit inside it). */
+  .node:focus { outline: none; }
+  .node::after {
+    content: ""; position: absolute; top: -8px; right: -8px; bottom: -8px; left: -8px; pointer-events: none;
+    border: 1px solid var(--tone); box-shadow: 0 0 12px rgba(var(--tone-rgb), .6); opacity: 0;
+    transition: opacity var(--t-ui) var(--ease);
+  }
+  .node:hover::after { opacity: .6; }
+  .node:focus::after { opacity: 1; border-width: 2px; }
+
+  #tInfo .facts { display: flex; margin-top: 8px; font-family: var(--font-mono); font-size: 12px; }
+  #tInfo .fact { min-width: 0; margin-right: 28px; }
+  #tInfo .fact .k { margin-right: 8px; letter-spacing: 2px; color: var(--dim); }
+  #tInfo .fact .v { color: var(--tone); }
+
+  /* ---- SHOP ---- */
+  #shStage { width: 836px; }
+  #shBody { display: flex; margin-top: 14px; }
+  #shRail { flex: none; width: 176px; margin-right: 18px; }
+  .shelf {
+    display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 9px 12px;
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--dim);
+    border-left: 2px solid rgba(var(--tone-rgb), .2); transition: background-color var(--t-ui) var(--ease);
+  }
+  .shelf + .shelf { margin-top: 4px; }
+  .shelf b { font-weight: 400; color: var(--dim); }
+  .shelf:hover, .shelf:focus { background-color: rgba(var(--tone-rgb), .08); }
+  .shelf.on { color: var(--tone); border-left-color: var(--tone); background-color: rgba(var(--tone-rgb), .1); }
+  .shelf.on b { color: var(--tone); }
+  #shGrid {
+    flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-gap: 12px;
+    align-content: start; min-height: 372px; max-height: 372px; overflow-y: auto;
+  }
+  .ware { min-height: 180px; padding: 12px 10px; }
+  .ware .ico { width: 64px; height: 64px; padding: 3px; margin-bottom: 9px; }
+  .ware .ico img { width: 100%; height: 100%; object-fit: contain; }
+  .ware .nm { max-width: 100%; font-size: 14px; font-weight: 600; letter-spacing: 1px; line-height: 1.25; }
+  .ware .qty { margin-top: 3px; font-size: 12px; color: var(--dim); }
+  .ware .price { margin-top: 8px; font-size: 16px; color: var(--tone); text-shadow: 0 0 8px rgba(var(--tone-rgb), .4); }
+  .ware.cant .ico, .ware.cant .nm, .ware.cant .qty { opacity: .5; }
+  .ware[data-tone="gold"] { border-color: rgba(var(--tone-rgb), .75); box-shadow: inset 0 0 18px rgba(var(--tone-rgb), .12); }
+  .shEmpty { grid-column: 1 / -1; padding: 40px 0; text-align: center; font-size: 13px; color: var(--dim); }
+  #shInfo .rDesc { -webkit-column-count: 2; column-count: 2; -webkit-column-gap: 28px; column-gap: 28px;
+                   font-family: var(--font-mono); font-size: 12px; color: var(--dim); }
+
   #keyDiag { display: none; }
 </style>
 </head>
@@ -136,37 +336,186 @@
   </div>
 </section>
 
+<!-- ======================= STATUS ======================= -->
+<section id="screen-status" class="screen" data-screen="status">
+  <div class="scale">
+    <div class="stage" id="sStage" data-tone="cyan">
+      <div class="proj" tabindex="-1" role="dialog" aria-labelledby="sTitle">
+        <div class="proj-title">
+          <span class="slashes">//</span><span class="name" id="sTitle" data-loc="view.status">Status</span><span class="rule"></span>
+        </div>
+        <div id="sHead">
+          <div id="sRank" data-tone="cyan">
+            <div class="crest"><img id="sRankIcon" alt="" /></div>
+            <div>
+              <div class="cap" data-loc="view.systemRank">System Rank</div>
+              <div id="sRankLetter" class="mono">—</div>
+            </div>
+          </div>
+          <div class="vr"></div>
+          <div id="sBless" data-tone="cyan">
+            <div class="cap" data-loc="view.blessing">Blessing</div>
+            <div class="row"><span id="sTier">—</span><span id="sMode" class="badge hidden"></span></div>
+            <div id="sAwaken" class="sub mono hidden"></div>
+            <div id="sCustom" class="sub mono hidden"></div>
+          </div>
+          <div id="sLevel" class="hidden">
+            <div class="cap" data-loc="view.level">Level</div>
+            <div id="sLevelNum" class="mono"></div>
+          </div>
+        </div>
+        <div id="sTiles">
+          <div class="tile">
+            <div class="cap" data-loc="view.milestones">Milestones</div>
+            <div class="val mono"><b id="sMile">—</b><span id="sMileTot"></span></div>
+            <div class="bar"><i id="sBar"></i></div>
+          </div>
+          <div class="tile">
+            <div class="cap" data-loc="view.systemPoints">System Points</div>
+            <div class="val mono"><b id="sPts">—</b></div>
+          </div>
+          <div class="tile" id="sQuestSect">
+            <div class="cap" data-loc="view.objective">Objective</div>
+            <div id="sQuestRow"><span id="sQuestText"></span><span id="sQuestCount" class="mono"></span></div>
+            <div class="bar"><i id="sQuestBar"></i></div>
+          </div>
+        </div>
+        <div id="sAttSect">
+          <div class="sect" data-loc="view.attunements">Attunements</div>
+          <div id="sAtt"></div>
+        </div>
+        <div id="sTitleSect">
+          <div class="sect"><span data-loc="view.titles">Titles</span><span id="sTitleCount"></span></div>
+          <div id="sTitles"></div>
+        </div>
+        <div class="foot">
+          <div class="grp" id="sNav"></div>
+          <div class="grp" id="sActions"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= SKILL TREE ======================= -->
+<section id="screen-tree" class="screen" data-screen="tree">
+  <div class="scale">
+    <div class="stage" id="tStage" data-tone="cyan">
+      <div class="proj" tabindex="-1" role="dialog" aria-labelledby="tTitle">
+        <div class="proj-title">
+          <span class="slashes">//</span><span class="name" id="tTitle" data-loc="view.skillTree">Skill Tree</span><span class="rule"></span>
+          <span class="chip"><span data-loc="view.systemPoints">System Points</span><b id="tPts">—</b></span>
+          <span class="chip"><span data-loc="view.perkPoints">Perk Points</span><b id="tPerks">—</b></span>
+        </div>
+        <div id="tMain">
+          <div id="tRail">
+            <div class="sect" data-loc="view.tree.mastery">Mastery</div>
+            <div id="tRows"></div>
+          </div>
+          <div id="tNet">
+            <svg id="tSvg" width="720" height="560" viewBox="0 0 720 560" xmlns="http://www.w3.org/2000/svg">
+              <g id="tZones"></g><g id="tLinks"></g><g id="tFrames"></g>
+            </svg>
+            <div id="tNodes"></div>
+          </div>
+        </div>
+        <div id="tInfo" class="readout empty">
+          <div class="rHead"><span class="rName" id="tiName"></span><span class="rState mono" id="tiState"></span></div>
+          <div class="rDesc" id="tiDesc"></div>
+          <div class="facts" id="tiFacts"></div>
+          <div class="rEmpty mono" data-loc="view.tree.hint">Click a glowing node to unlock · ESC to close</div>
+        </div>
+        <div class="foot">
+          <div class="grp"><button class="btn" id="tBack"><span class="lbl" data-loc="view.back">Back</span></button></div>
+          <div class="grp">
+            <button class="btn hidden" id="tRespec" data-tone="red"><span class="lbl"></span></button>
+            <button class="btn" id="tClose"><span class="lbl" data-loc="view.close">Close</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= SHOP ======================= -->
+<section id="screen-shop" class="screen" data-screen="shop">
+  <div class="scale">
+    <div class="stage" id="shStage" data-tone="cyan">
+      <div class="proj" tabindex="-1" role="dialog" aria-labelledby="shTitle">
+        <div class="proj-title">
+          <span class="slashes">//</span><span class="name" id="shTitle" data-loc="view.shop">Shop</span><span class="rule"></span>
+          <span class="chip"><span data-loc="view.systemPoints">System Points</span><b id="shPts">—</b></span>
+        </div>
+        <div id="shBody">
+          <div id="shRail"></div>
+          <div id="shGrid"></div>
+        </div>
+        <div id="shInfo" class="readout empty">
+          <div class="rHead"><span class="rName" id="shiName"></span><span class="rState mono" id="shiState"></span></div>
+          <div class="rDesc" id="shiDesc"></div>
+          <div class="rEmpty mono" data-loc="view.shop.hint">Delivered into your Dimensional Storage · ESC to close</div>
+        </div>
+        <div class="foot">
+          <div class="grp"><button class="btn" id="shBack"><span class="lbl" data-loc="view.back">Back</span></button></div>
+          <div class="grp"><button class="btn" id="shClose"><span class="lbl" data-loc="view.close">Close</span></button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <div id="keyDiag" hidden></div>
 
 <!-- The build id (generated next to the pages by the build). A missing file must not
      stop the page: it then reports "dev". -->
 <script src="version.js" onerror="window.console && console.warn('version.js missing; the page reports build dev')"></script>
 <script src="common.js"></script>
+<!-- The data screens: each registers a factory that the script below runs. -->
+<script src="screens/status.js"></script>
+<script src="screens/tree.js"></script>
+<script src="screens/shop.js"></script>
 <script>
 "use strict";
 (function () {
   const ui = window.isekaiUi;
-  const { esc, iconUrl } = ui;
+  const { esc, iconUrl, t, tf } = ui;
   const $ = (id) => document.getElementById(id);
   const TONES = { cyan: 1, gold: 1, red: 1, violet: 1 };
   const toneOf = (v) => (TONES[v] ? v : "cyan");
 
-  /* Every kind of pad/keyboard target. All are <button>s, so they take focus without
-     a tabindex; Magelight's navigation-style pad moves that focus, the arrow keys
-     below do the same for a keyboard. tools/check.mjs holds this list to the markup. */
-  const FOCUSABLE = ".btn, .card, .iconBtn";
+  /* Every kind of pad/keyboard target: buttons and choice cards (panel), icon actions,
+     skill-tree nodes and mastery rows, shop cards (.card) and shelves. All are
+     <button>s, so they take focus without a tabindex; Magelight's navigation-style pad
+     moves that focus, the arrow keys below do the same for a keyboard.
+     tools/check.mjs holds this list to the markup. */
+  const FOCUSABLE = ".btn, .card, .iconBtn, .node, .mrow, .shelf";
 
   /* ======================= screens =======================
      One <section class="screen"> per screen and one registry entry each:
        render(data, fresh)  draw; fresh = a new payload, false = re-render in place
-                            (translation table or scale arrived while showing)
+                            (translation table or scale arrived while showing, or a
+                            re-push of a refreshable screen)
        escape(data)         true: the page takes Escape (sent as __escapecapture)
        onEscape(data)       what Escape does when the page has it
+       refresh              a show of this screen while it is already up is the same
+                            screen with new numbers (a purchase, a respec): it updates
+                            in place, keeps the pad's focus and plays no animation
+       home()               where the pad lands on its first press
      Switching screens inside an open view swaps without reopening; a show after
-     the view was closed by an action plays the projector flicker-on. */
+     the view was closed by an action plays the projector flicker-on.
+
+     The panel lives in this file. The data screens live in screens/<name>.js, each a
+     factory handed the helpers below (core) that returns its entry; a screen whose
+     script failed to load is simply not offered (isekai.screens), never a dead page. */
   const SCREENS = {
     panel: { render: renderPanel, escape: panelCapturesEscape, onEscape: panelEscape },
   };
+  const core = { ui, $, esc, iconUrl, t, tf, TONES, toneOf, closing, closeScreen, focusedId, refocus };
+  const defs = window.isekaiScreens || {};
+  ["status", "tree", "shop"].forEach((name) => {
+    if (typeof defs[name] !== "function") { console.warn("[isekai] screens/" + name + ".js did not load"); return; }
+    try { SCREENS[name] = defs[name](core); } catch (e) { console.warn("[isekai] screen '" + name + "' failed: " + e); }
+  });
 
   let current = "";       // the screen on display
   let currentData = null; // its payload
@@ -186,6 +535,7 @@
       return;
     }
     clearTimeout(reopenTimer);
+    const again = !!entry.refresh && open && current === name;   // new numbers, same screen
     const swap = open && current !== "";
     current = name; currentData = data; open = true;
 
@@ -198,10 +548,38 @@
     const section = sectionOf(name);
     const stage = section.querySelector(".stage");
     stage.setAttribute("data-tone", toneOf(data.tone));
+    if (again) {
+      entry.render(data, false);
+      fit(section);
+      return;
+    }
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     entry.render(data, true);
     ui.escapeCapture(!!entry.escape(data));
+    fit(section);
     play(stage, swap ? "swapping" : "opening");
+  }
+
+  /* Never larger than the screen. UiScale scales the window from the stylesheet; a
+     window that would then run off the screen (the skill tree on a small display, a
+     large UiScale) is scaled down to fit instead, as a transform on the same element. */
+  function fit(section) {
+    const box = section && section.querySelector(".scale");
+    const win = box && box.querySelector(".proj");
+    if (!win) return;
+    box.style.transform = "";
+    const css = window.getComputedStyle(document.documentElement).getPropertyValue("--ui-scale");
+    const s = parseFloat(css) || 1;
+    const w = win.offsetWidth * s, h = win.offsetHeight * s;
+    if (!w || !h) return;
+    const f = Math.min(window.innerWidth * 0.96 / w, window.innerHeight * 0.94 / h);
+    if (f < 1) box.style.transform = "scale(" + (s * f).toFixed(4) + ")";
+  }
+
+  /* The action that ends a data screen: Close, Escape. */
+  function closeScreen() {
+    ui.send("close");
+    closing();
   }
 
   function play(stage, cls) {
@@ -236,6 +614,19 @@
   function rerender() {
     if (!current || !SCREENS[current]) return;
     SCREENS[current].render(currentData, false);
+    fit(sectionOf(current));
+  }
+
+  /* Rebuilding a row of buttons must not lose the pad: the focused one's data-id is
+     found again afterwards. Ids are the page's own tokens (action words, indices). */
+  function focusedId(box) {
+    const a = document.activeElement;
+    return a && box.contains(a) && a.dataset ? a.dataset.id : undefined;
+  }
+  function refocus(box, id) {
+    if (id === undefined) return;
+    const again = box.querySelector('[data-id="' + id + '"]');
+    if (again) again.focus();
   }
 
   /* ======================= SYSTEM PANEL ======================= */
@@ -465,7 +856,13 @@
     const list = targets();
     if (!list.length) return;
     const cur = document.activeElement;
-    if (list.indexOf(cur) < 0) { list[0].focus(); return; }
+    if (list.indexOf(cur) < 0) {
+      // First press: the screen's own starting point (an affordable node, the first
+      // card), else whatever comes first.
+      const home = SCREENS[current].home && SCREENS[current].home();
+      (home && list.indexOf(home) >= 0 ? home : list[0]).focus();
+      return;
+    }
     const r = cur.getBoundingClientRect();
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     let best = null, bestScore = Infinity;
@@ -502,9 +899,23 @@
       e.preventDefault(); e.stopPropagation();
       return;
     }
+    /* Enter (a pad's A in key style) presses the focused target here rather than through
+       the browser's own button activation, which needs a keypress the host may not
+       synthesize. preventDefault keeps that keypress from pressing it a second time. */
+    if (e.key === "Enter" || e.keyCode === 13) {
+      const a = document.activeElement;
+      const section = sectionOf(current);
+      if (a && a.matches && a.matches(FOCUSABLE) && section && section.contains(a)) {
+        e.preventDefault(); e.stopPropagation();
+        a.click();
+        return;
+      }
+    }
     const dir = ARROWS[e.key] || ARROW_CODES[e.keyCode];
     if (dir) { e.preventDefault(); moveFocus(dir[0], dir[1]); }
   }, true);
+
+  window.addEventListener("resize", () => { if (current) fit(sectionOf(current)); });
 
   /* ======================= plugin entry points =======================
      Called by src/UI/Magelight.cpp through InvokeJS. loc and scale arrive before the

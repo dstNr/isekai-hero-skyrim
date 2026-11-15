@@ -255,6 +255,39 @@ img { display: block; }
 }
 .btn:hover::after, .btn:focus::after, .btn.on::after { opacity: 1; }
 
+/* ---- small pieces of the data screens ----
+   A counter in a title bar ("SYSTEM POINTS 30"), a section heading with a rule running
+   out of it, a progress bar, and a tag. All in the tone of whatever they sit in. */
+.chip {
+  flex: none; display: inline-flex; align-items: baseline;
+  padding: 4px 10px; border: 1px solid rgba(var(--tone-rgb), .45);
+  background: rgba(var(--tone-rgb), .07);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 400;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--dim); text-shadow: none;
+}
+.chip b { margin-left: 9px; font-size: 15px; font-weight: 600; letter-spacing: 1px; color: var(--tone); }
+.sect {
+  display: flex; align-items: center; margin-bottom: 8px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 4px; text-transform: uppercase;
+  color: var(--tone);
+}
+.sect::after {
+  content: ""; flex: 1 1 auto; height: 1px; margin-left: 12px;
+  background: linear-gradient(90deg, rgba(var(--tone-rgb), .4), rgba(var(--tone-rgb), 0));
+}
+/* The fill is scaled from the left (a transform), never resized. */
+.bar { position: relative; height: 4px; overflow: hidden; background: rgba(var(--tone-rgb), .14); }
+.bar > i {
+  position: absolute; top: 0; left: 0; bottom: 0; width: 100%;
+  background: var(--tone); box-shadow: 0 0 8px rgba(var(--tone-rgb), .6);
+  transform-origin: 0 50%; transform: scaleX(0); transition: transform 380ms var(--ease);
+}
+.badge {
+  display: inline-block; padding: 2px 10px; border: 1px solid var(--tone); border-radius: 999px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--tone); background: rgba(var(--tone-rgb), .1);
+}
+
 /* ---- focus: where the pad or the keyboard is ----
    Loud on purpose: on a pad there is no cursor to look for, so a subtle ring makes
    the screen unusable. An outline is not layout, so it costs no reflow. */
