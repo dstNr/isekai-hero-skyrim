@@ -43,7 +43,17 @@ namespace Isekai::UI::Magelight {
             Logic::ReadyGate gate;  // mx
             std::string version;    // mx: what the page sent with its last isekai.ready
             std::function<std::vector<std::string>()> prelude;  // mx: copied out, run outside the lock
+            std::size_t queued = 0;   // mx: calls queued in this not-ready period
+            bool fullWarned = false;  // mx: the queue-full warning was logged in this period
         };
+
+        // Caller holds a_slot.mx. Back to not-ready: the page has to report ready again.
+        void ResetGate(Slot& a_slot) {
+            a_slot.gate.Reset();
+            a_slot.version.clear();
+            a_slot.queued = 0;
+            a_slot.fullWarned = false;
+        }
 
         // Sent once, ungated, after a reload: a page that already reported ready before the
         // reload event was handled reports again (page contract in Magelight.h).
@@ -183,13 +193,18 @@ namespace Isekai::UI::Magelight {
             {
                 std::scoped_lock lock(s.mx);
                 build = s.prelude;
+                // A repeated ready (isekai.hello after a reload, or a page that says it twice):
+                // back to not-ready, so Runs from other threads queue while the prelude is built
+                // and go out after it. A ready gate's queue is empty, so nothing is lost; a gate
+                // that is not ready yet keeps its queue untouched.
+                if (s.gate.Ready()) ResetGate(s);
             }
             std::vector<std::string> prelude;
             if (build) {
                 try {
                     prelude = build();
                 } catch (const std::exception& e) {
-                    logger::error("Magelight: {} prelude: {}", s.name, e.what());
+                    logger::error("Magelight: {} prelude: {}", s.name, Clip(e.what()));
                 } catch (...) {
                     logger::error("Magelight: {} prelude: unknown exception", s.name);
                 }
@@ -204,6 +219,8 @@ namespace Isekai::UI::Magelight {
                 const auto id = s.id.load();
                 for (const auto& js : prelude) g_api->InvokeJS(id, js.c_str());
                 const auto calls = s.gate.MarkReady();
+                s.queued = 0;
+                s.fullWarned = false;
                 for (const auto& js : calls) g_api->InvokeJS(id, js.c_str());
                 sent = calls.size();
             }
@@ -315,8 +332,7 @@ namespace Isekai::UI::Magelight {
                         // page once, ungated, to send it again; a second ready is harmless.
                         if (slot) {
                             std::scoped_lock lock(slot->mx);
-                            slot->gate.Reset();
-                            slot->version.clear();
+                            ResetGate(*slot);
                             g_api->InvokeJS(slot->id.load(), kHello);
                         }
                         logger::info("Magelight: {} page reloaded, asked it to report ready again", name);
@@ -561,7 +577,17 @@ namespace Isekai::UI::Magelight {
             // InvokeJS only queues the script for the page; nothing it calls back into takes
             // this lock.
             std::scoped_lock lock(s.mx);
-            if (auto now = s.gate.Submit(std::move(a_js))) g_api->InvokeJS(s.id.load(), now->c_str());
+            if (auto now = s.gate.Submit(std::move(a_js))) {
+                g_api->InvokeJS(s.id.load(), now->c_str());
+                return;
+            }
+            // Queued. Past kMaxPending the gate drops the oldest call: say so once per
+            // not-ready period.
+            if (++s.queued > Logic::ReadyGate::kMaxPending && !s.fullWarned) {
+                s.fullWarned = true;
+                logger::warn("Magelight: {} page not ready and {} calls queued, dropping the oldest from now on",
+                             s.name, Logic::ReadyGate::kMaxPending);
+            }
         } catch (const std::exception& e) {
             logger::error("Magelight: Run: {}", e.what());
         } catch (...) {

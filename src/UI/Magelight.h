@@ -68,7 +68,9 @@ namespace Isekai::UI::Magelight {
     void SetPrelude(View a_view, std::function<std::vector<std::string>()> a_build);
 
     // InvokeJS on the view, from ANY thread (paused game and free camera included). Before
-    // the page reports ready the call is queued; once it does, the queue drains in order.
+    // the page reports ready the call is queued (at most Logic::ReadyGate::kMaxPending, the
+    // oldest is dropped beyond that, warned once); once it does, the queue drains in order.
+    // While !Available() (no Install, RenderDead) calls are dropped, not queued.
     // Callers build js only from nlohmann::json::dump() output.
     void Run(View a_view, std::string a_js);
 

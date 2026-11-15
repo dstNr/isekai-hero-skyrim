@@ -22,6 +22,8 @@ namespace Isekai::UI::Screens::detail {
     void OnExited(bool a_reopened);
 
     // A RequestOpen was not entered (a lost race, low memory); a_detail is the host's reason.
+    // Delivered directly from the event, not via PostGameTask, so it can arrive before an
+    // earlier OnExited.
     void OnRefused(std::string a_detail);
 
     // A page sent "isekai.ready"; every call queued for it has been sent.
