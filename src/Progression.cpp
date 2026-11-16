@@ -570,7 +570,7 @@ namespace Isekai::Progression {
         constexpr bool          kEnableDebugGrant = false;
         constexpr std::uint32_t kDebugGrantKey = 0x57;  // DIK_F11
 
-        [[maybe_unused]] void DebugGrantNext() {
+        void GrantNextOwed() {
             for (const auto& m : kMilestones) {
                 if (!AlreadyGranted(m.key)) {
                     logger::info("Debug hotkey: granting '{}'", m.questName);
@@ -637,6 +637,15 @@ namespace Isekai::Progression {
         ShowStatusPanel();
     }
 
+    void DebugGrantNext() {
+        // Same guard as a quest event: nothing is paid before the System is bound.
+        if (!GetState().reincarnated) {
+            logger::info("Debug grant: not reincarnated, nothing granted");
+            return;
+        }
+        GrantNextOwed();
+    }
+
     std::string StatusJson() {
         return BuildStatusJson();
     }
@@ -695,7 +704,7 @@ namespace Isekai::Progression {
                                   Config::GamepadMenuModifier());
         UI::RegisterVRHotkey(Config::VRMenuButton(), ShowStatusPanel);
         if constexpr (kEnableDebugGrant) {
-            UI::RegisterHotkey(kDebugGrantKey, DebugGrantNext);
+            UI::RegisterHotkey(kDebugGrantKey, GrantNextOwed);
         }
         if (a_log) {
             logger::info("Progression: system-menu hotkey registered (key={:#x}, modifier={:#x})",

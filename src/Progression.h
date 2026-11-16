@@ -45,6 +45,10 @@ namespace Isekai::Progression {
     // points that stand in for the hotkey, like the codex. Main thread only.
     void OpenStatusPanel();
 
+    // Test runs: pay out the next milestone still owed exactly as its quest would (gold
+    // panel, rewards, co-save). Main thread only. Papyrus: IsekaiHeroCraft.DebugGrantNext.
+    void DebugGrantNext();
+
     // The status screen's payload (screens/status.js), for the screens facade's in-view
     // switches back to it and its refresh after a reroll. Reads game state: main thread only.
     [[nodiscard]] std::string StatusJson();

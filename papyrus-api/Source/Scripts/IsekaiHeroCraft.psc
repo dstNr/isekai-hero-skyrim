@@ -28,3 +28,8 @@ Bool Function IsStorageTransfer(ObjectReference akOtherContainer) global native
 ; The run is queued for the next frame, so the lines appear shortly after the
 ; call returns. True when it was queued. No on-screen panel.
 Bool Function RunSelfTest() global native
+
+; Test runs only: pay out the next milestone the character is still owed, exactly as
+; finishing its quest would (gold panel, rewards, saved in the co-save). Does nothing
+; before reincarnation. Queued for the next frame; True when it was queued.
+Bool Function DebugGrantNext() global native

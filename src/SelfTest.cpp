@@ -782,6 +782,20 @@ namespace Isekai::SelfTest {
             });
             return true;
         }
+
+        // IsekaiHeroCraft.DebugGrantNext(): test runs reach the milestone panel without a
+        // quest (console completequest raises no event Isekai sees). Queued like RunSelfTest.
+        bool DebugGrantNextNative(RE::StaticFunctionTag*) {
+            auto* task = SKSE::GetTaskInterface();
+            if (!task) {
+                return false;
+            }
+            task->AddTask([]() {
+                logger::info("Debug grant: requested by script (IsekaiHeroCraft.DebugGrantNext)");
+                Progression::DebugGrantNext();
+            });
+            return true;
+        }
     }
 
     bool RegisterPapyrus(RE::BSScript::IVirtualMachine* a_vm) {
@@ -789,7 +803,8 @@ namespace Isekai::SelfTest {
             return false;
         }
         a_vm->RegisterFunction("RunSelfTest", "IsekaiHeroCraft", RunSelfTestNative);
-        logger::info("SelfTest: Papyrus native IsekaiHeroCraft.RunSelfTest registered");
+        a_vm->RegisterFunction("DebugGrantNext", "IsekaiHeroCraft", DebugGrantNextNative);
+        logger::info("SelfTest: Papyrus natives IsekaiHeroCraft.RunSelfTest and DebugGrantNext registered");
         return true;
     }
 }
