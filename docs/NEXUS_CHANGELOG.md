@@ -7,6 +7,18 @@ are still in the older, longer style — that is how they already sit on Nexus.)
 
 ---
 
+## Unreleased
+
+Changed: **the interface is drawn by Magelight UI** — PrismaUI and the ImGui overlay are no longer needed.
+
+Fixed: **loading a save without its .skse file no longer deletes the Dimensional Storage chest**, and the System warns instead of greeting you as a new soul.
+
+Changed: **the first choice is NORMAL or TRANSMIGRATOR** — HERO, ASCENDED, DORMANT and CUSTOM are one step in, with a way back.
+
+Changed: **picking plants pays a quarter of what it did** — four harvests count as one craft (HarvestsPerAction).
+
+Added: **AllSpellsExclude** — keep chosen plugins or spells out of the every-spell skill node.
+
 ## 0.9.0
 
 Added: **Skyrim 1.7.104 support** — one download still covers SE, AE and VR.

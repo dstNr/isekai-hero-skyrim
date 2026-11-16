@@ -175,6 +175,11 @@ namespace Isekai {
     // "NORMAL" / "HERO" / "ASCENDED" — for panels and logs.
     [[nodiscard]] std::string PowerName(PowerLevel a_power);
 
+    // What the last load found in the co-save, for the self-test: "read (vN)", "none (…)"
+    // or, when the character carries System abilities but no state came back, "LOST".
+    [[nodiscard]] std::string CoSaveStatus();
+    [[nodiscard]] bool        CoSaveLost();
+
     // Run the boot sequence now, on a character it has not run for yet. A no-op once
     // the System is bound. This is what the menu hotkey does for a player who set
     // AutoStart = 0, and the escape hatch if the automatic trigger never fires.

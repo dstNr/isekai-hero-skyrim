@@ -46,6 +46,13 @@ namespace Isekai {
         // 14: the pre-blessing baseline, so REBOOT can hand the body back
         constexpr std::uint32_t kVersion = 16;
 
+        // What the last load read. A save with no record at all looks exactly like a new
+        // character, so these two are how a lost co-save is told apart from one (Nexus
+        // report: progress, System and storage gone, the System "recognised" the player
+        // again). Reset by the revert callback before every load.
+        std::uint32_t g_recordVersion = 0;  // 0 = no state record read
+        bool          g_stateLost = false;
+
         void SystemMsg(const char* a_text) {
             RE::SendHUDMessage::ShowHUDMessage(a_text);
         }
@@ -468,14 +475,47 @@ namespace Isekai {
                 });
         }
 
-        void ShowPowerSelection() {
+        // The pick, numbered 0 NORMAL, 1 HERO, 2 ASCENDED, 3 DORMANT, 4 CUSTOM, whichever
+        // of the two screens below it was made on.
+        void TakeBlessing(int a_idx) {
+            // CUSTOM sets the three axes apart in its own builder.
+            if (a_idx == 4) {
+                ShowCustomBuilder();
+                return;
+            }
+            g_state.shattered = false;
+            g_state.custom = false;
+            // DORMANT is not a fourth tier: it starts at NORMAL and climbs the
+            // same ladder on its own, so g_state.power stays the tier held now.
+            g_state.dormant = (a_idx == 3);
+            g_state.power = g_state.dormant ? PowerLevel::Normal
+                                            : static_cast<PowerLevel>(std::clamp(a_idx, 0, 2));
+            // For a preset the reward tier, the tree ceiling and (via Full) the
+            // grant all agree: tree opens to the tier now; for DORMANT the tree
+            // grows with each awakening (AwakenTo raises treeTier too).
+            g_state.treeTier = g_state.power;
+            g_state.grantTier = PowerLevel::Normal;  // set for real in ShowPathSelection
+            logger::info("Power level selected: {} ({}{})", a_idx, PowerName(g_state.power),
+                         g_state.dormant ? ", DORMANT" : "");
+            // NORMAL has no floor to skip, so it never asks; HERO/ASCENDED and
+            // DORMANT choose full-vs-shattered next.
+            if (g_state.power == PowerLevel::Normal && !g_state.dormant) {
+                ApplyReincarnation();
+            } else {
+                ShowPathSelection();
+            }
+        }
+
+        void ShowPowerSelection();
+
+        // The gifts behind TRANSMIGRATOR. BACK (also Escape and pad B) returns to the
+        // first question, so looking here commits to nothing.
+        void ShowTransmigratorSelection() {
             UI::ShowSystemWindow(
                 L("window.system", "[ SYSTEM ]"),
-                LF("blessing.choose",
-                   "You have been reincarnated.\n"
-                   "The System offers you a blessing.\n"
+                LF("blessing.transmigrator",
+                   "A transmigrator arrives with a gift.\n"
                    "\n"
-                   "  NORMAL    No blessing. Pure challenge.\n"
                    "  HERO      Awakened power.\n"
                    "  ASCENDED  Transcend mortal limits.\n"
                    "  DORMANT   The blessing sleeps. Begin as a mortal;\n"
@@ -485,41 +525,50 @@ namespace Isekai {
                    "            reward pace and skill-tree depth, each on\n"
                    "            its own.\n"
                    "\n"
-                   "Choose your path:",
+                   "Choose your gift:",
                    Config::DormantHeroLevel(), Config::DormantAscendedLevel()),
                 std::vector<UI::Choice>{
-                    { "NORMAL", BlessingIcon("blessing_normal.png"), false },
                     { "HERO", BlessingIcon("blessing_hero.png"), false },
                     { "ASCENDED", BlessingIcon("blessing_ascended.png"), false },
                     { "DORMANT", BlessingIcon("blessing_dormant.png"), false },
                     { "CUSTOM", BlessingIcon("blessing_custom.png"), false },
+                    { .label = L("button.back", "BACK"), .cancel = true },
                 },
                 [](int a_idx) {
-                    // CUSTOM sets the three axes apart in its own builder.
                     if (a_idx == 4) {
-                        ShowCustomBuilder();
-                        return;
-                    }
-                    g_state.shattered = false;
-                    g_state.custom = false;
-                    // DORMANT is not a fourth tier: it starts at NORMAL and climbs the
-                    // same ladder on its own, so g_state.power stays the tier held now.
-                    g_state.dormant = (a_idx == 3);
-                    g_state.power = g_state.dormant ? PowerLevel::Normal
-                                                    : static_cast<PowerLevel>(std::clamp(a_idx, 0, 2));
-                    // For a preset the reward tier, the tree ceiling and (via Full) the
-                    // grant all agree: tree opens to the tier now; for DORMANT the tree
-                    // grows with each awakening (AwakenTo raises treeTier too).
-                    g_state.treeTier = g_state.power;
-                    g_state.grantTier = PowerLevel::Normal;  // set for real in ShowPathSelection
-                    logger::info("Power level selected: {} ({}{})", a_idx, PowerName(g_state.power),
-                                 g_state.dormant ? ", DORMANT" : "");
-                    // NORMAL has no floor to skip, so it never asks; HERO/ASCENDED and
-                    // DORMANT choose full-vs-shattered next.
-                    if (g_state.power == PowerLevel::Normal && !g_state.dormant) {
-                        ApplyReincarnation();
+                        ShowPowerSelection();
                     } else {
-                        ShowPathSelection();
+                        TakeBlessing(a_idx + 1);
+                    }
+                },
+                45.0f, 720.0f, {}, UI::Logic::Tone::Gold);  // the blessing (spec 7.2)
+        }
+
+        // First question, two answers (Nexus feedback: five blessings at once were too
+        // much for a first life). NORMAL is the plain start; the rest sit one step in.
+        void ShowPowerSelection() {
+            UI::ShowSystemWindow(
+                L("window.system", "[ SYSTEM ]"),
+                L("blessing.chooseStart",
+                  "You have been reincarnated.\n"
+                  "The System offers you a blessing.\n"
+                  "\n"
+                  "  NORMAL         No blessing. Pure challenge —\n"
+                  "                 the start for a first life.\n"
+                  "  TRANSMIGRATOR  Arrive with a gift: HERO, ASCENDED,\n"
+                  "                 a DORMANT blessing or a CUSTOM build.\n"
+                  "\n"
+                  "Choose your path:"),
+                std::vector<UI::Choice>{
+                    { "NORMAL", BlessingIcon("blessing_normal.png"), false },
+                    { L("button.transmigrator", "TRANSMIGRATOR"),
+                      BlessingIcon("blessing_hero.png"), false },
+                },
+                [](int a_idx) {
+                    if (a_idx == 1) {
+                        ShowTransmigratorSelection();
+                    } else {
+                        TakeBlessing(0);
                     }
                 },
                 45.0f, 720.0f, {}, UI::Logic::Tone::Gold);  // the blessing (spec 7.2)
@@ -637,6 +686,12 @@ namespace Isekai {
         }
 
         void TryTrigger() {
+            // A save whose System state did not come back must not be greeted by a fresh
+            // System: saving afterwards would bury the old state for good. The System key
+            // still starts over (TriggerReincarnation), for a player who means it.
+            if (g_stateLost) {
+                return;
+            }
             // The order of the gates is Readiness::DecideTrigger's and pinned by
             // tests/readiness_tests.cpp. A reincarnated character is not asked about
             // readiness at all, so a loaded save past its reincarnation never logs
@@ -1019,19 +1074,22 @@ namespace Isekai {
                         g_state.nodeCostScale = 1.0f;
                     }
                 }
+                g_recordVersion = version;
             }
 
             logger::info(
                 "State loaded (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={}, "
-                "dormant={}, custom={}, grant={}, tree={})",
+                "dormant={}, custom={}, grant={}, tree={}, chest={:#x}, record=v{})",
                 g_state.reincarnated, g_state.grantedMilestones.size(),
                 g_state.unlockedNodes.size(), g_state.systemPoints, g_state.shattered,
                 g_state.dormant, g_state.custom, PowerName(g_state.grantTier),
-                PowerName(g_state.treeTier));
+                PowerName(g_state.treeTier), g_state.storageChest, g_recordVersion);
         }
 
         void RevertCallback(SKSE::SerializationInterface*) {
             g_state = State{};
+            g_recordVersion = 0;
+            g_stateLost = false;
             Readiness::Reset();
             logger::info("State reverted to defaults (new game / pre-load)");
         }
@@ -1129,6 +1187,30 @@ namespace Isekai {
             return UI::LogHotkeys();       // the table the input handler actually consults
         }
 
+        // A loaded save with no state record is either a character the System never met
+        // or one whose co-save did not come back (missing .skse next to the .ess, a copy
+        // or cloud sync that dropped it, a record from a newer build). The System's
+        // abilities and the storage chest ride in the .ess itself, so a character with
+        // either was bound.
+        void CheckCoSave() {
+            if (g_recordVersion != 0) {
+                return;
+            }
+            if (!Passives::PlayerCarriesAbility() && !Storage::AnyChestInWorld()) {
+                logger::info("Co-save: no Isekai Hero record in this save — a character the "
+                             "System has not met yet");
+                return;
+            }
+            g_stateLost = true;
+            logger::error("Co-save: no Isekai Hero record, but the character carries System "
+                          "abilities — the .skse co-save is missing or was not read. Automatic "
+                          "reincarnation and storage clean-up are held; the System key still "
+                          "starts over");
+            SystemMsg(L("cosave.lost",
+                        "Isekai Hero: this save's System data is missing (its .skse file). "
+                        "Restore it and load again."));
+        }
+
         // ------------------------------------------------------------------
         // SKSE lifecycle
         // ------------------------------------------------------------------
@@ -1174,6 +1256,9 @@ namespace Isekai {
             // populated and the catch-up knows what it already owes.
             case SKSE::MessagingInterface::kPostLoadGame:
             case SKSE::MessagingInterface::kNewGame:
+                if (a_msg->type == SKSE::MessagingInterface::kPostLoadGame) {
+                    CheckCoSave();
+                }
                 // The loaded save has its own state: a decision or screen from before the
                 // load must not answer into it.
                 UI::Screens::OnGameLoaded();
@@ -1190,8 +1275,12 @@ namespace Isekai {
                 SkillTree::ApplyOnLoad();
                 // Ability magnitudes live in the plugin, not the save, so they come back
                 // as whatever the ESP says (zero) on every load. Rebuild them from the
-                // milestones the save *does* remember.
-                Passives::Refresh();
+                // milestones the save *does* remember. Not on a lost co-save: with no
+                // milestones it would strip the abilities, the one sign left that this
+                // character was bound — and a save made after that would look brand new.
+                if (!g_stateLost) {
+                    Passives::Refresh();
+                }
                 // One-shot: undo the character level earlier builds granted and kept
                 // re-asserting. After this the mod never touches the level again.
                 RetireLevelGrant();
@@ -1234,6 +1323,18 @@ namespace Isekai {
             return;
         }
         BeginReincarnation();
+    }
+
+    std::string CoSaveStatus() {
+        if (g_recordVersion != 0) {
+            return "read (v" + std::to_string(g_recordVersion) + ")";
+        }
+        return g_stateLost ? "LOST: no record, but System abilities or a storage chest in the save"
+                           : "none (a character the System has not met yet)";
+    }
+
+    bool CoSaveLost() {
+        return g_stateLost;
     }
 
     std::string PowerName(PowerLevel a_power) {

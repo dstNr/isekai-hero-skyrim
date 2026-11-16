@@ -578,27 +578,39 @@
   var SCENARIOS = [
     { id: "story", group: "Panel", label: "Story", hint: "Single CONTINUE, typewriter: REINCARNATION COMPLETE, gold",
       run: function () { open("panel", storyPanel("")); } },
-    { id: "blessing", group: "Panel", label: "Blessing ×5",
-      hint: "The real blessing choice: five choices fall back to the capsule row, gold",
-      run: function () {
+    { id: "blessing", group: "Panel", label: "Blessing",
+      hint: "The real blessing choice: NORMAL or TRANSMIGRATOR, then four gifts and BACK, gold",
+      run: function blessing() {
         open("panel", panel("[ SYSTEM ]",
           "You have been reincarnated.\nThe System offers you a blessing.\n\n" +
-          "  NORMAL    No blessing. Pure challenge.\n  HERO      Awakened power.\n" +
-          "  ASCENDED  Transcend mortal limits.\n  DORMANT   The blessing sleeps. Begin as a mortal;\n" +
-          "            it wakes to HERO at level " + DORMANT_HERO + ", then to\n" +
-          "            ASCENDED at level " + DORMANT_ASCENDED + ".\n" +
-          "  CUSTOM    Set the pieces yourself — starting gift,\n" +
-          "            reward pace and skill-tree depth, each on\n            its own.\n\nChoose your path:",
+          "  NORMAL         No blessing. Pure challenge —\n                 the start for a first life.\n" +
+          "  TRANSMIGRATOR  Arrive with a gift: HERO, ASCENDED,\n" +
+          "                 a DORMANT blessing or a CUSTOM build.\n\nChoose your path:",
           [
-            { label: "NORMAL",   icon: "blessing_normal.png",   iconOnly: false },
-            { label: "HERO",     icon: "blessing_hero.png",     iconOnly: false },
-            { label: "ASCENDED", icon: "blessing_ascended.png", iconOnly: false },
-            { label: "DORMANT",  icon: "blessing_dormant.png",  iconOnly: false },
-            { label: "CUSTOM",   icon: "blessing_custom.png",   iconOnly: false }
+            { label: "NORMAL",        icon: "blessing_normal.png", iconOnly: false },
+            { label: "TRANSMIGRATOR", icon: "blessing_hero.png",   iconOnly: false }
           ], "gold"),
           function (i) {
-            if (i === 4) customStep(0);
-            else open("panel", pathPanel(i === 3), function () { open("panel", storyPanel(i === 3 ? "DORMANT" : "")); });
+            if (i === 0) { open("panel", storyPanel("")); return; }
+            open("panel", panel("[ SYSTEM ]",
+              "A transmigrator arrives with a gift.\n\n  HERO      Awakened power.\n" +
+              "  ASCENDED  Transcend mortal limits.\n  DORMANT   The blessing sleeps. Begin as a mortal;\n" +
+              "            it wakes to HERO at level " + DORMANT_HERO + ", then to\n" +
+              "            ASCENDED at level " + DORMANT_ASCENDED + ".\n" +
+              "  CUSTOM    Set the pieces yourself — starting gift,\n" +
+              "            reward pace and skill-tree depth, each on\n            its own.\n\nChoose your gift:",
+              [
+                { label: "HERO",     icon: "blessing_hero.png",     iconOnly: false },
+                { label: "ASCENDED", icon: "blessing_ascended.png", iconOnly: false },
+                { label: "DORMANT",  icon: "blessing_dormant.png",  iconOnly: false },
+                { label: "CUSTOM",   icon: "blessing_custom.png",   iconOnly: false },
+                { label: "BACK" }
+              ], "gold", { cancel: 4 }),
+              function (j) {
+                if (j === 4) blessing();
+                else if (j === 3) customStep(0);
+                else open("panel", pathPanel(j === 2), function () { open("panel", storyPanel(j === 2 ? "DORMANT" : "")); });
+              });
           });
       } },
     { id: "cards", group: "Panel", label: "Blessing ×3", hint: "Three cards (CUSTOM step 1), violet",

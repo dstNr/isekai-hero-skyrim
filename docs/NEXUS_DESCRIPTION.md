@@ -24,7 +24,7 @@ Isekai Hero turns your next playthrough into a reincarnation story: you arrive i
 Built as a [b]native SKSE plugin[/b] with its own interface rendered inside the game. No Papyrus scripts, no MCM dependency, ESL-flagged.
 
 [size=4][b]The Awakening[/b][/size]
-The first time you gain control of your character — regardless of how you start the game (vanilla, Alternate Start, Skyrim Unbound, ...) — the System boots up and offers a choice:
+The first time you gain control of your character — regardless of how you start the game (vanilla, Alternate Start, Skyrim Unbound, ...) — the System boots up and asks one thing: [b]NORMAL[/b], or [b]TRANSMIGRATOR[/b] — arriving with a gift, which opens the other four:
 
 [list]
 [*][b]NORMAL[/b] — no blessing. The pure challenge. The System still tracks your deeds, and its skill tree becomes your own progression path.
@@ -100,7 +100,7 @@ The blessing you choose keeps mattering — everything the System pays out is mu
 [/list]
 
 [size=4][b]Dimensional Storage[/b][/size]
-Every reincarnated soul receives a private pocket dimension: one chest inventory, reachable from anywhere through the System panel. Its contents are [b]automatically available at crafting stations[/b] — forge, alchemy table, enchanter — without moving a single item yourself. It [b]holds up inside a full crafting-overhaul stack[/b]: recipes a mod hides behind "do you carry this material?" still show, and pre-craft prompts like an enchanter's "empower with a flawless gem?" see the stored gems. Stock is drawn from what recipes require, so DLC materials (chitin plate, netch leather, corkbulb root…) come along.
+Every reincarnated soul receives a private pocket dimension: one chest inventory, reachable from anywhere through the System panel. Its contents are [b]automatically available at crafting stations[/b] — forge, alchemy table, enchanter — without moving a single item yourself. It [b]holds up inside a full crafting-overhaul stack[/b]: recipes a mod hides behind "do you carry this material?" still show, and pre-craft prompts like an enchanter's "empower with a flawless gem?" see the stored gems. Stock is drawn from what recipes require, so DLC materials (chitin plate, netch leather, corkbulb root…) come along. Creation Club ingredients are left out on purpose: they carry scripts that fire on every move, and the crafting shuttle moves stock constantly.
 
 It [b]starts empty for every blessing[/b] — you stock it from the System Shop's material packs, so what it holds is what you chose to spend your points on. HERO and ASCENDED still get there sooner: their reward scale multiplies point income.
 

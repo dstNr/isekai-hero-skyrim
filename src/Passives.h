@@ -25,4 +25,8 @@ namespace Isekai::Passives {
     // values — a double-apply is impossible by construction, because we always write
     // the total rather than adding a delta.
     void Refresh();
+
+    // Does the player carry any of our ability spells? They are saved in the .ess, not
+    // the co-save, so after a load they are evidence the System was bound before.
+    [[nodiscard]] bool PlayerCarriesAbility();
 }

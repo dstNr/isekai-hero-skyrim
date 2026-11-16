@@ -46,7 +46,13 @@ namespace Isekai::Professions {
             RE::BSEventNotifyControl ProcessEvent(
                 const RE::TESHarvestedEvent::ItemHarvested* a_event,
                 RE::BSTEventSource<RE::TESHarvestedEvent::ItemHarvested>*) override {
-                if (a_event && a_event->harvester == RE::PlayerCharacter::GetSingleton()) {
+                if (a_event && a_event->harvester == RE::PlayerCharacter::GetSingleton() &&
+                    ++m_picks >= Config::HarvestsPerAction()) {
+                    // A pick takes a second and a crafted item real materials, so several
+                    // picks make one action (Nexus feedback: herbs paid far too fast).
+                    // shortcut: the leftover picks are not saved, up to HarvestsPerAction-1
+                    // are lost per load; move into State if that ever matters.
+                    m_picks = 0;
                     CountAction("harvest");
                 }
                 return RE::BSEventNotifyControl::kContinue;
@@ -54,6 +60,7 @@ namespace Isekai::Professions {
 
         private:
             HarvestWatcher() = default;
+            std::uint32_t m_picks = 0;
         };
 
         // There is no event for "the player crafted something": BGSCraftItemEvent exists as
@@ -115,7 +122,8 @@ namespace Isekai::Professions {
             logger::error("Professions: no harvest event source — harvesting will not pay");
         }
 
-        logger::info("Professions: watching harvest and craft ({} actions per System Point)",
-                     Config::ProfessionActionsPerPoint());
+        logger::info("Professions: watching harvest and craft ({} actions per System Point, "
+                     "{} harvests per action)",
+                     Config::ProfessionActionsPerPoint(), Config::HarvestsPerAction());
     }
 }

@@ -175,6 +175,13 @@
           "type": "slider",
           "valueOptions": { "min": 0, "max": 500, "step": 5, "formatString": "{0}", "sourceType": "ModSettingInt", "defaultValue": 25 }
         },
+        {
+          "id": "iHarvestsPerAction:Progression",
+          "text": "Harvests per craft",
+          "help": "How many picked plants count as one action on the track above. 1 counts every pick.",
+          "type": "slider",
+          "valueOptions": { "min": 1, "max": 100, "step": 1, "formatString": "{0}", "sourceType": "ModSettingInt", "defaultValue": 4 }
+        },
         { "text": "Awakening", "type": "header" },
         {
           "id": "iDormantHeroLevel:Dormant",

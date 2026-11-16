@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <fstream>
 #include <string>
+#include <vector>
 
 namespace Isekai::Config {
 
@@ -50,6 +51,8 @@ namespace Isekai::Config {
         std::uint32_t g_killsPerBounty = 50;
         std::int32_t  g_killBountyPoints = 1;
         std::uint32_t g_professionActionsPerPoint = 25;
+        std::uint32_t g_harvestsPerAction = 4;
+        std::vector<std::string> g_allSpellsExclude;
         // Read once at reincarnation and then fixed for that character — see
         // State::nodeCostScale. Live here only so a new character picks up the ini.
         float         g_nodeCostScale = 1.0f;
@@ -299,6 +302,19 @@ namespace Isekai::Config {
                                                                g_killBountyPoints), 1u, 1000u));
             } else if (key == "professionactionsperpoint") {
                 g_professionActionsPerPoint = AsCount(val, g_professionActionsPerPoint, 0u, 10000u);
+            } else if (key == "harvestsperaction") {
+                g_harvestsPerAction = AsCount(val, g_harvestsPerAction, 1u, 100u);
+            } else if (key == "allspellsexclude") {
+                // Comma-separated: ';' would be read as the start of a comment.
+                g_allSpellsExclude.clear();
+                std::size_t from = 0;
+                while (from <= val.size()) {
+                    const auto comma = std::min(val.find(',', from), val.size());
+                    if (auto entry = Lower(Trim(val.substr(from, comma - from))); !entry.empty()) {
+                        g_allSpellsExclude.push_back(std::move(entry));
+                    }
+                    from = comma + 1;
+                }
             } else if (key == "questrewardscale") {
                 // Clamped rather than trusted: 0 would hand out objectives that pay
                 // nothing, which reads as the quest system being broken rather than as a
@@ -425,6 +441,8 @@ namespace Isekai::Config {
         g_killsPerBounty = 50;
         g_killBountyPoints = 1;
         g_professionActionsPerPoint = 25;
+        g_harvestsPerAction = 4;
+        g_allSpellsExclude.clear();
         g_nodeCostScale = 1.0f;
         g_nodeEffectScale = 1.0f;
         g_heroSkillLevel = 50;
@@ -484,6 +502,9 @@ namespace Isekai::Config {
                      g_nodeCostScale, g_nodeEffectScale, g_heroSkillLevel,
                      g_heroAttributeTarget, g_heroSystemPoints, g_ascendedSkillLevel,
                      g_ascendedAttributeTarget, g_ascendedSystemPoints);
+        logger::info("Config: ProfessionActionsPerPoint={}, HarvestsPerAction={}, "
+                     "AllSpellsExclude={} entr(ies)",
+                     g_professionActionsPerPoint, g_harvestsPerAction, g_allSpellsExclude.size());
     }
 
     std::string KeyName(std::uint32_t a_scanCode) {
@@ -616,6 +637,14 @@ namespace Isekai::Config {
 
     std::uint32_t ProfessionActionsPerPoint() {
         return g_professionActionsPerPoint;
+    }
+
+    std::uint32_t HarvestsPerAction() {
+        return g_harvestsPerAction;
+    }
+
+    const std::vector<std::string>& AllSpellsExclude() {
+        return g_allSpellsExclude;
     }
 
     float QuestRewardScale() {

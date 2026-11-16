@@ -560,11 +560,32 @@ namespace Isekai::Storage {
         }
     }
 
+    bool AnyChestInWorld() {
+        if (!g_base) {
+            return false;
+        }
+        const auto& [all, lock] = RE::TESForm::GetAllForms();
+        const RE::BSReadLockGuard guard{ lock };
+        for (const auto& [id, form] : *all) {
+            auto* ref = form ? form->As<RE::TESObjectREFR>() : nullptr;
+            if (ref && ref->GetBaseObject() == g_base) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     void PruneOrphanChests() {
         if (!g_base) {
             return;
         }
         const RE::FormID keep = GetState().storageChest;  // the one still in use
+        // Without a live chest there is nothing to tell a husk from the real one. That is
+        // a lost co-save, and sweeping here deleted the player's chest with everything in
+        // it (Nexus report: storage gone after the System reset).
+        if (keep == 0) {
+            return;
+        }
 
         // Collect first, delete after: Disable()/SetDelete() mutate reference state, which
         // must not happen while the global form list is read-locked.

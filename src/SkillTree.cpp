@@ -469,6 +469,37 @@ namespace Isekai::SkillTree {
             logger::info("SkillTree: {} ingredients fully known", learned);
         }
 
+        // An entry is a plugin ("magic.esp") or one spell in it ("magic.esp|0x801"), the
+        // ID local to that plugin as xEdit shows it without the load-order byte.
+        [[nodiscard]] bool IsExcluded(const RE::SpellItem* a_spell,
+                                      const std::vector<std::string>& a_exclude) {
+            const auto* file = a_spell->GetFile(0);
+            if (!file) {
+                return false;
+            }
+            std::string plugin(file->GetFilename());
+            std::ranges::transform(plugin, plugin.begin(),
+                                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            const RE::FormID local = file->IsLight() ? (a_spell->GetFormID() & 0xFFF)
+                                                     : (a_spell->GetFormID() & 0xFFFFFF);
+            for (const auto& entry : a_exclude) {
+                const auto bar = entry.find('|');
+                if (entry.substr(0, bar) != plugin) {
+                    continue;
+                }
+                if (bar == std::string::npos) {
+                    return true;
+                }
+                try {
+                    if (std::stoul(entry.substr(bar + 1), nullptr, 16) == local) {
+                        return true;
+                    }
+                } catch (...) {
+                }
+            }
+            return false;
+        }
+
         void UnlockAllSpells(RE::PlayerCharacter* a_player) {
             auto* data = RE::TESDataHandler::GetSingleton();
             if (!data) {
@@ -478,6 +509,8 @@ namespace Isekai::SkillTree {
             // thousands of NPC-only and test spells — if it can be bought and read,
             // the System can teach it.
             std::size_t spells = 0;
+            std::size_t skipped = 0;
+            const auto& exclude = Config::AllSpellsExclude();
             for (auto* book : data->GetFormArray<RE::TESObjectBOOK>()) {
                 if (!book || !book->TeachesSpell()) {
                     continue;
@@ -486,11 +519,16 @@ namespace Isekai::SkillTree {
                 if (!spell) {
                     continue;
                 }
+                if (!exclude.empty() && IsExcluded(spell, exclude)) {
+                    ++skipped;
+                    continue;
+                }
                 if (a_player->AddSpell(spell)) {
                     ++spells;
                 }
             }
-            logger::info("SkillTree: {} spells learned from tomes", spells);
+            logger::info("SkillTree: {} spells learned from tomes, {} skipped by AllSpellsExclude",
+                         spells, skipped);
         }
 
         // Make one node's effect real. Attribute nodes need no action here — their

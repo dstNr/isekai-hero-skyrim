@@ -1494,7 +1494,8 @@ check("ui: the game's panels pass their spec 7.2 tones", () => {
     return src.slice(at, next < 0 ? undefined : at + name.length + next);
   };
   const want = [
-    [sys, "void ShowPowerSelection()", /UI::Logic::Tone::Gold\)/, "the blessing choice is not gold"],
+    [sys, "void ShowPowerSelection() {", /UI::Logic::Tone::Gold\)/, "the blessing choice is not gold"],
+    [sys, "void ShowTransmigratorSelection() {", /UI::Logic::Tone::Gold\)/, "the transmigrator gifts are not gold"],
     [sys, "void ShowPathSelection()", /g_state\.dormant \? UI::Logic::ToneFor\(UI::Logic::Blessing::Dormant\)\s*:\s*UI::Logic::Tone::Cyan\)/,
      "the Full/Shattered choice is not violet when dormant, else cyan"],
     [sys, "void ShowPathSelection()", /"SHATTERED"\),\s*BlessingIcon\("blessing_shattered\.png"\), false, UI::Logic::Tone::Red \}/,

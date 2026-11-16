@@ -4,6 +4,7 @@
 #include "Progression.h"
 #include "SkillTree.h"
 
+#include <algorithm>
 #include <map>
 #include <vector>
 
@@ -166,6 +167,16 @@ namespace Isekai::Passives {
             out.push_back(av);
         }
         return out;
+    }
+
+    bool PlayerCarriesAbility() {
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        if (!player) {
+            return false;
+        }
+        return std::ranges::any_of(g_abilities, [player](const auto& a_entry) {
+            return player->HasSpell(a_entry.second.spell);
+        });
     }
 
     void Refresh() {

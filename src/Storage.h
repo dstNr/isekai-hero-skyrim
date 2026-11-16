@@ -67,6 +67,10 @@ namespace Isekai::Storage {
     // on every load.
     void PruneOrphanChests();
 
+    // Is there any reference of our chest base in the world? Created references live in
+    // the .ess, so after a load with no co-save state one means the System was bound.
+    [[nodiscard]] bool AnyChestInWorld();
+
     // --- Zero-transfer crafting support (used by CraftHooks) ---
 
     // How many of a_obj the storage chest holds (0 if no chest / not found). Read by

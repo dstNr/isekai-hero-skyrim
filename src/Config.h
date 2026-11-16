@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 // Lightweight INI settings, read once at kDataLoaded from
 // Data\SKSE\Plugins\IsekaiHero.ini. Absent file / keys fall back to defaults, so
@@ -163,6 +164,11 @@ namespace Isekai::Config {
     [[nodiscard]] std::int32_t  KillBountyPoints();
     // 0 = professions off. Harvest/smelt/tan/craft actions per System Point.
     [[nodiscard]] std::uint32_t ProfessionActionsPerPoint();
+    // How many harvests make one profession action (1 = every pick counts, as before).
+    [[nodiscard]] std::uint32_t HarvestsPerAction();
+    // [SkillTree] AllSpellsExclude: "Plugin.esp" or "Plugin.esp|0xID" entries, lower
+    // case. The all-spells node skips a tome spell from a listed plugin or with a listed ID.
+    [[nodiscard]] const std::vector<std::string>& AllSpellsExclude();
 
     // Skill-tree price scale. Read once at reincarnation and snapshotted into the
     // co-save — see State::nodeCostScale for why it must not be live.

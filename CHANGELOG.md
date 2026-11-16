@@ -7,6 +7,20 @@ All notable changes to Isekai Hero are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **A lost co-save is caught instead of greeted as a new character** (Nexus report:
+  progress, System and storage gone, the System "recognised" the player again). A save with
+  no Isekai record whose character still carries a System ability or a storage chest is
+  marked lost: the log says so (`Co-save: no Isekai Hero record, but …`), a HUD line tells
+  the player to restore the `.skse` file, the automatic reincarnation is held (the System
+  key still starts over on purpose) and the abilities are left on the character, so a save
+  made afterwards still shows the loss. The self-test has a `co-save` line (`read (vN)`,
+  `none …` or a FAIL on `LOST`), and `State loaded` now names the chest and the record
+  version.
+- **`AllSpellsExclude`** ([SkillTree], ini only): plugins or single spells
+  (`Plugin.esp|0xID`, comma-separated) the every-spell node does not teach (Nexus request).
+- **`HarvestsPerAction`** ([Progression], ini and MCM, default 4): picks per profession
+  action. Harvesting shared the craft track one for one and paid far faster than any
+  station (Nexus feedback); the leftover picks are not saved.
 - **The self-test also writes machine-readable lines, and scripts can start it.**
   Every run (after each load, the hotkey, or the new Papyrus native
   `IsekaiHeroCraft.RunSelfTest()`) ends with one `[SELFTEST] isekai.<test-id> PASS|FAIL
@@ -30,6 +44,9 @@ All notable changes to Isekai Hero are documented here. The format follows
   `pwsh -NoProfile -File tools/run-unit-tests.ps1` (MSVC Build Tools only, no vcpkg).
 
 ### Fixed
+- **Loading a save without its co-save deleted the storage chest.** `PruneOrphanChests`
+  kept only the chest the state named; with no state it named none and removed the real
+  chest with its contents. It now does nothing while no chest is known.
 - **Ordinator's "Recycle Materials" no longer duplicates the crafting tokens, and "Fuel the Inferno" no longer burns a dragon soul for them.**
   On menu close the token return moves up to a few hundred materials out of the player's
   inventory into the storage chest. Every move raises `OnItemRemoved` on the player's
@@ -55,6 +72,11 @@ All notable changes to Isekai Hero are documented here. The format follows
   report of it surfacing again says where it actually was.
 
 ### Changed
+- **The blessing choice asks one thing first: NORMAL or TRANSMIGRATOR.** HERO, ASCENDED,
+  DORMANT and CUSTOM sit behind TRANSMIGRATOR with a BACK button (also Escape and pad B).
+  Five blessings at once were too much for a first life (Nexus feedback). New strings
+  `blessing.chooseStart`, `blessing.transmigrator`, `button.transmigrator`, `button.back`
+  replace `blessing.choose`.
 - **The whole interface is now drawn by Magelight UI instead of ImGui and PrismaUI.**
   Every screen — the System panels, the skill tree, storage and shop, the blessing choice,
   toasts, banners, the level-up flourish and the threat labels — is one of two HTML/CSS

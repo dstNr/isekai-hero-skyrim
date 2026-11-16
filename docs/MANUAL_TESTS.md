@@ -28,6 +28,17 @@ Log lines to keep an eye on throughout: the mod writes what it does, so a test t
 
 ## Priority 1 — changed most recently, least proven
 
+### 0.9 Nexus feedback (co-save, blessing choice, harvests, spell exclusions)
+
+| Step | Expected |
+|---|---|
+| Load a reincarnated save with its `.skse` file. | Log `State loaded (reincarnated=true, …, chest=0x…, record=v16)`; self-test `co-save` PASS `read (v16)`. |
+| Copy that save's `.ess` without its `.skse` under a new name, load it. | Log error `Co-save: no Isekai Hero record, but the character carries System abilities …`; HUD line about the missing System data; self-test `co-save` FAIL `LOST …`; no blessing choice appears by itself; no `Storage: removed … orphaned chest husk(s)`. Loading the original save afterwards shows the chest and its contents unchanged. |
+| A new game. | Log `Co-save: no Isekai Hero record in this save — a character the System has not met yet` is NOT written (new game has no load); the blessing choice comes as usual. |
+| Blessing choice. | Two buttons, NORMAL and TRANSMIGRATOR, gold. TRANSMIGRATOR opens HERO / ASCENDED / DORMANT / CUSTOM / BACK. BACK, Escape and pad B return to the first screen. Each gift then runs as before (FULL/SHATTERED, the CUSTOM builder). |
+| Pick 8 plants with the defaults. | Log `Professions: N actions (harvest)` only on payouts; the action count rises by 2, not 8 (`State saved … ` professionActions in the co-save, or the payout every 100 picks). |
+| `AllSpellsExclude = Skyrim.esm|0x0001C789` (Fireball), then buy the every-spell node on a character that does not know it. | Log `SkillTree: N spells learned from tomes, 1 skipped by AllSpellsExclude`; Fireball not learned. |
+
 ### 1.0 The 0.9.1 fixes (#36, #37, #38)
 
 Three reports, three checks. Test from the packaged archive in MO2 — `build.bat` does not

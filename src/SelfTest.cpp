@@ -533,6 +533,8 @@ namespace Isekai::SelfTest {
                     ? "reincarnated, " + PowerName(st.power) + ", " +
                           std::to_string(st.systemPoints) + " SP"
                     : "not reincarnated yet");
+            // A lost co-save fails here so a bug report shows it on the first screen.
+            Add(out, !CoSaveLost(), false, "co-save", CoSaveStatus());
             Add(out, true, false, "dimensional storage",
                 Storage::Available() ? "available" : "unavailable (not reincarnated)");
         }
