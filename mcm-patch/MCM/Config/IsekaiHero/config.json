@@ -199,6 +199,13 @@
         },
         { "text": "Integration", "type": "header" },
         {
+          "id": "iAdventurersGuildPoints:AdventurersGuild",
+          "text": "Adventurers Guild pay",
+          "help": "Multiplier on the System Points Adventurers Guild work pays (missives, dungeons, promotions). 0 switches it off. Does nothing without that mod.",
+          "type": "slider",
+          "valueOptions": { "min": 0, "max": 10, "step": 1, "formatString": "{0}", "sourceType": "ModSettingInt", "defaultValue": 1 }
+        },
+        {
           "id": "bStorageCodex:Storage",
           "text": "Storage Codex",
           "help": "A carried book that opens the Dimensional Storage. Off by default, because the panel already reaches it.",

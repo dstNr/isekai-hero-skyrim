@@ -142,3 +142,30 @@ It gets its own design spec before any code, covering at least:
 **A `src/` reorganisation into folders.** It would touch `CMakeLists.txt` and about thirty
 hard-coded paths in `tools/check.mjs` without fixing anything. Files are split where a fix
 already touches them, as with the trigger code in 0.9.1.
+
+## Update 2026-11-16: Magelight UI and the Nexus feedback
+
+**The interface moved to Magelight UI** (`feat/magelight-ui`), with the 0.9.1 fixes on the same
+branch: rebound hotkeys take hold on menu close, and the storage chest has an empty mesh.
+That retires two 0.10.0 items:
+
+- **CJK glyphs in the built-in interface.** There is no ImGui atlas any more. `theme.css`
+  falls back to Microsoft YaHei UI and Yu Gothic UI, and the ini note says glyphs no
+  installed font covers come out as boxes. What is left is an in-game check with a `zh`
+  language file.
+- **#9, toasts and threat labels in PrismaUI.** Both live on the Magelight HUD page now.
+
+**Nexus feedback, acted on** (`feat/nexus-feedback`, on top of Magelight):
+
+- A save whose co-save did not come back is caught, not greeted as a new character. Loading
+  one used to delete the storage chest with its contents.
+- The blessing choice asks NORMAL or TRANSMIGRATOR first.
+- Harvests count four to one profession action (`HarvestsPerAction`).
+- `AllSpellsExclude` keeps plugins or spells out of the every-spell node.
+- Adventurers Guild work pays System Points (`GuildBridge`, from the guild's SKSE mod
+  events).
+- Creation Club ingredients stay out of the material packs. The Nexus page says why.
+
+**Into the Inbox:** other kinds of System (a player asked for more than one System flavour).
+This goes with "new systems" (#14, #15, New Game+). It needs its own spec before any code,
+because every panel, the skill tree and the milestone table assume the one System there is.

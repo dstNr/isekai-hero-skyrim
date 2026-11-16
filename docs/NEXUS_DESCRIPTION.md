@@ -51,6 +51,8 @@ Changed your mind later? The System status menu has a [b]Reboot[/b] button that 
 
 All passives aggregate into [b]System abilities visible under Active Effects[/b], and every earned title is listed in the System's status ledger. Quests you completed before installing are recognized retroactively.
 
+With [url=https://www.nexusmods.com/skyrimspecialedition/mods/193777]Adventurers Guild[/url] installed, the System also pays for guild work: missives, notices and Jarl's bounties, cleared dungeons and promotions earn System Points by their rank (E to S). Optional, no dependency — without the guild nothing changes.
+
 [size=4][b]The System gives you work[/b][/size]
 The System does not only watch — it assigns. On its own schedule it hands you a [b]kill objective[/b] ("Slay 25 Draugr"), announces it, counts your kills on screen as they happen, and pays [b]System Points[/b] when it is done. Then it goes quiet for a while and offers the next one.
 
@@ -112,7 +114,7 @@ It [b]starts empty for every blessing[/b] — you stock it from the System Shop'
 [/list]
 
 [size=4][b]Translations[/b][/size]
-Every line of text the mod shows goes through a language file. Drop a `lang/<code>.txt` next to the plugin, set [b]Language[/b] in the ini, and anything a translation does not cover falls back to English rather than showing a blank or a key. The pages translate themselves the same way. A full English template ships with the mod as the starting point.
+Every line of text the mod shows goes through a language file. Drop a `lang/<code>.txt` next to the plugin, set [b]Language[/b] in the ini, and anything a translation does not cover falls back to English rather than showing a blank or a key. The pages translate themselves the same way. A full English template ships with the mod as the starting point. Chinese, Japanese and Korean text uses the system fonts Windows already has (Microsoft YaHei, Yu Gothic, Malgun Gothic), so those translations show real glyphs, not boxes. Translators are welcome to publish their files as their own Nexus pages.
 
 [size=4][b]One interface: Magelight UI[/b][/size]
 The whole interface — skill tree, System panels, toasts, level-up flourish, threat labels — is a set of HTML/CSS pages drawn by [url=https://www.nexusmods.com/skyrimspecialedition/mods/193303]Magelight UI[/url] ([b]1.7.0 or newer[/b], required) in a translucent cyan "projection" look. The earlier built-in overlay and the optional PrismaUI patch are gone, so there is nothing to choose in the installer about how the System is drawn. Same mod, same logic, same saves.

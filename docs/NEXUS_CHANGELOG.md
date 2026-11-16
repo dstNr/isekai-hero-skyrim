@@ -17,6 +17,8 @@ Changed: **the first choice is NORMAL or TRANSMIGRATOR** — HERO, ASCENDED, DOR
 
 Changed: **picking plants pays a quarter of what it did** — four harvests count as one craft (HarvestsPerAction).
 
+Added: **Adventurers Guild support** — guild missives, cleared dungeons and promotions pay System Points by their rank.
+
 Added: **AllSpellsExclude** — keep chosen plugins or spells out of the every-spell skill node.
 
 ## 0.9.0

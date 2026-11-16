@@ -47,6 +47,8 @@ add_commonlibsse_plugin(
         src/Plugin.cpp
         src/Plugin.h
         src/Professions.cpp
+        src/GuildBridge.cpp
+        src/GuildBridge.h
         src/Professions.h
         src/Progression.cpp
         src/Quests.cpp

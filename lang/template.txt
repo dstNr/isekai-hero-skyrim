@@ -75,6 +75,9 @@ view.tree.sealedRebirth = Sealed — needs {} rebirth
 view.tree.tierTag =  · {} ({}/{})
 view.tree.unlocked = Unlocked
 
+; --- src/GuildBridge.cpp ---
+guild.payout = [ SYSTEM ]  Guild work recognised  —  +{} SP
+
 ; --- src/Professions.cpp ---
 profession.payout = [ SYSTEM ]  Craft recognised  —  +1 SP
 

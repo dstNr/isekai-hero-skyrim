@@ -5,6 +5,7 @@
 #include "CraftHooks.h"
 #include "FrameTick.h"
 #include "ModAPI.h"
+#include "GuildBridge.h"
 #include "Passives.h"
 #include "Plugin.h"
 #include "Progression.h"
@@ -1237,6 +1238,7 @@ namespace Isekai {
                 Progression::Install();
                 Quests::Install();      // watches kills for the standing objective
                 Professions::Install();  // harvesting and crafting feed the System
+                GuildBridge::Install();  // Adventurers Guild work, when that mod is there
                 InstallConsoleCommand();  // IsekaiPoints [n]
                 BindAllHotkeys(/*a_log=*/true);  // every hotkey, from the ini just read
 

@@ -16,6 +16,12 @@ All notable changes to Isekai Hero are documented here. The format follows
   made afterwards still shows the loss. The self-test has a `co-save` line (`read (vN)`,
   `none …` or a FAIL on `LOST`), and `State loaded` now names the chest and the record
   version.
+- **Adventurers Guild pays System Points** (`src/GuildBridge.cpp`, Nexus request). The
+  guild sends SKSE mod events; `AG_MissiveCompleted` (missive, notice, Jarl's bounty) and
+  `AG_DungeonCleared` pay rank+1 (E=1 … S=6), `AG_RankChanged` three times that, all times
+  `AdventurersGuildPoints` ([AdventurersGuild], ini and MCM, default 1, 0 = off) and the
+  reward pace. Only once the System is bound. No link against the guild: without it the
+  events never come. Log `GuildBridge: <event> '<what>' rank X -> +N SP`.
 - **`AllSpellsExclude`** ([SkillTree], ini only): plugins or single spells
   (`Plugin.esp|0xID`, comma-separated) the every-spell node does not teach (Nexus request).
 - **`HarvestsPerAction`** ([Progression], ini and MCM, default 4): picks per profession

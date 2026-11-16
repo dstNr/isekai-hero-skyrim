@@ -52,6 +52,7 @@ namespace Isekai::Config {
         std::int32_t  g_killBountyPoints = 1;
         std::uint32_t g_professionActionsPerPoint = 25;
         std::uint32_t g_harvestsPerAction = 4;
+        std::uint32_t g_adventurersGuildPoints = 1;
         std::vector<std::string> g_allSpellsExclude;
         // Read once at reincarnation and then fixed for that character — see
         // State::nodeCostScale. Live here only so a new character picks up the ini.
@@ -302,6 +303,8 @@ namespace Isekai::Config {
                                                                g_killBountyPoints), 1u, 1000u));
             } else if (key == "professionactionsperpoint") {
                 g_professionActionsPerPoint = AsCount(val, g_professionActionsPerPoint, 0u, 10000u);
+            } else if (key == "adventurersguildpoints") {
+                g_adventurersGuildPoints = AsCount(val, g_adventurersGuildPoints, 0u, 10u);
             } else if (key == "harvestsperaction") {
                 g_harvestsPerAction = AsCount(val, g_harvestsPerAction, 1u, 100u);
             } else if (key == "allspellsexclude") {
@@ -442,6 +445,7 @@ namespace Isekai::Config {
         g_killBountyPoints = 1;
         g_professionActionsPerPoint = 25;
         g_harvestsPerAction = 4;
+        g_adventurersGuildPoints = 1;
         g_allSpellsExclude.clear();
         g_nodeCostScale = 1.0f;
         g_nodeEffectScale = 1.0f;
@@ -503,8 +507,9 @@ namespace Isekai::Config {
                      g_heroAttributeTarget, g_heroSystemPoints, g_ascendedSkillLevel,
                      g_ascendedAttributeTarget, g_ascendedSystemPoints);
         logger::info("Config: ProfessionActionsPerPoint={}, HarvestsPerAction={}, "
-                     "AllSpellsExclude={} entr(ies)",
-                     g_professionActionsPerPoint, g_harvestsPerAction, g_allSpellsExclude.size());
+                     "AllSpellsExclude={} entr(ies), AdventurersGuildPoints={}",
+                     g_professionActionsPerPoint, g_harvestsPerAction, g_allSpellsExclude.size(),
+                     g_adventurersGuildPoints);
     }
 
     std::string KeyName(std::uint32_t a_scanCode) {
@@ -641,6 +646,10 @@ namespace Isekai::Config {
 
     std::uint32_t HarvestsPerAction() {
         return g_harvestsPerAction;
+    }
+
+    std::uint32_t AdventurersGuildPoints() {
+        return g_adventurersGuildPoints;
     }
 
     const std::vector<std::string>& AllSpellsExclude() {

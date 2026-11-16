@@ -166,6 +166,8 @@ namespace Isekai::Config {
     [[nodiscard]] std::uint32_t ProfessionActionsPerPoint();
     // How many harvests make one profession action (1 = every pick counts, as before).
     [[nodiscard]] std::uint32_t HarvestsPerAction();
+    // 0 = off. Multiplier on what Adventurers Guild work pays (GuildBridge).
+    [[nodiscard]] std::uint32_t AdventurersGuildPoints();
     // [SkillTree] AllSpellsExclude: "Plugin.esp" or "Plugin.esp|0xID" entries, lower
     // case. The all-spells node skips a tome spell from a listed plugin or with a listed ID.
     [[nodiscard]] const std::vector<std::string>& AllSpellsExclude();
