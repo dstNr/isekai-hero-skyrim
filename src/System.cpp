@@ -373,7 +373,7 @@ namespace Isekai {
                     { L("button.fullAwakening", "FULL AWAKENING"),
                       BlessingIcon("blessing_full.png"), false },
                     { L("button.shattered", "SHATTERED"),
-                      BlessingIcon("blessing_shattered.png"), false },
+                      BlessingIcon("blessing_shattered.png"), false, UI::Logic::Tone::Red },
                 },
                 [](int a_idx) {
                     g_state.shattered = (a_idx == 1);
@@ -389,10 +389,10 @@ namespace Isekai {
                     ApplyReincarnation();
                 },
                 45.0f, 720.0f, {},
-                // The blessing it builds (spec 7.2): a dormant one violet; otherwise the
-                // question is whether to take the Shattered path, red.
-                UI::Logic::ToneFor(g_state.dormant ? UI::Logic::Blessing::Dormant
-                                                   : UI::Logic::Blessing::Shattered));
+                // A dormant blessing violet (spec 7.2), otherwise the default cyan; only
+                // the SHATTERED button is red.
+                g_state.dormant ? UI::Logic::ToneFor(UI::Logic::Blessing::Dormant)
+                                : UI::Logic::Tone::Cyan);
         }
 
         // ---- CUSTOM build: the three axes, chosen one by one ----

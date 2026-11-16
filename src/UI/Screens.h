@@ -4,6 +4,7 @@
 #include "UI/UiLogic.h"
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -25,6 +26,10 @@ namespace Isekai::UI {
         std::string label;
         std::string icon;  // empty = text only
         bool        iconOnly = false;
+        std::optional<Logic::Tone> tone;  // this button's own tone; empty = the panel's
+        // Escape, pad B and a lost view answer with this button, so the panel is no
+        // binding decision (the reboot confirm's CANCEL).
+        bool        cancel = false;
     };
 
     // The insignia beside the panel title: a crest and an optional caption, in a tone.
@@ -73,7 +78,7 @@ namespace Isekai::UI {
     [[nodiscard]] bool HoldsInput();
 
     // Escape / Tab / pad B from the game's menu chain: closes a data screen, answers a
-    // panel with one text button with that button, and leaves a decision alone. Acts only
+    // panel with its cancel button or its one text button, and leaves a decision alone. Acts only
     // on the screen that is up NOW and entered (HoldsInput), on the next game-thread task,
     // so it never answers a panel the player has not seen. Any thread.
     void DismissSystemWindow();

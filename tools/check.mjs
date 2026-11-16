@@ -1495,8 +1495,10 @@ check("ui: the game's panels pass their spec 7.2 tones", () => {
   };
   const want = [
     [sys, "void ShowPowerSelection()", /UI::Logic::Tone::Gold\)/, "the blessing choice is not gold"],
-    [sys, "void ShowPathSelection()", /ToneFor\(g_state\.dormant \? UI::Logic::Blessing::Dormant\s*:\s*UI::Logic::Blessing::Shattered\)/,
-     "the Full/Shattered choice does not take ToneFor(Dormant / Shattered)"],
+    [sys, "void ShowPathSelection()", /g_state\.dormant \? UI::Logic::ToneFor\(UI::Logic::Blessing::Dormant\)\s*:\s*UI::Logic::Tone::Cyan\)/,
+     "the Full/Shattered choice is not violet when dormant, else cyan"],
+    [sys, "void ShowPathSelection()", /"SHATTERED"\),\s*BlessingIcon\("blessing_shattered\.png"\), false, UI::Logic::Tone::Red \}/,
+     "the SHATTERED button is not red"],
     [sys, "void AskTier(", /ToneFor\(UI::Logic::Blessing::Custom\)/, "the CUSTOM builder is not ToneFor(Custom)"],
     [sys, "void AwakenTo(", /UI::Logic::Tone::Gold\)/, "AWAKENING / TRANSCENDENCE is not gold"],
     [read("src/Progression.cpp"), "void ShowPanelWhenFree(", /UI::Logic::Tone::Gold\)/, "a milestone payout is not gold"],

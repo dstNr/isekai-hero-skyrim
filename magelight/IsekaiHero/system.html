@@ -738,6 +738,7 @@
     (PANEL.buttons || []).forEach((b, i) => {
       const el = document.createElement("button");
       el.dataset.choice = String(i);
+      if (b.tone) el.setAttribute("data-tone", toneOf(b.tone));
       if (b.iconOnly) {
         el.className = "iconBtn icon-plate";
         el.setAttribute("aria-label", b.label || "");
@@ -780,9 +781,13 @@
 
   /* Escape: a panel with exactly one text button (CONTINUE, CLOSE) closes with it at
      once, typing or not, as it always has; a decision ignores Escape and takes it from
-     Magelight, so Escape cannot dismiss a choice the game is waiting for (the blessing). */
-  function panelCapturesEscape(p) { return textButtons(p).length !== 1; }
+     Magelight, so Escape cannot dismiss a choice the game is waiting for (the blessing).
+     A panel with a cancel button (the reboot confirm) keeps Escape and answers with it,
+     so the screen goes back where CANCEL goes instead of closing. */
+  function hasCancel(p) { return Number.isInteger(p.cancel) && p.cancel >= 0; }
+  function panelCapturesEscape(p) { return hasCancel(p) || textButtons(p).length !== 1; }
   function panelEscape(p) {
+    if (hasCancel(p)) { answer(p.cancel); return; }
     const tb = textButtons(p);
     if (tb.length === 1) answer(p.buttons.indexOf(tb[0]));
   }

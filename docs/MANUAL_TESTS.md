@@ -198,7 +198,7 @@ defaults.
 
 Needs an Xbox-layout controller, a flat (non-VR) game, and Magelight UI's controller layer
 on (its default; the log line `the gamepad layer is off` means it is not, and then the pad
-does nothing in our screens). The pad works our screens as keys: d-pad and left stick are
+cannot move or press anything in our screens, only B still closes them). The pad works our screens as keys: d-pad and left stick are
 the arrow keys and move the **focus**, A is Enter, B is Escape, a right-stick click swaps
 to a pointer. Test with the **keyboard unplugged in spirit** — do not touch it once the
 panel is open.
@@ -214,8 +214,9 @@ panel is open.
 | Press **B** on the tree. | The view closes — and Skyrim's own menus do **not** open behind it. Open the status screen again: it plays the flicker-on, not a silent swap. |
 | Open the **Shop** with the pad: shelves and cards. | The focus reaches the shelf buttons and the cards; A on a shelf switches it, A on a card buys. |
 | Click the **right stick** in the tree, move the left stick, press **A** on a node. | A pointer appears and moves with the stick; A clicks under it. A second right-stick click gives the focus back. |
-| Trigger a panel with one **CONTINUE** (a milestone reward). Press **A**. | The panel answers and closes. B does the same. |
-| On the **blessing choice** (or Status → Reboot), press **B**. | Nothing: a decision ignores B. Move to an answer and press A. |
+| Trigger a panel with one button (a milestone reward: **ACCEPT**). Press **A**. | The panel answers and closes. B does the same. |
+| On the **blessing choice**, press **B**. | Nothing: a decision ignores B. Move to an answer and press A. |
+| Status → **Reboot**, press **B** on the red confirm. | It counts as CANCEL: back on the status screen, nothing rebooted. |
 | Check the log for `hotkey(s) armed`. | The list shows both the keyboard key and `pad 0x0020 (BACK) + pad 0x0100 (LB)`. |
 | Set `GamepadMenuButton = None`, reload. | No controller binding at all; the keyboard key still works. |
 | Set `GamepadMenuButton = B`, reload. | Refused, with a line in the log saying why (B closes panels). |
@@ -231,7 +232,7 @@ panel is open.
 | New character, take **ASCENDED / Full**. | Skills 100, Health/Magicka/Stamina at 600, the usual grant. The character level is whatever it already was. |
 | Note `player.getlevel`, then buy a few skill-tree nodes and play on a few levels. | Points spend as usual. |
 | Press **REBOOT**, read the confirm text. | A red panel with CANCEL and REBOOT swaps in over the status screen. It says what is undone and what is not - no promise of a clean slate, and it says the skill tree is refunded rather than kept. |
-| Press **CANCEL**. | Back on the status screen, nothing changed. Press Reboot again. |
+| Press **CANCEL**. | Back on the status screen, nothing changed. Press Reboot again, then **Escape**: the same as CANCEL. |
 | Confirm, then take **NORMAL**. | Skills and Health/Magicka/Stamina are back to what they were before the first blessing. The **character level is untouched** - the levels played since the blessing are still there. Milestones and storage are untouched, and the System Points spent on the tree are back in the pool with the tree cleared. |
 | REBOOT a second time, take ASCENDED again, then REBOOT again. | Still returns to the ORIGINAL mortal body, not to the ASCENDED one. The baseline is captured once and never overwritten. The level still never moves. |
 | Take NORMAL on a fresh character, then REBOOT. | Nothing to restore, and the panel says so - no grant was ever applied. |

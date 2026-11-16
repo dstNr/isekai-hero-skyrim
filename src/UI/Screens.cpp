@@ -72,8 +72,8 @@ namespace Isekai::UI {
             std::string              json;  // the page payload (Payloads::Panel)
             std::function<void(int)> onSelect;
             std::size_t              choices = 0;
-            int                      singleText = -1;  // the only text button, -1 unless there is exactly one
-            bool                     decision = false; // more than one text button
+            int                      dismissWith = -1; // what Escape, B or a loss answer: the cancel button, else the only text button
+            bool                     decision = false; // more than one text button and no cancel one
             std::uint32_t            id = 0;           // PendingDecision id
         };
 
@@ -173,13 +173,19 @@ namespace Isekai::UI {
             return a_name.substr(open + 1, close - open - 1);
         }
 
-        // The system-menu key as the player presses it: keyboard, then pad ("RSHIFT + S /
-        // LB + BACK"), each with its modifier.
+        // The system-menu key as the player presses it: the VR controller button in VR, then
+        // keyboard, then pad ("RSHIFT + S / LB + BACK"), each with its modifier.
         std::string MenuKeyText() {
             std::string out;
+            if (REL::Module::IsVR()) {
+                if (const auto vr = Config::VRMenuButton()) {
+                    out = LF("ui.vrMenuButton", "VR controller button {}", std::format("0x{:X}", vr));
+                }
+            }
             if (const auto key = Config::SystemMenuKey()) {
                 const auto mod = Config::SystemMenuModifier();
-                out = (mod ? KeyLabel(Config::KeyName(mod)) + " + " : std::string{}) + KeyLabel(Config::KeyName(key));
+                if (!out.empty()) out += " / ";
+                out += (mod ? KeyLabel(Config::KeyName(mod)) + " + " : std::string{}) + KeyLabel(Config::KeyName(key));
             }
             if (const auto pad = Config::GamepadMenuButton()) {
                 const auto mod = Config::GamepadMenuModifier();
@@ -306,15 +312,16 @@ namespace Isekai::UI {
                 // the hotkey, so a host that keeps ending UI mode cannot loop us.
                 if (a_exited && g_decision.NeedsReoffer() && !g_autoReoffered && Available()) {
                     g_autoReoffered = true;
+                    SendClosed();  // the re-offer opens fresh, with its flicker-on
                     Reoffer();
                     return;
                 }
                 NoteWaitingDecision();
                 return;
             }
-            if (g_panel->singleText >= 0) {
-                logger::info("Screens: a panel lost UI mode ({}); answered with its only button", a_why);
-                Answer(g_panel->singleText);
+            if (g_panel->dismissWith >= 0) {
+                logger::info("Screens: a panel lost UI mode ({}); answered with its dismiss button", a_why);
+                Answer(g_panel->dismissWith);
                 return;
             }
             g_panel.reset();  // icon buttons only: nothing to answer with
@@ -367,9 +374,10 @@ namespace Isekai::UI {
         }
 
         // Reboot undoes a blessing's grants, so it asks first and says what it keeps and
-        // what it takes back. A decision in red (spec 7.2: a warning); it swaps in over the
-        // status screen. REBOOT re-opens the blessing choice, whose panel takes the view
-        // over; CANCEL goes back to the status screen.
+        // what it takes back. In red (spec 7.2: a warning); it swaps in over the status
+        // screen. REBOOT re-opens the blessing choice, whose panel takes the view over;
+        // CANCEL goes back to the status screen. Not a binding decision: Escape, pad B and
+        // a lost view all cancel, so only an explicit REBOOT reboots.
         void ConfirmReboot() {
             ShowSystemWindow(
                 L("window.system", "[ SYSTEM ]"),
@@ -389,15 +397,16 @@ namespace Isekai::UI {
                   "NOTE:    gold and perk points already spent stay spent.\n"
                   "         A character from before this update has no such\n"
                   "         record, and keeps what it was given."),
-                std::vector<std::string>{ L("button.cancel", "CANCEL"), L("button.reboot", "REBOOT") },
+                std::vector<Choice>{ { .label = L("button.cancel", "CANCEL"), .cancel = true },
+                                     { .label = L("button.reboot", "REBOOT") } },
                 [](int a_choice) {
                     if (a_choice == 1) {
                         Isekai::RebootSystem();
-                    } else {
+                    } else if (g_open.load()) {  // a lost view cancels without coming back
                         ShowStatus(Progression::StatusJson());
                     }
                 },
-                45.0f, 720.0f, Logic::Tone::Red);
+                45.0f, 720.0f, {}, Logic::Tone::Red);
         }
 
         void OnStatusAction(const std::string& a_word) {
@@ -433,12 +442,15 @@ namespace Isekai::UI {
         PanelState p;
         p.choices = a_choices.size();
         std::size_t texts = 0;
+        int         cancel = -1;
         for (std::size_t i = 0; i < a_choices.size(); ++i) {
+            if (a_choices[i].cancel && cancel < 0) cancel = static_cast<int>(i);
             if (a_choices[i].iconOnly) continue;
-            if (texts++ == 0) p.singleText = static_cast<int>(i);
+            if (texts++ == 0) p.dismissWith = static_cast<int>(i);
         }
-        if (texts != 1) p.singleText = -1;
-        p.decision = texts > 1;
+        if (texts != 1) p.dismissWith = -1;
+        if (cancel >= 0) p.dismissWith = cancel;
+        p.decision = texts > 1 && cancel < 0;
         p.id = ++g_panelIds;
         p.onSelect = std::move(a_onSelect);
         p.json = Payloads::Panel({ .title = std::move(a_title),
@@ -510,8 +522,8 @@ namespace Isekai::UI {
             if (IsDataScreen(s)) {
                 CloseData();
             } else if (s == Screen::Panel && g_panel) {
-                if (g_panel->singleText >= 0) {
-                    Answer(g_panel->singleText);
+                if (g_panel->dismissWith >= 0) {
+                    Answer(g_panel->dismissWith);
                 } else if (!g_panel->decision) {
                     g_panel.reset();  // icon buttons only: a view, not a question
                     CloseData();

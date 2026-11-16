@@ -512,8 +512,8 @@
       CONTINUE, "gold");   // the blessing has landed: gold, as System.cpp sends it
   }
 
-  /* The reboot confirmation (Screens.cpp ConfirmReboot): a decision in red. CANCEL goes
-     back to the status screen, REBOOT re-opens the blessing choice. */
+  /* The reboot confirmation (Screens.cpp ConfirmReboot): red, CANCEL goes back to the
+     status screen, REBOOT re-opens the blessing choice. Escape and pad B answer CANCEL. */
   var REBOOT_TEXT =
     "REBOOT THE SYSTEM?\n\nRe-opens the blessing choice, so you can pick a different path\n" +
     "(tier, Full/Shattered, Dormant).\n\n" +
@@ -531,7 +531,7 @@
     open("panel", panel("[ SYSTEM ]", REBOOT_TEXT, [
       { label: "CANCEL", icon: "", iconOnly: false },
       { label: "REBOOT", icon: "", iconOnly: false }
-    ], "red"), function (i) {
+    ], "red", { cancel: 0 }), function (i) {
       if (i === 1) SCENARIOS.filter(function (s) { return s.id === "blessing"; })[0].run();
       else showStatus();
     });
@@ -571,8 +571,8 @@
         "Choose how you rise:";
     return panel("[ SYSTEM ]", body, [
       { label: "FULL AWAKENING", icon: "blessing_full.png",      iconOnly: false },
-      { label: "SHATTERED",      icon: "blessing_shattered.png", iconOnly: false }
-    ], dormant ? "violet" : "red");   // Logic::ToneFor(Dormant / Shattered), as System.cpp
+      { label: "SHATTERED",      icon: "blessing_shattered.png", iconOnly: false, tone: "red" }
+    ], dormant ? "violet" : "cyan");   // violet when dormant, else cyan; only SHATTERED red, as System.cpp
   }
 
   var SCENARIOS = [
@@ -603,7 +603,7 @@
       } },
     { id: "cards", group: "Panel", label: "Blessing ×3", hint: "Three cards (CUSTOM step 1), violet",
       run: function () { customStep(0); } },
-    { id: "awaken", group: "Panel", label: "Awakening", hint: "Two cards: FULL or SHATTERED, red",
+    { id: "awaken", group: "Panel", label: "Awakening", hint: "Two cards: FULL or SHATTERED, cyan with a red SHATTERED",
       run: function () { open("panel", pathPanel(false), function () { open("panel", storyPanel("")); }); } },
     { id: "dormant", group: "Panel", label: "Dormant", hint: "The dormant blessing stirs, violet",
       run: function () { open("panel", pathPanel(true), function () { open("panel", storyPanel("DORMANT")); }); } },

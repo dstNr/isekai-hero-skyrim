@@ -347,6 +347,7 @@ reboot.confirm = REBOOT THE SYSTEM?\n\nRe-opens the blessing choice, so you can 
 ui.decisionWaiting = [ SYSTEM ] A choice is waiting — press {}
 ui.menuKeyUnbound = the System menu key
 ui.needsMagelight = [ SYSTEM ] Isekai Hero needs Magelight UI (1.7.0 or newer). The System will wait.
+ui.vrMenuButton = VR controller button {}
 window.system = [ SYSTEM ]
 
 ; --- src/UI/ThreatLabels.cpp ---

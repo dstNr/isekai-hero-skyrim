@@ -122,6 +122,13 @@ namespace Isekai::UI::Payloads {
             j += "\",\"caption\":\"" + Escape(a_spec.emblemCaption.c_str()) + "\",";
             j += "\"tone\":\"" + std::string(Logic::ToneName(a_spec.emblemTone)) + "\"},";
         }
+        // The button Escape and pad B answer, when the panel is no binding decision.
+        for (std::size_t i = 0; i < a_spec.choices.size(); ++i) {
+            if (a_spec.choices[i].cancel) {
+                j += "\"cancel\":" + std::to_string(i) + ",";
+                break;
+            }
+        }
         j += "\"buttons\":[";
         for (std::size_t i = 0; i < a_spec.choices.size(); ++i) {
             const auto& c = a_spec.choices[i];
@@ -130,6 +137,9 @@ namespace Isekai::UI::Payloads {
             }
             j += "{\"label\":\"" + Escape(c.label.c_str()) + "\",";
             j += "\"icon\":\"" + Escape(IconFile(c.icon).c_str()) + "\",";
+            if (c.tone) {
+                j += "\"tone\":\"" + std::string(Logic::ToneName(*c.tone)) + "\",";
+            }
             j += "\"iconOnly\":" + std::string(Bool(c.iconOnly)) + "}";
         }
         j += "]}";
