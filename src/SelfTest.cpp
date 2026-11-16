@@ -712,12 +712,25 @@ namespace Isekai::SelfTest {
                              fatal > 0 ? UI::Logic::Tone::Red : UI::Logic::Tone::Cyan);
     }
 
+    // The Magelight pages report ready a few seconds after a load (the host reloads them,
+    // about 3 s in Lauf 26), later than the report used to run. Wait for them, 250 ms at a
+    // time and at most 10 s, so page-ready reports the state and not the race.
+    static void RunWhenPagesReady(int a_triesLeft) {
+        namespace ML = UI::Magelight;
+        const auto waiting = [](ML::View a_view) { return ML::ViewCreated(a_view) && !ML::PageReady(a_view); };
+        if (a_triesLeft > 0 && ML::Available() && (waiting(ML::View::System) || waiting(ML::View::Hud))) {
+            DelayedMainThread(250, [a_triesLeft]() { RunWhenPagesReady(a_triesLeft - 1); });
+            return;
+        }
+        Run(/*a_notify=*/false);
+    }
+
     void RunOnLoad() {
         // Off the load handler and onto the next frame: the sweeps walk every recipe and
         // every ingredient in the load order, which has no business sitting inside the
         // engine's post-load pass.
         if (auto* task = SKSE::GetTaskInterface()) {
-            task->AddTask([]() { Run(/*a_notify=*/false); });
+            task->AddTask([]() { RunWhenPagesReady(40); });
         }
     }
 
