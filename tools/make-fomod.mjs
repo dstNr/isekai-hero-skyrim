@@ -90,6 +90,7 @@ const xml = `<?xml version="1.0" encoding="utf-8"?>
     <folder source="Magelight\\IsekaiHero"               destination="Magelight\\IsekaiHero"/>
     <file   source="Scripts\\IsekaiHeroCraft.pex"        destination="Scripts\\IsekaiHeroCraft.pex"/>
     <file   source="Source\\Scripts\\IsekaiHeroCraft.psc" destination="Source\\Scripts\\IsekaiHeroCraft.psc"/>
+    <file   source="SKSE\\Plugins\\IsekaiHero\\lang\\template.txt" destination="SKSE\\Plugins\\IsekaiHero\\lang\\template.txt"/>
     <folder source="Sound"                             destination="Sound"/>
     <folder source="meshes"                            destination="meshes"/>
     <folder source="textures"                          destination="textures"/>

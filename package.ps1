@@ -84,6 +84,11 @@ Copy-Item (Join-Path $root "LICENSE") $stage
 # installer choice land on byte-identical files.
 Copy-Item (Join-Path $root "IsekaiHero.ini") $plugins
 
+# --- the English language template, where a translation starts (Loc.cpp reads lang\<code>.txt) ---
+$lang = Join-Path $plugins "IsekaiHero\lang"
+New-Item -ItemType Directory -Force $lang | Out-Null
+Copy-Item (Join-Path $root "lang\template.txt") $lang
+
 # --- FOMOD installer, and the ini presets it chooses between ---
 # Regenerated here rather than trusted from the repo: the presets are derived from
 # IsekaiHero.ini, and shipping a stale copy would hand players settings that no longer

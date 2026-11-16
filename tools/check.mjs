@@ -946,6 +946,7 @@ check("fomod: the installer offers files that exist, and presets that are curren
     "SKSE\\Plugins\\IsekaiHeroSKSE.dll": null,   // build output
     "Magelight\\IsekaiHero": "magelight/IsekaiHero",   // pages; icons and version.js are staged into it
     "SKSE\\Plugins\\IsekaiHero.ini": "IsekaiHero.ini",
+    "SKSE\\Plugins\\IsekaiHero\\lang\\template.txt": "lang/template.txt",
     "LICENSE": "LICENSE",
     "Sound": "sounds",
     "MCM\\Config\\IsekaiHero": "mcm-patch/MCM/Config/IsekaiHero",
