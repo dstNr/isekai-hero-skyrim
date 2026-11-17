@@ -7,7 +7,7 @@
 ![Skyrim](https://img.shields.io/badge/Skyrim-SE%20%2F%20AE%20%2F%20VR%20up%20to%201.7.104-0b2942?style=flat-square)
 ![SKSE64](https://img.shields.io/badge/requires-SKSE64-1f4e79?style=flat-square)
 ![CommonLibSSE-NG](https://img.shields.io/badge/built%20with-CommonLibSSE--NG-2d82c8?style=flat-square)
-![Version](https://img.shields.io/badge/version-0.9.0%20pre--release-59ccff?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.0.0-59ccff?style=flat-square)
 ![Licence](https://img.shields.io/badge/licence-MIT-3fb950?style=flat-square)
 
 **An Isekai / "reincarnated hero" system for Skyrim Special Edition** — a native
@@ -22,20 +22,15 @@ whose interface is a set of HTML/CSS pages drawn by
 
 </div>
 
-> ### ⚙️ Skyrim updated. **0.9.0 runs on the new runtime.**
+> ### ✨ 1.0.0: one interface, drawn by Magelight UI.
 >
-> Steam's update took Skyrim to **1.7.104**, and SKSE plugins built against the old
-> library stopped loading with it — that library identifies a runtime by its minor
-> version, so `1.7` was read as plain SE, and its address-library reader only knows
-> database formats 1 and 2 while 1.7.99 and later ship format 5.
+> The whole System (skill tree, panels, toasts, level-up flourish, threat labels) is a set
+> of HTML/CSS pages drawn by **[Magelight UI](https://www.nexusmods.com/skyrimspecialedition/mods/193303)
+> 1.7.0 or newer**, which is now required. The ImGui overlay and the optional PrismaUI
+> patch are gone, so the installer no longer asks how the System is drawn. The co-save
+> format is unchanged, so 0.9.0 saves carry over.
 >
-> **0.9.0 is built against [CommonLibSSE-NG](https://github.com/alandtse/CommonLibSSE-NG)
-> 7.5.4 and loads on 1.7.104 again.** Nothing was dropped to get there: the same single
-> DLL still serves **SE, AE and VR**, and older runtimes — 1.6.1170 included — are
-> unaffected. Update your **Address Library** along with the game; that is the one
-> requirement 1.7 changes.
->
-> Staying on an older runtime? Nothing to do — install 0.9.0 like any other version.
+> Still one DLL for **SE, AE and VR**, from 1.6.1170 up to 1.7.104.
 
 ---
 
@@ -431,10 +426,9 @@ keep returning V1.
 
 ## Status
 
-🧪 **Pre-release (v0.9.0).** Feature-complete for full-modlist test runs. The balance
-values are no longer a testing configuration — 0.9.0 replaced the character-level grant
-with attribute targets and cut ASCENDED's 500 starting System Points to 10 — but they are
-now all ini settings, so disagreeing with them is a number, not a fork. Version history in
+**v1.0.0**, the first release out of the `0.x` pre-release line. The balance values are
+all ini settings, so disagreeing with them is a number, not a fork. Skyrim VR is supported
+in code but still untested in a headset ([docs/VR.md](docs/VR.md)). Version history in
 [CHANGELOG.md](CHANGELOG.md), player-facing in
 [docs/NEXUS_CHANGELOG.md](docs/NEXUS_CHANGELOG.md).
 

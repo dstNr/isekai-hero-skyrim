@@ -7,7 +7,7 @@ are still in the older, longer style — that is how they already sit on Nexus.)
 
 ---
 
-## Unreleased
+## 1.0.0
 
 Changed: **the interface is drawn by Magelight UI** — PrismaUI and the ImGui overlay are no longer needed.
 
@@ -18,6 +18,8 @@ Changed: **the first choice is NORMAL or TRANSMIGRATOR** — HERO, ASCENDED, DOR
 Changed: **picking plants pays a quarter of what it did** — four harvests count as one craft (HarvestsPerAction).
 
 Added: **Adventurers Guild support** — guild missives, cleared dungeons and promotions pay System Points by their rank.
+
+Fixed: **the English translation template now really ships**, in SKSE\Plugins\IsekaiHero\lang\template.txt.
 
 Added: **AllSpellsExclude** — keep chosen plugins or spells out of the every-spell skill node.
 

@@ -2,11 +2,18 @@
 
 All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
-[Semantic Versioning](https://semver.org/) (still in the `0.x` pre-release line).
+[Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.0] — 2026-11-17
 
 ### Added
+- **`IsekaiHeroCraft.DebugGrantNext()`**, a Papyrus native for test runs: it pays out the
+  next milestone the character is still owed exactly as finishing its quest would (gold
+  panel, rewards, co-save). Nothing before reincarnation. Queued for the next frame; the
+  log says `Debug grant: requested by script`. Console `completequest` raises no quest event,
+  so this is how a test run reaches the milestone payout without playing the quest.
+- **The English language template ships**, in `SKSE\Plugins\IsekaiHero\lang\template.txt`
+  next to where `lang\<code>.txt` is read. The Nexus page already said it did.
 - **A lost co-save is caught instead of greeted as a new character** (Nexus report:
   progress, System and storage gone, the System "recognised" the player again). A save with
   no Isekai record whose character still carries a System ability or a storage chest is
@@ -1144,6 +1151,7 @@ ImGui UI (the archived Papyrus original lives under `papyrus/`, git tag
   through the game's audio system.
 - **ESL-flagged plugin** that overrides nothing — load-order position is irrelevant.
 
+[1.0.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v1.0.0
 [0.9.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.9.0
 [0.8.0]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.8.0
 [0.7.1]: https://github.com/dstNr/isekai-hero-skyrim/releases/tag/v0.7.1

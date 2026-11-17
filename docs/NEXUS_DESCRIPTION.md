@@ -12,8 +12,8 @@ You died. The System chose you. Begin your new life in Skyrim as a reincarnated 
 ## Description (BBCode)
 
 ```
-[size=4][b]⚙ Skyrim updated — version 0.9.0 runs on the new runtime[/b][/size]
-Steam's update took Skyrim to [b]1.7.104[/b], and SKSE plugins built against the older library stopped loading with it. [b]0.9.0 is rebuilt and loads on 1.7.104 again[/b] — still one download for [b]SE, AE and VR[/b], and older runtimes such as 1.6.1170 are unaffected. Update your [b]Address Library[/b] along with the game; that is the one requirement 1.7 changes. If you are staying on an older version of Skyrim, there is nothing to do.
+[size=4][b]✨ Version 1.0.0 — one interface, drawn by Magelight UI[/b][/size]
+Every screen of the System is now drawn by [url=https://www.nexusmods.com/skyrimspecialedition/mods/193303]Magelight UI[/url] [b]1.7.0 or newer[/b], which is [b]required[/b] from this version on — install it first. PrismaUI and the old overlay are no longer needed, and the installer no longer asks how the System is drawn. Your 0.9.0 saves carry over. Still one download for [b]SE, AE and VR[/b], from 1.6.1170 up to 1.7.104.
 
 [line]
 
