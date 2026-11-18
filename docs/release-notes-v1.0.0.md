@@ -21,7 +21,7 @@ The installer no longer asks how the interface is drawn.
   - the storage chest (#38)
   - the readiness gate (#36, flat screen)
   - the Ordinator token fix
-  - the milestone payout gold panel
+  - the milestone payout: a finished quest (Take Up Arms) pays its milestone and opens the gold panel
 - Not confirmed in game:
   - the hotkey rebind after the MCM closes (#37)
   - anything in a VR headset
@@ -74,4 +74,4 @@ The installer no longer asks how the interface is drawn.
   keys `VRInHeadsetLayer` and `VRThreatLabelHeight` are retired. An old ini that still
   has them loads as before.
 
-Full technical detail: [CHANGELOG.md](../CHANGELOG.md#100--2026-11-17).
+Full technical detail: [CHANGELOG.md](../CHANGELOG.md#100--2026-11-18).

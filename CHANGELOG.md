@@ -4,7 +4,7 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
-## [1.0.0] — 2026-11-17
+## [1.0.0] — 2026-11-18
 
 ### Added
 - **`IsekaiHeroCraft.DebugGrantNext()`**, a Papyrus native for test runs: it pays out the
