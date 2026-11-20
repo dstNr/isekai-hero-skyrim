@@ -884,8 +884,11 @@ Playing it (Task 8 of the plan): whether the constant-effect auras show permanen
 wearer, how bright the colours read, whether `SpeedMult` takes effect without a carry-weight
 nudge, whether the two perks apply while the item is worn and leave with it (Bulwark on body
 and shield at once included). One thing the ESP cannot do: a shader "at the feet" only (an
-effect shader covers the whole body). `IsekaiArtSystemBreach` still shows the vanilla shock-cloak mesh
-until the asset pipeline delivers `isekai\effects\systembreach_hit.nif` (Task 7).
+effect shader covers the whole body). `IsekaiArtSystemBreach` now points at its own mesh,
+`isekai\effects\systembreach_hit.nif` (cyan glitch shards, built by the asset pipeline's
+`tools/build-systembreach-hit.py`, texture `textures\isekai\effects\systembreach_glitch.dds`);
+only its `MODL` changed (OBND and the empty `MODT` are still the shock-cloak's). Whether it
+plays in game is the same test.
 
 ---
 
