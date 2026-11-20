@@ -59,6 +59,7 @@ impressed. About 60–70 files in total. Final wording is settled when generatin
 
 ## How it is made
 
+- **Voice:** ElevenLabs voice ID `kdmDKE6EkgrWrrykO9Qt` (owner's choice, 2026-11-20).
 - **Generation:** through the ElevenLabs MCP the owner sets up with their own API key, on a
   paid plan (Creator) that includes commercial use. All lines are generated while the
   subscription is active; the owner keeps the invoice as proof. Styles through ElevenLabs'
