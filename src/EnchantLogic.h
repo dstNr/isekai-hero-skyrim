@@ -54,6 +54,9 @@ namespace Isekai::Enchant::Logic {
         return *std::max_element(a_magnitudes.begin(), a_magnitudes.end());
     }
 
+    // A cooldown still running at a_now; expired ones are not worth saving.
+    inline constexpr bool CooldownLive(double a_readyAt, double a_now) { return a_readyAt > a_now; }
+
     inline constexpr std::uint32_t kMaxSavedCooldowns = 4096;
 
     // Bounds a co-save read: a corrupt count must not drive an allocation.

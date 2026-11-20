@@ -56,6 +56,11 @@ namespace {
         EXPECT(StrongestMagnitude(two) == 55.f);          // two items: one effect, the stronger
         EXPECT(!StrongestMagnitude({}).has_value());
     }
+    void CooldownLiveTest() {
+        EXPECT(CooldownLive(100.0, 99.0));
+        EXPECT(!CooldownLive(100.0, 100.0));
+        EXPECT(!CooldownLive(0.0, 5.0));
+    }
     void CooldownBound() {
         EXPECT(CooldownCountAcceptable(0));
         EXPECT(CooldownCountAcceptable(4096));
@@ -71,6 +76,7 @@ int main() {
         { "Phoenix", Phoenix },
         { "Strongest", Strongest },
         { "CooldownBound", CooldownBound },
+        { "CooldownLive", CooldownLiveTest },
     };
 
     int failedTests = 0;

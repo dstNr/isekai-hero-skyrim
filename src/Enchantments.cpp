@@ -1,9 +1,14 @@
 #include "Enchantments.h"
 
+#include "EnchantLogic.h"
+#include "FrameTick.h"
 #include "Plugin.h"
+#include "TickThrottle.h"
 
 #include <algorithm>
 #include <array>
+#include <chrono>
+#include <unordered_map>
 
 namespace Isekai::Enchantments {
 
@@ -100,4 +105,84 @@ namespace Isekai::Enchantments {
     RE::EffectSetting* PhoenixCarrier() { return g_phoenixCarrier; }
     RE::SpellItem*     StormchainJump() { return g_stormchainJump; }
     RE::BGSArtObject*  BreachArt() { return g_breachArt; }
+
+    namespace {
+        double                                  g_playSeconds = 0.0;
+        std::unordered_map<RE::FormID, double>  g_readyAt;   // actor -> PlaySeconds when ready
+
+        void ClockTick() {
+            using Clock = std::chrono::steady_clock;
+            static TickThrottle  throttle{ std::chrono::seconds(1) };
+            static Clock::time_point last{};
+            const auto now = Clock::now();
+            if (!throttle.Due(now)) {
+                return;
+            }
+            // FrameTick is silent while paused, so a long gap since the last tick is a pause
+            // (or a load) and must not count as play; clamp it.
+            if (const auto ui = RE::UI::GetSingleton(); last != Clock::time_point{} && !(ui && ui->GameIsPaused())) {
+                g_playSeconds += std::clamp(std::chrono::duration<double>(now - last).count(), 0.0, 2.0);
+            }
+            last = now;
+        }
+    }
+
+    void InstallClock() { FrameTick::Add(&ClockTick); }
+
+    double PlaySeconds() { return g_playSeconds; }
+
+    double PhoenixReadyAt(RE::FormID a_actor) {
+        const auto it = g_readyAt.find(a_actor);
+        return it == g_readyAt.end() ? 0.0 : it->second;
+    }
+
+    void PhoenixStartCooldown(RE::FormID a_actor) {
+        g_readyAt[a_actor] = g_playSeconds + Enchant::Logic::kPhoenixCooldownSeconds;
+    }
+
+    void ClearCooldowns() {
+        g_playSeconds = 0.0;
+        g_readyAt.clear();
+    }
+
+    void SaveCooldowns(SKSE::SerializationInterface* a_intf) {
+        std::vector<std::pair<RE::FormID, double>> live;
+        for (const auto& [id, ready] : g_readyAt) {
+            if (Enchant::Logic::CooldownLive(ready, g_playSeconds)) {
+                live.emplace_back(id, ready);
+            }
+        }
+        a_intf->WriteRecordData(g_playSeconds);
+        a_intf->WriteRecordData(static_cast<std::uint32_t>(live.size()));
+        for (const auto& [id, ready] : live) {
+            a_intf->WriteRecordData(id);
+            a_intf->WriteRecordData(ready);
+        }
+    }
+
+    void LoadCooldowns(SKSE::SerializationInterface* a_intf) {
+        ClearCooldowns();
+        double        play = 0.0;
+        std::uint32_t count = 0;
+        a_intf->ReadRecordData(play);
+        a_intf->ReadRecordData(count);
+        if (!(play >= 0.0)) {   // also rejects NaN
+            play = 0.0;
+        }
+        g_playSeconds = play;
+        if (!Enchant::Logic::CooldownCountAcceptable(count)) {
+            logger::error("Co-save: phoenix cooldowns claim {} entries - ignoring them", count);
+            return;
+        }
+        for (std::uint32_t i = 0; i < count; ++i) {
+            RE::FormID id = 0;
+            double     ready = 0.0;
+            a_intf->ReadRecordData(id);
+            a_intf->ReadRecordData(ready);
+            RE::FormID resolved = 0;
+            if (a_intf->ResolveFormID(id, resolved) && Enchant::Logic::CooldownLive(ready, g_playSeconds)) {
+                g_readyAt[resolved] = ready;
+            }
+        }
+    }
 }

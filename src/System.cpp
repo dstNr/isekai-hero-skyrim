@@ -46,7 +46,7 @@ namespace Isekai {
         // 12: its snapshotted target/reward, and when the next one is due
         // 13: how many objectives this character has been given
         // 14: the pre-blessing baseline, so REBOOT can hand the body back
-        constexpr std::uint32_t kVersion = 16;
+        constexpr std::uint32_t kVersion = 17;
 
         // What the last load read. A save with no record at all looks exactly like a new
         // character, so these two are how a lost co-save is told apart from one (Nexus
@@ -866,6 +866,8 @@ namespace Isekai {
             a_intf->WriteRecordData(g_state.nodeCostScale);
             a_intf->WriteRecordData(g_state.levelGrantRetired);
 
+            Enchantments::SaveCooldowns(a_intf);  // v17
+
             logger::info(
                 "State saved (reincarnated={}, milestones={}, nodes={}, sp={}, shattered={}, "
                 "dormant={}, custom={}, grant={}, tree={})",
@@ -1076,6 +1078,10 @@ namespace Isekai {
                         g_state.nodeCostScale = 1.0f;
                     }
                 }
+                Enchantments::ClearCooldowns();   // a v16 save has none
+                if (version >= 17) {
+                    Enchantments::LoadCooldowns(a_intf);
+                }
                 g_recordVersion = version;
             }
 
@@ -1092,6 +1098,7 @@ namespace Isekai {
             g_state = State{};
             g_recordVersion = 0;
             g_stateLost = false;
+            Enchantments::ClearCooldowns();
             Readiness::Reset();
             logger::info("State reverted to defaults (new game / pre-load)");
         }
@@ -1232,6 +1239,7 @@ namespace Isekai {
                 CraftHooks::Install();  // zero-transfer crafting (validation build for now)
                 ModAPI::Install();      // the export other plugins resolve by name
                 FrameTick::Install();   // main-thread clock: quests and the mod API publish
+                Enchantments::InstallClock();   // play-seconds clock for phoenix cooldowns
                 UI::InstallInput();     // hotkeys, menu guard
                 UI::Magelight::Install();  // system and hud views; no-op without Magelight UI
                 UI::Screens::Install();    // what every fresh page gets first: loc table, UiScale
