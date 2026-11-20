@@ -834,7 +834,10 @@ are fixed (the table scales only magnitudes) and **in-game test pending**.
 The three carriers are Value Modifiers on `Fame`, an actor value the game does not use, with
 `Recover` set: they only hold a magnitude the plugin reads off the active effect. The
 Stormchain carrier is hidden; System Breach's and Phoenix Heart's show their description,
-since that is the only text that explains them. Worn restrictions are three new keyword lists:
+since that is the only text that explains them. The two weapon carriers (`0xDA1`, `0xDA5`) also
+have `No Death Dispel` (`0x10000000`), as vanilla's soul-trap enchantments do: without it the
+engine dispels the carrier on a killing blow, and Stormchain would have no magnitude to chain
+with. Worn restrictions are three new keyword lists:
 `0xD9A` (`ArmorCuirass`, `ArmorShield`), `0xD9B` (`ArmorCuirass`, `ClothingNecklace`),
 `0xD9C` (`ArmorBoots`).
 

@@ -119,6 +119,8 @@ namespace Isekai::Enchantments {
         double                                  g_playSeconds = 0.0;
         std::unordered_map<RE::FormID, double>  g_readyAt;   // actor -> PlaySeconds when ready
 
+        void PhoenixWatch();   // below, with the effects
+
         void ClockTick() {
             using Clock = std::chrono::steady_clock;
             static TickThrottle  throttle{ std::chrono::seconds(1) };
@@ -134,6 +136,7 @@ namespace Isekai::Enchantments {
                 g_playSeconds += std::clamp(std::chrono::duration<double>(now - last).count(), 0.0, 2.0);
             }
             last = now;
+            PhoenixWatch();   // outside the lock: it calls into the engine
         }
     }
 
@@ -225,7 +228,11 @@ namespace Isekai::Enchantments {
         // caster, only that caster's effects count; several items still count once (strongest).
         std::optional<float> CarrierMagnitude(RE::Actor* a_target, const RE::EffectSetting* a_carrier,
                                               const RE::Actor* a_caster) {
-            auto* list = a_carrier ? a_target->GetActiveEffectList() : nullptr;
+            // Through AsMagicTarget(): the MagicTarget base moved in 1.6.629, so an implicit
+            // Actor -> MagicTarget conversion reads the wrong vtable there. On VR the list is a
+            // per-thread snapshot, so it is walked at once and not kept.
+            auto* target = a_carrier ? a_target->AsMagicTarget() : nullptr;
+            auto* list = target ? target->GetActiveEffectList() : nullptr;
             if (!list) {
                 return std::nullopt;
             }
@@ -265,6 +272,8 @@ namespace Isekai::Enchantments {
                 candidates.push_back({ origin.GetDistance(a_actor->GetPosition()), attacker->IsHostileToActor(a_actor),
                                        !a_actor->IsDead(), a_actor == attacker, a_actor == target });
             };
+            // Raw pointers outlive the handle's NiPointer here; safe only because this whole
+            // task runs on the main thread, where nothing unloads an actor under us.
             if (const auto* lists = RE::ProcessLists::GetSingleton()) {
                 for (const auto& handle : lists->highActorHandles) {
                     add(handle.get().get());
@@ -280,40 +289,61 @@ namespace Isekai::Enchantments {
         void Breach(RE::FormID a_attacker, RE::FormID a_target) {
             auto* attacker = LiveActor(a_attacker);
             auto* target = LiveActor(a_target);
-            auto* av = target ? target->AsActorValueOwner() : nullptr;
-            if (!attacker || !av) {
+            if (!attacker || !target) {
                 return;
             }
             const auto magnitude = CarrierMagnitude(target, g_breachCarrier, attacker);
             if (!magnitude) {
                 return;
             }
-            // Straight onto the damage modifier: no armor, no resistance in between.
-            av->ModActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, -*magnitude);
+            // Final health damage with the attacker as source (kill credit, aggro, crime). Armor
+            // and resistances are applied before this point in the engine, so they are skipped;
+            // true also skips the difficulty multiplier.
+            target->DoDamage(*magnitude, attacker, true);
             if (g_breachArt) {
                 target->ApplyArtObject(g_breachArt, 1.0f);
             }
         }
 
-        void PhoenixRescue(RE::FormID a_id) {
-            auto* actor = LiveActor(a_id);
-            auto* av = actor ? actor->AsActorValueOwner() : nullptr;
-            if (!av) {
+        // One path for both triggers (a hit, the 1 Hz watch); main thread only, actor already live.
+        void PhoenixRescue(RE::Actor* a_actor) {
+            auto*      av = a_actor->AsActorValueOwner();
+            const auto percent = av ? CarrierMagnitude(a_actor, g_phoenixCarrier, nullptr) : std::nullopt;
+            if (!percent) {
                 return;
             }
-            const auto  percent = CarrierMagnitude(actor, g_phoenixCarrier, nullptr);
+            const auto  id = a_actor->GetFormID();
             const float maxHealth = av->GetPermanentActorValue(RE::ActorValue::kHealth);
-            if (!percent || !(maxHealth > 0.0f) ||
+            if (!(maxHealth > 0.0f) ||
                 !Logic::PhoenixShouldFire(av->GetActorValue(RE::ActorValue::kHealth) / maxHealth, PlaySeconds(),
-                                          PhoenixReadyAt(a_id))) {
+                                          PhoenixReadyAt(id))) {
                 return;
             }
             av->RestoreActorValue(RE::ActorValue::kHealth, maxHealth * *percent / 100.0f);
-            PhoenixStartCooldown(a_id);
+            PhoenixStartCooldown(id);
             if (g_phoenixShader) {
-                actor->ApplyEffectShader(g_phoenixShader, kPhoenixFlashSeconds);
+                a_actor->ApplyEffectShader(g_phoenixShader, kPhoenixFlashSeconds);
             }
-            logger::info("Enchantments: Phoenix Heart rescued {:08X} (+{}% health)", a_id, *percent);
+            logger::info("Enchantments: Phoenix Heart rescued {:08X} (+{}% health)", id, *percent);
+        }
+
+        // Damage over time, falls and Breach lower health without a hit event, so the clock
+        // also checks every loaded wearer once a second (the spec's "watch each wearer").
+        void PhoenixWatch() {
+            if (!g_phoenixCarrier) {
+                return;
+            }
+            const auto check = [](RE::Actor* a_actor) {
+                if (a_actor && !a_actor->IsDeleted() && !a_actor->IsDisabled()) {
+                    PhoenixRescue(a_actor);
+                }
+            };
+            if (const auto* lists = RE::ProcessLists::GetSingleton()) {
+                for (const auto& handle : lists->highActorHandles) {
+                    check(handle.get().get());   // main thread: the actor stays loaded for this call
+                }
+            }
+            check(RE::PlayerCharacter::GetSingleton());
         }
 
         // Sinks may run off the main thread, so they only queue. Nothing thrown may reach the
@@ -368,7 +398,11 @@ namespace Isekai::Enchantments {
                 const auto* hit = a_event && a_event->target ? a_event->target->As<RE::Actor>() : nullptr;
                 if (hit && g_phoenixCarrier) {
                     const auto id = hit->GetFormID();
-                    OnMainThread("Phoenix Heart", [id]() { PhoenixRescue(id); });
+                    OnMainThread("Phoenix Heart", [id]() {
+                        if (auto* actor = LiveActor(id)) {
+                            PhoenixRescue(actor);
+                        }
+                    });
                 }
                 return RE::BSEventNotifyControl::kContinue;
             }
