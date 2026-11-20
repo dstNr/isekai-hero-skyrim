@@ -36,10 +36,8 @@ whose interface is a set of HTML/CSS pages drawn by
 
 ## What it looks like
 
-<img src="fomod/images/threat-labels.png" alt="Threat labels over an NPC" width="60%">
-<sub><b>Threat labels</b> — the System's read on anything you aim at or that fights you.
-(This picture predates the Magelight interface; new screenshots of the projected System
-panels are still to come.)</sub>
+<img src="fomod/images/threat-labels.png" alt="Threat labels over two bandits" width="60%">
+<sub><b>Threat labels</b> — the System's read on anything you aim at or that fights you.</sub>
 
 ---
 
