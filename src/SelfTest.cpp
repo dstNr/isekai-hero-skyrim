@@ -2,6 +2,7 @@
 
 #include "../include/IsekaiHeroAPI.h"
 #include "Config.h"
+#include "Enchantments.h"
 #include "CraftHooks.h"
 #include "Loc.h"
 #include "Passives.h"
@@ -434,6 +435,23 @@ namespace Isekai::SelfTest {
                                      "stored materials");
         }
 
+        // The eight System enchantments (nodes 24-31): every ENCH resolved, and the known flag
+        // (set on the form, not saved) matches whether its node is unlocked.
+        void CheckEnchantments(std::vector<Result>& out) {
+            const auto resolved = Enchantments::Resolved();
+            std::string bad;
+            for (std::uint32_t key = 24; key <= 31; ++key) {
+                const bool known = Enchantments::IsKnown(key);
+                const bool unlocked = SkillTree::IsUnlocked(key);
+                if (known != unlocked) {
+                    bad += (bad.empty() ? "" : "; ") + std::string("node ") + std::to_string(key) +
+                           (known ? " known but not unlocked" : " unlocked but not known");
+                }
+            }
+            Add(out, resolved == 8 && bad.empty(), false, "isekai.enchantments",
+                std::to_string(resolved) + " of 8 resolved" + (bad.empty() ? "" : "; " + bad));
+        }
+
         // The interface chrome — status buttons, blessing choice, rank insignia. Unlike
         // the tree and shop icons these are named inline rather than in a table, and the
         // rank ones are derived from a letter, so nothing at runtime would otherwise
@@ -645,6 +663,7 @@ namespace Isekai::SelfTest {
         CheckShop(out);
         CheckUiIcons(out);
         CheckCrafting(out);
+        CheckEnchantments(out);
         CheckModApi(out);
         CheckReadiness(out);
         CheckHotkeys(out);

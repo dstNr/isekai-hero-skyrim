@@ -102,6 +102,12 @@ namespace Isekai::Enchantments {
         return a_ench && std::ranges::any_of(g_entries, [a_ench](const Entry& e) { return e.form == a_ench; });
     }
 
+    bool IsKnown(std::uint32_t a_nodeKey) {
+        return std::ranges::any_of(g_entries, [a_nodeKey](const Entry& e) {
+            return e.nodeKey == a_nodeKey && e.form && (e.form->formFlags & static_cast<std::uint32_t>(Flag::kKnown)) != 0;
+        });
+    }
+
     std::size_t Resolved() {
         return static_cast<std::size_t>(
             std::ranges::count_if(g_entries, [](const Entry& e) { return e.form != nullptr; }));

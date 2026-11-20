@@ -24,6 +24,9 @@ namespace Isekai::Enchantments {
 
     [[nodiscard]] bool IsSystemEnchantment(const RE::EnchantmentItem* a_ench);
 
+    // Is the node's enchantment flagged known? False for an unresolved form or a foreign key (self-test).
+    [[nodiscard]] bool IsKnown(std::uint32_t a_nodeKey);
+
     // How many of the eight ENCH records resolved (self-test).
     [[nodiscard]] std::size_t Resolved();
 
