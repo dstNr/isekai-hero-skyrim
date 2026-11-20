@@ -783,8 +783,8 @@ one the `PlayerAlias` exists for — that the entry is **still there after a sav
 
 The eight enchantments of the skill tree's Enchant band
 ([design](superpowers/specs/2026-11-20-system-enchantments-design.md)), written into the
-plugin directly for the same reason as Part L: CK 1.7.99 crashes. 36 new records, local
-FormIDs `0xD91`–`0xDB4`, no existing record changed, masters still only `Skyrim.esm` and
+plugin directly for the same reason as Part L: CK 1.7.99 crashes. 38 new records, local
+FormIDs `0xD91`–`0xDB6`, no existing record changed, masters still only `Skyrim.esm` and
 `Update.esm` (no DLC master: the Dawnguard sun look was copied into an own shader).
 
 ### The FormIDs the code uses
@@ -817,14 +817,19 @@ vanilla enchantment (vanilla's strongest variants reach about 3–3.5× their ba
 | Stormchain | shock damage 25 (1 s, vanilla dual value: half to magicka, Resist Shock) · carrier 15 = damage per jump | violet shader `0xD93`, vanilla purple blade | weapons |
 | Soul Rend | absorb health 20 · absorb magicka 20 (1 s each, vanilla absorb FX script) | dark-red shader `0xD94`, vanilla red blade | weapons |
 | System Breach | carrier 30 = true damage (1 s) | ARTO `0xD99` (applied by the plugin), vanilla blue blade | weapons |
-| Bulwark | armor rating (`DamageResist`) +100 | blue shield shimmer `0xD95` | body, shield |
+| Bulwark | armor rating (`DamageResist`) +100 · perk `0xDB5`: all damage taken ×0.75 (`ModIncomingDamage`) | blue shield shimmer `0xD95` | body, shield |
 | Thorncrown | `ReflectDamage` 20 % | red thorn shader `0xD96` | body, shield |
 | Phoenix Heart | `HealRateMult` +40 % · carrier 20 = rescue heal in % of max health | ember shader `0xD97` | body, necklace |
-| Voidstep | `SpeedMult` +15 % · `StaminaRateMult` +50 % | dark violet shader `0xD98` | boots |
+| Voidstep | `SpeedMult` +15 % · `StaminaRateMult` +50 % · perk `0xDB6`: falling damage ×0 (`ModFallingDamage`) | dark violet shader `0xD98` | boots |
 
 Vanilla for comparison: fire damage base 10 (Divine Judgment is 3×), absorb health base 8.
 Charge cost lands at 110 for every weapon enchantment (vanilla's dearest base: Banish 113,
 Paralyze 102), and 502–507 for the armor ones (vanilla: Fortify Health Regen 503, Sneak 672).
+
+Bulwark's damage reduction and Voidstep's fall-damage immunity are perks, applied through
+`PerkToApply` on `IsekaiME_Bulwark` and `IsekaiME_VoidstepSpeed` while the item is worn —
+the way vanilla's `ghostHalfDamageEffect` applies its `ModIncomingDamage` perk. Their values
+are fixed (the table scales only magnitudes) and **in-game test pending**.
 
 The three carriers are Value Modifiers on `Fame`, an actor value the game does not use, with
 `Recover` set: they only hold a magnitude the plugin reads off the active effect. The
@@ -847,6 +852,7 @@ All new records:
 | `0xDA6`–`0xDAB` | MGEF | `IsekaiME_Bulwark`, `IsekaiME_Thorncrown`, `IsekaiME_PhoenixHeart`, `IsekaiCarrierPhoenixHeart`, `IsekaiME_VoidstepSpeed`, `IsekaiME_VoidstepStamina` |
 | `0xDAC`–`0xDB3` | ENCH | the eight above |
 | `0xDB4` | SPEL | `IsekaiSpellStormchainJump` (Fire and Forget, Target Actor, manual cost 0) |
+| `0xDB5`–`0xDB6` | PERK | `IsekaiPerkBulwark`, `IsekaiPerkVoidstep` |
 
 ### How it was verified
 
@@ -856,25 +862,26 @@ changed: effects from `DLC1EnchSunDamage[Undead]`, `EnchShockDamageFFContact`, `
 `PerkBleedingDamage`, `EnchFortifyHealth/HealRate/StaminaRateConstantSelf`; shaders from
 `DLC1SunFireFXShader`, `EnchFireFXShader`, `ShockFXShader`, `AbsorbHealthFXS`,
 `ShieldSpellFXS`, `FireFXShader`; the ARTO from `FXShockCloak01`; the spell from
-`DA16SkullOfCorruptionDamageSpell`. A byte diff of each shader against its reference shows
+`DA16SkullOfCorruptionDamageSpell`; the perks from `ghostHalfDamagePerk` (`ModIncomingDamage`)
+and `Cushioned` (`ModFallingDamage`, its conditions dropped). A byte diff of each shader against its reference shows
 only colour fields and the palette texture changed. No form of a DLC is referenced: every
 FormID inside the new records resolves to a `Skyrim.esm` record or to one of our own (333
 references checked).
 
 Read back twice: by an independent parser (sizes parse exactly, old records byte-identical,
-header count 86 = 74 records + 12 groups, ESL flag, every field against the table above) and
+header count 89 = 76 records + 13 groups, ESL flag, every field against the table above) and
 by houseCARL's record reader on the written file, which named every actor value, flag, link
 and magnitude as intended — and caught that index 58 is `WaterWalking`, not `Fame`, before
 it shipped. `node tools\check.mjs` passes its ESP checks, including the light-plugin ceiling
-(74 records, all ≤ `0xFFF`).
+(76 records, all ≤ `0xFFF`).
 
 ### What is left
 
 Playing it (Task 8 of the plan): whether the constant-effect auras show permanently on the
 wearer, how bright the colours read, whether `SpeedMult` takes effect without a carry-weight
-nudge. Two things the ESP cannot do and the plugin may have to: Voidstep's fall damage (no
-vanilla actor value or perk entry for it) and a shader "at the feet" only (an effect shader
-covers the whole body). `IsekaiArtSystemBreach` still shows the vanilla shock-cloak mesh
+nudge, whether the two perks apply while the item is worn and leave with it (Bulwark on body
+and shield at once included). One thing the ESP cannot do: a shader "at the feet" only (an
+effect shader covers the whole body). `IsekaiArtSystemBreach` still shows the vanilla shock-cloak mesh
 until the asset pipeline delivers `isekai\effects\systembreach_hit.nif` (Task 7).
 
 ---
