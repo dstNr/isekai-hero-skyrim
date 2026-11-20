@@ -43,4 +43,8 @@ namespace Isekai::Enchantments {
     void SaveCooldowns(SKSE::SerializationInterface* a_intf);
     void LoadCooldowns(SKSE::SerializationInterface* a_intf);
     void ClearCooldowns();   // revert and new game: cooldowns and clock
+
+    // The three plugin effects (Stormchain, System Breach, Phoenix Heart's rescue), for any
+    // actor who wields or wears the item. kDataLoaded, after Resolve().
+    void Install();
 }

@@ -6,6 +6,7 @@
 
 #include <cstdio>
 #include <iterator>
+#include <limits>
 #include <vector>
 
 namespace {
@@ -61,6 +62,11 @@ namespace {
         EXPECT(!CooldownLive(100.0, 100.0));
         EXPECT(!CooldownLive(0.0, 5.0));
     }
+    void ReadyAtClamp() {
+        EXPECT(ClampReadyAt(130.0, 100.0) == 130.0);                                       // a running cooldown stays
+        EXPECT(ClampReadyAt(std::numeric_limits<double>::infinity(), 100.0) == 160.0);     // corrupt: one cooldown at most
+        EXPECT(!CooldownLive(ClampReadyAt(std::numeric_limits<double>::quiet_NaN(), 100.0), 100.0));
+    }
     void CooldownBound() {
         EXPECT(CooldownCountAcceptable(0));
         EXPECT(CooldownCountAcceptable(4096));
@@ -77,6 +83,7 @@ int main() {
         { "Strongest", Strongest },
         { "CooldownBound", CooldownBound },
         { "CooldownLive", CooldownLiveTest },
+        { "ReadyAtClamp", ReadyAtClamp },
     };
 
     int failedTests = 0;

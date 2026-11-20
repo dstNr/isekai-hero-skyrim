@@ -57,6 +57,15 @@ namespace Isekai::Enchant::Logic {
     // A cooldown still running at a_now; expired ones are not worth saving.
     inline constexpr bool CooldownLive(double a_readyAt, double a_now) { return a_readyAt > a_now; }
 
+    // A loaded readyAt never lies more than one cooldown ahead: a corrupt (infinite) one would
+    // block that actor's rescue forever. NaN passes through and fails CooldownLive.
+    inline double ClampReadyAt(double a_readyAt, double a_now) {
+        return std::min(a_readyAt, a_now + kPhoenixCooldownSeconds);
+    }
+
+    inline constexpr float       kStormchainRange = 800.0f;
+    inline constexpr std::size_t kStormchainMaxJumps = 3;
+
     inline constexpr std::uint32_t kMaxSavedCooldowns = 4096;
 
     // Bounds a co-save read: a corrupt count must not drive an allocation.

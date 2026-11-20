@@ -1247,6 +1247,7 @@ namespace Isekai {
                 SkyrimNet::Install();   // optional AI-NPC context; no-op without SkyrimNet
                 Progression::Install();
                 Quests::Install();      // watches kills for the standing objective
+                Enchantments::Install();  // stormchain, system breach, phoenix rescue
                 Professions::Install();  // harvesting and crafting feed the System
                 GuildBridge::Install();  // Adventurers Guild work, when that mod is there
                 InstallConsoleCommand();  // IsekaiPoints [n]
