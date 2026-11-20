@@ -154,6 +154,8 @@ function parseMockShop() {
 check("skill tree: C++ and playground node tables agree", () => {
   const cpp = new Map(parseSkillTreeNodes().map((n) => [n.key, n]));
   const mock = new Map(parseMockNodes().map((n) => [n.key, n]));
+  const onlyMock = [...mock.keys()].filter((k) => !cpp.has(k));
+  need(onlyMock.length === 0, `keys ${onlyMock.join(", ")} are in the playground mock but missing in SkillTree.cpp`);
   need(cpp.size === mock.size, `C++ has ${cpp.size} nodes, playground has ${mock.size}`);
   for (const [key, c] of cpp) {
     const m = mock.get(key);

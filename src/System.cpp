@@ -3,6 +3,7 @@
 #include "Config.h"
 #include "Loc.h"
 #include "CraftHooks.h"
+#include "Enchantments.h"
 #include "FrameTick.h"
 #include "ModAPI.h"
 #include "GuildBridge.h"
@@ -1225,6 +1226,7 @@ namespace Isekai {
                 Plugin::DumpForms();
                 Passives::Install();
                 Sounds::Install();
+                Enchantments::Resolve();
                 Storage::Install();
                 Shop::Install();         // resolves the System Shop's soul-gem catalog
                 CraftHooks::Install();  // zero-transfer crafting (validation build for now)

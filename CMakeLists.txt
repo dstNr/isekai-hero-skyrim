@@ -69,6 +69,9 @@ add_commonlibsse_plugin(
         src/Storage.h
         src/CraftHooks.cpp
         src/CraftHooks.h
+        src/EnchantLogic.h
+        src/Enchantments.cpp
+        src/Enchantments.h
         src/ModAPI.cpp
         src/ModAPI.h
         include/IsekaiHeroAPI.h

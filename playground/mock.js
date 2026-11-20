@@ -46,15 +46,24 @@
     { key: 5,  zone: "MIGHT",  name: "Emberguard",          icon: "spells_12_frame.png", x: 390, y: 540, cost: 15, req: TIER.Normal,   prereq: [3, 0],   desc: "+25% Fire Resist." },
     // arcana (right band)
     { key: 6,  zone: "ARCANA", name: "Mana Well",           icon: "spells_15_frame.png", x: 930, y: 400, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Magicka." },
-    { key: 7,  zone: "ARCANA", scale: 1.2, name: "Arcane Omniscience",  icon: "spells_36_frame.png", x: 845, y: 540, cost: 25, req: TIER.Hero,     prereq: [6, 0],   desc: "Every enchantment laid bare.\nAll enchantments known without disenchanting." },
-    { key: 8,  zone: "ARCANA", name: "Frostguard",          icon: "spells_16_frame.png", x: 1015, y: 540, cost: 15, req: TIER.Normal,   prereq: [6, 0],   desc: "+25% Frost Resist." },
-    { key: 9,  zone: "ARCANA", scale: 1.2, name: "Spell Omniscience",   icon: "spells_37_frame.png", x: 845, y: 680, cost: 40, req: TIER.Hero,     prereq: [7, 0],   desc: "The System reads every tome ever written.\nAll spells with a spell tome learned." },
+    { key: 7,  zone: "ARCANA", scale: 1.2, name: "Arcane Omniscience",  icon: "spells_36_frame.png", x: 1015, y: 540, cost: 25, req: TIER.Hero,     prereq: [6, 0],   desc: "Every enchantment laid bare.\nAll enchantments known without disenchanting." },
+    { key: 8,  zone: "ARCANA", name: "Frostguard",          icon: "spells_16_frame.png", x: 845, y: 540, cost: 15, req: TIER.Normal,   prereq: [6, 0],   desc: "+25% Frost Resist." },
+    { key: 9,  zone: "ARCANA", scale: 1.2, name: "Spell Omniscience",   icon: "spells_37_frame.png", x: 1015, y: 680, cost: 40, req: TIER.Hero,     prereq: [7, 0],   desc: "The System reads every tome ever written.\nAll spells with a spell tome learned." },
     // shadow (centre band)
     { key: 10, zone: "SHADOW", name: "Swift Blood",         icon: "spells_32_frame.png", x: 615, y: 400, cost: 10, req: TIER.Normal,   prereq: [1, 0],   desc: "+100 Stamina." },
     { key: 11, zone: "SHADOW", scale: 1.2, name: "Alchemical Insight",  icon: "spells_31_frame.png", x: 530, y: 540, cost: 25, req: TIER.Hero,     prereq: [10, 0],  desc: "Every ingredient gives up its secrets.\nAll ingredient effects known." },
     { key: 12, zone: "SHADOW", name: "Plagueward",          icon: "spells_34_frame.png", x: 700, y: 540, cost: 15, req: TIER.Normal,   prereq: [10, 0],  desc: "+25% Disease Resist." },
     // capstone (bottom of the shadow band)
     { key: 13, zone: "SHADOW", scale: 1.45, name: "World Tree",         icon: "spells_09_frame.png", x: 615, y: 690, cost: 50, req: TIER.Ascended, prereq: [11, 12], desc: "The System blossoms through your soul.\n+100 Health, Magicka and Stamina." },
+    // enchant (System enchantments, all hang off Arcane Omniscience)
+    { key: 24, zone: "ENCHANT", name: "Divine Judgment",    icon: "spells_14_frame.png", x: 1165, y: 300, cost: 30, req: TIER.Hero,     prereq: [7, 0],   desc: "The System judges with light.\nSun damage, doubled against the undead." },
+    { key: 25, zone: "ENCHANT", name: "Stormchain",         icon: "spells_02_frame.png", x: 1165, y: 455, cost: 35, req: TIER.Hero,     prereq: [7, 0],   desc: "The System's lightning seeks every foe.\nShock damage that leaps to up to three more enemies." },
+    { key: 26, zone: "ENCHANT", name: "Soul Rend",          icon: "spells_08_frame.png", x: 1165, y: 610, cost: 30, req: TIER.Hero,     prereq: [7, 0],   desc: "The System tears life from the wound.\nAbsorbs health and magicka with every hit." },
+    { key: 27, zone: "ENCHANT", name: "System Breach",      icon: "spells_38_frame.png", x: 1165, y: 765, cost: 40, req: TIER.Ascended, prereq: [7, 0],   desc: "The System rewrites what the blow is allowed to ignore.\nExtra damage that bypasses armor and resistances." },
+    { key: 28, zone: "ENCHANT", name: "Bulwark",            icon: "spells_05_frame.png", x: 1315, y: 300, cost: 30, req: TIER.Hero,     prereq: [7, 0],   desc: "The System raises a wall around you.\nGreatly raised armor rating and reduced damage taken." },
+    { key: 29, zone: "ENCHANT", name: "Thorncrown",         icon: "spells_29_frame.png", x: 1315, y: 455, cost: 30, req: TIER.Hero,     prereq: [7, 0],   desc: "The System returns every blow in kind.\nReflects part of melee damage taken." },
+    { key: 30, zone: "ENCHANT", name: "Phoenix Heart",      icon: "spells_11_frame.png", x: 1315, y: 610, cost: 40, req: TIER.Ascended, prereq: [7, 0],   desc: "The System will not let you fall.\nStrong health regeneration; once a minute, a rescue heal when near death." },
+    { key: 31, zone: "ENCHANT", name: "Voidstep",           icon: "spells_04_frame.png", x: 1315, y: 765, cost: 30, req: TIER.Hero,     prereq: [7, 0],   desc: "The System lightens every step.\nFaster movement, cheaper stamina, no fall damage." },
     // mastery rail (repeatable, capped at 10 ranks / 5 tiers)
     { key: 16, zone: "MASTERY", name: "Beast of Burden",     icon: "spells_22_frame.png", x: 95,  y: 150, cost: 2,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System shoulders your load.\n+25 Carry Weight per rank." },
     { key: 15, zone: "MASTERY", name: "Fleet of Foot",       icon: "spells_28_frame.png", x: 95,  y: 221, cost: 3,  req: TIER.Normal,   prereq: [0, 0],   rep: true, maxRank: 10, desc: "The System quickens your stride.\n+3% movement speed per rank." },
@@ -69,9 +78,9 @@
   var PERK_MAX = 255; // Isekai::kMaxPerkPoints (see System.h)
 
   /* Mirrors SkillTree.cpp::IsRefundable. Not refundable: the four Omniscience unlocks
-     (4, 7, 9, 11) — they write knowledge the player keeps — and Perk Synthesis (14),
-     whose points already became perk points. */
-  var NO_REFUND = { 4: 1, 7: 1, 9: 1, 11: 1, 14: 1 };
+     (4, 7, 9, 11) and the eight System enchantments (24-31) — they write knowledge the
+     player keeps — and Perk Synthesis (14), whose points already became perk points. */
+  var NO_REFUND = { 4: 1, 7: 1, 9: 1, 11: 1, 14: 1, 24: 1, 25: 1, 26: 1, 27: 1, 28: 1, 29: 1, 30: 1, 31: 1 };
 
   /* --- mutable game state (co-save equivalents) --------------------------- */
   function freshState() {

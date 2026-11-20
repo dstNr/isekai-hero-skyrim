@@ -1,6 +1,7 @@
 #include "SkillTree.h"
 
 #include "Config.h"
+#include "Enchantments.h"
 #include "Loc.h"
 #include "Passives.h"
 #include "Sounds.h"
@@ -37,6 +38,7 @@ namespace Isekai::SkillTree {
         // what makes the zone framing line up — moving one across bands without changing
         // its Zone will draw it outside its own header.
         //   MIGHT  x 210..390    SHADOW  x 530..700    ARCANA  x 845..1015
+        //   ENCHANT x 1165..1315 (two columns of four, rows 300..765)
         //
         // The gaps BETWEEN bands (and between the CORE row and the branch rows) are not
         // cosmetic: a zone frame is its nodes' bounding box grown by a padding, so two
@@ -94,20 +96,50 @@ namespace Isekai::SkillTree {
               { { AV::kResistFire, 25.0f } } },
 
             // --- Arcana (right band) ---
+            // Arcane Omniscience sits on the band's right edge, next to the Enchant band it
+            // opens; Frostguard takes the inner slot so none of the eight links crosses it.
             { 6, Zone::kArcana, "Mana Well", "+100 Magicka.",
               "spells_15_frame.png", 930.0f, 400.0f, 10, kN, { 1, 0 }, Effect::kAttributes,
               { { AV::kMagicka, 100.0f } } },
             { 7, Zone::kArcana, "Arcane Omniscience",
               "Every enchantment laid bare.\nAll enchantments known without disenchanting.",
-              "spells_36_frame.png", 845.0f, 540.0f, 25, kH, { 6, 0 }, Effect::kAllEnchantments, {},
+              "spells_36_frame.png", 1015.0f, 540.0f, 25, kH, { 6, 0 }, Effect::kAllEnchantments, {},
               false, 0, 0.0f, 1.2f },
             { 8, Zone::kArcana, "Frostguard", "+25% Frost Resist.",
-              "spells_16_frame.png", 1015.0f, 540.0f, 15, kN, { 6, 0 }, Effect::kAttributes,
+              "spells_16_frame.png", 845.0f, 540.0f, 15, kN, { 6, 0 }, Effect::kAttributes,
               { { AV::kResistFrost, 25.0f } } },
             { 9, Zone::kArcana, "Spell Omniscience",
               "The System reads every tome ever written.\nAll spells with a spell tome learned.",
-              "spells_37_frame.png", 845.0f, 680.0f, 40, kH, { 7, 0 }, Effect::kAllSpells, {},
+              "spells_37_frame.png", 1015.0f, 680.0f, 40, kH, { 7, 0 }, Effect::kAllSpells, {},
               false, 0, 0.0f, 1.2f },
+            // --- Enchant (right of Arcana) ---
+            // The eight System enchantments (src/Enchantments.cpp). Weapons in the inner
+            // column, armor in the outer; every one needs only Arcane Omniscience, so each can
+            // be bought on its own.
+            { 24, Zone::kEnchant, "Divine Judgment",
+              "The System judges with light.\nSun damage, doubled against the undead.",
+              "spells_14_frame.png", 1165.0f, 300.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
+            { 25, Zone::kEnchant, "Stormchain",
+              "The System's lightning seeks every foe.\nShock damage that leaps to up to three more enemies.",
+              "spells_02_frame.png", 1165.0f, 455.0f, 35, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
+            { 26, Zone::kEnchant, "Soul Rend",
+              "The System tears life from the wound.\nAbsorbs health and magicka with every hit.",
+              "spells_08_frame.png", 1165.0f, 610.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
+            { 27, Zone::kEnchant, "System Breach",
+              "The System rewrites what the blow is allowed to ignore.\nExtra damage that bypasses armor and resistances.",
+              "spells_38_frame.png", 1165.0f, 765.0f, 40, kA, { 7, 0 }, Effect::kTeachEnchantment, {} },
+            { 28, Zone::kEnchant, "Bulwark",
+              "The System raises a wall around you.\nGreatly raised armor rating and reduced damage taken.",
+              "spells_05_frame.png", 1315.0f, 300.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
+            { 29, Zone::kEnchant, "Thorncrown",
+              "The System returns every blow in kind.\nReflects part of melee damage taken.",
+              "spells_29_frame.png", 1315.0f, 455.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
+            { 30, Zone::kEnchant, "Phoenix Heart",
+              "The System will not let you fall.\nStrong health regeneration; once a minute, a rescue heal when near death.",
+              "spells_11_frame.png", 1315.0f, 610.0f, 40, kA, { 7, 0 }, Effect::kTeachEnchantment, {} },
+            { 31, Zone::kEnchant, "Voidstep",
+              "The System lightens every step.\nFaster movement, cheaper stamina, no fall damage.",
+              "spells_04_frame.png", 1315.0f, 765.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
 
             // --- Shadow (centre band) ---
             { 10, Zone::kShadow, "Swift Blood", "+100 Stamina.",
@@ -423,7 +455,7 @@ namespace Isekai::SkillTree {
                 }
                 auto* base = ench->data.baseEnchantment;
                 const char* name = base->GetName();
-                if (!name || !*name) {
+                if (!name || !*name || Enchantments::IsSystemEnchantment(base)) {
                     continue;
                 }
                 auto [it, fresh] = byName.try_emplace(name, base);
@@ -438,8 +470,8 @@ namespace Isekai::SkillTree {
                 }
                 auto* base = ench->data.baseEnchantment;
                 const char* name = base->GetName();
-                if (!name || !*name) {
-                    continue;
+                if (!name || !*name || Enchantments::IsSystemEnchantment(base)) {
+                    continue;  // the eight are bought one by one, never handed out here
                 }
                 if (byName[name] == base) {
                     base->formFlags |= EnchFlag::kKnown;
@@ -555,6 +587,11 @@ namespace Isekai::SkillTree {
                 break;
             case Effect::kAllSpells:
                 UnlockAllSpells(player);
+                break;
+            case Effect::kTeachEnchantment:
+                if (!Enchantments::Teach(a_node.key)) {
+                    logger::error("SkillTree: '{}' has no resolved enchantment to teach", a_node.name);
+                }
                 break;
             case Effect::kDirectStat: {
                 // No fortify ability exists for these actor values, so set each one's
@@ -762,6 +799,9 @@ namespace Isekai::SkillTree {
         if (!unlocked.empty()) {
             logger::info("SkillTree: re-applied {} node(s) from the save", unlocked.size());
         }
+        // The known flag lives on the form, not in the save: a load after a save that never
+        // bought one must clear what an earlier session in this game process set.
+        Enchantments::SyncKnown(unlocked);
     }
 
     void AccumulateBonuses(std::map<RE::ActorValue, float>& a_totals) {
@@ -824,6 +864,7 @@ namespace Isekai::SkillTree {
         case Zone::kArcana:  return L("zone.arcana", "ARCANA");
         case Zone::kShadow:  return L("zone.shadow", "SHADOW");
         case Zone::kMastery: return L("zone.mastery", "MASTERY");
+        case Zone::kEnchant: return L("zone.enchant", "ENCHANT");
         default:             return "";
         }
     }

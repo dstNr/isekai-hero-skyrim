@@ -21,6 +21,7 @@ namespace Isekai::SkillTree {
                            // no ESP ability spell to fortify (move speed, resistances,
                            // regen rates): idempotent, so re-applying on load or after
                            // another purchase never stacks or drifts.
+        kTeachEnchantment, // one System enchantment known (Enchantments::Teach)
     };
 
     struct Bonus {
@@ -38,6 +39,7 @@ namespace Isekai::SkillTree {
         kArcana,   // the right branch (Magicka / enchanting / frost)
         kShadow,   // the centre-down branch (Stamina / alchemy / disease) + capstone
         kMastery,  // the repeatable utility stats — their own rail, not the graph
+        kEnchant,  // the eight System enchantments, right of Arcana, all off key 7
     };
 
     // Zone name for a header, e.g. "MIGHT". Centralised so both renderers label the
