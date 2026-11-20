@@ -818,9 +818,13 @@ vanilla enchantment (vanilla's strongest variants reach about 3–3.5× their ba
 | Soul Rend | absorb health 20 · absorb magicka 20 (1 s each, vanilla absorb FX script) | dark-red shader `0xD94`, vanilla red blade | weapons |
 | System Breach | carrier 30 = true damage (1 s) | ARTO `0xD99` (applied by the plugin), vanilla blue blade | weapons |
 | Bulwark | armor rating (`DamageResist`) +100 · perk `0xDB5`: all damage taken ×0.75 (`ModIncomingDamage`) | blue shield shimmer `0xD95` | body, shield |
-| Thorncrown | `ReflectDamage` 20 % | red thorn shader `0xD96` | body, shield |
+| Thorncrown | `ReflectDamage` 13 % | red thorn shader `0xD96` | body, shield |
 | Phoenix Heart | `HealRateMult` +40 % · carrier 20 = rescue heal in % of max health | ember shader `0xD97` | body, necklace |
 | Voidstep | `SpeedMult` +15 % · `StaminaRateMult` +50 % · perk `0xDB6`: falling damage ×0 (`ModFallingDamage`) | dark violet shader `0xD98` | boots |
+
+Thorncrown's base is 13, not 20: Body and shield both allow it and `ReflectDamage` stacks, so with the table's
+top scaling (about 3.5x) two pieces give 2 x 13 x 3.5 = 91 %, below 100 %. A base of 14 would be 98 %, too close;
+15 would pass 100 %. Whether the engine itself caps `ReflectDamage` is untested (E8).
 
 Vanilla for comparison: fire damage base 10 (Divine Judgment is 3×), absorb health base 8.
 Charge cost lands at 110 for every weapon enchantment (vanilla's dearest base: Banish 113,

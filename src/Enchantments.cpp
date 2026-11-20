@@ -295,7 +295,7 @@ namespace Isekai::Enchantments {
         void Breach(RE::FormID a_attacker, RE::FormID a_target) {
             auto* attacker = LiveActor(a_attacker);
             auto* target = LiveActor(a_target);
-            if (!attacker || !target) {
+            if (!attacker || !target || target->IsDead()) {   // no damage or art on a corpse
                 return;
             }
             const auto magnitude = CarrierMagnitude(target, g_breachCarrier, attacker);
@@ -340,7 +340,7 @@ namespace Isekai::Enchantments {
                 return;
             }
             const auto check = [](RE::Actor* a_actor) {
-                if (a_actor && !a_actor->IsDeleted() && !a_actor->IsDisabled()) {
+                if (a_actor && !a_actor->IsDeleted() && !a_actor->IsDisabled() && !a_actor->IsDead()) {
                     PhoenixRescue(a_actor);
                 }
             };

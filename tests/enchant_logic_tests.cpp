@@ -43,7 +43,7 @@ namespace {
     }
     void Reflect() {
         EXPECT(ReflectFraction(30.f) == 0.30f);
-        EXPECT(ReflectFraction(250.f) == 0.90f);   // five Thorncrowns never reach 100 %
+        EXPECT(ReflectFraction(250.f) == 0.90f);   // helper clamp only (plugin fallback, not wired); the shipped cap is the ESP base 13
         EXPECT(ReflectFraction(-5.f) == 0.0f);
     }
     void Phoenix() {
