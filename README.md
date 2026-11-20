@@ -39,6 +39,14 @@ whose interface is a set of HTML/CSS pages drawn by
 <img src="fomod/images/threat-labels.png" alt="Threat labels over two bandits" width="60%">
 <sub><b>Threat labels</b> — the System's read on anything you aim at or that fights you.</sub>
 
+| | |
+|---|---|
+| <img src="docs/images/blessing-choice.jpg" alt="The first blessing choice: NORMAL or TRANSMIGRATOR"><br><sub><b>Reincarnation</b> — the first choice: NORMAL or TRANSMIGRATOR.</sub> | <img src="docs/images/status.jpg" alt="The System status panel"><br><sub><b>Status</b> — rank, blessing, milestones, points, the current objective and your titles.</sub> |
+| <img src="docs/images/skill-tree.jpg" alt="The System skill tree"><br><sub><b>Skill tree</b> — core, Might, Shadow and Arcana nodes beside the mastery ranks.</sub> | <img src="docs/images/shop.jpg" alt="The System shop"><br><sub><b>Shop</b> — System Points for materials, wealth, restoratives and elixirs.</sub> |
+
+<img src="docs/images/quest-complete.jpg" alt="QUEST COMPLETE over the game world" width="60%">
+<sub><b>Milestones</b> — a finished quest is announced, then pays out.</sub>
+
 ---
 
 ## Features

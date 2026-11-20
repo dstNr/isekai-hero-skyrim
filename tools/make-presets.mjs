@@ -29,6 +29,7 @@ export const STARTS = [
     key: "standard",
     name: "Standard",
     blurb: "The System boots itself the first time you load into the world.",
+    image: "blessing-choice.jpg",
     values: {},   // the shipped file, unchanged
   },
   {

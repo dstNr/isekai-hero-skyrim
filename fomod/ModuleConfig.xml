@@ -53,7 +53,7 @@
           <plugins order="Explicit">
             <plugin name="Standard">
               <description>The System boots itself the first time you load into the world.</description>
-              
+              <image path="fomod\images\blessing-choice.jpg"/>
               <files/>
               <conditionFlags>
                 <flag name="start">standard</flag>
