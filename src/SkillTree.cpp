@@ -22,8 +22,9 @@ namespace Isekai::SkillTree {
         using AV = RE::ActorValue;
 
         // Layout: hub top-centre, three branches fanning out (Kraft left, Arkana
-        // right, Schatten centre-down), capstone at the bottom. Coordinates are the
-        // node centres in the tree canvas, designed at 1080p and scaled on draw.
+        // right, Schatten centre-down), capstone at the bottom, the Enchant band off
+        // Arcana's right edge. Coordinates are the node centres in the tree canvas,
+        // scaled on draw (see the layout note below).
         // minPower column staggers the tree by rebirth tier (see Node::minPower):
         //   NORMAL   — the whole self-made half: stats, resists, perk synthesis, Thu'um cd
         //   HERO     — + the four Omniscience gifts (shouts / enchants / ingredients / spells)
@@ -32,20 +33,24 @@ namespace Isekai::SkillTree {
         constexpr auto kH = PowerLevel::Hero;
         constexpr auto kA = PowerLevel::Ascended;
 
-        // Layout note: x/y are node centres in the 1120x760 design canvas, and they are
-        // grouped into three vertical bands that the renderers frame and label as zones
-        // (Zone::kMight / kShadow / kArcana). Keeping a node inside its band's x-range is
-        // what makes the zone framing line up — moving one across bands without changing
-        // its Zone will draw it outside its own header.
+        // Layout note: x/y are node centres in design units (x 210..1340, y 96..820). The
+        // web view scales them to fit its 920x660 net (tree.js treeLayout), about 0.73;
+        // names stay a fixed 84 px, so a smaller scale crowds them. The nodes are grouped
+        // into four vertical bands that the renderers frame and label as zones
+        // (Zone::kMight / kShadow / kArcana / kEnchant). Keeping a node inside its band's
+        // x-range is what makes the zone framing line up — moving one across bands without
+        // changing its Zone will draw it outside its own header.
         //   MIGHT  x 210..390    SHADOW  x 530..700    ARCANA  x 845..1015
-        //   ENCHANT x 1165..1315 (two columns of four, rows 300..765)
+        //   ENCHANT x 1190 / 1340: two columns of four; the outer column's rows (350..770)
+        //   sit in the inner column's gaps (400..820), where the page's trunk route from
+        //   Arcane Omniscience passes, and its top row keeps the zone header clear.
         //
         // The gaps BETWEEN bands (and between the CORE row and the branch rows) are not
         // cosmetic: a zone frame is its nodes' bounding box grown by a padding, so two
         // bands whose frames would collide have to be pulled apart in the data. The
         // renderers pad in design units scaled by the same fit factor as the positions,
         // so these clearances hold at every window size:
-        //   horizontal, band to band : > 130  (have 140 / 145)
+        //   horizontal, band to band : > 130  (have 140 / 145 / 175)
         //   vertical, row to row      : > 125  (have 140 throughout)
         // Shrink either below that and the frames start overlapping again.
         //
@@ -115,31 +120,32 @@ namespace Isekai::SkillTree {
             // --- Enchant (right of Arcana) ---
             // The eight System enchantments (src/Enchantments.cpp). Weapons in the inner
             // column, armor in the outer; every one needs only Arcane Omniscience, so each can
-            // be bought on its own.
+            // be bought on its own. The page draws the eight links as one trunk (tree.js
+            // trunkRoute), which is why the outer rows sit half a row off the inner ones.
             { 24, Zone::kEnchant, "Divine Judgment",
               "The System judges with light.\nSun damage, doubled against the undead.",
-              "spells_14_frame.png", 1165.0f, 300.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
+              "spells_14_frame.png", 1190.0f, 400.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
             { 25, Zone::kEnchant, "Stormchain",
               "The System's lightning seeks every foe.\nShock damage that leaps to up to three more enemies.",
-              "spells_02_frame.png", 1165.0f, 455.0f, 35, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
+              "spells_02_frame.png", 1190.0f, 540.0f, 35, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
             { 26, Zone::kEnchant, "Soul Rend",
               "The System tears life from the wound.\nAbsorbs health and magicka with every hit.",
-              "spells_08_frame.png", 1165.0f, 610.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
+              "spells_08_frame.png", 1190.0f, 680.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
             { 27, Zone::kEnchant, "System Breach",
               "The System rewrites what the blow is allowed to ignore.\nExtra damage that bypasses armor and resistances.",
-              "spells_38_frame.png", 1165.0f, 765.0f, 40, kA, { 7, 0 }, Effect::kTeachEnchantment, {} },
+              "spells_38_frame.png", 1190.0f, 820.0f, 40, kA, { 7, 0 }, Effect::kTeachEnchantment, {} },
             { 28, Zone::kEnchant, "Bulwark",
               "The System raises a wall around you.\nGreatly raised armor rating and reduced damage taken.",
-              "spells_05_frame.png", 1315.0f, 300.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
+              "spells_05_frame.png", 1340.0f, 350.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
             { 29, Zone::kEnchant, "Thorncrown",
               "The System returns every blow in kind.\nReflects part of melee damage taken.",
-              "spells_29_frame.png", 1315.0f, 455.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
+              "spells_29_frame.png", 1340.0f, 490.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
             { 30, Zone::kEnchant, "Phoenix Heart",
               "The System will not let you fall.\nStrong health regeneration; once a minute, a rescue heal when near death.",
-              "spells_11_frame.png", 1315.0f, 610.0f, 40, kA, { 7, 0 }, Effect::kTeachEnchantment, {} },
+              "spells_11_frame.png", 1340.0f, 630.0f, 40, kA, { 7, 0 }, Effect::kTeachEnchantment, {} },
             { 31, Zone::kEnchant, "Voidstep",
               "The System lightens every step.\nFaster movement, cheaper stamina, no fall damage.",
-              "spells_04_frame.png", 1315.0f, 765.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
+              "spells_04_frame.png", 1340.0f, 770.0f, 30, kH, { 7, 0 }, Effect::kTeachEnchantment, {} },
 
             // --- Shadow (centre band) ---
             { 10, Zone::kShadow, "Swift Blood", "+100 Stamina.",

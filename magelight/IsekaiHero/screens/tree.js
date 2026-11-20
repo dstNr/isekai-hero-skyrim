@@ -19,7 +19,7 @@
      the zones are framed around their own nodes, so a node moved in SkillTree.cpp
      keeps a correct picture without touching this page. */
   const SVGNS = "http://www.w3.org/2000/svg";
-  const NET_W = 720, NET_H = 560;          // the net's canvas in px, as in the markup
+  const NET_W = 920, NET_H = 660;          // the net's canvas in px, as in the markup
   const NODE_R = 34;                       // a scale-1 node's half-size, design units
   /* The always-on name under a node, in canvas px (not scaled: the text is not either).
      Must agree with .nlabel's width, margin and line-height. A node's footprint is the
@@ -193,9 +193,29 @@
     return hits;
   }
 
+  /* Many children of one parent in a zone to its right (Arcane Omniscience's eight
+     enchantments): a trunk out of the parent's side into the gap before that zone, a spine
+     down the gap and a rib into each child's side. A fan of separate lines cannot reach a
+     second column without crossing the first column's names; the shared spine reads as
+     one bus. The layout keeps the outer column's rows in the inner column's gaps. */
+  function trunkRoute(L, graph, from, to, frames) {
+    const zone = String(to.zone || "");
+    if (zone === String(from.zone || "")) return null;
+    const kids = graph.filter((n) => String(n.zone || "") === zone &&
+                                     (n.prereq || []).some((k) => +k === +from.key));
+    const pf = frames[String(from.zone || "")], cf = frames[zone];
+    if (kids.length < 3 || !pf || !cf || cf.x <= pf.x + pf.w) return null;
+    const p = posOf(L, from), c = posOf(L, to), rp = radOf(L, from), rc = radOf(L, to);
+    const xs = (pf.x + pf.w + cf.x) / 2;
+    return { pts: [{ x: p.x + rp + LINK_GAP, y: p.y }, { x: xs, y: p.y }, { x: xs, y: c.y },
+                   { x: c.x - rc - LINK_GAP, y: c.y }] };
+  }
+
   function linkRoute(L, graph, from, to, frames) {
     const p = posOf(L, from), c = posOf(L, to), rp = radOf(L, from), rc = radOf(L, to);
     const tries = [];
+    const trunk = trunkRoute(L, graph, from, to, frames);
+    if (trunk) tries.push(trunk);
     const a = linkStart(L, from, to, LINK_GAP), b = trimTo(c, p, rc + LINK_GAP);
     if (Math.hypot(b.x - a.x, b.y - a.y) >= LINK_MIN) {
       const bow = bowAround(L, graph, a, b, from, to);
@@ -260,7 +280,8 @@
 
   /* The pure geometry, for tools/check.mjs: it routes the real node table through these
      same functions and measures what is left visible of every link. */
-  defs.treeGeometry = { layout: treeLayout, links: netLinks, sample: sampleRoute, footprints: footprints };
+  defs.treeGeometry = { layout: treeLayout, links: netLinks, sample: sampleRoute, footprints: footprints,
+                       zones: zoneBoxes };
 
   defs.tree = function (core) {
     const { ui, $, esc, iconUrl, t, tf, closeScreen } = core;

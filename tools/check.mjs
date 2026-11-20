@@ -1093,6 +1093,49 @@ check("ui: every skill-tree link in the web view is visibly drawn", () => {
   return `${links.length} links, shortest ${who} at ${worst.toFixed(0)} px`;
 });
 
+/* The page's own net geometry over the real node table, in canvas px. */
+function webNet() {
+  const win = {};
+  new Function("window", read(`${PAGE_SCREENS}/tree.js`))(win);
+  const geo = win.isekaiScreens.treeGeometry;
+  need(typeof geo.zones === "function", "tree.js no longer publishes treeGeometry.zones");
+  const graph = parseSkillTreeNodes().filter((n) => n.zone !== "MASTERY");
+  const L = geo.layout(graph);
+  return { geo, graph, L, fp: graph.map((n) => ({ n, f: geo.footprints(L, n) })) };
+}
+
+check("ui: no skill-tree link runs across a node's name", () => {
+  // A dashed line through a name reads as strike-through. The first Enchant band fanned
+  // eight straight links from one node across its inner column's names.
+  const { geo, graph, L, fp } = webNet();
+  const crossed = [];
+  for (const lk of geo.links(L, graph)) {
+    for (const { n, f } of fp) {
+      const b = f.label;
+      if (geo.sample(lk.route).some((q) => q.x > b[0] && q.x < b[2] && q.y > b[1] && q.y < b[3])) {
+        crossed.push(`${lk.from.name} -> ${lk.to.name} over "${n.name}"`);
+      }
+    }
+  }
+  need(crossed.length === 0, crossed.join("; "));
+  return `scale ${L.k.toFixed(3)}, no name crossed`;
+});
+
+check("ui: no skill-tree tile covers a zone header", () => {
+  // The header is 10px mono text with 3px letter-spacing at the frame's top-left corner
+  // (drawNet): about 9px a letter. Divine Judgment once sat on "ENCHANT".
+  const { geo, graph, L, fp } = webNet();
+  for (const z of geo.zones(L, graph)) {
+    const h = [z.x + 8, z.y + 3, z.x + 8 + z.zone.length * 9, z.y + 15];
+    for (const { n, f } of fp) {
+      const t = f.tile;
+      need(!(t[0] < h[2] && t[2] > h[0] && t[1] < h[3] && t[3] > h[1]),
+           `"${n.name}" covers the ${z.zone} header`);
+    }
+  }
+  return "all headers clear";
+});
+
 check("ui: the controller's focus ring can reach every kind of target", () => {
   // A pad has no cursor, so in the web view it navigates by moving focus between the
   // elements named in a selector list. Those are class selectors written by hand against
