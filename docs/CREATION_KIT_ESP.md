@@ -16,6 +16,7 @@ plugin and wired up. What is left:
 **K is done** — the System Blade's two records are in the plugin, wired into the shop, and
 verified in game on 2026-09-11.
 **L is done too**, and without the Creation Kit — see Part L for why and for what to test.
+**M is done the same way** — the eight System enchantments; see Part M for the FormIDs.
 The **G fix** is a single `FULL - Name` change — see the warning box in Part G. **J** only
 if you want to go further.
 
@@ -775,6 +776,106 @@ Only playing it: install the archive in MO2 with **Mod Configuration Menu** tick
 that **Isekai Hero** appears under Mod Configuration, that all five pages show the shipped
 values, that changing the interface scale takes effect without a restart, and — this is the
 one the `PlayerAlias` exists for — that the entry is **still there after a save and reload**.
+
+---
+
+## Part M — System enchantments — **done, and not in the Creation Kit**
+
+The eight enchantments of the skill tree's Enchant band
+([design](superpowers/specs/2026-11-20-system-enchantments-design.md)), written into the
+plugin directly for the same reason as Part L: CK 1.7.99 crashes. 36 new records, local
+FormIDs `0xD91`–`0xDB4`, no existing record changed, masters still only `Skyrim.esm` and
+`Update.esm` (no DLC master: the Dawnguard sun look was copied into an own shader).
+
+### The FormIDs the code uses
+
+| Node key | Enchantment (`ENCH`) | | Carrier `MGEF` |
+|---|---|---|---|
+| 24 | `0xDAC` | `IsekaiEnchDivineJudgment` | — |
+| 25 | `0xDAD` | `IsekaiEnchStormchain` | `0xDA1` `IsekaiCarrierStormchain` |
+| 26 | `0xDAE` | `IsekaiEnchSoulRend` | — |
+| 27 | `0xDAF` | `IsekaiEnchSystemBreach` | `0xDA5` `IsekaiCarrierSystemBreach` |
+| 28 | `0xDB0` | `IsekaiEnchBulwark` | — |
+| 29 | `0xDB1` | `IsekaiEnchThorncrown` | — |
+| 30 | `0xDB2` | `IsekaiEnchPhoenixHeart` | `0xDA9` `IsekaiCarrierPhoenixHeart` |
+| 31 | `0xDB3` | `IsekaiEnchVoidstep` | — |
+
+Plus `0xDB4` `IsekaiSpellStormchainJump` (SPEL) and `0xD99` `IsekaiArtSystemBreach` (ARTO).
+
+All eight are **base enchantments**: `baseEnchantment` is empty and nothing in the plugin
+names them as one. Cast type, target and worn restrictions follow vanilla's own base
+enchantments (`EnchWeaponFireDamageBase`, `EnchArmorFortifyHealthBase`).
+
+### What each one holds (first-test values)
+
+Magnitudes are the enchantment's base values; the enchanting table scales them like any
+vanilla enchantment (vanilla's strongest variants reach about 3–3.5× their base).
+
+| Enchantment | Effects (magnitude / duration) | Look | Worn on |
+|---|---|---|---|
+| Divine Judgment | sun damage 30 (no resist) · burn 5/s for 3 s · undead-only 30 more (`HasKeyword ActorTypeUndead`) | gold sun shader `0xD91` on the target, gold blade `0xD92` | weapons |
+| Stormchain | shock damage 25 (1 s, vanilla dual value: half to magicka, Resist Shock) · carrier 15 = damage per jump | violet shader `0xD93`, vanilla purple blade | weapons |
+| Soul Rend | absorb health 20 · absorb magicka 20 (1 s each, vanilla absorb FX script) | dark-red shader `0xD94`, vanilla red blade | weapons |
+| System Breach | carrier 30 = true damage (1 s) | ARTO `0xD99` (applied by the plugin), vanilla blue blade | weapons |
+| Bulwark | armor rating (`DamageResist`) +100 | blue shield shimmer `0xD95` | body, shield |
+| Thorncrown | `ReflectDamage` 20 % | red thorn shader `0xD96` | body, shield |
+| Phoenix Heart | `HealRateMult` +40 % · carrier 20 = rescue heal in % of max health | ember shader `0xD97` | body, necklace |
+| Voidstep | `SpeedMult` +15 % · `StaminaRateMult` +50 % | dark violet shader `0xD98` | boots |
+
+Vanilla for comparison: fire damage base 10 (Divine Judgment is 3×), absorb health base 8.
+Charge cost lands at 110 for every weapon enchantment (vanilla's dearest base: Banish 113,
+Paralyze 102), and 502–507 for the armor ones (vanilla: Fortify Health Regen 503, Sneak 672).
+
+The three carriers are Value Modifiers on `Fame`, an actor value the game does not use, with
+`Recover` set: they only hold a magnitude the plugin reads off the active effect. The
+Stormchain carrier is hidden; System Breach's and Phoenix Heart's show their description,
+since that is the only text that explains them. Worn restrictions are three new keyword lists:
+`0xD9A` (`ArmorCuirass`, `ArmorShield`), `0xD9B` (`ArmorCuirass`, `ClothingNecklace`),
+`0xD9C` (`ArmorBoots`).
+
+All new records:
+
+| Local id | Type | EditorID |
+|---|---|---|
+| `0xD91`–`0xD98` | EFSH | `IsekaiShaderDivineJudgment`, `…DivineJudgmentBlade`, `…Stormchain`, `…SoulRend`, `…Bulwark`, `…Thorncrown`, `…PhoenixHeart`, `…Voidstep` |
+| `0xD99` | ARTO | `IsekaiArtSystemBreach` |
+| `0xD9A`–`0xD9C` | FLST | `IsekaiEnchWornBodyShield`, `IsekaiEnchWornBodyNecklace`, `IsekaiEnchWornBoots` |
+| `0xD9D`–`0xD9F` | MGEF | `IsekaiME_DivineJudgment`, `…Burn`, `…Undead` |
+| `0xDA0`–`0xDA2` | MGEF | `IsekaiME_Stormchain`, `IsekaiCarrierStormchain`, `IsekaiME_StormchainJump` |
+| `0xDA3`–`0xDA4` | MGEF | `IsekaiME_SoulRendHealth`, `IsekaiME_SoulRendMagicka` |
+| `0xDA5` | MGEF | `IsekaiCarrierSystemBreach` |
+| `0xDA6`–`0xDAB` | MGEF | `IsekaiME_Bulwark`, `IsekaiME_Thorncrown`, `IsekaiME_PhoenixHeart`, `IsekaiCarrierPhoenixHeart`, `IsekaiME_VoidstepSpeed`, `IsekaiME_VoidstepStamina` |
+| `0xDAC`–`0xDB3` | ENCH | the eight above |
+| `0xDB4` | SPEL | `IsekaiSpellStormchainJump` (Fire and Forget, Target Actor, manual cost 0) |
+
+### How it was verified
+
+Every record was **built from a vanilla record's own subrecords**, read from `Skyrim.esm`
+(Dawnguard's sun damage and sun shader from `Dawnguard.esm`), with only the named fields
+changed: effects from `DLC1EnchSunDamage[Undead]`, `EnchShockDamageFFContact`, `ShockDamageFFAimed`, `EnchAbsorbHealth/MagickaFFContact`,
+`PerkBleedingDamage`, `EnchFortifyHealth/HealRate/StaminaRateConstantSelf`; shaders from
+`DLC1SunFireFXShader`, `EnchFireFXShader`, `ShockFXShader`, `AbsorbHealthFXS`,
+`ShieldSpellFXS`, `FireFXShader`; the ARTO from `FXShockCloak01`; the spell from
+`DA16SkullOfCorruptionDamageSpell`. A byte diff of each shader against its reference shows
+only colour fields and the palette texture changed. No form of a DLC is referenced: every
+FormID inside the new records resolves to a `Skyrim.esm` record or to one of our own (333
+references checked).
+
+Read back twice: by an independent parser (sizes parse exactly, old records byte-identical,
+header count 86 = 74 records + 12 groups, ESL flag, every field against the table above) and
+by houseCARL's record reader on the written file, which named every actor value, flag, link
+and magnitude as intended — and caught that index 58 is `WaterWalking`, not `Fame`, before
+it shipped. `node tools\check.mjs` passes its ESP checks, including the light-plugin ceiling
+(74 records, all ≤ `0xFFF`).
+
+### What is left
+
+Playing it (Task 8 of the plan): whether the constant-effect auras show permanently on the
+wearer, how bright the colours read, whether `SpeedMult` takes effect without a carry-weight
+nudge. Two things the ESP cannot do and the plugin may have to: Voidstep's fall damage (no
+vanilla actor value or perk entry for it) and a shader "at the feet" only (an effect shader
+covers the whole body). `IsekaiArtSystemBreach` still shows the vanilla shock-cloak mesh
+until the asset pipeline delivers `isekai\effects\systembreach_hit.nif` (Task 7).
 
 ---
 
