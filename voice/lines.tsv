@@ -1,0 +1,68 @@
+sndr	file	style	text
+reincarnation	reincarnation_01.wav	solemn	[solemnly] System initializing... Soul signature confirmed. Welcome, Reincarnator.
+reincarnation	reincarnation_02.wav	solemn	[solemnly] Boot sequence complete. A new soul has been registered. Welcome to your second life.
+blessing_normal	blessing_normal_01.wav	solemn	[solemnly] No blessing selected. You will walk this world as you are. The System will be watching.
+blessing_hero	blessing_hero_01.wav	solemn	[solemnly] Hero blessing accepted. Your new life begins now.
+blessing_ascended	blessing_ascended_01.wav	solemn	[solemnly] Ascended blessing accepted. Your limits... have been removed.
+blessing_dormant	blessing_dormant_01.wav	solemn	[solemnly] Dormant blessing accepted. Its power sleeps. For now.
+blessing_custom	blessing_custom_01.wav	solemn	[solemnly] Custom configuration accepted. Your new life begins now.
+levelup	levelup_01.wav	solemn	[solemnly] Level up.
+levelup	levelup_02.wav	solemn	[solemnly] Level up. Your limits have been raised.
+levelup	levelup_03.wav	solemn	[solemnly] Level increased. Growth confirmed.
+levelup	levelup_04.wav	solemn	[solemnly] Experience threshold reached. Level up.
+levelup	levelup_05.wav	cold	[coldly] [clipped] Level up.
+levelup	levelup_06.wav	cold	[coldly] [clipped] Level up. Your limits have been raised.
+levelup	levelup_07.wav	cold	[coldly] [clipped] Level increased. Growth confirmed.
+levelup	levelup_08.wav	cold	[coldly] [clipped] Experience threshold reached. Level up.
+levelup	levelup_09.wav	plain	Level up.
+levelup	levelup_10.wav	plain	Level up. Your limits have been raised.
+levelup	levelup_11.wav	plain	Level increased. Growth confirmed.
+levelup	levelup_12.wav	plain	Experience threshold reached. Level up.
+milestone	milestone_01.wav	solemn	[solemnly] Quest complete. Reward granted.
+milestone	milestone_02.wav	solemn	[solemnly] Objective achieved. Rewards distributed.
+milestone	milestone_03.wav	solemn	[solemnly] Milestone recorded. The System acknowledges your progress.
+milestone	milestone_04.wav	cold	[coldly] [clipped] Quest complete. Reward granted.
+milestone	milestone_05.wav	cold	[coldly] [clipped] Objective achieved. Rewards distributed.
+milestone	milestone_06.wav	cold	[coldly] [clipped] Milestone recorded. The System acknowledges your progress.
+milestone	milestone_07.wav	plain	Quest complete. Reward granted.
+milestone	milestone_08.wav	plain	Objective achieved. Rewards distributed.
+milestone	milestone_09.wav	plain	Milestone recorded. The System acknowledges your progress.
+rank_d	rank_d_01.wav	solemn	[solemnly] System rank increased. Rank D.
+rank_c	rank_c_01.wav	solemn	[solemnly] System rank increased. Rank C.
+rank_b	rank_b_01.wav	solemn	[solemnly] System rank increased. Rank B.
+rank_a	rank_a_01.wav	solemn	[solemnly] System rank increased. Rank A.
+rank_s	rank_s_01.wav	solemn	[solemnly] System rank increased. Rank S. Maximum authority granted.
+quest_new	quest_new_01.wav	solemn	[solemnly] New quest issued.
+quest_new	quest_new_02.wav	solemn	[solemnly] A new objective has been assigned.
+quest_new	quest_new_03.wav	solemn	[solemnly] Quest received. Do not disappoint.
+quest_new	quest_new_04.wav	cold	[coldly] [clipped] New quest issued.
+quest_new	quest_new_05.wav	cold	[coldly] [clipped] A new objective has been assigned.
+quest_new	quest_new_06.wav	cold	[coldly] [clipped] Quest received. Do not disappoint.
+quest_new	quest_new_07.wav	plain	New quest issued.
+quest_new	quest_new_08.wav	plain	A new objective has been assigned.
+quest_new	quest_new_09.wav	plain	Quest received. Do not disappoint.
+quest_done	quest_done_01.wav	solemn	[solemnly] Objective fulfilled. System Points awarded.
+quest_done	quest_done_02.wav	solemn	[solemnly] Quest complete. Points transferred.
+quest_done	quest_done_03.wav	solemn	[solemnly] Target eliminated. Reward issued.
+quest_done	quest_done_04.wav	cold	[coldly] [clipped] Objective fulfilled. System Points awarded.
+quest_done	quest_done_05.wav	cold	[coldly] [clipped] Quest complete. Points transferred.
+quest_done	quest_done_06.wav	cold	[coldly] [clipped] Target eliminated. Reward issued.
+quest_done	quest_done_07.wav	plain	Objective fulfilled. System Points awarded.
+quest_done	quest_done_08.wav	plain	Quest complete. Points transferred.
+quest_done	quest_done_09.wav	plain	Target eliminated. Reward issued.
+dormant	dormant_01.wav	solemn	[solemnly] Dormant blessing... awakening.
+dormant	dormant_02.wav	solemn	[solemnly] The sleeping power stirs. Dormant blessing awakened.
+reboot	reboot_01.wav	solemn	[solemnly] System reboot. Rewriting fate.
+reboot	reboot_02.wav	solemn	[solemnly] Rebooting... Previous configuration erased.
+lethal	lethal_01.wav	solemn	[solemnly] Warning. Lethal threat detected.
+lethal	lethal_02.wav	solemn	[solemnly] Danger. This enemy exceeds your limits.
+lethal	lethal_03.wav	solemn	[solemnly] Lethal threat. Retreat is recommended.
+lethal	lethal_04.wav	cold	[coldly] [clipped] Warning. Lethal threat detected.
+lethal	lethal_05.wav	cold	[coldly] [clipped] Danger. This enemy exceeds your limits.
+lethal	lethal_06.wav	cold	[coldly] [clipped] Lethal threat. Retreat is recommended.
+lethal	lethal_07.wav	plain	Warning. Lethal threat detected.
+lethal	lethal_08.wav	plain	Danger. This enemy exceeds your limits.
+lethal	lethal_09.wav	plain	Lethal threat. Retreat is recommended.
+guild	guild_01.wav	solemn	[solemnly] Guild rank recognized.
+guild	guild_02.wav	solemn	[solemnly] Guild promotion confirmed. Your standing has risen.
+cosave_lost	cosave_lost_01.wav	solemn	[solemnly] Error. Soul record not found.
