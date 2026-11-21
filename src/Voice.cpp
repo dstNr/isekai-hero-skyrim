@@ -40,13 +40,14 @@ namespace Isekai::Voice {
             0x000DCA,  // IsekaiVOX_cosave_lost
         };
         static_assert(kFormIDs.size() == static_cast<std::size_t>(Line::CoSaveLost) + 1);
+        static_assert(static_cast<int>(Line::RankS) - static_cast<int>(Line::RankD) ==
+                      Logic::kRankS - Logic::kRankD);
 
         std::array<RE::BGSSoundDescriptorForm*, kFormIDs.size()> g_descriptors{};
 
-        // Gate state, touched by Say (any thread) and ResetSession.
+        // Gate state, touched by Say (any thread), OnRank, SayLethal and ResetSession.
         std::mutex g_lock;
-        double g_lastAt = -std::numeric_limits<double>::infinity();
-        int g_lastPriority = 0;
+        Logic::Gate g_gate;
         std::uint64_t g_generation = 0;  // bumped per accepted line
 
         // The line on the speakers. Main thread only (the DelayedMainThread callback).
@@ -63,7 +64,7 @@ namespace Isekai::Voice {
             case Line::BlessingDormant:
             case Line::BlessingCustom:
             case Line::Reboot:
-                return 3;
+                return Logic::kTopPriority;
             case Line::Dormant:
             case Line::RankD:
             case Line::RankC:
@@ -81,19 +82,43 @@ namespace Isekai::Voice {
                 .count();
         }
 
-        void Speak(RE::BGSSoundDescriptorForm* a_descriptor, int a_priority, Line a_line) {
+        // A line of the same weight waits for the running one: every 250 ms, for ~10 s.
+        constexpr std::uint32_t kWaitStepMs = 250;
+        constexpr int kWaitTries = 40;
+
+        // Main thread (DelayedMainThread callback). Never throws.
+        void Attempt(RE::BGSSoundDescriptorForm* a_descriptor, int a_priority, Line a_line,
+                     std::uint64_t a_generation, int a_triesLeft) {
+            {
+                std::scoped_lock lock(g_lock);
+                // Superseded by a later line that matters more, or by a load.
+                if (a_generation != g_generation && g_gate.lastPriority > a_priority) {
+                    return;
+                }
+            }
             auto* audio = RE::BSAudioManager::GetSingleton();
             if (!audio) {
                 return;
             }
-            if (g_handle.IsValid() && g_handle.IsPlaying()) {
-                // Only an outranked line is still running here: the gate let this one
-                // through, so either it matters more or the gap has passed. A lower line
-                // never cuts a higher one off mid-sentence.
-                if (a_priority < g_handlePriority) {
-                    return;
+            const bool playing = g_handle.IsValid() && g_handle.IsPlaying();
+            switch (Logic::HandoffFor(playing, g_handlePriority, a_priority)) {
+            case Logic::Handoff::kDrop:
+                return;
+            case Logic::Handoff::kWait:
+                if (a_triesLeft > 0) {
+                    DelayedMainThread(kWaitStepMs, [=]() {
+                        Attempt(a_descriptor, a_priority, a_line, a_generation, a_triesLeft - 1);
+                    });
+                } else {
+                    logger::warn("Voice: line {} gave up waiting for the one before it",
+                                 static_cast<int>(a_line));
                 }
+                return;
+            case Logic::Handoff::kInterrupt:
                 g_handle.Stop();
+                break;
+            case Logic::Handoff::kStart:
+                break;
             }
             RE::BSSoundHandle handle;
             if (!audio->GetSoundHandle(handle, a_descriptor) || !handle.Play()) {
@@ -102,6 +127,32 @@ namespace Isekai::Voice {
             }
             g_handle = handle;
             g_handlePriority = a_priority;
+        }
+
+        // Gate a line (a_lethal: through the lethal cooldown too) and schedule it.
+        void Submit(Line a_line, std::uint32_t a_delayMs, bool a_lethal) {
+            if (!Config::SystemVoice()) {
+                return;
+            }
+            const auto index = static_cast<std::size_t>(a_line);
+            auto* descriptor = index < g_descriptors.size() ? g_descriptors[index] : nullptr;
+            if (!descriptor) {
+                return;
+            }
+            const int priority = PriorityOf(a_line);
+            std::uint64_t generation = 0;
+            {
+                std::scoped_lock lock(g_lock);
+                const double now = NowSeconds();
+                if (!(a_lethal ? g_gate.AcceptLethal(now, priority) : g_gate.Accept(now, priority))) {
+                    return;
+                }
+                generation = ++g_generation;
+            }
+            DelayedMainThread(std::max(a_delayMs, Sounds::kResumeGraceMs),
+                              [descriptor, priority, a_line, generation]() {
+                                  Attempt(descriptor, priority, a_line, generation, kWaitTries);
+                              });
         }
     }
 
@@ -129,45 +180,30 @@ namespace Isekai::Voice {
     }
 
     void Say(Line a_line, std::uint32_t a_delayMs) {
-        if (!Config::SystemVoice()) {
-            return;
-        }
-        const auto index = static_cast<std::size_t>(a_line);
-        auto* descriptor = index < g_descriptors.size() ? g_descriptors[index] : nullptr;
-        if (!descriptor) {
-            return;
-        }
-        const int priority = PriorityOf(a_line);
-        std::uint64_t generation = 0;
+        Submit(a_line, a_delayMs, false);
+    }
+
+    void SayLethal() {
+        Submit(Line::Lethal, Sounds::kResumeGraceMs, true);
+    }
+
+    void OnRank(int a_rank) {
+        bool rose = false;
         {
             std::scoped_lock lock(g_lock);
-            const double now = NowSeconds();
-            if (!Logic::ShouldSpeak(now, g_lastAt, g_lastPriority, priority, Logic::kMinGapSeconds)) {
-                return;
-            }
-            g_lastAt = now;
-            g_lastPriority = priority;
-            generation = ++g_generation;
+            rose = g_gate.RankAnnounce(a_rank);  // recorded even with the voice off
         }
-        DelayedMainThread(std::max(a_delayMs, Sounds::kResumeGraceMs),
-                          [descriptor, priority, a_line, generation]() {
-                              {
-                                  std::scoped_lock lock(g_lock);
-                                  // Superseded by a later line that matters as much, or by a load.
-                                  if (generation != g_generation && g_lastPriority >= priority) {
-                                      return;
-                                  }
-                              }
-                              Speak(descriptor, priority, a_line);
-                          });
+        if (rose) {
+            Say(static_cast<Line>(static_cast<int>(Line::RankD) + a_rank - Logic::kRankD));
+        }
     }
 
     void ResetSession() {
         std::scoped_lock lock(g_lock);
+        g_gate.Reset();
         // The gap is over at once; the highest priority there is drops every line still
-        // waiting from the old session (the next Say passes on the gap alone).
-        g_lastAt = -std::numeric_limits<double>::infinity();
-        g_lastPriority = std::numeric_limits<int>::max();
+        // waiting from the old session (the next line passes on the gap alone).
+        g_gate.lastPriority = std::numeric_limits<int>::max();
         ++g_generation;
     }
 }

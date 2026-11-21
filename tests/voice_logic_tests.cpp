@@ -47,6 +47,58 @@ namespace {
         EXPECT(!LethalShouldSpeak(100.0 + 179.9, 100.0, kLethalCooldownSeconds));
         EXPECT(LethalShouldSpeak(100.0 + 180.0, 100.0, kLethalCooldownSeconds));
     }
+
+    void TopPriorityFollowsTopPriorityInsideGap() {
+        // Reboot, then a blessing picked within 4 s: the blessing line must not be dropped.
+        Gate g;
+        EXPECT(g.Accept(100.0, kTopPriority));
+        EXPECT(g.Accept(101.0, kTopPriority));
+        EXPECT(!g.Accept(101.5, 2));
+        EXPECT(!g.Accept(101.5, 1));
+    }
+
+    void GateKeepsTheGapBelowTop() {
+        Gate g;
+        EXPECT(g.Accept(100.0, 2));
+        EXPECT(!g.Accept(101.0, 2));
+        EXPECT(g.Accept(101.0, 3));
+        EXPECT(g.Accept(105.0, 1));
+    }
+
+    void OnlyAStrictlyHigherLineInterrupts() {
+        EXPECT(HandoffFor(false, 3, 1) == Handoff::kStart);
+        EXPECT(HandoffFor(true, 2, 3) == Handoff::kInterrupt);
+        EXPECT(HandoffFor(true, 3, 3) == Handoff::kWait);
+        EXPECT(HandoffFor(true, 3, 1) == Handoff::kDrop);
+    }
+
+    void LethalCooldownSpentOnlyWhenAccepted() {
+        Gate g;
+        EXPECT(g.Accept(100.0, 1));             // some other line just spoke
+        EXPECT(!g.AcceptLethal(101.0, 1));      // dropped by the gap...
+        EXPECT(g.AcceptLethal(104.0, 1));       // ...so the cooldown was not spent
+        EXPECT(!g.AcceptLethal(104.0 + 179.0, 1));
+        EXPECT(g.AcceptLethal(104.0 + 180.0, 1));
+    }
+
+    void RankRiseOnlyFromAKnownRank() {
+        Gate g;
+        EXPECT(!g.RankAnnounce(3));  // first rank seen after a load: not a rise
+        EXPECT(g.RankAnnounce(4));
+        EXPECT(!g.RankAnnounce(4));
+        EXPECT(!g.RankAnnounce(2));
+        g.Reset();
+        EXPECT(!g.RankAnnounce(5));  // loading a save with a higher rank says nothing
+        EXPECT(!g.RankAnnounce(9));  // out of range: recorded, no line
+        EXPECT(!g.RankAnnounce(5));
+    }
+
+    void ResetForgetsLethalAndGap() {
+        Gate g;
+        EXPECT(g.AcceptLethal(100.0, 1));
+        g.Reset();
+        EXPECT(g.AcceptLethal(101.0, 1));
+    }
 }
 
 int main() {
@@ -60,6 +112,12 @@ int main() {
         { "AfterGapAnyPriority", AfterGapAnyPriority },
         { "RankRoseNeedsKnownPrevious", RankRoseNeedsKnownPrevious },
         { "LethalCooldown", LethalCooldown },
+        { "TopPriorityFollowsTopPriorityInsideGap", TopPriorityFollowsTopPriorityInsideGap },
+        { "GateKeepsTheGapBelowTop", GateKeepsTheGapBelowTop },
+        { "OnlyAStrictlyHigherLineInterrupts", OnlyAStrictlyHigherLineInterrupts },
+        { "LethalCooldownSpentOnlyWhenAccepted", LethalCooldownSpentOnlyWhenAccepted },
+        { "RankRiseOnlyFromAKnownRank", RankRiseOnlyFromAKnownRank },
+        { "ResetForgetsLethalAndGap", ResetForgetsLethalAndGap },
     };
 
     int failedTests = 0;
