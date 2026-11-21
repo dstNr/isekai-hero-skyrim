@@ -783,7 +783,9 @@ namespace Isekai {
             RE::BSEventNotifyControl ProcessEvent(
                 const RE::LevelIncrease::Event*,
                 RE::BSTEventSource<RE::LevelIncrease::Event>*) override {
-                Voice::Say(Voice::Line::LevelUp);
+                if (g_state.reincarnated) {  // no System yet (or its state lost): nothing speaks
+                    Voice::Say(Voice::Line::LevelUp);
+                }
                 CheckDormantAwakening();
                 return RE::BSEventNotifyControl::kContinue;
             }
