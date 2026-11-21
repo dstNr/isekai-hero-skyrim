@@ -19,7 +19,7 @@
      the zones are framed around their own nodes, so a node moved in SkillTree.cpp
      keeps a correct picture without touching this page. */
   const SVGNS = "http://www.w3.org/2000/svg";
-  const NET_W = 920, NET_H = 660;          // the net's canvas in px, as in the markup
+  const NET_W = 1160, NET_H = 660;         // the net's canvas in px, as in the markup
   const NODE_R = 34;                       // a scale-1 node's half-size, design units
   /* The always-on name under a node, in canvas px (not scaled: the text is not either).
      Must agree with .nlabel's width, margin and line-height. A node's footprint is the
@@ -37,7 +37,9 @@
      arrive translated. */
   const isMastery = (n) => !!n.repeatable && +n.maxRank > 0;
 
-  /* Uniform scale from the graph's own extents, centred. Asymmetric padding: a zone's
+  /* Scale from the graph's own extents, centred. Tiles and padding take the smaller of the
+     two axis scales (k); positions spread across the full width (kx), so a wide net gives
+     the zones room between them instead of empty margins. Asymmetric padding: a zone's
      caption sits above its topmost node and every node carries a name below it. */
   function treeLayout(nodes) {
     const graph = nodes.filter((n) => !isMastery(n));
@@ -49,12 +51,13 @@
     });
     const cw = Math.max(1, maxX - minX), ch = Math.max(1, maxY - minY);
     const padX = 50, padTop = 56, padBot = 74;
-    const k = Math.min((NET_W - padX * 2) / cw, (NET_H - padTop - padBot) / ch);
-    return { k: k,
-             ox: (NET_W - cw * k) / 2 - minX * k,
+    const kx = (NET_W - padX * 2) / cw, ky = (NET_H - padTop - padBot) / ch;
+    const k = Math.min(kx, ky);
+    return { k: k, kx: kx,
+             ox: (NET_W - cw * kx) / 2 - minX * kx,
              oy: padTop + (NET_H - padTop - padBot - ch * k) / 2 - minY * k };
   }
-  const posOf = (L, n) => ({ x: L.ox + n.x * L.k, y: L.oy + n.y * L.k });
+  const posOf = (L, n) => ({ x: L.ox + n.x * L.kx, y: L.oy + n.y * L.k });
   const radOf = (L, n) => NODE_R * (+n.scale || 1) * L.k;
 
   function nodeBox(L, n) {

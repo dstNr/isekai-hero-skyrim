@@ -1136,6 +1136,25 @@ check("ui: no skill-tree tile covers a zone header", () => {
   return "all headers clear";
 });
 
+check("ui: the web view's zone frames keep apart", () => {
+  // Lauf 41: neighbouring branch frames shared or crossed their edges ("the frames of the
+  // trees still overlap"). The design-unit check above holds; the page pads every frame
+  // by its own nodes' names, so it is measured here in canvas px, as drawn.
+  const GAP = 12;
+  const { geo, graph, L } = webNet();
+  const zs = geo.zones(L, graph);
+  let tightest = Infinity;
+  for (let i = 0; i < zs.length; i++) {
+    for (let j = i + 1; j < zs.length; j++) {
+      const a = zs[i], b = zs[j];
+      const gap = Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w), b.y - (a.y + a.h), a.y - (b.y + b.h));
+      need(gap >= GAP, `${a.zone} and ${b.zone} frames are ${gap.toFixed(1)} px apart (at least ${GAP})`);
+      tightest = Math.min(tightest, gap);
+    }
+  }
+  return `${zs.length} frames, tightest gap ${tightest.toFixed(0)} px, scale ${L.k.toFixed(3)}`;
+});
+
 check("ui: the controller's focus ring can reach every kind of target", () => {
   // A pad has no cursor, so in the web view it navigates by moving focus between the
   // elements named in a selector list. Those are class selectors written by hand against
