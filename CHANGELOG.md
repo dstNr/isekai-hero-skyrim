@@ -4,6 +4,20 @@ All notable changes to Isekai Hero are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **The System speaks.** 67 English lines (ElevenLabs, model `eleven_v4`) at twelve moments:
+  binding, the blessing, level up, milestone, System rank rise, new and finished System
+  quest, Dormant awakening, reboot, a LETHAL threat, guild promotion and a lost co-save.
+  Played through 20 SNDRs `IsekaiVOX_*` (`0xDB7`–`0xDCA`, category Voice) with the files in
+  `Sound\fx\isekai\voice\`. A more important line may cut a minor one, an equal one waits,
+  minor lines keep 4 s apart; LETHAL warns once per enemy and at most every 180 s; a load
+  drops anything pending and a higher rank in a loaded save stays silent. No line on
+  window open, shop or skill-tree purchase. Switch `SystemVoice` (`[Voice]`, ini and MCM,
+  default 1). Self-test row `System voice descriptors N/20 resolved`; `check.mjs` checks the
+  descriptors and their files.
+
 ## [1.0.0] — 2026-11-18
 
 ### Added

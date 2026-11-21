@@ -243,6 +243,24 @@ and [MCM Helper](https://www.nexusmods.com/skyrimspecialedition/mods/53000); the
 itself uses no MCM Helper API — the menu writes a plain ini that `Config` layers over the
 shipped one, so a key the menu never mentions falls through rather than resetting.
 
+### The System's voice
+
+The System speaks at its big moments: when it binds the player, at the chosen blessing, on
+level up, a milestone, a System rank rise, a new and a finished System quest, the Dormant
+awakening, a reboot, a LETHAL threat entering the labels, a guild promotion and a lost
+co-save. 67 spoken lines in 20 sound descriptors (`IsekaiVOX_*`, category Voice, so the
+game's Voice slider sets their loudness). The frequent moments pick at random between a
+solemn, a cold and a plain delivery.
+
+It never talks over itself: a more important line (blessing, reboot) may cut a minor one, an
+equal one waits for the running line, and minor lines keep a 4 s gap. LETHAL warns once per
+enemy and at most once every 3 minutes. Loading a save forgets everything pending, and a
+save with a higher rank does not announce it. Switch: `SystemVoice` in `[Voice]`
+(`IsekaiHero.ini` and the MCM), default on.
+
+The lines are in English and are listed in `voice/lines.tsv`; `voice/README.md` says how
+they were made.
+
 ### Optional SkyrimNet integration *(experimental, untested)*
 
 When [SkyrimNet](https://github.com/MinLL/SkyrimNet-GamePlugin) (AI-driven NPCs) is
@@ -421,6 +439,7 @@ keep returning V1.
 ## Credits
 
 - **UI sounds** by Nathan Gibson (Cyrex Studios) — [UI Sound Pack](https://cyrex-studios.itch.io/ui-sound-pack), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- **The System's voice** generated with [ElevenLabs](https://elevenlabs.io) text-to-speech (model `eleven_v4`, paid plan)
 - **Weapon meshes and textures** generated with [Meshy](https://www.meshy.ai), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 - **Skill-tree node icons** by The Higalina Vault — [40 Spell Icons (Fantasy Style)](https://higalina.itch.io/40-spell-icons-fantasy-style-png-512x512). Every other icon in `icons/` is AI-generated artwork made for this mod.
 - **Crafting integration** — the Dimensional Storage reads/consumes the chest at a
