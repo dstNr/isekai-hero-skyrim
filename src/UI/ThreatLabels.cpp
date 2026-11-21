@@ -4,11 +4,13 @@
 #include "Loc.h"
 #include "UI/Hud.h"
 #include "UI/Input.h"
+#include "Voice.h"
 
 #include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace Isekai::UI {
@@ -22,6 +24,12 @@ namespace Isekai::UI {
         // fight, and someone who left them on can silence them for a screenshot.
         // Written on the main thread, read by the frame tick and the hotkey path.
         std::atomic<int> g_override{ -1 };
+
+        // Actors the lethal warning has already been raised for, since the last level-up
+        // (which changes every verdict) or load. Main thread only: SelectLabels and
+        // ResetLethalWarnings.
+        std::unordered_set<std::uint32_t> g_lethalSeen;
+        std::int32_t                      g_lethalSeenLevel = -1;
 
         // The verdict word. The verdict itself is Logic::VerdictFor (four bands, enough to
         // read as a System judgement without pretending to be a combat simulator); the
@@ -232,6 +240,10 @@ namespace Isekai::UI {
                   "threat");
     }
 
+    void ResetLethalWarnings() {
+        g_lethalSeen.clear();
+    }
+
     void LabelScreenSize(float& a_width, float& a_height) {
         a_width = 1920.0f;
         a_height = 1080.0f;
@@ -406,6 +418,18 @@ namespace Isekai::UI {
                   [](const LabelData& a, const LabelData& b) { return a.distance < b.distance; });
         if (labels.size() > kMaxLabels) {
             labels.resize(kMaxLabels);
+        }
+
+        // The voice warns on the edge: an actor shown LETHAL for the first time. Voice
+        // owns the cooldown, so a pack of them still yields one line.
+        if (playerLevel != g_lethalSeenLevel) {
+            g_lethalSeen.clear();
+            g_lethalSeenLevel = playerLevel;
+        }
+        for (const auto& label : labels) {
+            if (label.verdict == Logic::Verdict::Lethal && g_lethalSeen.insert(label.id).second) {
+                Voice::SayLethal();
+            }
         }
         return labels;
     }

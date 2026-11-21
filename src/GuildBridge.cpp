@@ -4,6 +4,7 @@
 #include "Loc.h"
 #include "System.h"
 #include "UI/Hud.h"
+#include "Voice.h"
 
 #include <algorithm>
 #include <cmath>
@@ -34,6 +35,9 @@ namespace Isekai::GuildBridge {
                          points);
             UI::ShowToast(LF("guild.payout", "[ SYSTEM ]  Guild work recognised  —  +{} SP", points),
                           kToastKey);
+            if (a_event == "AG_RankChanged") {
+                Voice::Say(Voice::Line::Guild);
+            }
         }
 
         class Sink : public RE::BSTEventSink<SKSE::ModCallbackEvent> {

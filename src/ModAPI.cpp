@@ -8,6 +8,7 @@
 #include "Progression.h"
 #include "SkillTree.h"
 #include "System.h"
+#include "Voice.h"
 
 namespace Isekai::ModAPI {
 
@@ -133,6 +134,10 @@ namespace Isekai::ModAPI {
         now.active = GetState().reincarnated;
         now.tier = TierValue(GetState().power);
         now.rank = RankValue(Progression::SystemRank());
+        // Every tick, not only when something is published: the first tick after a load
+        // has to record the loaded rank even when nothing differs from the last publish,
+        // or the next rise would be heard as the first rank of the session and stay silent.
+        Voice::OnRank(now.rank);
         now.systemPoints = GetState().systemPoints;
 
         if (g_everPublished && now.active == g_published.active && now.tier == g_published.tier &&

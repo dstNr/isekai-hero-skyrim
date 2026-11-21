@@ -5,6 +5,7 @@
 #include "Sounds.h"
 #include "System.h"
 #include "UI/Hud.h"
+#include "Voice.h"
 
 #include <algorithm>
 #include <random>
@@ -198,6 +199,7 @@ namespace Isekai::Quests {
             const auto payout = std::max(1, state.questReward);
             GrantSystemPoints(payout);
             Sounds::Play(Sounds::Sfx::LevelUp);
+            Voice::Say(Voice::Line::QuestDone, 900);  // after the sting
             logger::info("Quests: objective complete ({}) — paid {} System Point(s)",
                          a_quarry.name, payout);
             UI::ShowToastBanner(LF("quest.complete",
@@ -388,6 +390,11 @@ namespace Isekai::Quests {
             return;
         }
         Roll(0);
+        // Here and not in Roll: the player's own Reroll button stays silent. Roll can
+        // still come back empty-handed, and then there is nothing to announce.
+        if (state.questKey != 0) {
+            Voice::Say(Voice::Line::QuestNew);
+        }
     }
 
     bool Active() {

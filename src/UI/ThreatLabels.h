@@ -67,6 +67,10 @@ namespace Isekai::UI {
     // filter and pos stays {0, 0}.
     [[nodiscard]] std::vector<LabelData> SelectLabels(bool a_project);
 
+    // Main thread, on load and new game. Forget which actors the lethal warning already
+    // spoke about, so the new session warns afresh.
+    void ResetLethalWarnings();
+
     // Main thread, flat screens. The game's render size in pixels (1920 x 1080 if it
     // cannot be read): what the projection and LabelPushGate measure pixels in.
     void LabelScreenSize(float& a_width, float& a_height);

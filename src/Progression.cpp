@@ -12,6 +12,7 @@
 #include "UI/Input.h"
 #include "UI/Hud.h"
 #include "UI/Screens.h"
+#include "Voice.h"
 
 #include <algorithm>
 #include <cctype>
@@ -331,6 +332,7 @@ namespace Isekai::Progression {
                 Celebrate(a_milestone.endpoint ? L("flourish.milestone", "MILESTONE")
                                                : L("flourish.questComplete", "QUEST COMPLETE"),
                           QuestName(a_milestone), RewardText(a_milestone, perks));
+                Voice::Say(Voice::Line::Milestone, 900);  // after the flourish's sting
             }
         }
 

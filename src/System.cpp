@@ -330,6 +330,11 @@ namespace Isekai {
             // The biggest moment the mod has: let the flourish land before the panel.
             // (The sting comes with the flourish — PlayLevelUpEffect owns it.)
             UI::PlayLevelUpEffect(L("flourish.awakened", "AWAKENED"), PowerName(g_state.power));
+            Voice::Say(g_state.custom                          ? Voice::Line::BlessingCustom
+                       : g_state.dormant                       ? Voice::Line::BlessingDormant
+                       : g_state.power == PowerLevel::Ascended ? Voice::Line::BlessingAscended
+                       : g_state.power == PowerLevel::Hero     ? Voice::Line::BlessingHero
+                                                               : Voice::Line::BlessingNormal);
 
             // Gold: the blessing has landed (spec 7.2).
             DelayedMainThread(1600, [body]() {
@@ -644,6 +649,7 @@ namespace Isekai {
             UI::PlayLevelUpEffect(ascended ? L("flourish.transcended", "TRANSCENDED")
                                            : L("flourish.awakened", "AWAKENED"),
                                   PowerName(a_tier));
+            Voice::Say(Voice::Line::Dormant, 900);  // after the flourish's sting
             DelayedMainThread(1600, [body]() {
                 UI::ShowSystemWindow(L("window.system", "[ SYSTEM ]"), body,
                                      { L("button.continue", "CONTINUE") }, [](int) {}, 45.0f, 720.0f,
@@ -674,6 +680,7 @@ namespace Isekai {
             }
 
             g_state.reincarnated = true;  // fire exactly once per character
+            Voice::Say(Voice::Line::Reincarnation);
 
             logger::info("Reincarnation triggered — System boot sequence");
 
@@ -776,6 +783,7 @@ namespace Isekai {
             RE::BSEventNotifyControl ProcessEvent(
                 const RE::LevelIncrease::Event*,
                 RE::BSTEventSource<RE::LevelIncrease::Event>*) override {
+                Voice::Say(Voice::Line::LevelUp);
                 CheckDormantAwakening();
                 return RE::BSEventNotifyControl::kContinue;
             }
@@ -1212,6 +1220,7 @@ namespace Isekai {
                 return;
             }
             g_stateLost = true;
+            Voice::Say(Voice::Line::CoSaveLost, 2000);
             logger::error("Co-save: no Isekai Hero record, but the character carries System "
                           "abilities — the .skse co-save is missing or was not read. Automatic "
                           "reincarnation and storage clean-up are held; the System key still "
@@ -1271,6 +1280,10 @@ namespace Isekai {
             // populated and the catch-up knows what it already owes.
             case SKSE::MessagingInterface::kPostLoadGame:
             case SKSE::MessagingInterface::kNewGame:
+                // First: the old session's voice state must not gate or drop this one's
+                // lines (the lost co-save line just below, a dormant awakening on load).
+                Voice::ResetSession();
+                UI::ResetLethalWarnings();
                 if (a_msg->type == SKSE::MessagingInterface::kPostLoadGame) {
                     CheckCoSave();
                 }
@@ -1446,6 +1459,7 @@ namespace Isekai {
                      "baseline {}, skill tree {})",
                      restored ? "restored" : "not available",
                      refunded ? "refunded" : "nothing to refund");
+        Voice::Say(Voice::Line::Reboot);
         ShowPowerSelection();
     }
 
