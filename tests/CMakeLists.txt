@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 enable_testing()
 
-foreach(name enchant_logic readiness selftest_format tick_throttle ui_logic)
+foreach(name enchant_logic readiness selftest_format tick_throttle ui_logic voice_logic)
     add_executable(${name}_tests ${name}_tests.cpp)
     if(MSVC)
         target_compile_options(${name}_tests PRIVATE /W4 /WX /utf-8 /permissive-)

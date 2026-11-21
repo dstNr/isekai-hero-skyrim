@@ -1800,6 +1800,7 @@ function espFormIds() {
   const ids = [
     ...grab("src/Passives.cpp", /^\s*(0x000[0-9A-Fa-f]{3}),\s*\/\/\s*(.+)$/gm),
     ...grab("src/Sounds.cpp", /^\s*(0x000[0-9A-Fa-f]{3}),\s*\/\/\s*(.+)$/gm),
+    ...grab("src/Voice.cpp", /^\s*(0x000[0-9A-Fa-f]{3}),\s*\/\/\s*(.+)$/gm),
     ...grab("src/Storage.cpp", /constexpr RE::FormID \w+ = (0x000[0-9A-Fa-f]{3});()/g),
   ];
   // Potion IDs are 0 until their records exist; a real one joins the collision check.
@@ -1900,6 +1901,7 @@ check("ESP: every FormID the code names exists in the plugin", () => {
   };
   add("src/Passives.cpp", /^\s*(0x000[0-9A-Fa-f]{3}),\s*\/\/\s*(.+)$/gm);
   add("src/Sounds.cpp", /^\s*(0x000[0-9A-Fa-f]{3}),\s*\/\/\s*(.+)$/gm);
+  add("src/Voice.cpp", /^\s*(0x000[0-9A-Fa-f]{3}),\s*\/\/\s*(.+)$/gm);
   add("src/Storage.cpp", /constexpr RE::FormID (?:\w+) = (0x000[0-9A-Fa-f]{3});/g, "storage form");
   add("src/Shop.cpp", /Cat::k\w+,\s*\d+,\s*Shelf::k\w+,\s*(0x[0-9A-Fa-f]+)\s*\}/g, "shop item");
   need(named.length > 0, "no ESP FormIDs found in the source — parser stale?");
@@ -1926,6 +1928,42 @@ check("ESP: the ability and sound tables have their expected sizes", () => {
        `Passives lists ${abilities} abilities but the self-test expects ${expected[1]}`);
   need(sounds === 4, `Sounds lists ${sounds} descriptors, expected 4`);
   return `${abilities} abilities, ${sounds} sounds`;
+});
+
+check("ESP: the voice table names 20 SNDRs whose files all ship", () => {
+  // Voice.cpp resolves these by local FormID; the self-test reports N/20. A row pointing at
+  // something other than a sound descriptor, or a descriptor naming a WAV that is not in
+  // sounds/voice/ (package.ps1 ships that folder to Sound\fx\isekai\voice\), is silence.
+  const ids = [...read("src/Voice.cpp").matchAll(/^\s*(0x000[0-9A-Fa-f]{3}),\s*\/\/\s*(.+)$/gm)]
+    .map((m) => ({ id: parseInt(m[1], 16), note: m[2].trim() }));
+  need(ids.length === 20, `Voice lists ${ids.length} descriptors, expected 20`);
+  const { recs } = parseEsp();
+  const byLocal = new Map(recs.map((r) => [r.local, r]));
+  const prefix = "fx\\isekai\\voice\\";
+  let files = 0;
+  for (const { id, note } of ids) {
+    const hex = `0x${id.toString(16).toUpperCase().padStart(6, "0")}`;
+    const r = byLocal.get(id);
+    need(r && r.sig === "SNDR", `${hex} (${note}) is ${r ? `a ${r.sig}` : "missing"}, not an SNDR`);
+    need(r.edid === note, `${hex} is ${r.edid} in the ESP but Voice.cpp calls it ${note}`);
+    need(r.body.length > 0, `${hex} is compressed, so its files cannot be read`);
+    const anams = [];
+    for (let i = 0; i + 6 <= r.body.length;) {
+      const size = r.body.readUInt16LE(i + 4);
+      if (r.body.subarray(i, i + 4).toString("ascii") === "ANAM") {
+        anams.push(r.body.subarray(i + 6, i + 6 + size).toString("ascii").replace(/\0.*$/, ""));
+      }
+      i += 6 + size;
+    }
+    need(anams.length > 0, `${hex} (${note}) lists no sound file`);
+    for (const a of anams) {
+      need(a.toLowerCase().startsWith(prefix), `${note} plays ${a}, outside ${prefix}`);
+      const name = a.slice(prefix.length);
+      need(existsSync(join(ROOT, "sounds", "voice", name)), `${note}: sounds/voice/${name} is missing`);
+      ++files;
+    }
+  }
+  return `20 SNDRs, ${files} files present`;
 });
 
 check("ESP: the storage chest's model is empty and ships", () => {

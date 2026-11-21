@@ -35,6 +35,7 @@ namespace Isekai::Config {
         bool          g_storageCodex = false;
         bool          g_skyrimNetIntegration = true;
         bool          g_threatLabels = true;
+        bool          g_systemVoice = true;
         ThreatTargets g_threatTargets = ThreatTargets::kAggro;
         bool          g_threatNumbers = true;
         // On: the two pools share one thin strip under the health bar, so they cost the
@@ -262,6 +263,8 @@ namespace Isekai::Config {
                 g_skyrimNetIntegration = AsBool(val);
             } else if (key == "threatlabels") {
                 g_threatLabels = AsBool(val);
+            } else if (key == "systemvoice") {
+                g_systemVoice = AsBool(val);
             } else if (key == "threatlabeltargets") {
                 const std::string v = Lower(val);
                 g_threatTargets = v == "all"         ? ThreatTargets::kAll
@@ -432,6 +435,7 @@ namespace Isekai::Config {
         g_storageCodex = false;
         g_skyrimNetIntegration = true;
         g_threatLabels = true;
+        g_systemVoice = true;
         g_threatTargets = ThreatTargets::kAggro;
         g_threatNumbers = true;
         g_threatResources = true;
@@ -485,7 +489,7 @@ namespace Isekai::Config {
                      "HideSealedNodes={}, SystemMenuKey={}, SystemMenuModifier={}, "
                      "VRMenuButton={}, GamepadMenuButton={}, GamepadMenuModifier={}, "
                      "DormantHeroLevel={}, DormantAscendedLevel={}, StorageCodex={}, "
-                     "SkyrimNetIntegration={}, ThreatLabels={} (targets={}, range={}, aim={}%, "
+                     "SkyrimNetIntegration={}, SystemVoice={}, ThreatLabels={} (targets={}, range={}, aim={}%, "
                      "key={}), "
                      "FirstTaskHours={}, TaskIntervalHours={}, QuestRewardScale={}, QuestRerollButton={}, "
                      "SelfTestKey={}, DebugPointsKey={}, LogInputDiagnostics={}"
@@ -495,7 +499,7 @@ namespace Isekai::Config {
                      KeyName(g_vrMenuButton), GamepadButtonName(g_padMenuButton),
                      GamepadButtonName(g_padMenuModifier),
                      g_dormantHeroLevel, g_dormantAscendedLevel, g_storageCodex,
-                     g_skyrimNetIntegration, g_threatLabels,
+                     g_skyrimNetIntegration, g_systemVoice, g_threatLabels,
                      g_threatTargets == ThreatTargets::kAll         ? "all"
                      : g_threatTargets == ThreatTargets::kCrosshair ? "crosshair"
                      : g_threatTargets == ThreatTargets::kHostile   ? "hostile"
@@ -602,6 +606,10 @@ namespace Isekai::Config {
 
     bool ThreatLabels() {
         return g_threatLabels;
+    }
+
+    bool SystemVoice() {
+        return g_systemVoice;
     }
 
     bool ThreatLabelNumbers() {

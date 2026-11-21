@@ -65,6 +65,9 @@ add_commonlibsse_plugin(
         src/SkyrimNet.h
         src/Sounds.cpp
         src/Sounds.h
+        src/Voice.cpp
+        src/Voice.h
+        src/VoiceLogic.h
         src/Storage.cpp
         src/Storage.h
         src/CraftHooks.cpp

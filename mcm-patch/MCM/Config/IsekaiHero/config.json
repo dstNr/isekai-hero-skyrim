@@ -35,6 +35,13 @@
           "type": "toggle",
           "valueOptions": { "sourceType": "ModSettingBool", "defaultValue": true }
         },
+        {
+          "id": "bSystemVoice:Voice",
+          "text": "System voice",
+          "help": "The System speaks its announcements aloud. Off keeps the text windows and silences the voice; takes effect at once.",
+          "type": "toggle",
+          "valueOptions": { "sourceType": "ModSettingBool", "defaultValue": true }
+        },
         { "text": "", "type": "empty" },
         {
           "text": "Language stays in IsekaiHero.ini: it names a file in the lang folder, and there is no useful way to list those here.",

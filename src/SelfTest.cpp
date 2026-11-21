@@ -12,6 +12,7 @@
 #include "Readiness.h"
 #include "SelfTestFormat.h"
 #include "Sounds.h"
+#include "Voice.h"
 #include "Shop.h"
 #include "SkillTree.h"
 #include "Storage.h"
@@ -93,6 +94,11 @@ namespace Isekai::SelfTest {
             Add(out, sounds == soundsTotal, false, "ESP sound descriptors",
                 std::to_string(sounds) + "/" + std::to_string(soundsTotal) + " resolved" +
                     (sounds == soundsTotal ? "" : " — those effects will be silent"));
+
+            const auto [voices, voicesTotal] = Voice::Resolved();
+            Add(out, voices == voicesTotal, false, "System voice descriptors",
+                std::to_string(voices) + "/" + std::to_string(voicesTotal) + " resolved" +
+                    (voices == voicesTotal ? "" : " — those lines will be silent"));
 
             auto* chest = Plugin::LookupOurForm<RE::TESObjectCONT>(0x000D7A);
             Add(out, chest != nullptr, true, "ESP storage container",

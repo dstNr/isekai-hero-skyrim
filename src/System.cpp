@@ -19,6 +19,7 @@
 #include "SkyrimNet.h"
 #include "Sounds.h"
 #include "Storage.h"
+#include "Voice.h"
 #include "UI/Hud.h"
 #include "UI/Input.h"
 #include "UI/Magelight.h"
@@ -1233,6 +1234,7 @@ namespace Isekai {
                 Plugin::DumpForms();
                 Passives::Install();
                 Sounds::Install();
+                Voice::Install();       // the System's spoken lines
                 Enchantments::Resolve();
                 Storage::Install();
                 Shop::Install();         // resolves the System Shop's soul-gem catalog

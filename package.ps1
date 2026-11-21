@@ -154,6 +154,10 @@ New-Item -ItemType Directory -Force $sound | Out-Null
 foreach ($wav in "Cinematic_6_1.wav", "Cinematic_7_2.wav", "Modern_2_2.wav", "Modern_5_2.wav") {
     Copy-Item (Join-Path $root "sounds\$wav") $sound
 }
+# The System's voice: every variant the voice SNDRs list (tools/check.mjs checks they exist).
+$voice = Join-Path $sound "voice"
+New-Item -ItemType Directory -Force $voice | Out-Null
+Copy-Item (Join-Path $root "sounds\voice\*.wav") $voice
 
 # --- privacy gate: nothing leaves this folder with the author's name in it ---
 # This used to check the DLL only, which is how v0.5.0 shipped a 130 MB .pdb with the

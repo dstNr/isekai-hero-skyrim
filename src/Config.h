@@ -104,6 +104,10 @@ namespace Isekai::Config {
     // who run SkyrimNet yet want no System context in it. See src/SkyrimNet.cpp.
     [[nodiscard]] bool SkyrimNetIntegration();
 
+    // The System speaks its announcements aloud (src/Voice.cpp). Default on; checked
+    // on every line, so the MCM switch takes effect at once.
+    [[nodiscard]] bool SystemVoice();
+
     // Floating threat verdicts over actors (src/UI/ThreatLabels.cpp). Default on.
     // Drawn by the Magelight hud view (src/UI/Hud.cpp).
     [[nodiscard]] bool ThreatLabels();
