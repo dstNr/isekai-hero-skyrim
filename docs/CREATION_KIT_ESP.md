@@ -17,6 +17,7 @@ plugin and wired up. What is left:
 verified in game on 2026-09-11.
 **L is done too**, and without the Creation Kit — see Part L for why and for what to test.
 **M is done the same way** — the eight System enchantments; see Part M for the FormIDs.
+**N as well** — the twenty voice descriptors of the System; see Part N.
 The **G fix** is a single `FULL - Name` change — see the warning box in Part G. **J** only
 if you want to go further.
 
@@ -893,6 +894,84 @@ effect shader covers the whole body). `IsekaiArtSystemBreach` now points at its 
 `tools/build-systembreach-hit.py`, texture `textures\isekai\effects\systembreach_glitch.dds`);
 only its `MODL` changed (OBND and the empty `MODT` are still the shock-cloak's). Whether it
 plays in game is the same test.
+
+---
+
+## Part N — Voice descriptors of the System — **done, and not in the Creation Kit**
+
+The System's spoken lines ([design](superpowers/specs/2026-11-20-system-voice-design.md)).
+One sound descriptor per moment, and one per blessing and rank; each lists every recorded
+variant of its line, and the engine picks one of them at random each time it plays. 20 new
+records, local FormIDs `0xDB7`–`0xDCA`, no existing record changed, masters still only
+`Skyrim.esm` and `Update.esm`.
+
+The WAV files are `sounds/voice/<sndr>_<nn>.wav` in the repo (the list with every line's
+text is `voice/lines.tsv`); packaging puts them in `Data\Sound\fx\isekai\voice\`.
+
+| FormID | Editor ID | Variants | Sound files |
+|---|---|---|---|
+| `0xDB7` | `IsekaiVOX_reincarnation` | 2 | `fx\isekai\voice\reincarnation_01.wav` … `_02` |
+| `0xDB8` | `IsekaiVOX_blessing_normal` | 1 | `fx\isekai\voice\blessing_normal_01.wav` |
+| `0xDB9` | `IsekaiVOX_blessing_hero` | 1 | `fx\isekai\voice\blessing_hero_01.wav` |
+| `0xDBA` | `IsekaiVOX_blessing_ascended` | 1 | `fx\isekai\voice\blessing_ascended_01.wav` |
+| `0xDBB` | `IsekaiVOX_blessing_dormant` | 1 | `fx\isekai\voice\blessing_dormant_01.wav` |
+| `0xDBC` | `IsekaiVOX_blessing_custom` | 1 | `fx\isekai\voice\blessing_custom_01.wav` |
+| `0xDBD` | `IsekaiVOX_levelup` | 12 | `fx\isekai\voice\levelup_01.wav` … `_12` |
+| `0xDBE` | `IsekaiVOX_milestone` | 9 | `fx\isekai\voice\milestone_01.wav` … `_09` |
+| `0xDBF` | `IsekaiVOX_rank_d` | 1 | `fx\isekai\voice\rank_d_01.wav` |
+| `0xDC0` | `IsekaiVOX_rank_c` | 1 | `fx\isekai\voice\rank_c_01.wav` |
+| `0xDC1` | `IsekaiVOX_rank_b` | 1 | `fx\isekai\voice\rank_b_01.wav` |
+| `0xDC2` | `IsekaiVOX_rank_a` | 1 | `fx\isekai\voice\rank_a_01.wav` |
+| `0xDC3` | `IsekaiVOX_rank_s` | 1 | `fx\isekai\voice\rank_s_01.wav` |
+| `0xDC4` | `IsekaiVOX_quest_new` | 9 | `fx\isekai\voice\quest_new_01.wav` … `_09` |
+| `0xDC5` | `IsekaiVOX_quest_done` | 9 | `fx\isekai\voice\quest_done_01.wav` … `_09` |
+| `0xDC6` | `IsekaiVOX_dormant` | 2 | `fx\isekai\voice\dormant_01.wav` … `_02` |
+| `0xDC7` | `IsekaiVOX_reboot` | 2 | `fx\isekai\voice\reboot_01.wav` … `_02` |
+| `0xDC8` | `IsekaiVOX_lethal` | 9 | `fx\isekai\voice\lethal_01.wav` … `_09` |
+| `0xDC9` | `IsekaiVOX_guild` | 2 | `fx\isekai\voice\guild_01.wav` … `_02` |
+| `0xDCA` | `IsekaiVOX_cosave_lost` | 1 | `fx\isekai\voice\cosave_lost_01.wav` |
+
+67 sound files in all. The order matters for the same reason as in Part E: the code maps the
+descriptors by FormID, in exactly this order.
+
+**Category and output model.** All twenty use the category **`AudioCategoryVOC`**
+(`0x0876BB`, Skyrim.esm), so the game's *Voice* volume slider controls them. It is the
+category of Skyrim's only voice-category sound descriptor, `NPCDraugrVoiceTaunt`
+(`0x10EC65`), and the engine's default object for dialogue voice. The output model is
+**`SOMDialogue2D`** (`0x0B5183`), *not* the draugr taunt's `SOMMono03000_verb`
+(`0x0F1B12`): that one is a positioned 3D model that fades out between 150 and 3000 units,
+while the System's lines are played without a position (like the Part E sounds). `SOMDialogue2D`
+is the engine's default output model for unpositioned dialogue; vanilla uses it for the
+voices that speak inside the player's head (Azura, Dagon, Namira, Hircine's beast).
+
+> ⚠️ **Voice pauses while a menu is open.** `AudioCategoryVOC` sits under
+> `AudioCategoryPausedDuringMenu`, so a line started while a menu is up is held until it
+> closes. That is why the Voice code plays its lines only after the menu's resume pass.
+
+### How it was built
+
+Written byte-wise into the plugin by a script, for the same reason as Parts L and M. Each
+record is `IsekaiSND_LevelUp` (`0xD7B`, Part E) with four changes: its own `EDID`, `GNAM`
+and `ONAM` as above, and one `ANAM` per variant instead of one. `CNAM` (standard
+descriptor), `LNAM` (no loop) and `BNAM` (priority 128, static attenuation 10.57 dB) are
+`0xD7B`'s bytes unchanged. The new records sit at the end of the existing `SNDR` group.
+
+### How it was verified
+
+Read back by an independent parser: every record parses to its exact length, 20 new
+`SNDR`s with the editor IDs, FormIDs and subrecord order above, every `ANAM` path matching
+`voice/lines.tsv` and naming a file that exists in `sounds/voice/` (67 of 67), header count
+109 = 96 records + 13 groups, ESL flag and masters unchanged. A byte diff against the
+previous plugin shows only three changes: the header's record count, the `SNDR` group's
+size, and the inserted records; everything after them is identical. The header's
+next-object ID stays `0x2314`: it is already above `0xDCA`, and lowering it would let an
+editor hand out IDs that are taken. `node tools\check.mjs` passes.
+
+### What is left
+
+Hearing it (in game): that the Voice slider moves the lines, that they sound centred and
+unfaded wherever the player stands, and whether 10.57 dB of static attenuation (copied from
+the UI sounds) leaves them loud enough next to dialogue.
 
 ---
 
