@@ -1985,6 +1985,34 @@ check("ESP: the voice table names 20 SNDRs whose files all ship", () => {
   return `20 SNDRs, ${files} files present`;
 });
 
+check("ESP: the voice has its own category, outside the menu pause", () => {
+  // Every System window pauses the game. Under AudioCategoryVOC (-> PausedDuringMenu) a line
+  // waited for the window to close, so the voice has its own SNCT 0xDCB directly under
+  // _AudioCategoryMaster, with its own slider in Settings -> Audio.
+  const { recs } = parseEsp();
+  const sub = (body, want) => {
+    for (let i = 0; i + 6 <= body.length;) {
+      const size = body.readUInt16LE(i + 4);
+      if (body.subarray(i, i + 4).toString("ascii") === want) return body.subarray(i + 6, i + 6 + size);
+      i += 6 + size;
+    }
+    return null;
+  };
+  const OWN_SNCT = 0x02000dcb;  // 02 = this plugin's own index (two masters)
+  const cat = recs.find((r) => r.local === 0xdcb);
+  need(cat && cat.sig === "SNCT", `0xDCB is ${cat ? `a ${cat.sig}` : "missing"}, not an SNCT`);
+  need(cat.edid === "IsekaiAudioCategorySystemVoice", `0xDCB is ${cat.edid}, not IsekaiAudioCategorySystemVoice`);
+  need(sub(cat.body, "PNAM")?.readUInt32LE(0) === 0x0eb803,
+       "IsekaiAudioCategorySystemVoice's parent is not _AudioCategoryMaster (0x0EB803)");
+  need((sub(cat.body, "FNAM")?.readUInt32LE(0) & 2) === 2,
+       "IsekaiAudioCategorySystemVoice lacks ShouldAppearOnMenu - no slider in the Audio settings");
+  const vox = recs.filter((r) => r.sig === "SNDR" && r.edid.startsWith("IsekaiVOX_"));
+  need(vox.length === 20, `${vox.length} IsekaiVOX SNDRs, expected 20`);
+  const wrong = vox.filter((r) => sub(r.body, "GNAM")?.readUInt32LE(0) !== OWN_SNCT);
+  need(wrong.length === 0, `not in category 0xDCB: ${wrong.map((r) => r.edid).join(", ")}`);
+  return "20 SNDRs in SNCT 0xDCB under _AudioCategoryMaster, on the menu";
+});
+
 check("ESP: the storage chest's model is empty and ships", () => {
   // The Dimensional Storage chest is a real reference parked under the player. Players
   // still saw it beside them now and then (#38), so the base record carries a model with

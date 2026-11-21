@@ -248,9 +248,15 @@ shipped one, so a key the menu never mentions falls through rather than resettin
 The System speaks at its big moments: when it binds the player, at the chosen blessing, on
 level up, a milestone, a System rank rise, a new and a finished System quest, the Dormant
 awakening, a reboot, a LETHAL threat entering the labels, a guild promotion and a lost
-co-save. 67 spoken lines in 20 sound descriptors (`IsekaiVOX_*`, category Voice, so the
-game's Voice slider sets their loudness). The frequent moments pick at random between a
-solemn, a cold and a plain delivery.
+co-save. 67 spoken lines in 20 sound descriptors (`IsekaiVOX_*`). The frequent moments pick
+at random between a solemn, a cold and a plain delivery.
+
+The voice has its own volume slider, **System Voice**, in Settings → Audio (the game's Voice
+and Effects sliders do not touch it; Master does). Its lines keep playing while a System
+window or any other menu is open. The game remembers the slider only with
+[SSE Engine Fixes](https://www.nexusmods.com/skyrimspecialedition/mods/17230) and its
+`bSaveAddedSoundCategories` setting; without it the slider is back at 100 % after every
+restart.
 
 It never talks over itself: a more important line (blessing, reboot) may cut a minor one, an
 equal one waits for the running line, and minor lines keep a 4 s gap. LETHAL warns once per

@@ -15,7 +15,10 @@ all the time.
 - Spoken lines at about twelve moments (below), never on every window or purchase.
 - One voice (owner's choice, a cool AI character), delivered in three to four styles for the
   frequent moments, so repeats do not sound the same.
-- Plays through the game's audio system, so the in-game **Voice** slider controls it.
+- Plays through the game's audio system, with its own **System Voice** slider in Settings →
+  Audio. (First built under the game's Voice category; that category pauses under every
+  menu, so lines waited for the System window to close. Changed 2026-11-21, owner's
+  decision: own category `0xDCB`, keeps playing in menus, see CREATION_KIT_ESP.md Part N.)
 - An MCM and ini switch to turn the voice off.
 
 ## Non-goals
@@ -34,7 +37,7 @@ all the time.
 
 | | Approach | Trade-off |
 |---|---|---|
-| **A (chosen)** | One SNDR per moment in `IsekaiHero.esp`, each holding all its variant files; the engine picks one at random. Category: Voice. | Volume slider works, random choice for free, same path as the existing System sounds (`src/Sounds.cpp`). |
+| **A (chosen)** | One SNDR per moment in `IsekaiHero.esp`, each holding all its variant files; the engine picks one at random. Category: own (System Voice). | Volume slider works, random choice for free, same path as the existing System sounds (`src/Sounds.cpp`). |
 | B | Play WAVs directly from the plugin | No ESP work, but the volume sliders do not apply, and random choice is our code. |
 
 ## The moments
@@ -67,7 +70,7 @@ impressed. About 60–70 files in total. Final wording is settled when generatin
 - **Files:** MP3 from ElevenLabs converted to WAV (the format of the existing System
   sounds), mono, peak-normalised so the moments sit at one loudness. An optional light
   "digital" filter for the AI character is tried and played to the owner before it is used.
-- **Records:** one SNDR per moment, category Voice, all variants listed; local FormIDs
+- **Records:** one SNDR per moment, category System Voice (own SNCT), all variants listed; local FormIDs
   ≤ 0xFFF; resolved like the existing ones in `Sounds.cpp`.
 - **Triggers:** each moment's existing code path (reincarnation, blessing, level-up,
   milestone payout, rank, quests, dormant awakening, REBOOT, threat verdict, guild, co-save

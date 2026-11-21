@@ -10,13 +10,20 @@ All notable changes to Isekai Hero are documented here. The format follows
 - **The System speaks.** 67 English lines (ElevenLabs, model `eleven_v4`) at twelve moments:
   binding, the blessing, level up, milestone, System rank rise, new and finished System
   quest, Dormant awakening, reboot, a LETHAL threat, guild promotion and a lost co-save.
-  Played through 20 SNDRs `IsekaiVOX_*` (`0xDB7`–`0xDCA`, category Voice) with the files in
+  Played through 20 SNDRs `IsekaiVOX_*` (`0xDB7`–`0xDCA`) with the files in
   `Sound\fx\isekai\voice\`. A more important line may cut a minor one, an equal one waits,
   minor lines keep 4 s apart; LETHAL warns once per enemy and at most every 180 s; a load
   drops anything pending and a higher rank in a loaded save stays silent. No line on
   window open, shop or skill-tree purchase. Switch `SystemVoice` (`[Voice]`, ini and MCM,
   default 1). Self-test row `System voice descriptors N/20 resolved`; `check.mjs` checks the
   descriptors and their files.
+- **The System's voice has its own volume slider**, *System Voice* in Settings → Audio
+  (SNCT `IsekaiAudioCategorySystemVoice`, `0xDCB`, directly under `_AudioCategoryMaster`).
+  The lines first used the game's Voice category, which pauses under every menu, so a line
+  waited until the System window closed; now they keep playing in menus. The Voice and
+  Effects sliders no longer affect them. The slider is saved only with SSE Engine Fixes'
+  `bSaveAddedSoundCategories`; without it it resets to 100 % on restart. `check.mjs` checks
+  the category and that all twenty descriptors use it.
 
 ## [1.0.0] — 2026-11-18
 

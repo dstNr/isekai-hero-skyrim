@@ -17,7 +17,7 @@ plugin and wired up. What is left:
 verified in game on 2026-09-11.
 **L is done too**, and without the Creation Kit — see Part L for why and for what to test.
 **M is done the same way** — the eight System enchantments; see Part M for the FormIDs.
-**N as well** — the twenty voice descriptors of the System; see Part N.
+**N as well** — the twenty voice descriptors of the System and their sound category; see Part N.
 The **G fix** is a single `FULL - Name` change — see the warning box in Part G. **J** only
 if you want to go further.
 
@@ -902,7 +902,8 @@ plays in game is the same test.
 The System's spoken lines ([design](superpowers/specs/2026-11-20-system-voice-design.md)).
 One sound descriptor per moment, and one per blessing and rank; each lists every recorded
 variant of its line, and the engine picks one of them at random each time it plays. 20 new
-records, local FormIDs `0xDB7`–`0xDCA`, no existing record changed, masters still only
+records, local FormIDs `0xDB7`–`0xDCA`, plus their own sound category `0xDCB` (added
+afterwards, see *Category* below); no older record changed, masters still only
 `Skyrim.esm` and `Update.esm`.
 
 The WAV files are `sounds/voice/<sndr>_<nn>.wav` in the repo (the list with every line's
@@ -930,23 +931,46 @@ text is `voice/lines.tsv`); packaging puts them in `Data\Sound\fx\isekai\voice\`
 | `0xDC8` | `IsekaiVOX_lethal` | 9 | `fx\isekai\voice\lethal_01.wav` … `_09` |
 | `0xDC9` | `IsekaiVOX_guild` | 2 | `fx\isekai\voice\guild_01.wav` … `_02` |
 | `0xDCA` | `IsekaiVOX_cosave_lost` | 1 | `fx\isekai\voice\cosave_lost_01.wav` |
+| `0xDCB` | `IsekaiAudioCategorySystemVoice` (`SNCT`) | — | the category of all twenty, see below |
 
 67 sound files in all. The order matters for the same reason as in Part E: the code maps the
 descriptors by FormID, in exactly this order.
 
-**Category and output model.** All twenty use the category **`AudioCategoryVOC`**
-(`0x0876BB`, Skyrim.esm), so the game's *Voice* volume slider controls them. It is the
-category of Skyrim's only voice-category sound descriptor, `NPCDraugrVoiceTaunt`
-(`0x10EC65`), and the engine's default object for dialogue voice. The output model is
+**Category.** All twenty use the plugin's own sound category
+**`IsekaiAudioCategorySystemVoice`** (`SNCT`, `0xDCB`), which shows in the game's
+**Settings → Audio** as its own slider, **System Voice**. Its fields:
+
+| Field | Value |
+|---|---|
+| `EDID` | `IsekaiAudioCategorySystemVoice` |
+| `FULL` | `System Voice` (plain string; the plugin is not localized) |
+| `FNAM` | `2` = *Should Appear On Menu* (no *Mute When Submerged*) |
+| `PNAM` | `_AudioCategoryMaster` (`0x0EB803`, Skyrim.esm) |
+| `VNAM` | `0xFFFF` = static volume multiplier 1.0 (u16 / 65535) |
+| `UNAM` | `0xFFFF` = default menu value 1.0 (u16 / 65535) |
+
+The parent is the master category directly, *not* any category under
+`AudioCategoryPausedDuringMenu` (`0x0DDDC5`). The lines first used `AudioCategoryVOC`
+(`0x0876BB`, the *Voice* slider), whose chain is VOC → `AudioCategoryVOCGeneral` →
+`AudioCategoryPausedDuringMenu` → `_AudioCategoryMaster`; since every System window pauses
+the game, a line then waited until the window closed (seen in game). The *Voice* and
+*Effects* sliders no longer affect the System's voice; the *Master* slider still does. The
+game saves the volume of an added category only with SSE Engine Fixes'
+`bSaveAddedSoundCategories`; without it the System Voice slider is back at 100 % after a
+restart.
+
+**Output model.** The output model is
 **`SOMDialogue2D`** (`0x0B5183`), *not* the draugr taunt's `SOMMono03000_verb`
 (`0x0F1B12`): that one is a positioned 3D model that fades out between 150 and 3000 units,
 while the System's lines are played without a position (like the Part E sounds). `SOMDialogue2D`
 is the engine's default output model for unpositioned dialogue; vanilla uses it for the
 voices that speak inside the player's head (Azura, Dagon, Namira, Hircine's beast).
 
-> ⚠️ **Voice pauses while a menu is open.** `AudioCategoryVOC` sits under
-> `AudioCategoryPausedDuringMenu`, so a line started while a menu is up is held until it
-> closes. That is why the Voice code plays its lines only after the menu's resume pass.
+> ⚠️ **Lines keep playing while a menu is open.** The category is outside
+> `AudioCategoryPausedDuringMenu`, so a line runs on under an open System window (or any
+> other pausing menu). The Voice code still starts each line no sooner than
+> `Sounds::kResumeGraceMs` after it is asked for: that delay is about the UI's resume pass
+> discarding a sound started in the frame a view loses focus, not about the category.
 
 ### How it was built
 
@@ -955,6 +979,16 @@ record is `IsekaiSND_LevelUp` (`0xD7B`, Part E) with four changes: its own `EDID
 and `ONAM` as above, and one `ANAM` per variant instead of one. `CNAM` (standard
 descriptor), `LNAM` (no loop) and `BNAM` (priority 128, static attenuation 10.57 dB) are
 `0xD7B`'s bytes unchanged. The new records sit at the end of the existing `SNDR` group.
+
+The category came second, by another script: one `SNCT` record (fields above, record
+version 44, flags 0) in a new top-level `SNCT` group placed right after the `SNDR` group
+(the Creation Kit's order is `SNDR`, `DUAL`, `SNCT`; the engine does not care), and the
+twenty `GNAM`s changed in place from `0x000876BB` to `0x02000DCB` (`02` = the plugin's own
+index, as in its other self-references). The subrecord layout and the u16 encoding of
+`VNAM`/`UNAM` were taken from real records (`SexLabAudioVoice` in SexLab.esm,
+`_AudioCategoryCustomVoice` in *PC Head Tracking - MCM.esp*: `VNAM` `0xFFFF` = 1.0, `UNAM`
+`0xE666` = 0.9) and the Mutagen schema (`Flags`: *MuteWhenSubmerged* = 1,
+*ShouldAppearOnMenu* = 2).
 
 ### How it was verified
 
@@ -967,11 +1001,21 @@ size, and the inserted records; everything after them is identical. The header's
 next-object ID stays `0x2314`: it is already above `0xDCA`, and lowering it would let an
 editor hand out IDs that are taken. `node tools\check.mjs` passes.
 
+The category change was read back the same way: every record parses to its exact length,
+the `SNCT` at `0xDCB` has exactly the six subrecords and values in the table, all twenty
+`IsekaiVOX_*` `GNAM`s are `0x02000DCB` with every other subrecord unchanged, every other
+record is byte-identical, header count 111 = 97 records + 14 groups, ESL flag, masters and
+next-object ID (`0x2314`, still above `0xDCB`) unchanged. The byte diff shows only the
+header's record count, the twenty `GNAM`s and the inserted 140-byte `SNCT` group; everything
+after it is identical. `node tools\check.mjs` now also checks that every `IsekaiVOX_*` uses
+`0xDCB` and that `0xDCB` is an `SNCT` under `0x0EB803` with the menu flag.
+
 ### What is left
 
-Hearing it (in game): that the Voice slider moves the lines, that they sound centred and
-unfaded wherever the player stands, and whether 10.57 dB of static attenuation (copied from
-the UI sounds) leaves them loud enough next to dialogue.
+Hearing it (in game): that the System Voice slider moves the lines (and the Voice and
+Effects sliders do not), that a line keeps playing while a System window is open, that they
+sound centred and unfaded wherever the player stands, and whether 10.57 dB of static
+attenuation (copied from the UI sounds) leaves them loud enough next to dialogue.
 
 ---
 
