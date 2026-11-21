@@ -56,6 +56,7 @@ namespace Isekai::UI {
         LabelPool      mp;
         LabelPool      sp;
         std::string    name;      // empty = unnamed; the page says "Unknown"
+        bool           hostile = false;  // a real threat to the player; gates the voice warning
     };
 
     // Main thread. The labels for this frame, nearest first, at most 12. Empty when there

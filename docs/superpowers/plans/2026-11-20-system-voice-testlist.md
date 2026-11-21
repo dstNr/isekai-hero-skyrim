@@ -22,6 +22,7 @@ System voice on unless a point says otherwise. Game Voice and Effects sliders at
 | V8 | Silent places | Open the System window, buy in the shop, buy a skill-tree node | No voice play |
 | V9 | Queueing in menus | Reincarnation, then pick NORMAL within 2 s; reboot, then pick a blessing within 2 s | The first line finishes, then the blessing line follows; no overlap and no cut (decides whether a menu-paused line counts as playing) |
 | V10 | Load drops pending lines | Trigger a quest done (900 ms delay) and quick-load within the delay | Nothing from the old session plays in the loaded save |
+| V11 | Lines followed by a System window | Blessing, dormant awakening, milestone, reincarnation, reboot: watch `game_audio` / `game_audio_level` while the window stays open, plus one ear check | The line finishes while the window is open; if it freezes mid-sentence, record it (the owner decides the code change after the run) |
 
 Watch items: loudness next to normal dialogue (static attenuation 10.57 dB copied from the
 existing System sound; too quiet → plugin follow-up); `quest_done_04` may start with a
@@ -29,6 +30,6 @@ clipped first syllable (listen once); a LETHAL warning dropped by the 4 s gap is
 that pack (known, deferred).
 
 Known open points the run settles: whether a voice line paused by a menu still reports as
-playing (V9); whether the engine stops a playing voice line on load (V10); how the modlist's
+playing (V9); whether the engine stops a playing voice line on load (V10); whether the lines followed by a System window (blessing, dormant awakening, milestone, reincarnation, reboot) finish while the window is open or freeze mid-sentence (V11); how the modlist's
 Audio Overhaul Skyrim and AudibleNPCDialogues overrides of the Voice category and the 2D
 dialogue output model affect the lines (V6).

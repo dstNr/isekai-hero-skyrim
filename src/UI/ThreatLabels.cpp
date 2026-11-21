@@ -335,6 +335,7 @@ namespace Isekai::UI {
             label.mp = PoolOf(av, RE::ActorValue::kMagicka);
             label.sp = PoolOf(av, RE::ActorValue::kStamina);
             label.name = name ? name : "";
+            label.hostile = actor->IsHostileToActor(player) || FightingUs(actor, player);
             labels.push_back(std::move(label));
         };
 
@@ -427,7 +428,9 @@ namespace Isekai::UI {
             g_lethalSeenLevel = playerLevel;
         }
         for (const auto& label : labels) {
-            if (label.verdict == Logic::Verdict::Lethal && g_lethalSeen.insert(label.id).second) {
+            // Only a real threat: a LETHAL guard or Jarl under the crosshair is not a warning.
+            if (label.verdict == Logic::Verdict::Lethal && label.hostile &&
+                g_lethalSeen.insert(label.id).second) {
                 Voice::SayLethal();
             }
         }
