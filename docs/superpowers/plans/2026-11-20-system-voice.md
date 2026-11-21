@@ -111,19 +111,19 @@ Styles: **plain** (no tag), **solemn** (`[solemnly]`), **cold** (`[coldly] [clip
 
 **Files:** `src/System.cpp`, `src/Progression.cpp`, `src/Quests.cpp`, `src/ModAPI.cpp`, `src/UI/ThreatLabels.cpp`, `src/GuildBridge.cpp`.
 
-**Interfaces:** Consumes `Voice::Say`, `Voice::ResetSession`, `Logic::RankRose`, `Logic::LethalShouldSpeak`.
+**Interfaces:** Consumes `Voice::Say`, `Voice::ResetSession`, `Voice::OnRank(int)`, `Voice::SayLethal()` (Task 4 fix round 1: Voice owns the rank and lethal-cooldown state).
 
 Call sites (from the code map):
 - Reincarnation: `BeginReincarnation()` after `g_state.reincarnated = true;` (System.cpp ~675).
 - Blessing: `ApplyReincarnation()` (System.cpp ~234), line chosen from `power`, `dormant`, `custom` (NORMAL/HERO/ASCENDED/DORMANT/CUSTOM).
 - Level up: `MenuWatcher::ProcessEvent(LevelIncrease)` (System.cpp ~775), before `CheckDormantAwakening()`.
 - Milestone: `CelebrateMilestone()` inside `if (Grant(...))` (Progression.cpp ~330), delay 900 ms (after the LevelUp sting).
-- Rank: `PublishIfChanged()` (ModAPI.cpp ~139) with `RankRose` over `RankValue`; `ResetSession` on load/new game sets the previous rank unknown.
+- Rank: `PublishIfChanged()` (ModAPI.cpp ~139) calls `Voice::OnRank(RankValue)`; Voice decides with `RankRose` and `ResetSession` sets the previous rank unknown.
 - New quest: `Quests::Roll()` at the toast (~191), not for `Reroll()` by the player's button.
 - Quest done: `Quests::Complete()` after the LevelUp sting (~200), delay 900 ms.
 - Dormant: `AwakenTo()` (System.cpp ~595), delay 900 ms.
 - REBOOT: `RebootSystem()` before `ShowPowerSelection()` (~1417).
-- Lethal: `ThreatLabels.cpp` `SelectLabels()` after `VerdictFor` (~312): edge per actor (a set of FormIDs announced this session, cleared when the player levels) and `LethalShouldSpeak`. Only while threat labels run (builder's call in the spec: the line belongs to the threat reading).
+- Lethal: `ThreatLabels.cpp` `SelectLabels()` after `VerdictFor` (~312): edge per actor (a set of FormIDs announced this session, cleared when the player levels), then `Voice::SayLethal()` (the cooldown lives in Voice). Only while threat labels run (builder's call in the spec: the line belongs to the threat reading).
 - Guild: `GuildBridge.cpp` `Pay()` on `AG_RankChanged`.
 - Lost co-save: `CheckCoSave()` after `g_stateLost = true;` (~1213), delay 2000 ms.
 - `ResetSession()` on `kPostLoadGame` and `kNewGame`.
