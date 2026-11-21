@@ -93,6 +93,18 @@ namespace {
         EXPECT(!g.RankAnnounce(5));
     }
 
+    void PendingLineDueOnlyInItsSession() {
+        // Arguments: session at accept, session now, generation at accept, generation now,
+        // last accepted priority, this line's priority.
+        EXPECT(PendingStillDue(1, 1, 5, 5, 1, 1));   // nothing came after it
+        EXPECT(!PendingStillDue(1, 1, 5, 6, 2, 1));  // a higher line superseded it
+        EXPECT(PendingStillDue(1, 1, 5, 6, 3, 3));   // an equal one did not: it queues
+        // A load came between, then a new line was accepted: the old one stays silent
+        // whatever its priority.
+        EXPECT(!PendingStillDue(1, 2, 5, 7, 1, 3));
+        EXPECT(!PendingStillDue(1, 2, 5, 5, 0, 3));
+    }
+
     void ResetForgetsLethalAndGap() {
         Gate g;
         EXPECT(g.AcceptLethal(100.0, 1));
@@ -118,6 +130,7 @@ int main() {
         { "LethalCooldownSpentOnlyWhenAccepted", LethalCooldownSpentOnlyWhenAccepted },
         { "RankRiseOnlyFromAKnownRank", RankRiseOnlyFromAKnownRank },
         { "ResetForgetsLethalAndGap", ResetForgetsLethalAndGap },
+        { "PendingLineDueOnlyInItsSession", PendingLineDueOnlyInItsSession },
     };
 
     int failedTests = 0;

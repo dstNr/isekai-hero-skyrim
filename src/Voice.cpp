@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
-#include <limits>
 #include <mutex>
 
 namespace Isekai::Voice {
@@ -49,6 +48,7 @@ namespace Isekai::Voice {
         std::mutex g_lock;
         Logic::Gate g_gate;
         std::uint64_t g_generation = 0;  // bumped per accepted line
+        std::uint64_t g_session = 0;     // bumped only by ResetSession (load, new game)
 
         // The line on the speakers. Main thread only (the DelayedMainThread callback).
         RE::BSSoundHandle g_handle;
@@ -88,11 +88,12 @@ namespace Isekai::Voice {
 
         // Main thread (DelayedMainThread callback). Never throws.
         void Attempt(RE::BGSSoundDescriptorForm* a_descriptor, int a_priority, Line a_line,
-                     std::uint64_t a_generation, int a_triesLeft) {
+                     std::uint64_t a_session, std::uint64_t a_generation, int a_triesLeft) {
             {
                 std::scoped_lock lock(g_lock);
-                // Superseded by a later line that matters more, or by a load.
-                if (a_generation != g_generation && g_gate.lastPriority > a_priority) {
+                // Checked on every retry too: a load while this line queues drops it.
+                if (!Logic::PendingStillDue(a_session, g_session, a_generation, g_generation,
+                                            g_gate.lastPriority, a_priority)) {
                     return;
                 }
             }
@@ -107,7 +108,8 @@ namespace Isekai::Voice {
             case Logic::Handoff::kWait:
                 if (a_triesLeft > 0) {
                     DelayedMainThread(kWaitStepMs, [=]() {
-                        Attempt(a_descriptor, a_priority, a_line, a_generation, a_triesLeft - 1);
+                        Attempt(a_descriptor, a_priority, a_line, a_session, a_generation,
+                                a_triesLeft - 1);
                     });
                 } else {
                     logger::warn("Voice: line {} gave up waiting for the one before it",
@@ -140,6 +142,7 @@ namespace Isekai::Voice {
                 return;
             }
             const int priority = PriorityOf(a_line);
+            std::uint64_t session = 0;
             std::uint64_t generation = 0;
             {
                 std::scoped_lock lock(g_lock);
@@ -148,10 +151,12 @@ namespace Isekai::Voice {
                     return;
                 }
                 generation = ++g_generation;
+                session = g_session;
             }
             DelayedMainThread(std::max(a_delayMs, Sounds::kResumeGraceMs),
-                              [descriptor, priority, a_line, generation]() {
-                                  Attempt(descriptor, priority, a_line, generation, kWaitTries);
+                              [descriptor, priority, a_line, session, generation]() {
+                                  Attempt(descriptor, priority, a_line, session, generation,
+                                          kWaitTries);
                               });
         }
     }
@@ -199,11 +204,15 @@ namespace Isekai::Voice {
     }
 
     void ResetSession() {
-        std::scoped_lock lock(g_lock);
-        g_gate.Reset();
-        // The gap is over at once; the highest priority there is drops every line still
-        // waiting from the old session (the next line passes on the gap alone).
-        g_gate.lastPriority = std::numeric_limits<int>::max();
-        ++g_generation;
+        {
+            std::scoped_lock lock(g_lock);
+            g_gate.Reset();
+            ++g_session;  // every line still pending or queued from the old session is dropped
+        }
+        // Main thread (kPostLoadGame / kNewGame), like every other g_handle access.
+        if (g_handle.IsValid() && g_handle.IsPlaying()) {
+            g_handle.Stop();
+        }
+        g_handlePriority = 0;
     }
 }

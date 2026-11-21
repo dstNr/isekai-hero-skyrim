@@ -54,6 +54,18 @@ namespace Isekai::Voice::Logic {
                                                  : Handoff::kDrop;
     }
 
+    // May a line accepted earlier still play now? Not after a load or new game (the session
+    // epoch moved), and not once a later accepted line outranks it. An equal later line
+    // does not drop it: the two queue at the speakers (Handoff::kWait).
+    [[nodiscard]] constexpr bool PendingStillDue(unsigned long long a_session,
+                                                 unsigned long long a_sessionNow,
+                                                 unsigned long long a_generation,
+                                                 unsigned long long a_generationNow,
+                                                 int a_lastPriority, int a_priority) {
+        return a_session == a_sessionNow &&
+               (a_generation == a_generationNow || a_lastPriority <= a_priority);
+    }
+
     // The voice's memory between lines, reset on load and new game.
     struct Gate {
         double lastAt = -std::numeric_limits<double>::infinity();

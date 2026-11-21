@@ -59,7 +59,8 @@ namespace Isekai::Voice {
     // not silence the next one.
     void SayLethal();
 
-    // Load or new game: forget the last line, the rank and the lethal cooldown, so nothing
-    // from the old session gates or plays into the new one.
+    // Load or new game: forget the last line, the rank and the lethal cooldown, drop every
+    // line still pending or queued and stop the one playing, so nothing from the old
+    // session gates or plays into the new one. Main thread only.
     void ResetSession();
 }
